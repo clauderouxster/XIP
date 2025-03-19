@@ -1,0 +1,307 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	local_names.xip
+//! Content:	loacl grammar rule for proper names
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	28-Oct-2008
+//! Updated:	30-Oct-2009
+//!
+//! ENCODING : UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// ######################################################################
+// *** TO DO ***
+// revise tagging rules: 
+// - check redundancy wrt sequence rules blelow !
+// ######################################################################
+
+
+
+Tagging:
+
+// named entities
+// 
+
+// Exclude some town names from compounding
+
+
+// product or company name
+// :: VW/prop[bus] baut einen neuen VW/prop[prod]
+// :: Die Firma XY baut ein neues Haus.
+1> noun[proper, bus, prod] = | det[indef], adj* | ?[bus:~] .
+1> noun[proper, bus, prod, start] = ?[prod:~] .
+1> noun[proper, bus, prod] = | ?[premod,bus]| ?[prod:~] .
+
+//:: Die Firma XY 
+1> noun[guessed] = | ?[premod,bus] | noun[proper=+, bus=+] .
+
+// prefer common noun to peoper name in compounds
+//:: Finanzlage
+//1> noun<common>,noun<proper,is_loc,compd_level> = noun[proper,is_loc:~],noun[proper:~],?[noun:~] .
+
+// possessives
+//:: Peters Auto in Annas Garage
+1> noun<firstname,marked_gen> = noun<proper,gen,poss=+> | noun[common] |.
+
+//:: geographic name or person name
+//:: Er ist in Rostock
+//:: Rostock ist eine Stadt
+//:: Paul Rostock ist Mediziner
+//give preference to geographic name???
+1> noun[lastname,is_loc] = ?[lastname:~].
+
+// title or common noun
+//: Frau Anna und Herr Otto; Hans mit seiner Frau Anna; Latti und sein Herr Uli.
+1> noun<title> = | det[poss] | ?[title:~] .
+ 
+// common noun or last name
+//: Der Bauer kommt mit Herrn Bauer.
+//: Bauer kommt mit dem Hund
+//: Bauer kommt mit den Hunds
+
+// VERY TENTATIVE !!!
+//1> noun<lastname,sg>,noun<common> = | ?[title:~,firstname:~,init:~] | ?[lastname:~],?[lastname,sg:~].
+//: Hansens Haus
+//1> noun<lastname>,noun<common> = | ?[marked_gen] | ?[lastname:~].
+
+//// retag words on the right of non-ambiguous modifiers
+////:: Prof. Bauer
+////:: St. Anton
+//1> noun[common] = | ?[premod,noambiguity] | noun[proper=+] .
+//
+// first or last name
+//:: Martin Luther und Anna Martin
+//1> noun[firstname,lastname] = ?[lastname:~] | noun[lastname,guessed:~,common:~] |.
+1> noun[firstname,lastname] = ?[lastname:~] | (?[firstname];?[init])*, noun[lastname] |.
+
+// postmodified last names 
+//:: Hund et al.
+//:: Meier senior
+1> noun %= noun[proper=+, lastname=+, sg3=+, invar=+] | adv[postmod,name] |.
+
+// retag first name
+//:: Ghfhgt Maier
+1> noun[guessed,cap] %= noun[proper=+, firstname=+, sg3=+, invar=+] | noun[proper,lastname,common:~,guessed:~] |.
+
+
+// :: Lucas Cranach
+1> noun[lastname,title:~,start:~,common:~] %= | ?[firstname:~] | 
+	noun[proper=+, firstname=+, sg3=+, invar=+] 
+	| noun[proper,lastname,common:~,guessed:~] |.
+
+1> noun[lastname,title:~,start,guessed] %= 
+	noun[proper=+, firstname=+, sg3=+, invar=+ ] 
+	| noun[proper,lastname,common:~,guessed:~] |.
+
+// retag last name
+//:: John McGhgsdyt
+1> noun[guessed,cap] %= 
+	| noun[proper,firstname,common:~,guessed:~], (?[particle]) | 
+	noun[proper=+, lastname=+, invar=+] .
+
+
+//CHECK !!!
+//:: Schüssel sagt 
+//:: Er redet mit Schüssel
+2>  noun[sg,start2] = 
+     noun[lastname=+]
+     where (	lastname##0:1 ).
+2>  noun[sg] = 
+     | ?[det:~] | noun[lastname=+]
+     where (	lastname##0:1 ).
+
+
+// ----------------------------------------------------------------------------------------------------------
+Sequence:
+
+// Assosciations (e.g. football clubs)
+5> noun[proper=+,org=+,assoc=+,invar=+] = noun[lemma:Hertha], ?[lemma:BSC].
+5> noun[proper=+,org=+,assoc=+,invar=+] = noun[lemma:"Schalk(e)"], ?[lemma:"04"].
+5> noun[proper=+,org=+,assoc=+,invar=+] @= (?[lemma:FC]), noun[lemma:Bayern], ?[lemma:München].
+5> noun[proper=+,org=+,assoc=+,invar=+] = noun[prepart,assoc], noun[proper,town].
+
+Tagging:
+9> det<neut,sg> = det<neut,sg> | noun%*, noun#2[lemma:Journal] |. 
+
+Sequence:
+// das XXX Journal
+10> noun[proper=+,org=+]  @= | ?[det,neut,sg] | noun*, noun#2[lemma:Journal], 
+	where (#0[nvagree]={#2} ). 
+
+10> noun[proper=+,org=+] @= |?#1[det,fem,sg] | (noun;adj[cap])*, noun#2[lemma:News];noun#2[lemma:Zeitung], 
+	where (#0[nvagree]={#2} ) .
+
+10> noun[proper=+,org=+] @= (noun;adj[cap])*, noun#2[lemma:News];noun#2[lemma:Times], 
+	where (#0[nvagree]={#2} ) .
+
+
+// BRD
+10> noun[proper=+,org=+,nagr:!] = noun[surface: Bundesrepublik,!nagr:!], ?[lemma: Deutschland].
+
+// DDR
+10> noun[proper=+,org=+,nagr:!] = adj[lemma: deutsch], adj[lemma: demokratisch], noun[lemma:Republik,!nagr:!].
+
+
+// die XXX Union
+10> noun[proper=+,org=+,loc=+,country=+,continent=~,nagr:!] = 
+    adj[cap,attr,lemma:europäisch], noun[lemma:Union,!nagr:!].
+10> noun[proper=+,org=+,nagr:!] = adj[cap,attr], noun[lemma:Union,!nagr:!].
+
+//:: die Vereinigten Staaten
+//:: das Vereinigte Königreich
+10> noun[proper=+,org=+,loc=+,country=+,nagr:!] @=
+	adj[lemma:vereinigen,cap], 
+	noun[lemma:Staat,!nagr:!,pl]; noun[lemma:"König#Reich",!nagr:!] ,
+	(prep[lemma:von], noun[proper, country]).
+
+
+// ==============================================================================
+// ORGANISATION NAMES
+//:: Sachsen AG
+//:: Meyher und Müller GmbH
+
+15> noun[noun=+,proper=+] @= (noun[proper], (conj[coord];punct[comma]))*, 
+	noun,  
+	noun#1[orggrp, postpart], 
+	where ( #0[nvagree]={#1} & #0[orggrp] = {#1} ).
+
+// ==============================================================================
+// PLACE NAMES
+20> noun[noun=+,proper=+] @= (noun[proper], (conj[coord];punct[comma]))*, 
+	noun,  
+	noun#1[is_loc, postpart],
+	where ( #0[nvagree]={#1} & #0[is_loc] = {#1}).
+
+//:: St. Anton
+20> noun[noun=+,proper=+,sg3=+,invar=+]  = 
+	noun#1[is_loc, prepart],
+	noun#2,
+	where ( #0[is_loc] = {#1} ).
+
+
+//:: die kanarischen Inseln
+10> noun[noun=+,proper=+] = adj#1[attr,is_loc], noun#2[prophead],
+	where (UnifyAgree(#1,#2,#0) & #0[is_loc] = {#2}  ).
+
+
+
+// ==============================================================================
+// PERSON NAMES
+
+// last names with particle
+//:: Leonardi di Caprio
+25> noun[ proper=+, name=+, lastname=+,sg=+,sg3=+, invar=+, guessed:! ] =
+	?[particle,prep:~], noun#1[lastname];noun#1[guessed,!guessed:!],
+	where (partlastname##1=1).
+
+//:: Gero von Stauffenberg, Anette von Arnim
+25> noun[ proper=+, name=+, lastname=+,sg=+,sg3=+, invar=+ ] =
+	| noun[firstname, common:~, guessed:~];noun[title] |
+	?[particle,prep], noun#1[proper];noun#1[!guessed:!],
+	where ( partlastname##1=1 ).
+
+25> noun[ proper=+, name=+, lastname=+,sg=+,sg3=+, invar=+ ] =
+	?[particle], noun#1,
+	where ( partlastname##1:1 ).
+
+//:: Herr Anton W. Müller
+30> noun[ proper=+, name=+, sg=+, sg3=+, invar=+,marked_gen:!,gender:!] @= 
+	| noun[title] |
+	(symbol[cap, init]; noun[firstname,!gender:!])*, 
+	noun#1[lastname,!marked_gen:!],
+	where ( lastname##1=1 ).
+
+//:: Klaus Maier
+30> noun[ proper=+, name=+, sg=+, sg3=+,invar=+,marked_gen:!,gender:!] @= 
+	(symbol[cap, init])*,
+	noun[firstname, !gender:!, marked_gen:~, guessed:~],
+	(symbol[cap, init]; noun[firstname])*, 
+	noun#1[lastname,!marked_gen:!],
+	where ( lastname##1=1 ).
+
+//:: Minister Hamburgs
+30> noun[proper=+,name=+, sg=+,sg3=+, invar=+, guessed:!,gender:!] @= 	
+	| noun[title] |
+	(noun[firstname,lastname:~,!gender:!];symbol[cap, init];noun[guessed])*,
+	noun#1[!guessed:!,abbr:~,is_loc:~],
+	where ( lastname##1=1 ).
+
+//:: Minister Hamburg
+30> noun[proper=+,name=+, sg=+,sg3=+, invar=+, guessed:!,gender:!] @= 	
+	| noun[title] |
+	(noun[firstname,lastname:~,!gender:!];symbol[cap, init];noun[guessed])*,
+	noun#1[!guessed:!,abbr:~,is_loc, gen:~],
+	where ( lastname##1=1 ).
+
+// Karl VI., Maria Theresia III.
+30> noun[proper=+,name=+,gender:!] @= 
+	noun#1[firstname,!gender:!], (noun[firstname])*, num[roman,cap],
+	where ( #0[nvagree]={#1} ).
+
+
+//: Karl der Kahle;Katharina die Große
+30> noun[proper=+,name=+,gender:!] = 
+	noun#1[firstname,!gender:!], det#2, ?[nadj,masc,sg];num[roman,cap],
+	where ( #1[gender]:#2[gender] 
+	& UnifyAgree(#1,#2,#0) ).
+
+
+//:: Herr Georg Wintermantel
+30> noun[proper=+,name=+, sg=+,sg3=+, invar=+, guessed:!,gender:!] @= 	
+	| noun[title] |
+	(symbol[cap, init]; noun[firstname,gender:~])*, 
+	noun[firstname,lastname:~,gender,!gender:!],
+	(symbol[cap, init];noun[guessed];noun[firstname])*,
+	noun#1[common,lastname=+,abbr:~],
+where (	lastname##1=1 ).
+
+//:: Maria Rheinwein
+//!: Mutter kauft Maria Rheinwein
+//!: Peters Stuhl
+30> noun[proper=+,name=+, sg=+,sg3=+, invar=+, guessed:!,gender:!] @= 	
+	(symbol[cap, init]; noun[firstname,gender:~])*, 
+//	noun[firstname,lastname:~,marked_gen:~,!gender:!],
+	noun[firstname,marked_gen:~,!gender:!],
+	(symbol[cap, init];noun[guessed];noun[firstname])*,
+//	noun#1[common,lastname=+,abbr:~],
+	noun#1[lastname=+,abbr:~],
+where (	lastname##1=1 ).
+
+
+
+
+
+
+
+// Title + Name
+//:: Frau Anna und Herr Maier
+30> noun[proper=+,name=+,sg3=+,person_type:!,is_person:!] @= 
+	noun[title,premod,!person_type:!,!nvagree:!], 
+	(noun[title,premod,!person_type:!])*, 
+	noun#1[title:~,is_person,!is_person:!],
+where (	lastname##1=1 ).
+
+//:: Frau Wintermantel und Herr Waldmeister
+30> noun[proper=+,name=+,sg3=+,invar=+, person_type:!,lastname=+] @= 
+	(noun[title,premod,!person_type:!])+, 
+	noun#1[title:~,is_person:~],
+where (	lastname##1=1 ).
+
+//:: Maria Wintermantel und Paul Waldmeister
+30> noun[proper=+,name=+,sg3=+,invar=+, person_type:!,lastname=+] @= 
+	(noun[firstname,gen:~,!person_type:!])+, 
+	noun#1[title:~,is_person:~],
+where (	lastname##1=1 ).
+
+// First names only
+//: Klaus Peter 
+31> noun[noun=+,name=+,proper=+,sg=+,marked_gen:!,gender:!,firstname=+] @= 
+	(symbol[cap, init]; noun[firstname])+, 
+	noun#1[firstname,!marked_gen:!,!gender:!],
+	where ( #0[nvagree]={#1} ).
+

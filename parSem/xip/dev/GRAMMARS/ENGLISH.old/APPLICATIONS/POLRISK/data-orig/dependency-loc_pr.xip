@@ -1,0 +1,182 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency_loc_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+/***************************** LES LIEUX *************************************\
+dependencyRules:
+
+/************ compléments à la grammaire ************\
+
+/LOCORG pour les mots inconnus dans certains contextes\
+//to return to Parchin (mot inconnu)
+if((PREPD(#2[last,noun, guess, maj, proper],#4[p_to])|PREPD(#2[last,noun, guess, maj, proper],#4[form:ffrom])) & (MOD(#3[mvt_to],#2)|RESULT(#3[mvt_to],#2)|RCP(#3[mvt_to],#2)) & ~LOCORG(#2) & ~LOCATION(#2) & ~PERSON(#2) & ~ORGANISATION(#2))
+	LOCATION(#2)
+
+//the site of Parchin
+if(MOD(#1[commonplace],#2[guess, proper]) & PREPD(#2,#3[form:fof]) & ~LOCORG(#2) & ~PERSON(#2) & ~ORGANISATION(#2) & ~LOCATION(#2))
+	LOCATION(#2)
+
+/************** établissement des relations COORDINATE[loc-pr] *******\
+
+//**** en utilisant les relations OBJ-N
+//verbes dont l'objet peut être le lieu de l'événement
+/to visit Iran\
+if (LOCORG(#1) | LOCATION(#1) & OBJ-N(#2[tr_loc],#1) & ~COORDINATE[loc-pr](#2, #1))	
+	COORDINATE[loc-pr=+](#2, #1)
+
+/to visit the site\
+if (OBJ-N(#2[tr_loc],#1[commonplace]) & ~COORDINATE[loc-pr](#2, #1))
+	COORDINATE[loc-pr=+](#2,#1)
+
+//noms dont l'objet normalisé peut être le lieu de l'événement
+//the visit of the site
+//utilise la relation OBJ-N du verbe fictif correspondant
+
+if (SREL(#1[tr_loc], #2[verb, fictivenode]) & OBJ-N(#2,#3[commonplace]) & ~COORDINATE[loc-pr](#1,#3))
+	COORDINATE[loc-pr=+](#1,#3)
+
+//**** en utilisant les relations LOC
+/on reprend parmi les relations LOC celles qui rattachent un nom à un verbe \
+if (LOC[sentence:~](#1,#2[noplace:~]) & ~COORDINATE[loc-pr](#1,#2))	
+	COORDINATE[loc-pr=+](#1,#2).
+
+
+/his meetings with officials in Brussels\
+if(MOD[post](#1,#2[verb:~]) & LOC[post](#2,#3) & ~COORDINATE[loc-pr](#1,#3))
+	COORDINATE[loc-pr=+](#1,#3)
+
+
+//**** en utilisant les autres relations (notamment MOD)
+
+//verbes et noms dont le complément 'to/from' peut être le lieu de l'événement
+/to send something to the site\
+if ((PREPD(#2[commonplace],#4[p_to]) | PREPD(#2[commonplace],#4[form:ffrom])) & (MOD(#3[mvt_to],#2)|RESULT(#3[mvt_to],#2)|RCP(#3[mvt_to],#2)) & ~COORDINATE[loc-pr](#2, #1))
+	COORDINATE[loc-pr=+](#3,#2).
+
+/to send something to Iran\
+if ((PREPD(#2,#4[p_to]) | PREPD(#2,#4[form:ffrom])) & (LOCATION(#2)|LOCORG(#2)) & (MOD(#3[mvt_to],#2)|RESULT(#3[mvt_to],#2)|RCP(#3[mvt_to],#2)) & ~COORDINATE[loc-pr](#2, #1))
+	COORDINATE[loc-pr=+](#3,#2).
+
+
+//verbes et noms dont le complément 'on' peut être[loc-pr=+] le lieu de l'événement
+// an attack on Iran
+if(PREPD(#2,#3[p_on]) & MOD(#1[loc_on],#2) & (LOCORG(#2)|LOCATION(#2)) & ~COORDINATE[loc-pr](#2, #1))
+	COORDINATE[loc-pr=+](#1,#2).
+//an attack on the site
+if(PREPD(#2,#3[p_on]) & MOD(#1[loc_on],#2[commonplace]) & ~COORDINATE[loc-pr](#2, #1))
+	COORDINATE[loc-pr=+](#1,#2).
+
+
+// la relation MOD est interprétée comme une relation COORDINATE[loc-pr] lorsque le modifieur est un nom de lieu
+//at the site
+// l'exclusion des noms qui ont un objet normalisé permet d'éviter de reconnaître comme lieu 'construction' dans 'the construction of the house'
+if (PREPD(#2[commonplace, commoncountry:~],#4[prepnoloc:~]) & (MOD(#3,#2)) & ~COORDINATE[Nobj](#2,?) & ~COORDINATE[loc-pr](#3,#2))
+	COORDINATE[loc-pr=+](#3,#2)
+	
+
+//la relation MOD pour les entités nommées (LOCORG et LOCATION) précédés de certaines prépositions
+if (PREPD(#1,#3[preploc]) & (LOCORG(#1)|LOCATION(#1)) & ^MOD(#2,#1) & ~COORDINATE[loc-pr](#2,#1))
+	COORDINATE[loc-pr=+](#2,#1).
+
+//la relation MOD pour les noms qui peuvent être des lieux selon les préposition 
+if (PREPD(#2[commonplace, commoncountry],#4[preploc]) & (MOD(#3,#2)) & ~COORDINATE[Nobj](#2,?) & ~COORDINATE[loc-pr](#3,#2))
+	COORDINATE[loc-pr=+](#3,#2)
+
+//la relation MOD entre plusieurs noms
+if (MOD(#1,#2[unit-loc]) & MOD(#2,#3[commonplace]) & PREPD(#3, ?[form:fof]))
+	COORDINATE[loc-pr=+](#1,#3)
+
+//**** en utilisant les dépendances COORDINATE[loc-pr] déjà établies
+
+//the seals at the Isfahan facility should be removed by 8 August.
+// on rattache le complément de lieu de seals au verbe
+if (OBJ-N(#1[tr_loc],#2) & ~CORE-NOUN(#2) & COORDINATE[loc-pr](#2,#3) & ~COORDINATE[loc-pr](#1,#3))
+	COORDINATE[loc-pr=+](#1,#3)
+
+
+/at the Parchin base near Tehran : deux compléments de lieu
+il faudra raffiner pour n'avoir qu'un complément 'the town of Darkhuin'
++ la règle ne fonctionne pas pour le moment pour 'in the town of Darkhuin in the southwestern Khuzestan province' car il n'y a pas de dépendance entre Darkhuin et province
+\
+if (PREPD(#2,?) & (LOCORG(#2)|LOCATION(#2)) & MOD(#3,#2) & COORDINATE[loc-pr](#4,#3) & ~COORDINATE[loc-pr](#4,#2))
+	COORDINATE[loc-pr=+](#4,#2).
+
+
+/a plant near Bandar Abbas
+à tester - pour l'instant cette règle ne s'applique pas\
+if (PREPD(#2[maj, toutmaj:~, guess, proper],#5[preploc]) & MOD(#3,#2) & COORDINATE[loc-pr](#4,#3) & ~COORDINATE[loc-pr](#4,#2))
+	COORDINATE[loc-pr=+](#4,#2), LOCATION(#4).
+
+// cas où le lieu n'est lié par aucune dépendance dans la grammaire générale
+//dealing with the construction of a nuclear plant in Iran
+|#1,PP#2|
+	if(HEAD2(#3,#1) & COORDINATE[loc-pr](#4,#3) & HEAD2(#5,#2) & (LOCATION(#5)|LOCORG(#5)) & ~COORDINATE[loc-pr](#4,#5))
+	COORDINATE[loc-pr=+](#4,#5)
+
+//**** autres
+
+// on rattache un lieu en début de phrase au premier verbe non subordonné qui suit
+// à tester
+
+if(PREPD(#1[commonplace],#2[firstprep, preploc]) & MAIN(#3) & ~COORDINATE[loc-pr](#3,#1))
+	COORDINATE[loc-pr=+](#3,#1)
+if(PREPD(#1,#2[firstprep, preploc]) & (LOCORG(#1)|LOCATION(#1)) & MAIN(#3) & ~COORDINATE[loc-pr](#3,#1))
+	COORDINATE[loc-pr=+](#3,#1)
+
+
+|#3adv[lemme:once], #1PP|
+	if(HEAD2(#2,#1) & (LOCORG(#2)|LOCATION(#2)) & MOD(#4,#3) & ~COORDINATE[loc-pr](#4,#2))
+	COORDINATE[loc-pr=+](#4,#2)
+
+/***************** suppression de certaines dépendances COORDINATE[loc-pr]**********\
+
+/lorsqu'un lieu peut se rattacher à un nom ou à un verbe, privilégier le nom si c'est un événement\
+/ex. Mohamed ElBaradei says uranium enrichment in Iran could lead to nuclear weapons\
+if (^COORDINATE[loc-pr](#1[verb],#2) & COORDINATE[loc-pr](#3[noun],#2) & CORE-NOUN(#3))
+	~
+/lorsqu'un lieu peut se rattacher à deux noms, privilégier celui qui est un événement\
+if (^COORDINATE[loc-pr](#1[noun],#2) & COORDINATE[loc-pr](#3[noun],#2) & CORE-NOUN(#3) & ~CORE-NOUN(#1))
+	~
+
+//in the town of Darkuin : ne garder comme COORDINATE[loc-pr] que Darkuin
+if (^COORDINATE[loc-pr](#1,#2[commonplace, commoncity]) & COORDINATE[loc-pr](#1,#3) & LOCORG[city](#3))
+	~
+
+
+/supprimer la relation COORDINATE[loc-pr] si nécessaire\
+	if(^COORDINATE[loc-pr](#1,#2[noplace]))
+	~ 
+
+//on supprime toutes les relations COORDINATE[loc-pr] qui ne concernent pas un événement 
+if (^COORDINATE[loc-pr](#1,#2) & ~CORE-NOUN(#1) & ~CORE-VERB(#1))
+	~ 
+
+
+/*************** mise en forme ******************\
+/remplacer where par son antécédent\
+if (^COORDINATE[loc-pr](#1,#2) & ANTECEDENT(#3,#2) & (LOCATION(#3)|LOCORG(#3)|ORGANISATION(#3)))
+	COORDINATE[loc-pr=+](#1,#3)
+
+if (^COORDINATE[loc-pr](#1,#2) & ANTECEDENT(#3[commonplace],#2))
+	COORDINATE[loc-pr=+](#1,#3)
+
+//s'il n'y a pas d'antécédent convenable, supprimer la relation
+if (^COORDINATE[loc-pr](#1,#2[form:fwhere]))
+	~
+
+// établissement de la dépendance COORDINATE[loc-pr2] dans le cas où un événement a deux lieux (to go from Russia to Iran)
+if (COORDINATE[loc-pr](#1,#2) & COORDINATE[loc-pr](#1,#3) & ~COORDINATE[loc-pr, loc-pr2](#1,#2,#3) & ~COORDINATE[loc-pr, loc-pr2](#1,#3,#2))
+	COORDINATE[loc-pr=+, loc-pr2=+](#1,#2,#3)
+
+

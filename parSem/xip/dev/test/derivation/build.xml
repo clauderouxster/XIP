@@ -1,0 +1,160 @@
+<project name="" default="test" basedir=".">
+    
+    <property name="env" environment="env" value="env"/>
+    <property name="cc.debug"		value="false" />
+    <property name="include.dir"	location="../../include" />
+    <property name="build.dir"		location="${basedir}/build" />
+    <mkdir dir="${build.dir}" />
+    
+    <target name="test" depends="testShared, testStatic"> </target>
+    
+    <target name="testShared" depends="shared, copyDll">
+        <exec os="SunOS" executable="${build.dir}/derivationD" failonerror="true" >
+            <env key="LD_LIBRARY_PATH" path="${lib.dir}/sharedLib:/usr/lib:/opt/gnu/lib"/>
+        </exec>
+        <exec os="Linux" executable="${build.dir}/derivationD" failonerror="true" >
+            <env key="LD_LIBRARY_PATH" path="${lib.dir}/sharedLib"/>
+        </exec>
+        <!-- copy the dll -->
+        <exec os="Windows 2000" executable="${build.dir}/derivationD" failonerror="true" >
+        </exec>
+        <exec os="Windows XP" executable="${build.dir}/derivationD" failonerror="true" >
+        </exec>
+    </target>
+    
+    <target name="copyDll" depends="" description="" if="windows">
+        <copy file="${lib.dir}/sharedLib/${name}.dll" todir="."/>
+    </target>
+    
+    <target name="testStatic" depends="static" description=" ">
+        <exec executable="${build.dir}/derivationS" failonerror="true" >
+        </exec>
+    </target>
+    
+    <target name="compile" depends="static, shared" description="compile And Link (shared and static)" > </target>
+    
+    <!-- compile and link(shared lib)  code -->
+    <target name="shared" depends="setCommonProperties" >
+        <delete file="build/derivation.o"/>
+        <delete file="build/derivationD"/>
+        <delete file="build/derivationD.exe"/>
+        <delete file="build/derivation.obj"/>
+        <cc name="${compilerCplus.name}" optimize = "extreme" objdir="${build.dir}" subsystem="console" exceptions="true" 
+     multithreaded="true" outtype="executable" runtime="dynamic" outfile="${build.dir}/derivationD" >
+            <compiler name = "${compilerCplus.name}" debug="false">
+                <fileset dir="." includes="derivation.cxx" />
+                <includepath> 
+                    <pathelement location="${include.dir}"/>
+                </includepath>
+                <defineset define="${define.common}"/>
+            </compiler>
+            <linker name= "${compilerCplus.name}" debug="false">
+                <syslibset libs="${system.libCplus.names}"  />
+                <libset dir="${lib.dir}/sharedLib" libs="xip" type="shared"/> 
+            </linker>
+        </cc>
+    </target>
+    
+    <!-- compile and link(static lib)  code -->
+    <target name="static" depends="setCommonProperties" >
+        <delete file="build/derivation.o"/>
+        <delete file="build/derivationS"/>
+        <delete file="build/derivationS.exe"/>
+        <delete file="build/derivation.obj"/>
+        <cc name="${compilerCplus.name}" optimize = "extreme" objdir="${build.dir}" subsystem="console" exceptions="true" 
+     multithreaded="true" outtype="executable" runtime="dynamic" outfile="${build.dir}/derivationS" >
+            <compiler name = "${compilerCplus.name}" debug="false">
+                <fileset dir="." includes="derivation.cxx" />
+                <includepath> 
+                    <pathelement location="${include.dir}"/>
+                </includepath>
+                <defineset define="${define.common}"/>
+            </compiler>
+            <linker name= "${compilerCplus.name}" debug="${cc.debug}">
+                <syslibset libs="${system.libCplus.names}" if="linux" />
+                <syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+                <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+                <libset dir="${lib.dir}/staticLib" libs="xip" type="static"/> 
+            </linker>
+        </cc>
+    </target>
+    
+    <target name="setCommonProperties" depends="platformSetting" >
+        <property name="lib.dir"		location="${basedir}/../../lib/${platform}" />
+    </target>
+    
+    <target name="platformSetting" depends="setWin32Properties, setSolarisProperties, setLinuxProperties, setMacProperties" description="platform setting" />
+    
+    <target name="setWin32Properties" depends="platformIdentification" if="windows" description="define properties for the platform : win32" >
+        <property name="platform" value="windows" />
+        <property name="obj.suffixe" value="obj" />
+        <property name="compilerCplus.name" value="msvc" />
+        <property name="system.libCplus.names"   value="c" />
+        <property name="define.common"          value="XIPDLL_EXPORT, XIPSTLAPI, XIPSTLUSE, WIN32" />
+    </target>
+    
+    <target name="setSolarisProperties" depends="platformIdentification" if="solaris" description="define properties for the platform : solaris" >
+        <property name="platform" value="solaris" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names"   value="m,pthread,z"/>
+        <property name="define.common"          value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="setLinuxProperties" depends="platformIdentification" if="linux" description="define properties for the platform : linux" >
+        <property name="platform" value="linux64" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names"   value="m,pthread,z" />
+        <property name="define.common"          value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="setMacProperties" depends="platformIdentification" if="mac" description="define properties for the platform : mac" >
+        <echo message="set mac properties" />
+        <property name="platform" value="mac" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names"   value="m,pthread,z"/>
+        <property name="define.common"          value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="platformIdentification" depends="taskExt" 
+            description="platform identification: set the property solaris, windows or linux to true when one of this platform has been identified">
+        <condition property="solaris"> <os name="SunOS" arch="sparc"/> </condition>
+	<condition property="windows">
+            <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows Server 2008 R2" arch="amd64"/>  <!-- used by chamonix: windows 64 bits -->
+                <os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="windows64"> <!-- flag used in the fst -->
+            <os name="Windows Server 2008 R2" arch="amd64"/>  <!-- used by chamonix: windows 64 bits -->
+        </condition>
+
+        <condition property="linux"> <os name="Linux" arch="i386"/> </condition>
+        <condition property="mac"> <os name="Mac OS X" /> </condition>
+    </target>
+    
+    <target name="taskExt" depends="" description="add jar for specific ant task" >
+        <!-- download cpptasks.jar from http://ant-contrib.sourceforge.net/ -->
+        <property name="common.dir"		location="${basedir}/../../../../common" />
+        <taskdef resource="cpptasks.tasks">
+            <classpath>
+                <pathelement location="${common.dir}/cpptasks.jar"/>
+            </classpath>
+        </taskdef>
+        <typedef resource="cpptasks.types">
+            <classpath>
+                <pathelement location="${common.dir}/cpptasks.jar"/>
+            </classpath>
+        </typedef>
+    </target>
+    
+    <target name="clean"  >
+        <delete dir="build"/>
+    </target>
+    
+</project>
+

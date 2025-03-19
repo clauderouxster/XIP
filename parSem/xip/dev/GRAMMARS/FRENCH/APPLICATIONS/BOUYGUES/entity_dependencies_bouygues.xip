@@ -1,0 +1,985 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP grammar
+//!   filename   : entity_dependencies.xip
+//!   Date       : 04/08/2003
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+DependencyRules:
+
+// >>>>>>>>>>>>>EXTRACTIONS 
+
+
+|noun#1[position]|
+        ROLE[entite=+](#1)
+
+|?#1[noun,prof]|
+        ROLE[entite=+](#1)
+
+|?#1[noun,title,prof:~]|
+        if(~TITLE(#1))
+        TITLE[entite=+](#1)
+ 
+|?#1[noun,titlepost,prof:~]|
+        if(~TITLE(#1))
+        TITLE[entite=+](#1)
+
+|NOUN#1{?*,?#2,?*} |
+        if(TITLE(#1) & ^TITLE(#2))
+        ~
+
+ |NOUN#1[position]{?*,noun{?*,noun#2}}} |
+        if(TITLE(#1) & ^TITLE(#2))
+        ~
+
+|NOUN#1{?*,?#2,?*} |
+        if(ROLE(#1) & ^ROLE(#2))
+        ~
+
+ |NOUN#1[position]{?*,noun{?*,noun#2}}} |
+        if(ROLE(#1) & ^ROLE(#2))
+        ~
+
+
+|DIG#1[zipcode]|
+        ZIPCODE[entite=+](#1)
+
+|NOUN#1[zipcode]|
+        ZIPCODE[entite=+](#1)
+
+|NOUN#1[place,ambig:~,org:~,direction:~]|
+        LOCATION[entite=+](#1)
+
+|NOUN#1[place,ambig:~,org,country:~,city:~,usastate:~,contin:~,!suborg:!]|
+        LOCORG[entite=+](#1)
+
+ | NOUN#2[org,place:~,alsoloc:~,!suborg:!]| 
+        ORGANISATION[entite=+](#2)
+
+ | NOUN#2[org,alsoloc,country:~,city:~,usastate:~,contin:~,!suborg:!]|  
+     if(~LOCORG(#2))
+        LOCORG[entite=+](#2)
+
+ | NOUN#2[bus,ambig:~,let:~,place:~,!suborg:!]| 
+        ORGANISATION[entite=+](#2)
+
+
+if((_mainorg:1) & (^LOCORG[suborg](#1)|^ORGANISATION[suborg](#1)))
+        ORGUNIT(#1)
+
+
+Script:
+
+if((_mainorg:0) & (ORGANISATION(#1) | LOCORG(#1)))
+        {_mainorg=1;}
+        
+
+DependencyRules:
+
+
+
+ | NOUN#2[person,ambig:~]| 
+        if (~PERSON(#2))
+        PERSON[entite=+](#2)
+
+ | NOUN#2[proper,celeb,toutmaj:~,ambig:~,maj]| 
+        if (~PERSON(#2))
+        PERSON[entite=+](#2)
+
+ | NOUN#2[proper,celeb,fullname,ambig:~,maj]| 
+        if (~PERSON(#2))
+        PERSON[entite=+](#2)
+
+ | NOUN#2{NADJ[country],NOUN[title],NOUN#3} |
+        if (~PERSON(#3))
+        PERSON[entite=+](#3)
+
+ |NOUN#2[city,ambig:~,org,!cityaddress:!]|    
+        LOCORG[city=+,entite=+](#2)
+
+ |NOUN#2[country,ambig:~,org]|
+        LOCORG[country=+,entite=+](#2)
+  
+ |NOUN#2[address,mwe]|
+        LOCATION[address=+,entite=+](#2)
+
+ |NOUN#2[direction,mwe]|
+        STREET[entite=+](#2)
+
+|NOUN#1[usastate];NOUN#1[state]|
+        PROVINCE[entite=+](#1)
+
+  |NOUN#2[place,contin,ambig:~,abr:~,org]|
+        LOCORG[contin=+,entite=+](#2)
+
+  |NOUN#2[place,country:~,city:~,contin:~,address:~,ambig:~,abr:~,org:~,direction:~]|
+        LOCATION[entite=+](#2)
+
+ |NOUN#2[place,country:~,city:~,contin:~,address:~,ambig:~,abr:~,org,!suborg:!]|
+        if(~LOCORG(#2))
+        LOCORG(#2)
+
+| NOUN#2[bus,place,!suborg:!]| 
+        LOCORG[entite=+](#2) 
+ 
+ |NOUN#1{?*,NOUN#2}|
+        if(^LOCATION(#2) & LOCATION(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(^LOCORG(#2) & LOCORG(#1))
+        ~
+
+ |DIG#2[date,mwe]|
+          TEMPEXPR[date=+,entite=+](#2)
+
+ |ADV#1[tempadv] |
+        TEMPEXPR[entite=+](#1) 
+
+ |ADV#1[tempexpr] |
+        TEMPEXPR[entite=+](#1) 
+
+ |NOUN#1[time,date:~] |
+        TEMPEXPR[entite=+](#1) 
+
+ |NOUN#2[date,proper:~]|
+        TEMPEXPR[date=+,entite=+](#2)
+
+  |DIG#2[date]|
+        TEMPEXPR[date=+,entite=+](#2)
+
+ |NOUN#1[phone,mobile:~,fax:~] |
+        if(~PHONE(#1))
+        PHONE[entite=+](#1)
+
+ |dig#1[phone,mobile:~,fax:~] |
+        if(~PHONE(#1))
+        PHONE[entite=+](#1)
+
+  |NOUN#1[phone,mobile] |
+        if(~MOBILE(#1))
+        MOBILE[entite=+](#1)
+
+ |dig#1[phone,mobile] |
+        if(~PHONE(#1))
+        MOBILE[entite=+](#1)
+
+
+ |NOUN#1[fax];dig#1[fax] |
+        FAX[entite=+](#1)
+
+
+ |NOUN#1[url]|
+        URL[entite=+](#1)
+
+ |NOUN#1[email]|
+        EMAIL[entite=+](#1)
+
+|NOUN#1[hour]|
+        HOUR[entite=+](#1)
+
+|NOUN#1[event]|
+        EVENT[entite=+](#1)
+
+|NOUN#1[law]|
+        LAW[entite=+](#1)
+ 
+ |PP#1[tempexpr]{PREP,DIG#2[year:+]}|
+        TEMPEXPR[date:+,entite=+](#2)
+
+
+ |NUM#1[mwe,card,money:~]|
+        COMPLEXNUM[entite=+](#1)
+
+// just a money dig
+// pb with multiple extraction
+
+ |DIG#2[money];NOUN#2[money];NUM#2[money]|
+        MONEY[entite=+](#2)
+
+// percentages 
+
+  |NUM#1{DIG,NOUN[percent:+]}|
+        PERCENT[entite=+](#1)
+
+//2% to 3%
+  |DIG#1{DIG[percent:+]}|
+        PERCENT[entite=+](#1)
+
+  |DIG#1[percent:+]|
+        PERCENT[entite=+](#1)
+
+  |DIG#1{?*,DIG#2[percent:+]}|
+        if (^PERCENT(#2) & PERCENT(#1))
+        ~
+// units like 346 km/h
+
+ |NOUN#1[mwe,unit]|
+        UNIT[entite=+](#1)
+
+
+//SUPPRESS FIRSTNAME ALONE IN BUSI
+//|?[det:~], NOUN#1[firstname,hmm_verb:~,hmm_vbi:~,hmm_vbpap:~,hmm_vbpast:~,hmm_vbprog:~,
+//         hmm_vpap:~,hmm_vpast:~,hmm_noun:~,hmm_aux:~,hmm_adj:~,hmm_nadj:~,misc:~,place:~,ambig:~,toutmaj:~]|
+//        if(ORG##1:0)
+//        PERSON[entite=+](#1)
+//
+//
+//| NOUN#1[firstname,hmm_verb:~,hmm_vbi:~,hmm_vbpap:~,hmm_vbpast:~,hmm_vbprog:~,
+//         hmm_vpap:~,hmm_vpast:~,hmm_noun:~,hmm_aux:~,hmm_adj:~,hmm_nadj:~,misc:~,place:~,ambig:~,toutmaj:~]|
+//        if(ORG##1:0)
+//        PERSON[entite=+](#1)
+
+
+|NOUN#1{NOUN#2,PUNCT[form:fhyph],NOUN#3}|
+        if (LOCATION(#2) & LOCORG(#3))
+        LOCORG[entite=+](#1)
+
+|NOUN#1{NOUN#2,PUNCT[form:fhyph],NOUN#3}|
+        if (LOCATION(#2) & LOCATION(#3))
+        LOCATION[entite=+](#1)
+
+|NOUN#1{NOUN#2,PUNCT[form:fhyph],NOUN#3}|
+        if (LOCORG(#2) & LOCORG(#3))
+        LOCORG[entite=+](#1)
+
+
+// FOR EVALUATION PURPOSES 
+// the name is DATE ;
+
+if(^TEMPEXPR[date](#1)) 
+        DATE[entite=+](#1)
+
+if(^LOCORG[country](#1))
+        COUNTRY[entite=+](#1)
+
+if(^LOCORG[city,!cityaddress:!](#1))
+        CITY[entite=+](#1)
+
+if(^LOCORG[contin](#1))
+        CONTIN[entite=+](#1)
+
+
+Script:
+
+// AFTER MARKING AND BEFORE DELETIONS
+// Propagation rules :
+
+// >>>>>>>>>>>>>>MARQUAGE DES ELEMENTS A PROPAGER 
+|NOUN#1[person]{?*,NOUN#2[proper,particlename:~,orgend:~,orghead:~,place:~,last,bus:~,org:~]}|
+        { PERS##2=1;}
+
+|NOUN#1[person]{NOUN#2[firstname:~],NOUN#3}|
+          { PERS##1=1;}
+
+|NOUN#1[person]{?*,NOUN#2[firstname],NOUN#3[celeb:~,last,proper]}|
+       { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[title],?*,NOUN#3[maj,title:~,initial:~,let:~,orgend:~,orghead:~,place:~]}|
+        { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[firstname],NOUN#3[maj,wordpart:~,proper,initial:~,let:~,orgend:~,orghead:~,place:~]}|
+         { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[title],NOUN#3[person]}|
+        { PERS##3=1;}
+
+|NP#1{?*,NOUN#1[prof],NOUN#2[person]{?*,NOUN#3[last,proper]}}|
+                { PERS##3=1;}
+
+|NOUN#1[org]{NOUN#2[orgend:~,orghead:~,orgmod:~,place:~,proper,adj:~,guess],?*,NOUN[orgend]}|
+        { ORG##2=1;}
+
+|NOUN#1[org]{NOUN#2[place:~,proper,orgend:~,orghead:~,orgmod:~,adj:~,guess],NOUN#3[orgMod],NOUN[orgend]}|
+        { ORG##2=1;}
+
+|NOUN#1[org:+,propag:+]|
+        {ORG##1=1;}
+
+//Sinon : 
+|NOUN#1[org]{NOUN#2[place:~],NOUN#3[place:~],NOUN*,NOUN[orgend]}|
+        { ORGINTER##2=1; ORGINTER##3=1 ;} // pour propager sur NP 
+
+
+
+|NOUN#1{NOUN#2[guess:+,proper,adj:~],NOUN#3,NOUN#4[orgend]}|
+        {ORG##2=1;}
+
+|NOUN#1{NOUN#2[place:~,proper,orgend:~,orghead:~,orgmod:~,adj:~,guess],NOUN#4[orgend]}|
+        { ORG##2=1;}
+
+|NOUN#1{NOUN#2[guess:+,proper,adj:~],NOUN#4[orgmod]}|
+       {ORG##2=1;}
+
+
+|NOUN#1{NOUN#2[guess:+,proper,adj:~],NOUN#4[orghead]}|
+       { ORG##2=1;}
+
+|NOUN#1[person,propag]| 
+        {PERS##1=1;}    	
+
+|NOUN#1[org,propag]| 
+        {ORG##1=1;}    	
+
+|NOUN#1[place,propag,org:~]| 
+        {LOC##1=1;}    	
+
+|NOUN#1[place,propag,org]| 
+        {LOCORG##1=1;}  
+
+|NOUN#1[proper,place,mwe,org:~]{?*,PREP,NOUN#2[propag]}|
+        {LOC##2=1;}
+
+|NOUN#1[proper,place,mwe,org]{?*,PREP,NOUN#2[propag]}|
+        {LOCORG##2=1;}
+
+|NOUN#1{NOUN#2[guess:+,period:~],NOUN#3[eventmod:+]}|
+        {EVENT##2=1;}
+
+// Cas Phillip Morris Corp: Les elements de "Phillip Morris"
+// sont marques comme PERS, il faut les effacer et marquer 
+// comme Org . 
+
+|NOUN#1[org]{NOUN#2[person]{NOUN#3[firstname],NOUN#4[proper]}}|
+        {ORG##4=1 ; PERS##4=0 ;  PERS##3=0 ;  }
+          
+// >>>>>>>>>>>>>>>>>> PROPAGATION
+
+DependencyRules: 
+
+|NOUN#1[maj]| if(PERS##1:1 & ~PERSON(#1))
+        PERSON[entite=+](#1)
+
+|NOUN#1[maj] | if ((ORG##1:1) & ~ORGANISATION(#1))
+        ORGANISATION[entite=+](#1)
+
+ |NOUN#1[maj] | if ((LOC##1:1) & ~LOCATION(#1))
+        LOCATION[entite=+](#1)
+
+|NOUN#1[maj]| if(EVENT##1:1 & ~EVENT(#1))
+        EVENT[entite=+](#1)
+
+|NOUN#1[maj]| if(LOCORG##1:1 & ~EVENT(#1))
+        LOCORG[entite=+](#1)
+
+
+// MARQUAGE AU NIVEAU DES CHUNKS 
+
+// Si on a marque Video[ORGINTER]  Display[ORGINTER] Corp
+// On veut que Video Display soit retrouve comme org,
+// on ne peut le faire que si c'est dans un NP
+
+|NP#1{NOUN#2,NOUN#3[last]}|
+        if((ORGINTER##2:1) & (ORGINTER##3:1))
+        ORGANISATION[entite=+](#1)
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// >>>>>>>>>>>>>>>>>>DELETIONS
+// We delete entities included in larger entities
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+|?#1{?*,?#2,?*} |
+        if ($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+|?#1{?*,?{?*,?#2,?*},?*} |
+        if ($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+|NOUN#1[address]{?*,NOUN{NOUN#3}}|
+        if(^PERSON(#3))
+        ~
+
+|NOUN#1[address]{?*,NOUN{?*,NOUN#3}}|
+        if(^PERSON(#3))
+        ~
+|NUM#1[money]{?*,NOUN{NOUN#2}}|
+        if(^LOCORG(#2))
+        ~
+
+|NOUN#1[money]{?*,NOUN{NOUN#2}}|
+        if(^LOCORG(#2))
+        ~
+|NOUN#1[address]{NOUN{NOUN#3}}|
+        if(^ORGANISATION(#3))
+        ~
+
+|NOUN#1[address]{?*,NOUN{NOUN#2}}|
+                if(^ORGANISATION(#2))
+        ~
+
+|NOUN#1[address]{?*,NOUN#2{?*,NOUN#3}}|
+        if(^LOCORG(#3))
+        ~
+
+|NOUN#1{NOUN#2{?*,NOUN#3}}|
+        if(LOCATION(#1) & ^LOCORG(#3))
+        ~
+
+|NOUN#1{NOUN{?*,NOUN#2}}|
+        if (LOCORG(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{?*,NOUN{?*,NOUN#2}}|
+        if(^ORGANISATION(#2) & PERSON(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2{NOUN#3}}|
+        if(ORGANISATION(#1) & ^ORGANISATION(#3))
+        ~
+
+|NOUN#1{NOUN{?*,NOUN#2}}|
+        if(ORGANISATION(#1) & ^ORGANISATION(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(LOCATION(#1) & ^LOCATION(#3))
+        ~
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(PERSON(#1) & ^ORGANISATION(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(LOCORG(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(ORGANISATION(#1) & ^LOCATION(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(LOCORG(#1) & ^LOCATION(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(DATE(#1) & ^TEMPEXPR(#2))
+        ~
+
+|NOUN#1|
+        if(LOCORG(#1) & ^LOCORG(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2}| 
+        if(DATE(#1) & ^PERSON(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2}| 
+        if(DATE(#1) & ^DATE(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2}| 
+        if(ORGANISATION(#1) & ^ORGANISATION(#2))
+        ~
+
+|NOUN#1{?*,DIG#2} |
+        if(DATE(#1) & ^DATE(#2))
+        ~
+|DIG#1{?*,DIG#2} |
+        if(DATE(#1) & ^DATE(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(LOCATION(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{NOUN#1{NOUN#3}}| 
+        if (LOCATION(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2{NOUN#3}} |
+        if(LOCORG(#1) & ^LOCORG(#3))
+        ~
+
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+         if(^ORGANISATION(#3) & LOCORG(#1))
+        ~
+
+|NOUN#1{NOUN#1{?*,NOUN#3}}|
+         if(ORGANISATION(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{NOUN#2{?*,NOUN#3{?*,NOUN#4}}}|
+        if(ORGANISATION(#1) & ^ORGANISATION(#4))
+        ~
+
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if (ORGANISATION(#1) & ^LOCORG(#3))
+        ~ 
+ 
+|NOUN#1{NOUN#2{?*,NOUN#3}}|
+        if (LOCORG(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{NOUN#2}| 
+        if (^ORGANISATION(#2) & LOCATION(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if (PERSON(#1) & ^LOCATION(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if (PERSON(#1) & ^LOCORG(#3))
+        ~
+
+|NOUN#1{NOUN#2}| 
+       if (^LOCATION(#2) & LOCORG(#1))
+        ~
+
+|NOUN#1{NOUN#2}| 
+       if (^LOCATION(#2) & PERSON(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if (^PERSON(#2) & LOCATION(#1))
+        ~
+|NOUN#1{?*,NOUN#2}|
+        if (^PERSON(#2) & LOCORG(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if (LOCATION(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if (LOCORG(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if (ORGANISATION(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3{?*,NOUN#4}}}|
+        if (LOCORG(#1) & ^ORGANISATION(#4))
+        ~
+
+
+|NOUN#1{?+,NOUN#2}|
+        if (^ORGANISATION(#2) & LOCATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^ORGANISATION(#2) & LOCORG(#1))
+        ~
+
+|NOUN#1[date]{?+,NOUN#2[date]}|
+        if (TEMPEXPR(#1) & ^TEMPEXPR(#2))
+        ~
+
+|NUM#1{DIG#2,NUM#3}|
+        if (MONEY(#1) & ^MONEY(#2))
+        ~
+
+
+|NUM#1{NUM#2,NOUN#3}|
+        if (MONEY(#1) & ^COMPLEXNUM(#2))
+        ~
+
+|NUM#1{NOUN#2,?+}|
+        if (MONEY(#1) & ^LOCATION(#2))
+        ~
+
+|NUM#1{NOUN#2,?+}|
+        if (MONEY(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{?,NOUN{?,NOUN#2}}|
+        if(ORGANISATION(#1) & ^LOCATION(#2))
+        ~
+
+|NOUN#1{?,NOUN{?,NOUN#2}}|
+        if(ORGANISATION(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{NOUN#2}|
+        if(^ORGANISATION(#2) & LOCORG(#1))
+        ~
+
+|NOUN#1[org]{NOUN#2{NOUN#3,NOUN#4}}|
+       if (ORGANISATION(#1) & ^ORGANISATION(#4))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(LOCATION(#1) & ^LOCATION(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(LOCORG(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{NOUN#2[guess:+],NOUN#3[eventmod:+]}|
+  if(EVENT(#1) & ^EVENT(#2))
+        ~
+
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORGANISATION(#1) & ^LOCATION(#3))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORGANISATION(#1) & ^LOCORG(#3))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORGANISATION(#1) & ^ORGANISATION(#3))
+        ~
+
+|NOUN#1{NOUN#2}|
+     if(PERSON(#1) & ^PERSON(#2))
+        ~
+
+|NOUN#1{NOUN#2{?*,NOUN#3{?*,NOUN#4}}}|
+        if(PERSON(#1) & ^PERSON(#4))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORGANISATION(#1) & ^PERSON(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2,?*,NOUN#3[last]}|
+        if (^ORGANISATION(#2) & EVENT(#1))
+        ~
+
+|NOUN#1{DIG#2,?+}|
+        if (MONEY(#1) & ^TEMPEXPR(#2))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^ORGANISATION(#2) & PERSON(#1))
+        ~
+
+|NOUN#1|
+        if(^PERSON(#1) & PERSON(#1))
+        ~
+
+|PP#1{PREP,?,NOUN#2}|
+     if(TEMPEXPR(#1) & ^TEMPEXPR(#2))
+        ~
+|PP#1{PREP,DIG#2}|
+     if(TEMPEXPR(#1) & ^TEMPEXPR(#2))
+        ~
+
+|NOUN#1|
+     if (PERS##1:1 & ^LOCATION(#1))
+        ~ 
+
+|NOUN#1|
+     if (PERS##1:1 & ^LOCORG(#1))
+        ~ 
+
+|NOUN#1{ADV,NOUN#2}|
+      if(TEMPEXPR(#1) & ^TEMPEXPR(#2))
+        ~
+
+|NOUN#1{?+,NOUN#2,?+}|
+        if (^PERSON(#2) & LOCATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2,?+}|
+        if (^PERSON(#2) & LOCORG(#1))
+        ~
+
+| NOUN#1{NOUN#2,NOUN#3{?*,NOUN#4}} |
+        if(PERSON(#1) & ^PERSON(#4))
+        ~
+
+| NOUN#1{?*,NOUN#3{?*,NOUN#4}} |
+        if(PERSON(#1) & ^PERSON(#4))
+        ~
+
+
+|NOUN#1{NOUN#2[title],NOUN#3{?,NOUN#4}}|
+        if (^LOCATION(#4) & PERSON(#1))
+        ~
+
+|NOUN#1{NOUN#2[title],NOUN#3{?,NOUN#4}}|
+        if (^LOCORG(#4) & PERSON(#1))
+        ~
+
+|NOUN#1{NOUN#2[title],NOUN#3{?,NOUN#4}}|
+        if (^PERSON(#4) & PERSON(#1))
+        ~
+
+|NOUN#1{NOUN#2}|
+        if (^LOCATION(#2) & PERSON(#1[famlink]))
+        ~
+
+|NOUN#1{NOUN#2}|
+        if (^LOCORG(#2) & PERSON(#1[famlink]))
+        ~
+
+|NOUN#1{?+,NOUN#2},?*|
+        if (^PERSON(#2) & PERSON(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2,?+}|
+        if (^PERSON(#2) & PERSON(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^ORGANISATION(#2) & ORGANISATION(#1))
+        ~
+|NOUN#1{NOUN#2,?+}|
+        if (^ORGANISATION(#2) & ORGANISATION(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^LOCATION(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^LOCORG(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^PERSON(#2) & ORGANISATION(#1))
+        ~
+
+
+ |PP#1{?*,NP#2{?*,NOUN#3[tempexpr]}}|
+        if (^TEMPEXPR(#3) & TEMPEXPR(#1))
+        ~
+
+ |PP#1{?*,NP#2[tempexpr]}|
+        if (^TEMPEXPR(#2) & TEMPEXPR(#1))
+        ~
+
+ |PP#1{PREP,NOUN#2}|
+        if (^TEMPEXPR(#2) & TEMPEXPR(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & PERSON(#1))
+        ~
+ |NOUN#1|
+        if (^LOCATION(#1) & LOCATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & PERSON(#1))
+        ~
+ |NOUN#1[bus:~]|
+        if (^LOCORG(#1) & LOCATION(#1))
+        ~
+ |NOUN#1[bus]|
+        if (LOCORG(#1) & ^LOCATION(#1))
+        ~
+
+ |NOUN#1{?*,NOUN#2[unit]}|
+        if(^UNIT(#2) & UNIT(#1))
+        ~
+
+  |NOUN#1{NOUN#3[unit],NOUN#2[unit]}|
+        if (^UNIT(#2) & ^UNIT(#1))
+        ~
+
+  |NOUN#1{NOUN#2,?+}|
+        if(^LOCATION(#2) & QUOTED_ELEMENT(#1))
+        ~
+
+ |NOUN#1{NOUN#2,?+}|
+        if(^LOCORG(#2) & QUOTED_ELEMENT(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^PERSON(#2) & PERSON(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & PERSON(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & PERSON(#1))
+        ~
+
+ |NOUN#1{NOUN#2,?+}|
+        if (^LOCORG(#2) & PERSON(#1))
+        ~
+ 
+
+ |NOUN#1{?+,NOUN#2,?+}|
+        if (^QUOTED_ELEMENT(#2) & PERSON(#1))
+        ~
+
+
+ |NOUN#1{NOUN#2,?+}|
+        if (^LOCATION(#2) & EVENT(#1))
+        ~
+
+ |NOUN#1{NOUN#2,?+}|
+        if (^LOCORG(#2) & EVENT(#1))
+        ~
+
+
+ |NOUN#1{NOUN#2,?+}|
+        if (^LOCATION(#2) & LAW(#1))
+        ~
+
+ 
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & EVENT(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & EVENT(#1))
+        ~
+ 
+ |NOUN#1{?+,NOUN#2}|
+        if (^ORGANISATION(#2) & PERSON(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & LAW(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & LAW(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^LOCATION(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^LOCORG(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^PERSON(#2) & ORGANISATION(#1))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^PERSON(#2) & LOCATION(#1))
+         ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^PERSON(#2) & LOCORG(#1))
+         ~
+
+|NOUN#1{NOUN{NOUN{NOUN#2,?+}},?+}|
+        if(PERSON(#1) & ^ORGANISATION(#2))
+        ~
+
+|NOUN#1{NOUN{NOUN#2,?+},?+}|
+        if(PERSON(#1) & ^LOCATION(#2))
+        ~
+
+|NOUN#1{NOUN{NOUN#2,?+},?+}|
+        if(PERSON(#1) & ^LOCORG(#2))
+        ~
+
+|NOUN#1{?+,NOUN{NOUN#2,?+}}|
+        if(PERSON(#1) & ^PERSON(#2))
+        ~
+
+
+
+// ADDRESSES BUSICARDS
+if(PROVINCE(#1) & ^LOCORG(#1))
+        ~
+
+|?#1{?*,?#2,?*} |
+        if($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+
+|NOUN#1{?*,?#2,?*}|
+        if(PHONE(#1) & ^DATE(#2))
+        ~
+
+|NOUN#1{?*,?#2{?*,?#3}}| 
+        if(PHONE(#1) & ^DATE(#3))
+        ~
+
+//|NOUN#1{?*,?#2,?*}|
+ //       if(STREET(#1) & (^LOCATION(#2)|^PERSON(#2)|^ORGANISATION(#2)|^TITLE(#2)|^PROVINCE(#2)|^LOCORG(#2)|^CONTIN(#2)|^ROLE(#2)))
+     //   ~
+
+|NOUN#1{?*,?{?*,#3},?*}|
+        if(STREET(#1) & (^LOCATION(#3)|^PERSON(#3)|^ORGANISATION(#3)|^TITLE(#3)|^ROLE(#3)))
+        ~
+
+|NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^ZIPCODE(#2))
+        ~
+
+|NOUN#1{?*,?{?*,?#2}}}|
+       if(STREET(#1) & (^LOCATION(#2)|^PERSON(#2)|^ZIPCODE(#2)))
+        ~
+
+  |NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^CITY(#2))
+        ~
+
+|NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^STREET(#2))
+        ~
+
+|NOUN#1|
+     if(PROVINCE(#1) & ^LOCATION(#1))
+        ~
+
+|NOUN#1|
+     if(CITY(#1) & ^PERSON(#1))
+        ~
+
+ |NOUN#1{?*,?#2}|
+           if(CITY(#1) & ^PERSON(#2))
+           ~
+  
+ |NOUN#1{?*,?#2{?*,?#3}}|
+           if(CITY(#1) & ^TITLE(#3))
+           ~
+
+ |?#1{?*,?#2,?*} |
+        if(ZIPCODE(#1) & (^ORGANISATION(#2)|^ZIPCODE(#2)))
+        ~
+
+
+ |NOUN#1{?*,?#2,?*} |
+        if(ORGANISATION(#1) & ^CITY(#2))
+        ~
+
+
+  |NOUN#1{?*,?#2,?*}|
+        if(^COUNTRY(#2)  & ORGANISATION(#1))
+        ~
+
+ |NOUN#1{?*,?#2,?*}|
+        if(^ZIPCODE(#2)  & ORGANISATION(#1))
+        ~
+
+  |NOUN#1{?*,?#2,?*}|
+        if(^TITLE(#2)  & ROLE(#1))
+        ~
+  |NOUN#1{NOUN#2{NADJ#3,?*},?*} |
+        if(^ROLE(#3) & (LOCORG(#1) |ORGANISATION(#1) | ORGUNIT(#1)))
+        ~
+  
+
+
+Final :
+
+CleanAllLemmas;

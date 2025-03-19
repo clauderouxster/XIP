@@ -1,0 +1,2024 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : chunker.xip
+//!   Date       : 10/02/2003
+//!   Author     : P. Dunne - Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+IDrules:
+
+
+
+//========================== Adverbial Chunks ===============================
+
+// very quickly
+1> ADVP[notly=~] -> adv[degree], adv[notly:~,last].
+
+// very late
+1> ADVP[tempexpr:+,time:+] -> adv[degree], adv[time:+] .
+
+// CH 22th August
+// Grouping together HOW + OFTEN 
+// The result is given an ADV category with feature WH (this is dubious but so it stays coherent with WHEN, WHY etc. 
+2> ADVP[wh:+,form:foften] -> adv[form:fhow], adv[form:foften].
+
+// CH 24th August
+// Grouping together HOW + LONG
+// The result gives a WH adv.
+2> ADVP[wh:+, form:flong] -> adv[form:fhow], adv[form:flong] .
+
+// CH 5th September
+// Grouping together HOW+FAR
+// The result is a WH adv
+
+
+
+2> ADVP[wh:+,form:ffar] -> adv[form:fhow], adv[form:ffar] .
+
+
+// How rich, how nice etc. in interrogative sentences (how + adj or nadj)
+2> ADVP[wh:+,howadj:+] -> adv[form:fhow], nadj[adj] | ?*, punct[form:fquest] | .
+
+2> ADVP[wh:+,howadj:+] -> adv[form:fhow], adj[adj] | ?*, punct[form:fquest] | .
+
+
+
+// coordinated adverbs
+
+// plants grow highly and constituively
+// at the end of a sentence
+2> ADVP -> adv[notly:~], conj[coord,last:~], adv[notly:~] | ?*[verb:~], ?[sent] | .
+
+
+// between two verbal forms of the same verbal chain
+2> ADVP -> | verb[form:fbe];verb[form:fcan];verb[form:fwill];aux   | adv[notly:~], conj[coord], adv[notly:~] | verb | .
+
+2> ADVP -> | verb[form:fhave]   | adv[notly:~], conj[coord], adv[notly:~] | (verb[form:fbe,partpas:+]), verb[partpas:+] | .
+//;verb[form:fcan];verb[form:fwill];aux | adv[notly:~], conj[coord] | verb | .
+
+
+// ADVP of coordinated adverbs at the beginning of the sentence
+2> ADVP -> | ?*[verb:~] | adv, conj[coord,last:~,first:~], adv .
+
+
+// AS SOON AS POSSIBLE considered as an ADVP - When not followed by a noun where possible could be an adjective
+2> ADVP -> conj[lemme:as_soon_as], adj[lemme:possible] | ?[noun:~] | .
+
+
+
+//========================== Numeral chunks ===============================
+
+// Chnks for complex numeral expressions
+// e.g. approximately 25 people/km
+
+2> NUMP[dig=+] -> adv[startbis], dig | noun;?[meas] | .
+2> NUMP[dig=+] -> | prep;verb | adv, dig | noun;?[meas] | .
+
+2> NUMP[card=+] -> adv[startbis], num[card] | noun;?[meas] | .
+2> NUMP[card=+] -> | prep;verb | adv, num[card] | noun;?[meas] | .
+
+
+
+//========================== Verb Chunks ===============================
+
+
+// INFINITE VERB CHUNKS - IV 
+//==========================
+
+
+//The "infto" category from the morphological analyser is not used in the 
+//chunker due to tagging errors - many infinitive "to"s are tagged as preps
+
+
+
+//Rule 1
+//This rule covers basic infinitive verbs:  IV{(not) (adv) to (adv) give
+//Adverbs which precede the IV may modify a preceding finite verb and 
+//therefore may not be the first element in an IV chunks: 
+//NP{They} FV{worked}} IV{carefully to rescue} NP{him}
+//Also verb particles from preceding finite verbs are tagged as adverbs:
+//!NP{They} FV{did} NFV{not stay} IV{up+ADV to welcome} 
+//!The [p3:~] feature is required to avoid chunking mistagged plural nouns:
+// "I got IV{to places} 
+//!The [maj:~] feature is required to avoid chunking mistagged proper nouns:
+//NP{He} FV{played} NP{host} to FV{Bush} PP{in NP{Dec 1988}}
+
+2> IV ->  	prep[form:finfto],(adv+[first:~]),(adv[form:fnot,first:+]), (advp[first:~]), 
+                verb[past:~,partpas:~,prog:~,p3:~,maj:~,last:+].
+            
+   
+//Rule No. 2    
+//Passive infinitive forms 
+//(not) to BE (totally) forgotten 
+//(not) to HAVE (quickly) ACCOMPLISHED" 
+//(not) to HAVE BEEN (quickly) ACCOMPLISHED"  
+
+2> IV -> 	prep[form:finfto],(adv[form:fnot,first:+]),
+		(adv+[first:~]), (advp[first:~]), (verb[auxbh:+,first:~]),
+		(verb[partpas:+,first:~]),
+		verb[partpas:+,last:+].
+
+
+//Rule No. 3 
+//This rule captures "to have been" followed by an adjective:
+//IV{to have been} AP{able} IV{to resist}
+2> IV -> 	prep[form:finfto],(adv[form:fnot,first:+]),
+		(adv+[first:~]), (advp[first:~]), verb[form:fhave,first:~],
+		verb[partpas:+,last:+].
+
+
+
+//Rule No. 4
+//Basic infinitives followed by a present participle
+//Barrios was believed IV{(not) to BE (laboriously) cutting} steel when... 
+
+2> IV -> 	prep[form:finfto],verb[form:fbe,first:~],
+		(adv+), (advp), verb[prog:+,last:+]. 		 
+ 		 
+
+//Rule No. 5 		 
+//can't include this rule with above one as this leads to errors such as:
+//!!FV{objected}} IV{to making} NP{contributions}		 
+//Barrios was believed IV{(not) to HAVE BEEN (quickly) CUTTING} steel when.. 		 
+2> IV -> 	prep[form:finfto],verb[auxbh:+,first:~],
+		(adv+), (advp), verb[prog:+,last:+]. 		
+ 		 	 
+
+// He is going (To have to) import food. 
+2> IV -> prep[form:finfto], adv*, (advp), aux | verb | .
+
+//Rule No. 
+//A baseform verb that follows the conjunction "than" is an IV
+//"rather than IV{dump} them let us recycle the waste"
+2> IV -> |?[form:fthan]| verb[bf:+].
+
+
+
+//Rule No. 6
+//!!!CHANGE RULE /CHECK IF ANY BF FOLLOWING ANOTHER VERB FORM IS AN INF! AND PUT IN CONTEXT
+//This rule captures bare infinitives which immediately follow an IV chunk 
+//"It was used IV{to help} IV{absorb} the liquid"
+3> IV -> |?[verb:+,inf:+]|  verb[bf:+]. 
+
+
+
+
+//Rule No. 7
+//This rule captures bare infinitives which immediately follow a coord 
+//SC{BG{unless} NP{something} FV{is done}} soon IV{to curb} 
+//NP{the birth rate} AND rapidly IV{expand}}
+//IV{to reduce} NP{the deficit} OR IV{fund}} NP{another project}
+3> IV -> |?*[verb:~], iv, ?*[verb:~], ?[coord:+]|  (adv), (advp), verb[bf:+]. 
+
+
+//Rule No. 8
+//The preceding pronoun must be oblique case but not a relative pronoun
+//or a nominative pronoun such as "these"
+//"Let him IV{go}"  
+//BUT NOT "The aides who !IV{let} him go  
+//OR "These IV{have} been ...
+
+3> IV -> |?[obl:+,rel:~,nom:~]|  (adv), (advp), verb[bf:+] |?[verb:~]|. 
+
+
+
+
+//Rule No. 9
+//IVs chunks ending in a base form which follow finite auxiliary verbs in 
+//declarative and interrogative sentences
+//They may/must/can/could/would/should/ go/be/learn
+//SC{FV{Would}} NP{AP{nuclear} war} IV{occur}
+//"there" which is tagged as an adverb, is excluded from chunk to avoid: FV{There can be} no change
+5> IV -> 	| aux ; verb[form:fdo], ?*[verb:~, comma:~, conj:~] |
+		(adv+[form:~fthere]),(advp), (punct[form:foquotes]),(punct[form:fcquotes]),
+		(num[ord:+]), 
+		verb[p3:~, partpas:~, past:~, prog:~, last:+].
+
+
+// Rule XXXXX
+// CH, Jan. 2002
+// Have to after an auxiliary verb
+// e.g. They would have to face -- In this case HAVE to has to be an IV
+5> IV ->	| aux |
+		(adv+[form:~fthere]), (advp), (punct[form:foquotes]),(punct[form:fcquotes]),
+		(num[ord:+]), 
+		aux
+		| verb | .
+
+
+
+//Rule 10
+//Base infinitives which immediately follow an IV and the conjunction "and"
+//"to limit and reduce"
+5> IV -> 	|iv, conj[form:fand]| verb[p3:~, partpas:~, past:~, prog:~, last:+].
+
+
+// Bare infinitives 
+// e.g. I saw them come
+5> IV ->	| ?[verb,lemme:see], ?*[verb:~] | verb[bf:+,nfin:+] .
+
+
+// Rule XXXX
+// CH. 10th Sept 01
+// A base infinitive that immediately follow a finite verb that has the feature sc_toinf
+// i.e. verb that subcategorizes an infinitive with or without to
+4> IV -> | verb[sc_toinf] | verb[p3:~, partpas:~, past:~, prog:~, last:+].
+
+
+//============================FINITE VERB CHUNKS=========================
+
+
+//"He FV{has} NFV{been charged} by the police" 
+//"FV{has} he !!FV{been charged} by the police"
+
+		 
+//Non-finite Verb Chunks 
+//-----------------------
+
+
+//Auxiliary verbs are chunked as finite verbs and all non-finite verbs that immediately follow them
+//are chunked separately as non-finite verb chunks (NFV) to ensure consistent treatment in declarative and
+//interrogative sentences:  "He FV{has} {been charged}" and "FV{Has} he NFV{been charged}"
+
+
+//When Rule 11 is split into two (one for "be" and one for "have" then the system cannot 
+//choose between the two for abbreviated verb forms such as "He's tickled"
+//and so NFVs are isolated as FVs!!
+
+//Rule No. 11a
+//NFVs chunks ending in a past participle that follow finite form of verbs "be" or "have"
+//(certainly) (never) (been) (being) (more) (widely) represented
+//{SC{NP{He} FV{has}} NFV{not yet been being charged}}
+//FV{had}} NFV{`` negligently and improperly '' left}
+//NP{Officials} FV{have}} PP{in NP{the past AP{several} years}} NFV{routinely predicted} NP{1 million visitors}
+
+
+4> NFV -> 		|verb[form:fhave,prog:~], ?*[punct:~,verb:~,wh:~]| 
+			(quant),(adv+), (advp), (verb[partpas:+,form:fbe]), (verb[prog:+,form:fbe]),
+			(punct[form:foquotes]), (punct[form:fcquotes]), 
+			verb[partpas:+,last:+].
+
+//Rule No. 11b
+//That is a cute one Barbara got
+4> NFV -> 		|verb[form:fbe,partpas:~,prog:~]| 
+			(quant),(adv+), (advp), (verb[partpas:+,form:fbe]), (verb[prog:+,form:fbe]),
+			(punct[form:foquotes]), (punct[form:fcquotes]), 
+			verb[partpas:+,last:+].
+
+//Rule No. 12
+//This rule captures NFVs which end in a past particple that has been mistagged as an adj
+//NP{Senior party leaders} FV{have}} NFV{also criticized+ADJ} NP{Gorbachev}
+//SC{BG{who} FV{has}} NFV{reportedly visited+ADJ} NP{Tunis} .}
+// CH, 26th October. 
+4> NFV -> 		| verb[auxbh:+,prog:~]| (quant),(adv+), (advp), 
+			(verb[partpas:+,form:fbe]), (verb[prog:+,form:fbe]),
+			(punct[form:foquotes]),(punct[form:fcquotes]), 
+			adj[partpas:+,last:+, hmm_vpap].
+
+
+
+//Rule No. 13
+//NFVs chunks ending in a present participle that follow finite form of verbs "be" or "have"
+//"She IS/WAS (certainly) (NOT) going"	
+//"She HAS/HAD  (certainly) (not) BEEN SWIMMING for over six years now"	
+ 		   
+4> NFV[vprog:+] ->  	|verb[auxbh:+,prog:~]| (adv[form:fnot]), (advp),  (adv+[form:~finfto]), 
+		(punct[form:foquotes]),(punct[form:fcquotes]),
+		(verb[form:fbe,partpas:+]),
+ 		verb[prog:+,last:+].
+ 
+
+
+// Essai CH. To maintain the coherence between "he is sleeping" and "Is he sleeping?"
+
+//3> NFV ->  |pron[nom:+,personal:+]| (adv+), verb[prog:+,last:+].
+
+
+//Rule No. 14
+//NFVs chunks ending in a past participle that follow finite auxiliary verbs 
+//She will/may/can/could/would/should NFV{(certainly) (not) (be/have) (been) (being) charged}
+//{should also be steadily improved and perfected}
+
+/4> NFV -> 		|aux| 	(num[ord:+]), (punct[form:foquotes]),(punct[form:fcquotes]),
+			(adv+), (advp), (quant), verb[auxbh:+], (verb[form:fbe,partpas:+]), 
+			(verb[form:fbe,prog:+]), (conj[coord:+]), (verb[partpas:+,last:~]),  
+			verb[partpas:+,last:+].		\	
+
+//She will/may/can/could/would/should NFV{(certainly) (not) (be/have) (been) (being) charged}
+4> NFV -> 		|aux| 	(num[ord:+]), (punct[form:foquotes]),(punct[form:fcquotes]),
+			(adv+), (advp), (quant), verb[auxbh:+], (verb[form:fbe,partpas:+]), 
+			(verb[form:fbe,prog:+]), 
+			verb[partpas:+,last:+].	
+
+// Coordinated past participle 
+// {should also be steadily improved and perfected}
+4> NFV -> 		|aux| 	(num[ord:+]), (punct[form:foquotes]),(punct[form:fcquotes]),
+			(adv+), (advp), (quant), verb[auxbh:+], (verb[form:fbe,partpas:+]), 
+			(verb[form:fbe,prog:+]), conj[coord:+], verb[partpas:+,last:~],  
+			verb[partpas:+,last:+].	
+ 
+//Rule No. 15
+//NFVs chunks ending in a present participle that follow finite auxiliary verbs 
+//will/may/can/could/would/should NFV{(not) (certainly)  (FIRST)  BE coming}
+		  
+4> NFV ->  	      |aux| (num[ord:+]),(verb[form:fbe,inf:+]), 
+		      (punct[form:foquotes]),(punct[form:fcquotes]),
+		      (adv+), (advp), verb[prog:+,last:+].		  
+
+
+// CH - NFV chunk after a form of get
+// He got elected
+4> NFV ->		| verb[form:fget] | 		  
+			(punct[form:foquotes]),(punct[form:fcquotes]),
+			(adv+), (advp), 
+			(conj[coord:+]), (verb[partpas:+,last:~]),  
+			verb[partpas:+,last:+].			
+
+
+//Rule No. 16
+5> NFV -> 		|?[nfin:+], conj| 
+			(quant),(adv+), (advp), (verb[partpas:+,form:fbe]), (verb[prog:+,form:fbe]),
+			(punct[form:foquotes]), (punct[form:fcquotes]), 
+			verb[partpas:+,last:+].
+
+5> NFV ->		| verb[cop] |
+			verb[partpas:+,last:+] | ?[adj:~,noun:~] | .
+
+
+//PRESENT TENSE VERB CHUNKS		  	
+//-------------------------
+
+
+// Rule XXXXX 
+// CH, TEST
+// Coordination of finite simple verbs
+//4> FV -> (verb[pres:+]), (punct[comma]), (verb[pres:+]), (punct[comma]), verb[pres:+], conj[coord:+], verb[pres:+].
+
+//4> FV -> (verb[past:+]), (punct[comma]), (verb[past:+]), (punct[comma]), verb[past:+], conj[coord:+], verb[past:+].
+
+
+
+//Rule No. 17
+//Present tense verb forms that immediately follow a personal pronoun
+//141>GROUP{has made it FV{clear} it [pron,nom,obl,personal]FV{is} reluctant
+//593>GROUP{S, Gorbachev also made it FV{clear} that he
+//275>GROUP{Let IT[pron,nom,obl,personal] FV{go} !}   -"let go (of 
+//This rule must be in a later layer to the NFVs to avoid:
+//!FV{never before were}} NP{we} FV{prepared} so well 
+5> FV -> 	|pron[nom:+,personal:+]|   adv*, (advp), verb[pres:+,last:+].
+
+
+//Rule No. 18
+//Imperatives which are the first lexical unit in the sentence
+//Let us continue
+5> FV -> 	verb[startbis, pres:+].
+
+
+
+//Rule No. 19
+//This rule identifies all remaining present tense verbs 
+//adverbs are excluded they often modify a preceding noun phrase
+//2483>GROUP{SC{SC{BG{NP{What}} FV{happens}} FV{outside is}} NP{another matter}
+15> FV ->  verb[pres:+,last:+].
+
+
+
+//PAST TENSE VERB CHUNKS
+//----------------------
+
+
+//Rule No. 20
+//This rule captures all past tense verbs - the [past:+] feature is removed from
+//past participles in the disambiguation module first
+//May leave adverbs out of chunk due to: !FV{ADV{two weeks ago} said}} 
+// CH, added a constraint on hmm_vpap in order to avoid to construct a FV for forms that are uniquely a past participle
+// e.g. Measures *FV{taken} this afternoon
+//14> FV -> ADV*[form:~fthere, form:~fhere, wh:~], verb[past:+,last:+,hmm_vpap].
+
+//14> FV -> ADV*[form:~fthere, form:~fhere, wh:~], verb[past:+,last:+,hmm_vpast].
+
+//14> FV -> ADV*[form:~fthere, form:~fhere, wh:~], verb[past:+,last:+,partpas:~].
+15> FV -> ADV*[form:~fthere, form:~fhere, wh:~], (advp), verb[past:+,last:+].
+
+//15> FV -> 
+
+// AUXILIARY VERB CHUNKS
+//----------------------
+
+//Rule No. 21
+//This rule chunks finite forms of primary verbs HAVE and BE 
+//[tempadv:~] feature used to exclude verb particles which are tagged as adverbs from 
+//auxiliary chunk: NP{All three people} !FV{aboard were} NFV{killed} .}
+//[inf:~] ensures base form of "be" is not identified as a finite verb chunk
+//!!SC{FV{has} NP{he} FV{been}} NFV{charged}
+6> FV ->	(adv+[form:~fthere, form:~fhere, wh:~, tempadv:~,vpart:~]), (advp),
+		verb[form:fhave, inf:~, prog:~, vprog:~, last:+].
+		
+6> FV ->	(adv+[form:~fthere, form:~fhere, tempadv:~,vpart:~,wh:~]), (advp), 
+		verb[form:fbe, inf:~, partpas:~, prog:~, vprog:~, last:+].
+
+//CH 2nd August. The same as the previous one but especially for wh interrogative pronouns (which are categorized as ADV[wh:+], in order to have the feature wh on the FV node
+// After having constrained the previous rule with wh:~ and written the following rule to add the wh- case, I've commented this rule in order to have the same structure for "why is" and "why do" (dominated by an SC)
+
+//5> FV[wh=+] ->	adv[wh:+], 
+//	verb[form:fbe, inf:~, partpas:~, prog:~, vprog:~, last:+].
+		
+//Rule No. 22
+//This rule isolates all finite auxiliaries 
+//May leave preceding adverbs out of chunk altogether or if possible just those
+//which are ambiguous - not sure that temporal advs are ambiguous with verbs other than "be"
+//1>GROUP{NP{death figures} NFV{tomorrow will} NFV{tell}}
+//"There" is tagged as an adverb but is a dummy subject and must be excluded from verb chunks
+//{There will} NFV{be} NP{a trial} here soon 
+
+6> FV ->	(adv+[form:~fthere,form:~fhere, wh:~, tempadv:~,vpart:~]), (advp), aux[last:+].
+
+
+// Finite past verbs that have been wrongly tagged as past-participle and are not caught by the general FV rule
+
+7> FV -> (adv+[form:~fthere,form:~fhere, wh:~, tempadv:~,vpart:~]), (advp), verb[partpas:+,last:+].
+
+//PRESENT PARTICIPLE VERB CHUNKS - GVs                    
+//====================================
+
+//RECHECK {SC{GV{Having} been NFV{really excluded} NP{he} FV{left}}}!!!!
+//Rule No. 23
+//This rule identifies verb chunks which begin with a present participle:
+//GV{Having (already) (been) spotted }
+//It must be a layer prior to NFV ending in a past participle to avoid:
+//!!after GV{having been} NFV{systematically excluded}
+//Left context is required to avoid !NP{she} FV{is}} not GV{being rushed} 
+//since GV{being named} NP{head} PP{of NP{state}}
+//!150>in GV{balloting nullified} by Noriega - Ellipsis
+
+3> GV ->   	|?[form:~fbe, adv:~] | (adv[form:fnot,first:+]), (advp), 	
+		verb[prog:+,auxbh:+], (adv+[first:~]), 
+	   	(verb[form:fbe,partpas:+]), verb[partpas:+,last:+].
+
+
+
+//Rule No. 24
+//Picks up lone GVs after all IVs, FVs containing present participle have been isolated.
+//Also picks up present participles tagged as verbs instead of adjs, nouns or preps!
+//Tried putting this rule after NPs to try to capture adj that are tagged as verbs such as 
+//"GV{soaring} prices" but this creates more issues with actual GVs being included in NPs!
+//Adverbs are not included in this chunk due to ambiguity:
+//!!NFV{returning} NP{home}} tonight, GV{then flying} PP{to NP{Boston}} ELLIPTIC 
+//NP{He} FV{once described}} NP{himself} GV{as belonging} to
+6> GV ->	 verb[prog:+,last:+].	 
+
+
+
+//==============================================APS===============================================
+
+
+4> AP -> adj[first:+], conj[coord:+,first:~,form:~fthan], adj.
+
+// CH
+4> AP -> nadj[first:+], conj[coord:+,first:~,form:~fthan], nadj[last:+].
+
+// Case of such
+6> AP[form=fsuch] -> adj[form:fsuch] .
+
+
+
+
+
+
+//Rule No. 25
+//This rule chunks a conjunction of adjectives 
+//AP{severe+adj social+adj and economic+adj} problems
+// very very handsome and talented
+
+6> AP -> 	adj+[last:~], (adv+[form:~fnot]),(punct+[first:~]),
+	  	conj[coord:+,first:~,form:~fthan], adj[adj:+,last:+].
+
+
+// CH, 12/01 duplication of the previous rule for NADJ (desambiguation of NADJ in the file adjust.xip is supresed)
+6> AP -> 	adj+[last:~], (adv+),(punct+[first:~]),
+	  	conj[coord:+,first:~,form:~fthan], nadj[adj:+,last:+].
+
+// CH, triplication
+// EN COURS
+6> AP ->		nadj[last:~], (adv+),(punct+[first:~]),
+	  	conj[coord:+,first:~,form:~fthan], adj[adj:+,last:+].
+
+
+
+
+6> AP[preperiod:+] -> nadj[preperiod:+] .
+
+//Rule No. 26
+//This rule chunks adjectives as APs
+//the AP{Noriega-dominated+adj Electoral+adj} Council 
+//!736FV{took} his oath AP{as New} York's 106th mayo - why "as" is excluded from adverbs
+//SC{NP{No matter} NP{AP{how+WH difficult} 1989} FV{was}}
+//he wants to be AP{more+QUANT active} but !NP{16 AP{more appellate} judgeships} 
+//"more"  MODIFIES "16" NOT "appellate" so no quants included in APs
+
+6> AP -> 	(adv+[form:~fnot,form:~fas,wh:~]),  adj[last:+,vprog:~,vpap:~].
+
+
+
+//6> AP -> 	(adv+[form:~fnot,form:~fas,wh:~]),  nadj[last:+,vprog:~,vpap:~].
+
+6> AP -> 	| det | (adv+[form:~fnot,form:~fas,wh:~]),  nadj[last:+,vprog:~,vpap:~] | ?[noun] | .
+
+6> AP -> | det;prep | advp, adj[partpas] | ?[noun] | .
+
+// Rule XXXXX
+// CH - for adjective past-participle
+// Adding a feature verb on the AP's contructed with a past-participle used as adjective
+6> AP[verb=+] -> 	(adv+[form:~fnot,form:~fas,wh:~]),  adj[last:+,vpap:+].
+
+
+6> AP[verb=+] -> 	(adv+[form:~fnot,form:~fas,wh:~]),  nadj[last:+,vpap:+].
+
+
+// Rule XXXX
+// CH - distinction between AP having a ING- adj from the others
+// naturally-occuring element
+6> AP[vprog=+] -> adv[notly:~], punct[form:fhyph,left:+,right:+], adj[last:+,vprog:+].
+
+6> AP[vprog=+] -> 	(adv+[form:~fnot,form:~fas,wh:~]),  adj[last:+,vprog].
+
+
+6> AP[vprog=+] -> 	(adv+[form:~fnot,form:~fas,wh:~]),  nadj[last:+,vprog].
+
+
+
+
+
+// Rule XXXXX
+// CH - AP made by a cardinal point and a following adjective (or nadj) 
+6> AP -> noun[cardpoint:+], nadj[last:+].
+
+
+// Rule XXXXX
+// CH - AP made by more+AP
+// e.g. more comfortable and vigorous than tired.
+7> AP[compar=+] -> (adv[form:feven]), quant[form:fmore], AP, conj[form:fthan], AP.
+
+
+7> AP[compar=+] -> (adv[form:feven]), quant[form:fmore], AP.
+
+
+//===================================================NPs============================================
+
+
+//-----------------------------------NPs WITH POSSESSIVE PARTICLE---------------------------------
+
+
+  
+
+
+
+// CH ESSAI Mettre une contrainte sur tous les NP pour retirer les noms propres en dernier si il existe auparavant un nom ou un nadj.
+
+//Rule No. 27
+//This rule isolates NPs containing one or more obligatory possessive particles ending in a noun
+//NP{the state's more than 710,000 AP{registered} motor boats}}
+//NP{19 times Marcos' AP{annual presidential} salary}
+//NP{Vietnam 's AP{Communist} Party leader Nguyen Van Linh+PROPER}
+//!! Tagger Error NP{what Romania 's AP{new} authorities} FV{found} - WHY [wh:~]REQUIRED
+
+
+// The state's Supreme Court
+10> NP ->  	(det[wh:~,first:+]), part+[first:~], (AP+),
+		(noun+[last:~]),  (nadj+), 
+	   	noun[time:~,last:+,proper:+,mwe:+].        
+
+10> NP ->  	(det[wh:~,first:+]), part+[first:~], (AP+),
+		(quant), (num), (dig), (NUMP), (noun+[last:~]),  (nadj+), 
+		(adv[first:~,lemme:~as, form:~fago]), (conj[form:fthan]),
+	   	noun[time:~,last:+,proper:~].        
+
+
+
+// CH. Added an optional comma. Check if no bad consequences 
+// e.g Forster's successful, 13-years battle.
+// Accept a comma when in case of coordinated AP
+10> NP -> (det[wh:~,first:+]), noun[last:~], part+[first:~], AP, punct[comma], AP, noun[time:~,last:+,proper:~].
+
+
+
+
+//Rule No. 28
+//This rule isolates NPs containing a possessive particle ending in a nadj
+//NP{AP{New} York's Times Square} 	
+//NP{a AP{special Romanian Orthodox} New Year 's Mass} 
+
+10> NP ->  	(det[first:+]), part+[first:~], (AP+), (quant), (num), (dig), (NUMP),
+	   	(noun+[maj:~,first:~,last:~]), (noun+[maj:+,last:~]), (nadj+[last:~]), 
+	   	(adv[first:~,form:~fas, form:~fago]), nadj[last:+]. 
+
+
+// Rule XXXXX
+// John's Alfa Romeo
+10> NP -> noun[proper:+,last:~], part[first:~], (AP+), (nadj+[last:~]), noun[proper:+,last:+].
+
+//Rule No. 29
+//This rule handles ELLIPSIS of the head noun in NPs containing a possessive particle
+//IV{to fete} NP{the first New Year 's} PP{in NP{four decades}}
+//SC{NP{They} FV{argue}} NP{that Prego 's} FV{should} NFV{be} NP{a worker 's compensation case}
+
+10> NP ->  	(det[first:+]), (AP+), (quant), (num), (dig), (NUMP),
+	   	noun+, (nadj+), (adv),
+	   	part[last:+].
+
+
+
+
+//Rule No. 31
+//CHECK AGAIN!!!
+//Identifies NP chunks which begin with a genitive relative pronoun and end in a noun
+//The feature [rel:+] is passed to the mother node as it is required later to form
+//sentence chunks that contain an NP and an FV: SC{BG{NP{whose worth}} FV{is}} NFV{believed}
+//Head noun cannot be a proper noun: PP{in NP{whose embassy Noriega}} FV{sought} 
+//Head noun cannot be a time noun: PP{on NP{whose show Sunday}} last... 
+//"Her" receives +Pron+Pers+Gen+3P+Sg(morph)+DET from morph. when no adverb follows
+//"Her" receives  +Pron+Pers+Obl+3P+Sg(morph)+PRONPERSfrom morph. when an adverb follows
+//So "Her nearly four-year tenure" is not chunked by this rule while "her four-year tenure" is.
+
+9> NP[rel:+] -> 	pron[gen:+,form:fwho,first:+], (part+),(AP+), (num), (dig), (NUMP),
+			(quant), (nadj+), (noun+[last:~]), 
+			noun[proper:~,maj:~,time:~,last:+].
+
+
+
+//Rule No. 32
+//Rule identifies NP chunks that begin with genitive pronouns which are not also 
+//relative pronouns and end with a noun
+//The [part:+] feature is not obligatory as it is included in the pronoun "its" 
+//NP{its 14th AP{annual} First+NUM Night festivities}
+//NP{their first New Year 's Eve+PROPER} 
+//NP{his son 's most+QUANT AP{cherised} possession} Thursday[time:~]
+//CH rajout contrainte sur le trait fam pour ne pas attraper (my friend Peter)NP
+// CH 6. Aug
+// This rule was not able to take as a single NP the expression
+// its driest December (because of time:~ in the last noun.
+// The time:~ constraint has been changed to a tempexpr:~ constraint (yesterday)
+// TO VERIFY IF THIS RULE HAS ANY SIDE EFFECT.
+
+10> NP ->  	 pron[gen:+,rel:~,first:+,wh:~], (part+), (AP+), (num+), (dig), (NUMP),
+	   	 (quant), (nadj+), (noun+[last:~]), 
+	   	 noun[tempexpr:~,last:+,fam:~,proper:~].    
+// my days 
+10> NP ->   pron[gen:+,rel:~,first:+], (AP+), (nadj+), noun[period:+,last:+].
+
+
+// in order to be able to take into account things with uppercases that are tagged as proper noun
+// eg his first State
+10> NP ->	pron[gen:+,rel:~,first:+,wh:~], (part+), (AP+), (num+), (dig), (NUMP), noun[tempexpr:~,last:+]. 
+
+//Rule No. 33
+//Identifies NP chunks which begin with a genitive relative pronoun and end in a nadj
+//The feature [rel:+] is passed to the mother node as it is required later to form
+//sentence chunks that contain an NP and an FV: SC{BG{NP{whose worth}} FV{is}} NFV{believed}
+//GROUP{SC{NP{The boy} SC{BG{NP{whose game}} FV{was}} NFV{stolen} FV{cried}}}
+
+9> NP[rel:+] -> 	pron[gen:+,form:fwho,first:+], (part+),(AP+), (num), (dig), (NUMP),
+			(quant), (nadj+[last:~]), (noun+),  
+			nadj[last:+]. 
+
+
+
+
+//Rule No. 34
+//Rule identifies NP chunks that begin with genitive pronouns which are not also
+//relative pronouns and end with a nadj or noun
+//Again the [part:+] feature is not obligatory as it is included in the pronoun "its" 
+//NP{your heart 's content}
+//NP{their home base}
+
+10> NP ->  	pron[gen:+,rel:~,first:+], (part+), (AP+), 
+	   	(quant), (num+), (dig), (NUMP), (noun+), (nadj+[last:~]) ,
+	   	nadj[last:+].      
+
+
+
+
+//Rule No. 35j
+//Identifies NP chunks which begin with a genitive relative pronoun and end in an adj
+//The student NP{whose Spanish} is good....
+10> NP[rel:+] -> 	pron[gen:+,rel:+,first:+], 	
+			AP[last:+]. 
+
+
+//Rule 51
+//Rule identifies NP chunks that begin with genitive pronouns which are not also
+//relative pronouns and end with an adjective
+//NP{his own}   NP{her Spanish} is good
+//change in MA!! Spanish should be a NAdj
+
+10> NP ->  	pron[gen:+,rel:~,first:+], 	   	
+	   	AP[last:+].      
+
+
+
+//Rule 37
+//Rule identifies NP chunks that begin with genitive pronouns which are not also
+//relative pronouns and end with the possessive particle due to ellipsis
+//NP{their first New Year 's} PP{in NP{more}} than NP{two decades}
+
+10> NP ->  	pron[gen:+,rel:~,first:+], (part+), (AP+), 
+	   	(quant), (num+), (dig), (NUMP),
+	   	(noun+[last:~]), (nadj+) ,
+	   	part[last:+].    
+
+
+
+
+//------------------------------------------NPs with Determiners----------------------------------------------
+
+
+
+
+// Rule 55
+// CH 8th August
+// In order to avoid : The weaker the starting point, {NP THE MORE ONE} has to do .....
+// i.e. comparative before a pronoun cannot build a unique NP
+
+
+9> NP[compar:+] -> det[def:+, first:+], quant[compar:+].
+9> NP[compar:+] -> det[def:+, first:+], ap[compar:+].
+
+
+
+10> NP -> AP[form:fsuch, first:+], det[indef:+], (AP+), (noun+), noun.
+
+// Rule XXXXX
+// CH 8th August
+// To have {NP The year 2002} as a single NP.
+10> NP[period:+] -> det, noun[period], dig[percent:~].
+
+
+//10> NP[period:+] -> det, (AP+), noun[period,last].
+
+//10> NP[period:+] -> dig, (AP+), noun[period,last].
+
+// Rule XXXX
+// CH 16th October 
+// To have the feature [tempexpr:+] on the NP "What time"
+10> NP[tempexpr:+] -> det[wh], noun[period] .
+
+// Rule XXXXX
+// Having feature tempexpr on NP like "This afternoon", "This night" etc.
+10> NP[tempexpr:+] -> det[form:fthis], noun[posttime].
+
+// Rule XXX
+//Heving NPs wich are detetermid and ended with a period name and modified by a noun at the left
+10> NP[tempexpr:+] -> det[first,indef:~], noun[period] .
+
+10> NP[tempexpr:+] -> det[first,indef:~], (noun), noun[period,day:~] .
+
+
+// Rule XXXXX
+// Adding this rule in order to have NP{The British Ministry} 
+10> NP ->	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]),
+		(AP+), (nadj+), noun[last:+].
+
+
+// Deals : the 16th president
+10> NP ->  	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]),
+		(AP+), (dig), (num+), (quant), (nadj+),(noun+[last:~]), 
+	   	noun[tempexpr:~,last:+,maj:~,proper:~]. 
+
+
+
+// Rule XXXX
+// The previous general rule is duplicated in order to allow to have in an unique NP the expression "The nice December" that could no be constructed because of the constraint on feature maj.
+10> NP ->  	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]),
+			(AP+), (dig), (num+), (quant), (nadj+), 
+			noun[period,last:+]. 
+
+
+
+// CH 3rd December. Adding a rule in order to have the construction of a determined NP when there is a proper noun preceeding the last nadj
+// e.g. The Information Technology field(nadj)
+10> NP ->	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]), 
+		(AP+), noun[proper:+], nadj[meas:~,proper:~,last:+].
+
+
+//Rule 39
+//This rule covers NPs with an optional conjunction which begin with a determiner 
+//and end with a noun.  Commas and other punctuation are also permitted as the set of 
+//categories are reduced compared to the above rule
+//NP{the two or three times} 
+//NP{the sixth and AP{bloodiest} attempt} 
+//!!a first+ORD or second-class ticket is fine[NP _a first or second class ticket NP]
+//{a AP{politically grim} `` Prague Winter}
+//NP{a AP{tall} , AP{thin} cowpoke}
+//NP{the AP{12-member} , AP{decision-making Inner} Cabinet}
+//{a AP{beautiful} , AP{beautiful} planet}
+//!!TEST{the least AP{disagreeable} , '' McGrath} FV{said}
+
+11> NP ->  	det[first:+], (punct+[form:~fcquotes]), (AP+), (dig), (num+), (NUMP), (quant), 
+	   	(conj[coord:+]), noun[time:~,last:+,proper:~].
+	   	
+
+//Rule 40
+//Rule covers NPs which begin with a determiner and end with a nadj	   	
+//NP{a AP{former) agribusiness executive}
+//NP{the second most+QUANT AP{popular} choice+NADJ}
+//{the ( European ) continent} 
+//[meas:~] prevents measurements being included in NP: !NP{a foot long}
+// CH 20th August. Rule modified in order to accept an NP wich begin with a wh determiner and ends with a nadj (delete the constraint wh:~ on the first determiner)
+
+
+            
+11> NP ->  	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]),
+		(AP+), (dig), (num+), (NUMP), (quant), (nadj+),(noun+[last:~]), 
+	   	nadj[meas:~,last:+,proper:~].
+
+11> NP ->  	pron[gen:+,det:+,first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]), (AP+), (dig), (num+), (NUMP), (quant), (nadj+),(noun+[last:~]), nadj[meas:~,last:+,proper:~].
+
+//Rule 41
+//Rule identifies NPs which begin with a determiner and end with a digit
+//noun+[month:~] ensures that dates are not included in NP: NP{the hangings}} NP{Dec. 21}
+//NP{the AP{Japanese} Communications Satellite Co. Skynet 4}
+//NP{the AP{estimated} $60,000}
+
+11> NP ->  	det[first:+], (punct[form:fopar]), (punct[form:fcpar]),(punct[form:foquotes]),
+		(AP+), (dig), (num+), (quant), (nadj+), (noun+[month:~]), 
+	   	dig[last:+].
+
+
+
+//Rule 39
+//Rule identifies NPs which begin with a determiner and end with a number
+//NP{a third+NUM} FV{was}
+//NP{an AP{estimated} 400 million+NUM}
+
+11> NP -> 	det[first:+], (AP+), (noun+[month:~]),(dig), num[last:+] .  
+
+
+
+
+//Rule 63
+//Rule identifies NPs which begin with a determiner and end with an 
+//adjective due to ellipsis
+//NP{the most difficult} of her tenure
+
+11> NP -> 	det[first:+], (quant), (AP+), AP[last:+].
+
+
+
+//Rule 43
+//Rule identifies NPs which begin with a determiner and end with a quantifier
+//NP{the most}
+//NP{a little}
+11> NP ->  	det[first], quant[last:+].
+
+
+//Rule 44
+//CHECK AGAIN!
+//{SC{NP{The process} FV{could collapse}} NP{more}} - why compar:+ quants excluded
+//{SC{NP{He} FV{wanted}} much[adv:+] more[compar:+] - "more" is some kind of np here
+//{NP{He} FV{had}} too little IV{to drink}}
+//13> NP -> (adv), (quant[adv:+]), quant[adv:~,compar:~,last:+].
+
+// CH 24th August
+// Determiner before a proper noun (i.e. The Nobel Prize)
+//11> NP -> det[first], noun[proper:+].
+
+//------------------------------------------NPs Without Determiners ---------------------------------------------
+
+
+
+// none|some ... of the people
+9> NP[quant:+] -> quant | ?[prep] | .
+
+
+// Rule XXXX
+// CH le 24 juillet
+// NP rule without determiner and specific for nouns which have the tempexpr feature eg. yesterday
+10> NP[tempexpr:+] -> | ?[quant:~,gen:~] | noun[tempexpr:+, e_age:~] | ?[noun:~] |.
+
+
+// Rule XXXXX
+// CH
+// NP rule without determiner specific for nouns which have the period:+, time:+ features
+// e.g. Friday, March
+10> NP[tempexpr:+] -> noun[time:+,period].
+
+
+
+// CH - Addition of a quantif feature for quantified NP. 
+11> NP[quantif:+] ->   quant+, conj[form:fthan,first:~], (AP+), (dig+), (num+), (NUMP),
+			    (nadj+), noun[time:~,pron:~,last:+,proper:~].
+
+// CH
+11> NP[quantif:+] ->  adv[quantadv:+], (AP+), (dig+), (num+), (NUMP),
+			   (nadj+), 
+	    		noun[time:~,pron:~,last:+,proper:~].
+
+9> NP[quantif:+,period:+] ->  adv[quantadv:+], (AP+), (dig+), (num+), (NUMP), (det),
+			   (nadj+), 
+	    		noun[period].
+
+//Rule 45
+//Rule for NPs without determiners that end in a noun
+//NP{much more AP{drastic economic reforms}
+//{three AP{large} pleasure yachts}
+//[pron:~] required to avoid: {SC{PP{in NP{the course}} PP{of NP{advance one} FV{may}} 
+
+11> NP ->   (AP+), (dig+), (num+), (NUMP), (quant+), (nadj+), (noun+[last:~]), noun[time:~,pron:~,last:+,proper:~].
+///// XXXXX DESSUS
+
+
+
+// Rule XXXX
+// CH 9 aout ESSAI
+
+11> NP[proper:+] -> (det[first]), (AP+), (num), noun[proper:+].
+11> NP[proper:+] -> (det[first]), (nadj+), (num), noun[proper:+].
+
+
+
+//Rule 47
+//Rule chunks nouns with the feature [time:+] which are excluded from above NP rules
+//NP{a Sunday}
+
+13> NP ->  (det[first:+]),(AP), (dig), (NUMP), (quant), 
+	   noun[time:+,last:+].
+
+
+
+
+//TEST!!!
+//Rule 48
+//Rule identifies NPs without determiners which end in a NADJ
+//[meas:~] feature required to avoid chunking NP{75 feet long}
+//PP{of NP{high-living+NADJ}} 
+//!!GV{acting} chief+NADJ - NOT CAPTURED WHEN NADJ MUST BE PRECEDED BY ONE OF THE FOLL
+
+11> NP ->   (dig), (num+), (NUMP), (AP), (quant), (quant[compar:+]), (noun+), (nadj+[last:~]), 
+	     nadj[meas:~,last:+].
+
+
+//CHECK!!
+//Rule 49
+//Identifies NPs which contain "more than" and end in a nadj
+//NP{more than one-quarter}
+11> NP ->   quant+, conj[form:fthan,first:~], (AP+), (dig+), (num+),  (NUMP), nadj[meas:~,last:+].
+
+
+
+
+
+// Rule XXXXX
+// CH. Special feature for NP made by a digit (possible dates)
+//11> NP[dig:+,tempexpr:+] -> dig[year:+].
+//11> NP[dig:+,tempexpr:+] -> dig[date:+].
+
+11> NP[dig:+] -> dig[year:~].
+
+11> NP[dig:+] -> NUMP.
+
+
+
+
+//Rule 50
+//Identifies NPs without determiners which end in a digit
+//NP{Pope John Paul II}
+//!!NP{beneficiaries ages 65} PP{through NP{69}}
+//!!SC{NP{he} FV{sought}} NP{sanctuary Dec. 24}} WHY [time:~] required in rule CHECK THIS AGAIN!!!!
+//11> TEST ->   (dig), (num+), (AP), (title), (quant[compar:+]), (noun+), (nadj+[last:~]), dig[last:+].
+
+11> NP ->   (dig), (num+), (NUMP), (AP), (quant), (noun+[time:~]), (nadj+[last:~]), dig[last:+].
+
+
+
+//Rule 51
+//Rule for diverse date forms
+//DATES + time?
+//NP{Dec. 24, 1973}
+//Tues. the 24th Oct., 1994
+//Thu, 06 Oct 1994 11:47:55 EDT
+//10:06 p.m.
+//2000 GMT
+//two-thirty
+//10/01/99
+//10.02.96
+
+11> NP -> noun[time:+], (punct[comma:+,last:~]), dig+.
+
+
+
+//Rule 52
+//Identifies NPs without a determiner which end in a number
+//1>GROUP{SC{NP{He} FV{received}} NP{2.5 million}}
+
+11> NP ->    (dig), (num+), (NUMP), (AP), (quant), (noun+), (nadj+[last:~]), num[last:+].
+
+
+//***Rule 53
+//**12> TEST ->    (dig), (num+), (AP), (title), (quant), (noun+), (nadj+[last:~]), quant[last:+].
+
+
+
+//Maybe free all "rel" features and then do an SC rule ?[rel:+] etc
+
+
+//Quants which are followed by the prep "of" are NPs
+//NP{Some} of NP{the people} ...
+11> NP -> adv*, quant |prep[form:fof]|.
+
+
+
+//Rule 54
+//check again!
+//Quants which begin a sentence and are followed by a verb are NPs
+//NP{Some} arrived earlier
+//NP{Many} PP{in NP{the theater}} FV{had}}
+//!NP{All} NP{the people} FV{arrived}}
+11> NP -> quant[startbis, predet:~] |?*[verb:~], ?[verb:+]|.
+
+
+//Rule 55
+//Rule chunks all/both/half as NPs when immediately foll by a det
+//!!much the same
+//all the people/ half the time / both the plaintiffs
+//11> NP[predet:+] -> quant[predet:+] |det|.
+
+
+
+//Rule 56
+//!Thousands+noun more arrived
+//11> TEST -> |?[num:~ ; dig :~ ; pron:~ ; verb:~]|  quant |?[verb:+]|.	
+
+
+//Rule 57
+//Identifies NPs without a determiner which end in a measurement
+//NP{2 lb}
+
+11> NP[quantif:+] ->   (dig), (num+), (NUMP), (AP),(quant), (noun+), (nadj+), meas[last:+].
+
+
+// Rule XXXX
+// NP without determiner that are only made of AP's
+// e.g. (human)AP (overhead)AP (capital)AP
+//11> NP -> | ?[noun:~] | (quant), (AP+), AP[last:+] | ?[noun:~] |.
+// aout 2005 est commentee
+
+// The whole City of Paris
+11> NP -> quant, noun[proper:+,mwe:+] .
+
+// CH an adverb with the quantadv:+ feature immediately followed by an NP with feature quantif:+ builds an NP eg At least three people...
+//13> NP -> ADV[quantadv:+], NP[quantif:+] .
+
+// CH. More than a year
+//13> NP[period:+] -> adv[quantadv], NP[period] .
+
+
+// CH. NP build by a standalone accusative/dative feminine personal pronoun
+14> NP -> pron[personal,gen,pron]. 
+
+//11> NP -> adv[form:fthere] |verb|.
+
+
+
+
+// ------------------------------------------------- NP which head are of category Title -----------------------------
+// CH 12nd October (When they are capitalized, nouns like president, king, etc. are considered as Title and not as noun.
+
+// CH
+// A title that is preceeded or not by a determiner and followed by something that is not adjectival or nominal builds a NP
+
+//TITLE 11> NP -> pron[gen:+], title | ?[noun:~,adj:~] | .
+//TITLE 11> NP -> quant, title | ?[noun:~,adj:~] |.
+//TITLE 11> NP -> (det), (num[ord:+]), title | ?[noun:~,adj:~] | .
+
+
+
+//------------------------------------------ COORDINATION ---------------------------------------------
+
+
+//Rule
+//Coord is too ambiguous
+//NP{four or five days}
+//NP{two or five kids}  [NP _four or five kids NP]/N 
+//NP{more than one-quarter} PP{of NP{the AP{projected} world population}} 
+//!!!FV{are}} SC{NP{AP{still unmet} and all help} FV{is}} NFV{needed} 
+//!!FV{are} AP{well-known} SC{and NP{police} FV{said}}
+//!!{NP{Romanians} PP{on NP{the street}} FV{greeted}} NP{each AP{other} and foreigners}
+ //!!GV{imploring} NP{AP{calm} and discipline}
+//!!FV{has} NFV{become} SC{NP{AP{irrelevant} and Dubcek} FV{must}} NFV{know} 
+//!!by NP{one third+ORD and sentences}
+//11> NP ->  (AP+), (dig), (num+), (quant), (title), (conj[coord:+,first:~]), noun[time:~,pron:~,last:+].
+
+
+//Rule 
+//???????WITH THIS RULE: NP{AP{other} AP{common+NADJ} crimes} WITHOUT THIS RULE: NP{AP{other common+NADJ} crimes}
+//!!NP{he}} FV{hit} NP{AP{bottom} and AP{asked} Foster}
+//1>GROUP{SC{NP{They} FV{wanted}} NP{AP{proper} and AP{swift} plans}}
+//in TEST{English and AP{Spanish} warning} PP{against NP{the practice}}
+//NP{AP{corporate} and AP{individual} donations}
+//NP{AP{European} and AP{Soviet} affairs}
+//NP{AP{Communist} and AP{Moslem} insurgencies}
+//!!FV{are} TEST{AP{well-known} and police} FV{said}
+//!!NP{each} TEST{AP{other} and foreigners} WHY TWO APS REQUIRED!
+//{Romanian and Moldavian} WHY NADJs ARE NOT IN RULE
+//from AP{intermediate} and NP{AP{junior high} schools}
+//11> NP ->   AP[first:+], conj[coord:+], AP[first:~], noun[time:~,pron:~,last:+].
+//DOESN'T WORK9> NP ->   nadj[first:+], conj[coord:+,first:~], AP, noun[time:~,pron:~,last:+].
+
+//----------------------------------------------------PRONOUN NPs----------------------------------------
+
+
+//Rule 58
+//Identifies NPs which are nominative pronouns but not relative, "wh",
+//genitive, or personal 
+//NP{He} FV{was} AP{able} IV{to keep} NP{his} .
+//SC{BG{unless} NP{something} FV{is}} NFV{done} soon 
+//*11> NP -> 	pron[det:~,rel:~,gen:~].  - changed rule to allow[nom:+,wh:+]to be picked up in NP
+//*11> NP -> 	pron[det:~,rel:~,gen:~,wh:~].
+//excluded personal pronouns from this rule in order to recuperate their features in NPs to capture SCs! (TWO RULES DOWN)
+//may not be a good idea as it also excludes obl personal pronouns such as "him" so may switch back to above rule!
+//NP{these}[pron:+,nom:+,obl:+,p3:+,pl:+] FV{have}}
+//NP{a crony} PP{of NP{his}}[pron:+,nom:+,obl:+,poss:+,p3:+,sg:+,pl:+]
+//*11> NP -> 	pron[rel:~,wh:~,last:+]. May not need to exclude det, gen, or personal prons
+
+11> NP -> 	pron[det:~,gen:~,personal:~,rel:~,wh:~,last:+].
+
+
+
+
+//Rule 59
+//Identifies NPs which are oblique personal pronouns
+//remove this rule if above rule reverted to!
+//to NP{him} / NP{me} etc
+
+11> NP -> 	pron[personal:+,obl:+,last:+].
+
+
+
+//Rule 60
+//Identifies NPs which are reflexive personal pronouns
+//remove this rule if above rule reverted to!
+//Iran was able to feed NP{itself} 
+
+11> NP -> 	pron[personal:+,refl:+,last:+].
+
+
+
+//Rule 61
+//Identifies NPs which are nominative personal pronouns
+//personal pronouns features required later to chunk "NP FV" SCs!
+//he[pron:+,nom:+,personal:+,p3:+,sg:+,maj:+]
+
+11> NP[nom:+,personal:+] -> 	pron[nom:+,personal:+,last:+].
+
+
+
+//Rule 62
+//Identifies NPs which are nominative pronouns with the feature "wh"
+//SC{PP{In NP{what+nom+wh}} FV{appeared}} IV{to be}  
+//1>GROUP{SC{NP{I} FV{don't know}} SC{BG{NP{who}} NP{they} FV{are basing}} NP{that} on .}
+//NP{some} PP{of whom} left soon after
+
+
+// CH 16th august. NP with determiner and proper nouns.
+// The Nobel Prize
+11> NP[proper:+] -> det, np[proper:+].
+
+
+
+
+
+//===================================================PPs==============================================
+
+
+
+
+
+
+// Rule XXXXX
+// CH. A special feature date is added for PP made by in + digit
+13> PP[date:+] -> prep[first:+, form:fin], np[dig:+].
+
+
+
+
+//Rule 63
+//Identifies PPs formed with relative pronouns previously chunked as NPs
+//The feature [rel:+] is passed up to mother node for use in chunking SCs
+//NP{The embassy} SC{PP{in NP{whose building}} NP{Noriega} FV{sought}} NP{refuge}
+ 13> PP[rel:+] -> prep[first:+], np[rel:+,last:+].
+
+
+
+//Rule 64
+//Identifies PPs formed with relative pronouns 
+//The feature [rel:+] is passed up to mother node for use in chunking SCs
+//!!{but who} Tagger Error "but" is a conjunction here not a prep IFSP but  [SC [NP who NP]
+//the issue PP{of who} would drive   [SC [PP of who PP]
+//PP{in which} - "which" is a prepositional complement
+//NP{some} PP{of whom[pron:+,nom:+,obl:+,rel:+,p3:+,sg:+,pl:+]}
+
+13> PP[rel:+] -> prep[first:+], pron[rel:+,last:+].
+
+
+// Rule XXXXX
+// about 20 years ago
+14> PP[tempexpr:+] -> prep[first:+], NP[tempexpr:+].
+
+//Rule 65
+//Identifies PPs formed with NPs without pronoun features
+//This rule must be in layer 14 as lone NP rules are in layer 13
+//[form:~fas] required to avoid: PP{as NP{they}} left
+
+14> PP -> prep[first:+,form:~fas], np[last:+].
+
+
+// CHECK (only as sense considering the disambiguation rules around AS (adjust.xip)
+14> PP -> prep[first:+,form:fas], np[last:+] | ?+[verb:~] | .
+
+// CH, joining in a PP a preposition followed by an AP which is no followed by a NP
+15> PP -> prep[first:+,form:~fas], ap[last:+] | ?+[noun:~] | .
+
+//============================================SC RULES============================================
+
+/ BG Clause boundaries \
+
+//Tokens that typically introduce a subordinate clause are chunked as BGs
+//BGs are then used as the first element in certain sentence chunks
+
+
+//Rule 66
+//Identifies relative pronouns as BGs
+//who/whom/ which/that
+
+16> BG ->  pron[rel:+]. 
+
+
+
+//Rule 67
+//Identifies PPs with the relative pronoun feature [rel:+] as BGs
+//{SC{NP{The Vatican} PP{in NP{whose AP{Roman} embassy}} NP{Noriega} FV{sought}} NP{refuge} .}
+
+16> BG[rel:!]-> pp[rel:+].
+
+
+
+//Rule 68
+//Identifies NPs with the relative pronoun feature [rel:+] as BGs
+//NP{The AP{Dalai} Lama}, BG{NP{whose AP{Tibetan} homeland} FV{is ruled}} PP{by NP{China}}, said 
+
+16> BG[rel:!] -> np[rel:+].
+
+
+
+//Rule 69
+//Identifies nominative NPs with the feature [wh:+] as BGs
+//{SC{NP{I} FV{don't know}} SC{BG{NP{what}} NP{they} FV{are basing}} NP{that} on .}
+//{SC{NP{I} FV{don't know}} SC{BG{NP{who}} NP{they} FV{are basing}} NP{that} on .}
+
+//15> BG ->  np[wh:+,nom:+].
+
+// CH 2nd August. The previous rule is enlarged in order to construct BG with all the NP[wh:+] (i.e. nominative and obliques
+
+//15> BG[wh=+] ->  np[wh:+].
+//The enlarged rule is commented 
+
+
+// CH, 2nd August
+// Making a BG[wh:+] from a PRON[wh:+]
+16> BG[wh:+] -> pron[wh:+].
+
+
+// Making a BG[wh:+] from a CONJ[wh:+]
+16> BG[wh:+] -> conj[wh:+].
+
+//Rule 70
+//Identifies adverbs with the feature [wh:+] as BGs  
+//"He did not know WHY it happened"
+//BG{how} IV{to end} NP{the fighting}
+
+16> BG ->  |?+|	 adv[wh:+]  |?*, fv|. 
+
+
+// Rule XXXXX
+// CH
+// BG with an adverb and a subord. conjunction
+// eg. just when the operation started
+//16> BG -> adv[wh:~,degree:~], conj[sub].
+
+//Rule 71
+//Identifies subordinate conjunctions as beginnings of clauses
+//All subordinate conjunctions are chunked regardless if they are followed  by a
+//finite verb or not - however only those foll by an fv will combine to form an SC
+//that/because/if/where/when/while/WHETHER/before/unless/although/BUT/as/so/SINCE/AFTER/
+16> BG -> conj[sub:+].
+
+
+
+
+
+//and/or/nor/than/either/neither/both/plus/as well as/
+//need context here to allow these to be present in SCs starting with a conj sub.
+//and NP{a third} FV{was} FV{freed}
+//?16> BG -> conj[coord:+] |?*[comma:~,], fv|. 
+//15> BG -> conj[coord:+,form:fand]. |?*, fv|. 
+
+
+//INS Clause boundaries
+//=====================
+
+
+//Rule 72
+//This category corresponds to insertions in clauses that have no finite verbs
+//Rule identifies INS chunks 
+// CH, (regles du NP) A VOIR SI CETTE REGLE PEUT S APPLIQUER
+17> INS -> punct[form:fopar,first:+],(bg+),
+           (np+), (pp+), (adv+), (verb+[partpas:+]),(conj+[coord:+]), (ap+),
+           (iv+),(gv+), (prep+),(punct+[form:~fcpar]),
+           punct[form:fcpar,last:+].
+
+
+
+//==============================================END ID-rules==========================================
+
+LPrules:
+
+//(det[wh:~]), part+[first:~], (AP+), (title),(quant), (num), (dig), 
+//	   	(noun+[last:~]),  (nadj+[first:~]), (adv[first:~,form:~fas]), (conj[form:fthan]),
+//	   	noun[time:~,last:+].        
+
+//10> [det:+] < [part:+]
+//10> [det:+] < [adj:+]
+//10> [adj:+] < [title:+]
+//10> [det:+] < [quant:+]
+//10> [det:+] < [num:+]
+//10> [det:+] < [dig:+]
+//10> [adj:+] < [noun:+]
+//10> [adj:+] < [nadj:+]
+//10> [adj:+] < [adv:+]
+//10> [adj:+] < [conj:+]
+//[punct:+,form:fcm] < [coord:+] 
+
+
+
+
+// Rule XXXXX
+// Adverb how before the adjective or nadj
+1> [form:fhow] < [adj:+]
+
+1> [form:fhow] < [adv:+]
+
+// for NUMP
+1> [adv:+] < [dig:+]
+1> [adv:+] < [card:+]
+
+// Rule XXXXXX
+// Coordinated AP's
+//5> [adj:+,last:~] < [conj:+,coord:+]
+//5> [conj:+,coord:+] < [adj:+,last:+]
+
+
+10> [quant:+] < [noun:+]
+//Rule 1
+//Prevents quants from following nouns in the same NP except when preceded by a genitive
+//NP{the solitude+NOUN some+QUANT presidents} experience  - this is an elliptic issue ("that" is missing)
+//!!BUT NP{The century} 's most+QUANT AP{praised} artists - This type of rule is in a different layer!
+//!!The past+NADJ few+QUANT months -  these nadjs are disambiguated in disambiguation.fic
+11> [quant:+] < [noun:+]
+
+11> [num:+,card:+] < [noun:+,pl:+]
+
+//Rule 2
+//Prevents digits from following superlative quantifiers in the same NP :
+//NP{the most 2 people} could handle 
+//Other quantifiers may be followed by digits in NPs: NP{Some 200,000 partygoers}
+11> [dig:+] < [quant:+,sup:+]
+
+
+
+
+// CH
+16> [adv:+] < [conj:+]
+
+
+//This rule prevents "They gave NP{the Americans 72 hours} SUBCAT ISSUE?? TO GIVE SB STH
+//BUT also !!NP{an August+PROPER 1988+DIG ceasefire}
+//AND ! "the year 2000" 
+//11> [dig:+] < [noun:+]
+
+
+//A plural noun cannot be followed by a sing noun in the same NP?  Si!
+//!!NP{the most AP{respected civil} rights+PL organization+SG}
+//!!NP{The AP{American Civil} Liberties+PL Union+SG}
+//!!NP{Juan Carlos+PLURAL Lightowler+SG Stahlberg}
+//!!NP{a AP{new} sales+PL+NOUNonly tax+SG}
+//!!NP{a media+PL campaign+SG}
+//!!NP{the AP{official} Sudan News Agency}}
+//!!NP{AP{civil} rights leader King} + NP{a AP{recent white} supremacists march}}
+//!!NP{the AP{Japanese} Communications+PLURAL Satellite+SINGULAR Co. Skynet} 4 "Skynet 4"  (APPOSITION)
+//NP{The 1000 AP{extra} men} Congress and NP{the city} agreed IV{to provide} -ELLIPTIC "that"!!
+//NP{the decree} FV{gave}} NP{AP{former} exiles priority} -SUBCAT ISSUE??
+//!!NP{The AP{Eritrean} People+PLURAL 's Liberation+SING Army+SING} SO PUT POSS NPs IN ANOTHER LAYER?
+//!!1481>GROUP{SC{NP{The All-India Sikh Students} NP{Federation} TEST{claimed}  - should be STUDENT'S rather than students
+//11>  [noun:+,sg:+,proper:~] < [noun:+,pl:+,proper:~]
+
+
+
+
+
+//!!GV{honoring} NP{AP{civil} rights} NP{leader King} .
+//!!NP{AP{civil} rights} NP{leader Martin Luther King Jr.}
+//!!?NP{an AP{all-star} lineup AP{including} comics} NP{Jay Leno} and NP{George Carlin}
+//PP{by NP{the reforms}} !!NP{AP{sweeping} Eastern Europe}//1934>GROUP{SC{NP{AP{Occasional} boos} NP{AP{also greeted} Glenn}
+//PP{at NP{the Stockholm world championships}} !!AP{unleashed} NP{pent-up  !!Czechoslovak AP{political} feelings}
+//NP{The Kremlin} FV{slowly achieved}} SC{NP{the results} !!NP{Brezhnev} FV{sought}}
+//{NP{The 1000 AP{extra} officers} !!NP{Congress} and NP{the city} FV{have}} NFV{agreed} IV{to provide}}
+//11>  [noun:+,maj:+] < [noun:+,pl:+,maj:~]
+
+
+//Any need for an LP rule which states that a Quant always precedes an AP??
+//!!The past+nadj few+quant weeks
+//The most+quant beautiful present
+//11>  [quant:+] < [adj:+]
+
+
+
+//Do nadjs always precede adjs or VICE VERA - NO!
+//the TEST{big downtown+NADJ} fireworks display
+//{The TEST{new female+NADJ} doctorates
+//is a nadj followed by an adj always an adj??? - NO! IT CAN BE A NOUN MODIFYING ANOTHER NOUN IN THE SAME NP
+//The TEST{average+NADJ retired+ADJ} NP{worker
+//{annual+NADJ presidential+ADJ} NP{salary}
+//the TEST{main+NADJ stumbling+ADJ} NP{block} A NOUN MODIFYING AN ADJ?
+//a TEST{three-hour riding} NP{lesson} .}  - NB "three-hour" IS NOT AN ADJ IT IS A NOUN MODIFYING THE NOUN "lesson"!
+//!! 75+dig feet+noun long+nadj ifsp![NP 75 feet wide NP]
+//THIS RULE HAS BEEN REPLACED BY ASSIGNING FEATURE [meas:+] TO "wide" etc
+//8> [adj:+] < [noun:+]
+//8> [adj:+] < [nadj:+]
+
+
+//its politically NP{AP{powerful} Tamil minority}
+// [adv:+] < [adj:+]     
+
+
+//============================= RECONSTRUCTOR RULES ===========================
+
+reshuffling:
+
+
+
+
+//Rule 1
+//This rule enables us to include a quantifier that precedes a determiner
+//which is the 1st element in an existing NP in that NP
+//all NP{the people} ->  NP{all the people}//
+//when a quant is an NP and is preceded by a prep then it forms a PP!!
+//12> NP{quant#1[predet:+,last:+]}, NP#2{det#3,?*#4,#5[last:+]} = #2{#1,#3,#4,#5}.
+
+12> quant#1[predet:+], NP#2{#3[det:+],?*#4,#5[last:+]} = #2{#1,#3,#4,#5}.
+
+
+
+// Rule XXXXXXX
+// CH July 2002
+// Reshuffling in order to catch in a single NP things like "twice a week"
+12> adv#1[form:ftwice], NP#2{#3[det:+,indef:+], #4[noun,period]} = #2[tempexpr=+,c_set=+]{#1, #3, #4}.
+
+
+// Rule XXXXX
+// CH August 2002
+// Reshuffling of {more than}adv {one year}np
+12> adv#1[quantadv]{quant#5[compar], conj#6[form:fthan]}, NP{num#2, ?*#3, noun#4[period,last]}
+	= NP[tempexpr=+]{#1{#5,#6},  #2, #3, #4}.
+
+
+// Rule XXXXX
+// Reshuffling when a unique NP follows a ditransitive verb and if that unique NP can be considered as two NPs (e.g. He gave (Mary two books)NP(
+12> NP[tempexpr:~]{?*#2[noun:~], #3[noun:+,adj:~], #4[num:+], ?-#5} =
+	NP{#2,#3[last=+]}, NP{#4[first=+],#5} .
+
+
+
+// TEST pour incise avec mauvais tagging
+// e.g. Clones encoding homologs of bacterial FPG, designated Atfpg-1, have been isolated
+18> NP#1{#7[startbis],?-#8}, ?*#2[fin:~,comma:~], #3[comma], FV{#4[verb,partpas]}, ?*#5[verb:~,comma:~], #6[comma] 
+	= #1{#7,#8}, #2, #3, #4[fin=~], #5, #6 .
+
+
+
+//============================= SEQUENCE RULES ===========================
+
+
+
+Sequence:
+
+
+
+ 
+//-- SENTENCE CHUNKS ---
+
+
+
+// Rule XXXX
+// CH 7th August
+// Marking the SC that contains a verb introducing indirect speech eg. said when this chunk is made by a lonely NP and the verb\\
+// ex. She's sick, John said.
+
+20> SC[indspeech=+] = | punct[comma:+] |  np, fv[indspeech] | ?*[noun:~, prep:~] |.
+
+// Rule XXXXX
+// CH 7th August
+// Constructing an SC containing a verb introducion indirect speech with the Subject-Verb inversion
+// eg. She's sick, said John.
+
+20> SC[indspeech=+] = | punct[comma:+] | fv[indspeech], np | ?[verb:~] | .
+
+
+// Rule XXXXX
+// Construction of an SC containing a verb that is not marked as indspeech, followed by a NP which is a person name, at the end of a sentence.
+// This is the case of indspeech verb with subj-verb inversion when the verb is not marked as indspeech because it is highly ambiguous.
+// e.g. John ate a cake, continued Dr. Chapatti
+
+20> SC[indspeech=+] = | punct[comma:+] | fv, np[proper:+] | |.
+20> SC[indspeech=+] = | punct[comma:+] | fv, np[proper:+] | punct[sent:+] |.
+
+
+// Rule XXXX
+// CH 2nd August
+20> SC[wh=+] = ?[wh:+,startbis], ?*[fin:~,scbegin:~], fv.
+
+
+//Rule XXXXX
+// CH. Essai pour mettre dans des clauses The man (I met yesterday)SC is crazy
+// in order to have a parallelism with the embedded subordinate clauses introduced by a relative.
+21> SC = | np | np[tempexpr:~], ?*[fin:~], fv | ?*, ?[fin:+] |. 
+
+
+//Rule 1
+//This rule isolates subordinate clauses introduced by relative clauses
+// or 30>GROUP{SC{SC{BG{When} NP{a 1986 census} FV{showed}} 
+
+21> SC = bg, ?*[fin:~, scbegin:~], fv.
+
+
+//Rule 2
+//This rule also isolates subordinate clauses introduced by relative clauses but which contains an embedded clause
+//previously chunked by the above identical rule
+//111 said BG{that} SC{BG{if} NP{our hearts} FV{are}} AP{empty} , NP{no law} or NP{AP{political} reform} FV{can fill}
+//This rule is identical to the above one but is necessary to account for recursivity 
+//i.e. an SC which contains another SC.
+//??NP{The woman} SC{NP{whose husband} FV{won}} NP{the lottery} FV{is} AP{happy} 
+//[SC [NP The woman NP]/SUBJ  [SC [NP whose husband NP]/SUBJ :v won SC] [NP the lottery NP]/OBJ :v is SC]
+
+22> SC = bg, ?*[fin:~, scbegin:~], fv.
+
+
+
+//Rule 3
+//This rule chunks the beginning of the sentence with anything that follows
+//that does NOT contain a finite verb or a BG and is followed by a finite verb.
+//Instead of as "SC{The man SC{whose dog barked} is} angry."
+//2136>GROUP{SC{NP{Pocatello} , NP{Idaho} , FV{had}} NP{its AP{driest} December}
+// CH, 6 Aug. This rule is limited in order to avoid the construction of an SC in the case *{SC FOR WAHTEVER REASON, DON'T} BE LATE AGAIN.
+// CH 7th August restriction on indspeech in order to avoid the following SC{"As a result, said John, I'm} angry
+// CH 17th August added the restriction verb:~ on the first element in order to avoid
+// {SC {SC They say} They meet}
+23> SC = ?[wh:~,startbis:+, prep:~,verb:~], ?*[fin:~,scbegin:~,indspeech:~],  fv.
+
+
+// Rule XXXXXX 
+// The previous rule do not construct an SC with the sequence :
+// "At present, the lack of knwoledge about the factors is ...." because on the prep:~ constraint
+// This rule will allow this (at present will not be within the SC...
+23> SC =  pp[startbis:+], (punct[comma:+]),  np, ?*[noun]; ?*[prep], fv .
+
+// to have an sc also for PP PP, ..., e.g. "As the cat on the roof, the guy is happy"
+
+23>  SC =  pp[startbis:+], pp*, punct[comma:+],  np, ?*[noun]; ?*[prep], fv .
+
+//Rule 4
+//imperative or subject inversion
+//{SC{FV{Would}} NP{AP{nuclear} war} FV{occur}
+23> SC = fv[start:+] .
+
+
+
+
+
+//Rule 5     
+//CLAUSE (FCQUOTES)   COMMA	NP	FV
+//MUST BE PLACED IN SAME LAYER OR AFTER START SC RULE
+//23>GROUP{GV{Using} NP{AP{economic} incentives} , SC{NP{the government} FV{should encourage}}
+//NP{they} FV{gave}} up , '' TEST{NP{Cruz} FV{said}}
+//OK 19> SC = |?[comma:+]| np, fv.
+//SC{NP{I} FV{think}} , '' NP{she} FV{said} 
+// Avoid to take within a SC the last NP of a coordination without coordinator
+23> SC = | ?[noun:~], ?[comma:+] | np, fv.
+
+
+
+//Rule 6 
+//AND FV
+//and/or/nor/than/either/neither/both/plus/as well as/
+//SC{nor FV{did}} SC{NP{she} FV{say}}
+//!!FV{would rejuvenate}} rather SC{than FV{weaken}} NP{communism} MAYBE ONLY ALLOW "and" AND  "or"
+//ok 19> TEST = ?[form:fand], fv.
+23> SC =  ?[coord:+,form:~fthan], fv.
+
+
+
+//Rule 7
+//AND NP FV
+//Need to prevent the "start" feature from percolating up from the coord
+//as this leads to two SCs at the start of a sentence!!
+//!!!!SC{and NP{launch services} FV{providedVPAP}} PP{by NP{Martin Marietta}}
+// CH Added the left context on Jan 2002 in order to avoid the construction of erroneous SC
+// e.g. Whether you come late *SC(or not remains) uncertain
+// Problem "As the competition heats up, the implications for borrowers *(SC and investors are) enormous. See reshuffling
+// But is good for "I really like the borrowers and the sky is blue." in order to avoid to coordinate borrowers and sky
+23> SC = |  ?[verb:~] | ?[coord:+], ?[verb:~], fv .
+23> SC = |  ?[verb:~] | ?[coord:+], NP[quant], PP, fv .
+
+
+
+
+// Rule XXXX
+
+
+// Rule XXXXX
+// CH. Treating embedded subclauses that are not introduced by any BG. Eg. He told mary he was sick
+24> SC = | SC[wh:~], np | np, fv . 
+
+// Rule XXXXX
+// Building an SC on the right of another SC.
+// e.g. She said she is sick
+// Can contain the adverb too between commas is between the subject and the fv
+24> SC = | SC[wh:~,sc_s] |  np[tempexpr:~], (punct[comma], adv[form:ftoo], punct[comma]), fv .
+
+// Repeating the same rule in order to apply it more than once
+// e.g. They indicated they knew they were receiving stolen property.
+// NOTE: we suppose that we will not have more than three SC following each other....may be wrong
+25> SC = | SC[wh:~,sc_s] |  np[tempexpr:~], (pp), (punct[comma], adv[form:ftoo], punct[comma]), fv. 
+
+
+// CH
+// Women who are pregnant will be excluded
+24> SC = np[startbis], pp*, sc, (?[adj]), fv .
+
+// Rule XXXXXX
+//CH. Test pour extraire des sous-clauses
+/ au moins un verbe a gauche puis prend le SC \
+// EN COURS \\
+
+//25> TEST = |?*[verb:~], SC, ?*[verb:~]| SC, ?*[verb:~, comma:~] |punct[sent]| .
+
+//25> TEST = |?*[verb:~], SC, ?*[verb:~]| SC, ?*[verb:~, comma:~] || .
+
+//25> TEST = |?*[verb:~], ?[verb], ?*[verb:~]| SC, ?*[verb:~, comma:~] | SC | .
+
+//25> TEST = |SC, ?*[verb:~,comma:~]| punct[comma:+], ?*, punct[comma:+] | SC | .
+
+//25> TEST = |SC, ?*[verb:~,comma:~]| punct[comma:+], ?*, punct[comma:+] |punct[sent]| .
+
+//25> TEST = |SC, ?*[verb:~,comma:~]| punct[comma:+], ?*, punct[comma:+] || .
+
+
+//CHECK 782 IN IFSP 979 1059
+//!!959>GROUP{SC{`` NP{I} FV{'m}} AP{optimistic} TEST{NP{we} FV{can make}} NP{that world}
+// PP{of NP{harmony}} NP{we} TEST{NP{all} FV{want}} .}  [SC  
+//!![NP _I NP]/SUBJ :v don't know SC]  [SC [NP what NP]/SUBJ [NP they NP]/N :v are basing SC]  that on .
+//19> TEST = np, fv.
+// They FV{agreed}} TEST{NP{the AP{Indian} troops} FV{would leave}} 210>GROUP
+//!!{SC{NP{It} FV{might make}} TEST{NP{people} FV{think}} PP{about NP{it}} SUBCAT ISSUE?
+//!!SC{NP{Caller} NP{ID} simply FV{lets}} TEST{NP{them} FV{see}}SUBCAT ISSUE?
+//[SC  [NP _Caller ID NP]/SUBJ simply :v lets SC] [NP them NP]/N ![NP see NP]/OBJ
+//CHECK AGAIN!! - SHOULD THIS BE IN A LATER LAYER? OR SAME LAYER AS SC START SO FV CAN BE USED? 
+//19> TEST = |fv| np, fv.
+//IS IT NECESSARY TO CAPTURE PERSONAL PRON NPS FROM OTHER NP FVS???
+//!!SC{FV{can}} TEST{NP{we} FV{have}}  ALLOW AUX FEATURE TO PERCOLATE TO FVs?? 
+//OK 19> TEST =  np[personal:+,nom:+], fv.
+//!!TEST{NP{a AP{40-room} mansion} FV{crammed}} PP{with NP{AP{valuable} paintings}} 
+//*20> SC = np, fv.
+
+
+
+//19> TEST = (?[form:fcquotes]), ?[comma:+], (?[form:fcquotes]), (?*[fin:~, scbegin:~, punct:~]), ?[comma:+], (?*[fin:~, scbegin:~, punct:~]), ?[comma:+],  fv.
+//MUST BE PLACED AFTER THE SC RULE WITH COORD??
+//check against above rule maybe the above rule should be placed after this one or merged??
+//20> TEST = (?[form:fcquotes]), ?[comma:+], (?[form:fcquotes]), (?*[fin:~, scbegin:~]), fv.
+
+
+
+//COMMA FV
+//PUT IN A LATER LAYER!
+//, said NP{Coast Guard AP{Petty} Officer}
+//!!the ousted president , Nicolae Ceasescu , told the military tribunal .
+//21> TEST = |?[comma:+]| fv.
+
+//FV
+//123>GROUP{SC{NP{The challenges} NP{we} FV{face}} today !FV{are} no NP{less}
+
+
+//30> TEST = np .
+
+//-------------------------- SEQUENCE MARKING RULES ---------------------------------------
+
+
+//These rules are used to add or remove features from specific nodes using context
+
+//This rule would assign the feature time to any category bearing the feature period
+//when it is preceded by a category containing the feature preperiod but not if there's a det
+//!!PP{of NP{the AP{next}}} NP{century} .
+//6> ?[period:+] =  |?[det:~], ?[preperiod:+]| noun[time=+].
+
+
+
+
+
+//------------------------ RESHUFFLING of the final chunked tree -----------------------------------
+
+
+reshuffling:
+
+
+// Bad chunking with "SINCE" taken as a conjunction when it is in fact a preposition
+40> BG{#1[lemme:since]}, NP#2{#3,?-#4},  #5[punct] =
+    PP{prep#1[prep=+], #2{#3,#4}}, #5 .
+
+// Checked, it worked 30/01/07 (CH)
+40> BG{#1[lemme:since]}, NP#2{#3,?-#4}, #5[tempexpr] =
+   PP{prep#1[prep=+], #2{#3,#4}}, #5 .
+
+// Bad chunking with an adverb inbetween two verbal forms when the second is a be-form and the first a partpas
+// In this case we attach the adverb to the first verbal form (to check in corpora)
+40> SC{#1?+,FV#2{#5[partpas]}}, FV{adv#3, #4[lemme:be]} =
+	SC{#1,#2{#5}}, #3, FV{#4} .
+
+
+// CH
+// Bad chunking, a PP and NP are chunked together and should not be
+// e.g. {Over the past 3 decades considerable progress}PP* has been made
+40> PP[startbis]{#1[prep], NP{?*#2, #3[noun], #4[adj], ?-#5}}, FV#6 =
+	PP[startbis]{#1,#2,#3}, NP{#4,#5}, #6 .
+
+
+
+// CH - Nov 2002
+// An NP + PP[of][tempexpr]{?*, ?[last, form:fago] (e.g. A quarter of century ago) va etre reforme en
+// NP { a quarter of century ago}
+//40> NP{#1,#2}, PP[tempexpr]{#3[form:fof], NP#6{NP{#4[first,last]},adv#5[form:fago,last]} } =
+//	NP#6{#1,#2, #3, #4, #5} .
+
+
+
+// CH - October 2002
+// When a word has been guessed as NADJ, is at the end of the chunk tree and is preceeded by a NP
+// Then we include this NADJ in the NP with the noun tag
+// e.g. He was known {PP as {NP a master}} {AP bombmaker(guessed NADJ)}
+// VOIR AVEC CLAUDE (detruit tout ce qui est #2)
+//40> PP{#1[prep], NP{?+#2}}, AP{#3[guess,noun,adj]}, #4[end] = 
+//	PP{#1, NP{#2, #3[adj=~]}}, #4 .
+
+// Solution alternative qui marche
+40> PP{#1[prep], NP{#5, ?*#6, #7}}, AP{#3[guess,noun,adj]}, #4[end] = 
+	PP{#1, NP{#5,#6,#7, #3[adj=~]}}, #4 .
+
+// MISTAGGING
+
+
+
+// Clause with no NP and two FV. When the first FV is made by a single verb in plural 
+// e.g Recently, first evidence in favour of this hypothesis was provided
+40> SC{#20[startbis],?+#1, FV{verb#10[hmm_noun,first,last]}}, PP#2, FV#3 =
+    SC{#20,#1, noun#10[verb=~,noun=+], #2, #3} .
+
+// CH August 2002
+// Simple clause with two verbs...One of them is mistagged
+// If the first verb is non-ambiguously a finite verb and if the second one can be a adjectival ppart,
+// Then the error is corrected
+40> SC#1{?*#10[scbegin:~,wh:~], FV#11[indspeech:~]}, ?*#2[verb], NP#3, PP*#4, FV{#5[first,last,partpas,hmm_adj]} = 
+	#1{#10,#11}, #2, #3, #4, AP{adj#5[adj=+]} .
+
+
+
+// CH July 2002
+// Bad disambiguation of ING form in interrogative clauses.
+// e.g. When is John leaving(*noun) ?
+40> SC#1[wh], NP{#3, #4[noun,vprog]}, #5[punct,form:fquest] =
+	#1, NP{#3[last=+]}, GV{verb#4[noun=~,verb=+]}, #5 .
+
+// CH
+// Duplication when there is a determiner before the #3 noun
+40> SC#1[wh], NP{#6, #3, #4[noun,vprog]}, #5[punct,form:fquest] =
+	#1, NP{#6, #3[last=+]}, GV{verb#4[noun=~,verb=+]}, #5 .
+
+
+// CH March 2002
+// Reshuffling in case of bad disambiguation of BUT
+// If an NP which head is a pronoun with feature form:pronthing is on the left of a "but" that is tagged as conjunction and if after this "but" we have no verbs or a verb that is introduced by a conjunction
+// Then we rebuild the tree in order to make a PP with the "but" and the following NP
+// e.g. Echo "I want nothing but a sailor" 
+//40> NP#1{pron[form:pronthing]}, BG{CONJ#2[form:fbut]}, NP#3, #4*[verb:~] =
+//	#1, PP{prep#2[conj=~,hmm_prep=~,hmm_cosub=+,prep=+], #3}, #4 .
+
+
+// CH 
+// When "but" is tagged as a subord. conjunction but is in fact a coordinator just between two PP's that are introuduced by the same preposition and not followed by a verb
+// John is not the creator of the sculpture but of the painting
+//40> PP#1{prep#6, NP}, BG{CONJ#2[form:fbut]}, PP#3{prep#7,NP}  = 
+40> PP#1{prep#6, NP#10}, BG{CONJ#2[form:fbut]}, PP#3{prep#7,NP#30}, ?*#4[verb:~], ?#5[end]  = 
+	#1{#6,#10}, conj#2[prep=~,coord=+], #3{#7,#30}, #4, #5, 
+	where ( #6[form]::#7[form] ) .
+
+
+// CH
+// Reshuffling in case of a bad disamb of "but" when "but" is tagged as a preposition and does not follow any "pronthing.
+// e.g. The creator is not John but a sailor."
+40> NP#1{?*#10,#11[last,form:~pronthing]}, PP{prep#2[form:fbut], NP#3}, #4[verb:~] =
+	#1{#10,#11}, conj#2[prep=~,coord=+], #3, #4 .
+
+// EN COURS BUT comme conjonction de coord
+40> NP#1{?*#10,#11[last,form:~pronthing]}, PP{prep#2[form:fbut], NP#3}, #4[verb] =
+	#1{#10,#11}, SC{ BG{conj#2[prep=~,subord=+]}, #3, #4} .
+
+
+
+// Bad tagging noun/verb
+// If we have a NP in which the determiner is an indefinite singular article and the head is a plural noun which can be a verb, then this plural noun is mistagged and is in fact a finite present verb
+// e.g. A large current flows in the river
+40> PP{ prep#6, NP{det#1[sg:+,indef:+], AP*#2, noun*#3, noun#5, #4[noun,last,pl:+,hmm_verb:+]}} = 
+	PP{ #6, NP{#1,#2,#3,#5[last=+]}}, FV{verb#4[noun=~,verb=+,sg=+,pres=+,trans=+]} .
+
+// Same as above with NP
+40> NP{det#1[sg:+,indef:+], AP*#2, noun*#3, noun#5, #4[noun,last,pl:+,hmm_verb:+]} = 
+	NP{#1,#2,#3,#5[last=+]}, FV{verb#4[noun=~,verb=+,sg=+,pres=+,trans=+]} .
+
+
+// If a NP starts with a determiner (sing, indefinite) or definite, then followed by a singular noun, then followed by a plural noun (ambiguous verb) then followed by a singular noun, then the plural noun inbetween is a verb
+// e.g. The/A cat drinks milk
+40> NP[startbis]{det#1[sg:+], AP*#2, noun#3[sg:+,pl:~], noun#4[sg:~,pl:+], noun#5[sg:+,pl:~,last]} =
+	NP{#1,#2,#3[last=+]}, FV{verb#4[last=+]}, NP{#5} .
+
+40> ?#6[prep:~], NP{det#1[sg:+], AP*#2, noun#3[sg:+,pl:~], noun#4[sg:~,pl:+], noun#5[sg:+,pl:~,last]} =
+	#6, NP{#1,#2,#3[last=+]}, FV{verb#4[last=+]}, NP{#5} .
+
+
+// CH 31th August
+// COORDINATION
+
+
+
+// Adjustment of the chunks in order to be able to catch some coordination cases.
+// e.g. When did Spain and Korea restart ambassadorial relations
+// One SC {When did} and another SC {Korea restart} are constructed and so it will be impossible to treat this coordination.
+40> SC#1{#10[wh,startbis],FV#11}, NP#2{?*#20,#21[proper]}, SC{#3[form:fand], NP#4{?*#40,#41[proper]}, FV#5} = 
+		  #1{#10,#11}, #2{#20,#21}, #3, #4{#40,#41}, IV#5.
+
+
+
+// they say the Philippines and Thailand would be....
+40> SC#1{?*#10,#11[indspeech]}, NP#2{?*#3,#4[proper]}, SC{#5[form:fand], NP#6{?*#7,#8[proper]}, FV#9} = 
+    #1{#10,#11}, NP{#2{#3,#4}, #5, #6{#7,#8}}, #9 .
+
+// CH Jan. 2003
+// Coordination. The default that is make in chunking is to consider a coordination on the higher level in case of 
+// coord ?*[verb:~], fv in the middle of a sentence. (e.g. An SC is constructed in these cases)
+// Example: He likes her mother and her mother likes him. where this analysis is correct in order to avoid COORD(mother,mother)
+// But sometimes the analysis is not correct as in "As the competition heats up, the implications for investors *(SC and borrowers are enormous).
+//40> SC#1, ?*#2[verb:~], PP#3{?*,NP{?*[det:~],noun[pl]}}, SC{#5[conj,coord], NP#6{noun[pl]}, FV#7} = 
+//	#1, #2, #3, #5, #6, #7 .
+
+
+
+// Adjustement AP/NP because of Nadjs in order to avoid to duplicate all rules (AP with a nadj head can work as NP)
+// If we have a SC in which we have a AP which last element is a nadj and which have no NP, Then we change the chunk AP to chunk NP
+// e.g. "As {AP russians(nadj)} are nice..." we want "Russians" to be within a NP 
+40> SC{?*#1[adj:~,noun:~], AP{?*#2,nadj#5[last]}, ?*#3[noun:~], FV#4[last] } =
+	SC{ #1, NP{#2,#5}, #3, #4}. 
+
+
+
+// reshuffling rules for disambiguation. When it is easier to disambiguate when structures are already constructed.
+
+// CH Feb. 4
+// Adjustements in case of a bad disambiguation N(sg)/V(pres,pl)
+// When we have alone in a NP chunk a Plural noun followed by a singular noun with feature hmm_verb, AND if this NP chunk is preceeded by a conjunction of subordination 
+// then the second noun is in fact a verb
+// e.g. I will not wait, WHILE DANGERS GATHER
+40> BG#1{conj#10[sub,last]}, NP{ #2[noun,pl], #3[noun,sg,hmm_verb,last]} =
+	SC[verb=+]{ #1{#10}, NP{#2[last=+]}, FV{ verb#3[noun=~,sg=~,first=+,verb=+,pres=+]} }.
+
+
+
+
+// Same as above when the bad disambiguated NP contains only 2 elements 
+// e.g. Dogs bark
+40> NP{ #1[noun,pl,first,adj:~,org:~,country:~], #2[hmm_verb,noun,sg,last]} =
+	SC[verb=+]{ NP{#1[last=+]}, FV{ verb#2[noun=~,sg=~,first=+,verb=+,pres=+, last=+]} }.
+
+// CH Same as above when the NP contains 3 or more elements
+//Cats drink milk
+// Women use support features 
+40> NP{ #1[noun,pl,first,toutmaj:~,country:~], #2[hmm_verb,noun,sg], #3[last] } =
+	SC[verb=+]{ NP{#1[last=+]}, FV{ verb#2[noun=~,sg=~,first=+,verb=+,pres=+, last=+]} }, NP {#3} .
+40> NP{ #1[noun,pl,first,toutmaj:~,country:~], #2[hmm_verb,noun,sg], #3, #4[last] } =
+	SC[verb=+]{ NP{#1[last=+]}, FV{ verb#2[noun=~,sg=~,first=+,verb=+,pres=+, last=+]} }, NP {#3,#4} .
+
+
+
+
+// CH, 11th December
+// Adjustments in case of a bad disambiguation Noun/Verb
+// If we have a sentence (ending with a end-of-sentence marker) which is made only by a NP in which the last N has feature hmm_verb, then the last element of the NP is a verb
+// e.g. The dog barks.
+40> NP[startbis]{ ?*#1[noun:~], #2[noun:+,sg];AP#2{nadj[first,last,sg]}, #3[noun,hmm_verb,last,pl]}, punct#4[sent,end] = 
+	SC[verb=+]{ NP{#1, #2[last=+]}, FV{ verb#3[noun=~,verb=+,pres=+,first=+]} }, #4 .
+
+
+// CUCAR - PROBLEME : John loves Mary; he really loves her. Disparait un bout
+// CH, 17th May
+// Bad disambiguation Noun/Verb
+// If we have an ambiguous Npl/Verb tagged as NPl that is between two proper nouns, then we consider that the Npl, is in fact a verb in present, singular form.
+// checked in Brown corpus...
+// e.g. Peter orders Mary ....
+//40> NP{ #1[noun,proper], #2[noun,pl,hmm_verb,last]}, NP#3{ ?[proper,noun]} =
+//	SC[verb=+]{ NP{#1[last=+]}, FV{ verb#2[noun=~,verb=+,pres=+,sg=+,first=+,last=+]} }, #3 .
+
+
+// CH 5th Feb.
+// Disambiguation Noun/Verb
+// If we have a sentence (ending with a end-of-sentence marker) which is made by 
+// A proper noun + a noun without capital letter that is ambiguous verb and has a plural form + A proper noun
+// Then we consider that the second lexical element is a finite verb in present
+40> NP[startbis]{#1[noun:+,proper:+], #2[noun:+,pl:+,proper:~,hmm_verb]}, NP#3{noun#30[first,last,proper]}, punct#4[sent,end] =
+	SC[verb=+]{NP{#1[last=+]}, FV[last=+]{verb#2[noun=~,verb=+,pres=+,first=+,trans=+]} }, #3{#30}, #4.
+
+
+
+// EN COURS .... REGLE NE S'APPLIQUE PAS
+
+// CH, March 2002
+// "Mutation affected by multiplication is rare."
+// affected is taken as a FV and so an SC is constructed above "Mutation affected"
+// reshuffling in this case in order to have an SC above "Mutation affected by multiplication is"
+// We check that the past participle does not have the feature sc_pby (subcategorization of a by-complement)
+// Check if we have to put a constraint start on the first SC
+40>  SC{?*#5[verb:~], NP#1, PP*#6, FV{verb#2[partpas,sc_pby:~]}}, PP#3{prep#8[form:fby],?-#9}, FV#4 =
+	SC[verb=+]{#5, NP#1, #6, verb#2[adj=+], PP#3{#8,#9}, FV#4} .
+
+
+
+// CH, Feb. 2003
+// Bad disambiguation Finite-Verb Past-Participlr
+40> #6[verb], ?*#5[verb:~],IV#1{prep#10[form:finfto], verb#11[last]}, NP#2{?*#21,#20[noun,proper:~]}, FV{verb#3[first,last,partpas]}, NP#4 = 
+	#6, #5, #1{#10,#11}, #2{#21,#20}, verb#3[adj=+], #4 .
+	
+40> #6[verb], ?*#5[verb:~],IV#1{prep[form:finfto], verb[last]}, NP#2{?*,?}, FV{verb#3[first,last,partpas]}, NP#4 = 
+	#6, #5, #1, #2, verb#3[adj=+], #4 .
+
+
+// Finite preterite verb vs. past participle
+40> SC#1[startbis]{#10{#100[first:+,wh:~],?-#101},?-#11}, #2[noun], FV{(adv#5),verb#3[last,partpas]}, ?-#4-  = 
+	#1{#10{#100,#101},#11},#2, #5, verb#3[adj=+], #4.
+
+// She provided the tubes milked (not verb but adj) from the radium she purified
+40> SC#1{NP#2,FV#3[indspeech:~]}, SC{NP#4,FV{verb#5[last,partpas]}} =
+       #1{#2,#3}, #4, verb#5[adj=+,verb=+,partpas=+] .
+
+// Temporal expressions that also are conjunction introducing an subclause
+
+
+// Same as above with "every time"
+40> NP#1[tempexpr]{quant#10, noun#11[lemme:time]}, ?*#3[verb:~,conj:~], FV#4 =
+	SC { BG{conj#1[noun=~,conj:+,sub:+,time:+,c_set:+]{#10,#11}}, #3, #4} .
+
+
+// Reshuffling NPs
+// When a unique NP is considered when in fact two different NPs.
+
+// Verb with feature sc_np_nppred, followed by big NP containing a named entity of person and other nominal elements, then the NP is cut just after the named entity
+// e.g. Tom named John Bolton US ambassador to the United Nations
+40> SC#10{?*#11, FV#12{?*#13,#14[verb,last,sc_np_nppred]}}, NP{?*#1, #2[noun,proper,person], ?-#3[part:~]} = 
+    #10{#11,#12{#13,#14}}, NP{#1,#2}, NP{#3} .
+
+40> #10[verb:+]{?*#11,verb#12[last,sc_np_nppred]}, NP{?*#1, #2[noun,proper,person], ?-#3[part:~]} = 
+    #10{#11,#12}, NP{#1,#2}, NP{#3} .
+
+
+// When two nps are considered when this is a single NP
+// This is due to the use of NADJ category,,,
+// eg. War memorial
+// If those NPs are not followed by anything then, they are grouped together
+40> NP{?+#1,#2[noun:+,last:+,sg:+]}, NP[endbis]{nadj#3[first,last]} =
+	NP{#1,#2,#3} .
+
+40> NP{?+#1,#2[noun:+,last:+,sg:+]}, NP{nadj#3[first,last,partpas:~]}, #4[noun:~,adj:~] =
+	NP{#1,#2,#3}, #4.

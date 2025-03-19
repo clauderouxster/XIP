@@ -1,0 +1,1011 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2001 - 2009 Xerox Corporation.  All Rights Reserved.
+//!Author: C. Brun.
+//!
+//!  Date: Nov. 2009
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//Script:
+
+//if (ORGANISATION(#1[propag:~])){
+//   print(#1[surface],"\n");
+//    _numorg =  _numorg + 1;
+//}
+
+DependencyRules:
+
+// ************ DB entities
+
+//if ( ORGANISATION(#1[propag:~]) &  _numorg:1)
+//   PARTIES(#1)
+//
+//if ( ORGANISATION(#1[propag:~]) &  _numorg:2)
+//   PARTIES(#1)
+//
+//|NOUN#1[contract-type]|
+//        CONTRACT-TYPE(#1)
+//
+//|#1|
+//    if(SUBJ-N(#2,#1)   & MANNER(#2[lemme:"renew"],#3))
+//    AUTO-RENEWAL(#1,#3,#2)
+//
+//|NOUN#1[toutmaj,lemme:"indemnification"]|
+//        HAS-INDEMNIFICATION(#1)
+//
+//|NP{?*,AP{adj[lemme:"effective"]},noun[lemme:"date"]}, NP{NOUN#1}|
+//               if ( DATE(#1) )
+//               EFFECTIVE-DATE(#1)
+//
+//|NP{?*,AP{adj#2[lemme:"effective"]},noun#3[lemme:"date"],NOUN#1}|
+//               if ( DATE(#1) )
+//               EFFECTIVE-DATE(#2,#3,#1)
+//
+//|SC{NP#2{noun[lemme:"commencement"],noun[lemme:"date"]},(INS),FV{verb[lemme:"mean"]}},NP{noun#1}}|
+//        if (DATE(#1))
+//        START-DATE(#2,#1)
+//
+//|SC{NP#2{noun[lemme:"commencement"],noun[lemme:"date"]},(INS),FV{verb[lemme:"mean"]}},PUNCT(#1[spec])}|
+//        START-DATE(#2,#1)
+//
+//|NP#2{noun[lemme:"commencement"],noun[lemme:"date"],noun[lemme:"means"]},PUNCT(#1[spec])}|
+//        START-DATE(#2,#1)
+//
+
+
+//// test tweets
+ |NOUN#1[movie-title]|
+     MOVIE(#1)
+
+|NP#1{NOUN#2[pron:~,maj,date:~,last,time:~,tempexpr:~,let:~,first,last,event:~]}|
+        if (~ORGANISATION(#2) & ~MOVIE(#2) & ~PERSON(#2) & ~LOCORG(#2)  & ~LOCATION(#2) & ~EVENT(#2))
+         ENTITYPOT(#1)
+
+|NP#1{?+[pron:~,maj,date:~,time:~,tempexpr:~],NOUN#2[pron:~,maj,date:~,last,time:~,tempexpr:~,event:~]}|
+         if (~ORGANISATION(#2) & ~MOVIE(#2) & ~PERSON(#2) & ~LOCORG(#2)  & ~LOCATION(#2) & ~EVENT(#2))
+        ENTITYPOT(#1)
+
+|NP#1{?{?*[pron:~,maj,date:~,time:~,tempexpr:~]},NOUN#2[pron:~,maj,date:~,last,time:~,tempexpr:~,event:~]}|
+         if (~ORGANISATION(#2) & ~MOVIE(#2) & ~PERSON(#2) & ~LOCORG(#2)  & ~LOCATION(#2) & ~EVENT(#2))
+        ENTITYPOT(#1)
+        
+|NP#1{?*[pron:~,date:~,time:~,tempexpr:~],NOUN#2[pron:~,maj,date:~,last,time:~,tempexpr:~,event:~]}|
+        if (~ENTITYPOT(#1) & ~ORGANISATION(#2) & ~MOVIE(#2) & ~PERSON(#2) & ~LOCORG(#2)  & ~LOCATION(#2) & ~EVENT(#2) )
+        ENTITYPOT(#2) 
+
+// ***************** SOME CORRECTIONS and ADDITIONS
+//
+
+//Terrible capture, I like it : capture not subject
+
+|SC[start]{NP{?*,#1},punct[comma],NP{PRON#3[personal,nom]},FV{verb#2}}|
+        if (^SUBJ[pre](#2,#1))
+        SUBJ[pre](#2,#3)
+
+|SC[start]{NP{?*,#1},punct[comma],NP{PRON#3[personal,nom]},FV{verb#2}}|
+        if (^SUBJ-N[pre](#2,#1))
+        SUBJ-N[pre](#2,#3)
+
+// he needs to give up
+ |#1[negative=+,topic-subj=+]| 
+if ( NUCL[particle](#1[lemme:"give"],#2[lemme:"up"]) & OBJ[post,infinit](#3[lemme:"need"],#1) )
+   ~
+
+|NP{?*,#2[lemme:"negative",last,negative=~]}|
+        ~
+
+// a well structured image
+
+
+// Lou Ann, this is outstanding ==> Lou Ann not subject
+
+|SC{NP{NOUN#4{?*,NOUN#1}},PUNCT[comma],NP{PRON#2},FV{?*,VERB#3}}|
+        if (PERSON(#4) & ^SUBJ-N[pre](#3,#1) & ^ATTRIB(#1,#5))
+        SUBJ-N[pre](#3,#2),ATTRIB(#2,#5)
+
+// I can't wait for that AMBIG
+
+//|#2[positive=+,topic-for=+,modified=+]|
+ //       if (NUCL[vlink,modal](#1[lemme:"can"],#2[lemme:"wait"]) & NEGAT(#2))
+//        ~
+
+//  it stresses me out
+
+|#1[negative=+,topic-subj=+]|
+        if (MOD[post](#1[lemme:"stress",verb],#2[adv,lemme:"out"]))
+        ~
+// Don't miss xxx
+
+   |#2[topic-obj=+,positive=+,modified=+]|
+    if (NUCL[vlink,insist](#1[lemme:"do",imper],#2[lemme:"miss"]) & NEGAT(#2))
+    ~
+
+// he has got heart
+
+|#1[lemme:"heart",positive=+]|
+        if ( OBJ(#3[lemme:"have"],#1))
+        ~
+
+// you do it nicely ==> do nicely become the opinionated predicate
+
+|#1[positive=+,topic-obj=+]|
+if (MANNER(#1[lemme:"do"],#2[adv,positive]))
+   ~
+|#1[negative=+,topic-obj=+]|
+if (MANNER(#1[lemme:"do"],#2[adv,negative]))
+   ~
+
+// charge too much
+
+|VERB#1[lemme:"charge",topic-subj=+,negative=+]|
+        if( MANNER(#1,#2[lemme:"too much"]))
+        ~
+
+// I left your company
+
+|verb#1[lemme:"leave",topic-obj=+,negative=+]|
+        if (OBJ(#1,#2[lemme:"company"]))
+        ~
+
+if (MOD[NEG](#1,#2[lemme:"not"]))
+   NEGAT(#1)
+// which is not
+
+|SC{BG{PRON[lemme:"which"]},FV{VERB#1[lemme:"be"]}},adv[lemme:"not"]| 
+          if (~NEGAT(#1))                                                            
+                   NEGAT(#1)    
+
+|adv[lemme:"not"],NP#3|  
+                 if (head(#2,#3) & ~NEGAT(#2))
+                 NEGAT(#2)                                    
+
+// nobody as subject e.g. nobody loves it
+
+if (SUBJ-N(#1,#2[lemme:"nobody"]) |  EXPERIENCER(#1,#2[lemme:"nobody"]))
+	NEGAT(#1)
+
+// nobody is happy
+
+if ( ATTRIB[neg](#1,#2) & ~NEGAT(#2))
+   NEGAT(#2)
+
+// they don't look much better ...
+
+|IV{?*,VERB#2},?*[quant],AP{?*,ADJ#3}|
+if (NUCL[vlink,insist](#1[lemme:"do"],#2) & NEGAT(#2))
+	NEGAT(#3)
+
+// .. this isn't healthy
+
+ |FV{verb#1[lemme:"be"]},AP{ADJ#2}|
+	if (~ATTRIB(?,#2) & NEGAT(#1))
+	NEGAT(#2)
+
+// it is unlikely to last
+if (MOD[post,infinit](#1[lemme:"unlikely"],#2))
+   NEGAT(#2)
+
+	
+// but not recommended
+
+|FV{adv[lemme:"not"],adv*[lemme:~"only"],verb#1}|
+	NEGAT(#1)
+
+// you don't need to worry
+
+if (NEGAT(#1[lemme:"need"]) & EMBED[infinit](#2,#1))
+	NEGAT(#2)
+   
+
+if (QUANTD(#1,#2[lemme:"zero"]))
+   NEGAT(#1)
+
+// performed below
+
+if (MOD[post](#1[verb],#2[lemme:"below"]))
+   MANNER[post=+](#1,#2)
+
+
+// ******* Cons and pro as subject or objects
+
+|SC{NP{NOUN#1[lemme:"con",start]}, punct, NP#3, ?*} |
+          if (^$1(#2,#1) & HEAD(#4,#3))
+          $1(#2,#3)
+
+|SC{NP{NOUN#1[lemme:"con",start]}, punct, NP#3, ?*} |
+          if (^$1(#1,#2) & HEAD(#4,#3))
+          $1(#3,#2)
+
+|SC{NP{NOUN#1[lemme:"pro",start]}, punct, NP#3, ?*} |
+          if (^$1(#2,#1) & HEAD(#4,#3))
+          $1(#2,#3)
+
+|SC{NP{NOUN#1[lemme:"pro",start]}, punct, NP#3, ?*} |
+          if (^$1(#1,#2) & HEAD(#4,#3))
+          $1(#3,#2)
+
+// ******
+
+// adverbs : poorly integrated 
+
+//if (MANNER[pre](#1[positive=+],#2[adv,positive]))
+//   ~
+
+//if (MANNER[pre](#1[negative=+],#2[adv,negative]))
+//   ~
+
+// double objects I like this, Lou Ann
+
+|NP{PRON#1},PUNCT[comma],NP{?*,NOUN#2[last]}|
+        if (^OBJ-N(#3,#2) & OBJ-N(#3,#1) )
+        ~
+
+//They got angry 
+
+|SC{?*,FV{?*,verb#2[last,cop2]}},AP{?*,#1[last]}|
+        if (SUBJ-N(#2,#3))
+        ATTRIB(#3,#1)
+
+
+|AP{?*,adj#1[last,topic-of]},PP{prep[form:fof],NP#2}|
+        if (HEAD(#3,#2))
+        MOD[post=+](#1,#3)
+
+// coordination : amazing reflexion and colors.
+
+if (MOD[pre](#2,#1) & COORD(#4,#2) & COORD(#4,#3) & ~MOD[pre](#3,?) & #2 < #3 )
+   MOD[pre=+](#3,#1)
+
+// not much better 
+
+|AP{ADJ[lemme:"not_much"]},AP{?*, ADJ#1} |
+                       NEGAT(#1)
+
+// it is not a all good
+
+|SC{?*,FV{?*,verb#2[last,cop]}},adv[lemme:"not"],prep[lemme:"at"],quant[lemme:"all"],?{?*,#1[last]}|
+        if (SUBJ-N(#2,#3))
+        NEGAT(#1),ATTRIB(#3,#1)
+       
+        
+// I recommend not to  watch
+
+| IV{adv[lemme:"not"],prep[lemme:"to"], VERB#1}| 
+	NEGAT(#1)
+
+//It is not value (?) for your money
+
+|SC{?*,FV{?*,verb[last,cop]}}, adv[lemme:"not"],FV{?*,verb#1[last]}|
+      if (~NEGAT(#1))
+      NEGAT(#1)
+
+
+// I can't say it is nice : calculate the subject of is
+
+|IV{?*,VERB[indspeech]},NP#1,FV{VERB#3[lemme:"be"]},?*[verb:~]|
+	if (HEAD(#2,#1))
+	SUBJ-N(#3,#2)
+
+
+// no one ever ...
+
+// does not seem to use ... : the negation propagates on use
+
+if( NEGAT(#1[lemme:"seem"]) & MOD(#1,#2[verb]))
+	NEGAT(#2)
+
+// But blabla, this is definitively not the printer to have
+
+|FV{?*,VERB#1[cop]}, adv*, adv[lemme:"not"]| 
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+// was not as difficult
+
+|adv[lemme:"not"], PP{prep[lemme:"as"],AP{?*,#1[last]}}|
+		NEGAT(#1)
+
+
+|FV{AUX[auxnot]},IV{?*,#1}|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+|NFV{adv[lemme:"not"],verb#1}| 
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+// they will not have to worry
+
+|IV{adv[lemme:"not"],AUX{VERB#1,PREP}},IV{VERB#2,?*}|
+	if (~NEGAT(#1))
+	NEGAT(#1), NEGAT(#2)
+
+//to treat modifier and attributes the same way
+
+if (ATTRIB(#1,#2) | MOD(#1,#2) )
+	GLOBALMOD(#1,#2)
+
+|#2[negative=+]|
+if (GLOBALMOD(#1[lemme:"cost"],#2[lemme:"high"]))
+   ~
+
+|#2[negative=+]|
+if (GLOBALMOD(#1[lemme:"price"],#2[lemme:"high"]))
+   ~
+
+|#2[positive=+]|
+       if (MOD[post](#1,#2[lemme:"well"]))
+       ~
+       
+
+// not very interesting
+
+|adv[lemme:"not"],adv*,GV{?*,verb#1}|
+        NEGAT(#1)
+
+
+//Warning: I never had so many problems : double negation
+
+|NFV{ADV#1,VERB},?[lemme:~"so"]|
+if (MOD[pre](#2,#1[lemme:"never"]))
+	NEGAT(#2)
+
+|IV{ADV*,ADV[lemme:"not"],VERB#1}| 
+	NEGAT(#1)
+
+// case coodination of adjectives: this first (at least in negative)
+
+|AP{ADV[lemme:"not"], ADJ#1,CONJ,NADJ}|
+	NEGAT(#1)
+
+// AP enchasses : they are more succesful
+
+|ADV[lemme:"not"],NP{NADJ#1}|
+		NEGAT(#1)
+
+|ADV[lemme:"not"],NP{NADJ#1[first]{NADJ#2,?}}|
+		NEGAT(#1), NEGAT(#2)
+
+
+// it can not work
+if (MOD[neg](#1,#2[noun:~,verb]) & ~NEGAT(#1))
+	NEGAT(#1)
+
+//it cannot work
+
+|SC{?*,FV{AUX[auxnot]}},IV{?*,#1}|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+if (MOD(#1,#2[lemme:"never"]))
+	NEGAT(#1)
+
+|adv[lemme:"never"],NP{?*,#1[last]}|
+	if (~NEGAT(#1))
+		NEGAT(#1)
+
+
+|ADV[lemme:"not"],AP{?*,#1[last]}| 
+	NEGAT(#1)
+
+|ADV[lemme:"not"],GV{?*,#1}| 
+	NEGAT(#1)
+
+|ADV[lemme:"not"],ADV*,NP{?*,#3{adv*,#4[adj,lemme:~"single"]},#2[adj],#1[last]} |
+		NEGAT(#4)
+
+|ADV[lemme:"not"],ADV*,NP{?*,#3{adv*,#4[adj,lemme:"single"]},#2[adj],#1[last]} |
+		NEGAT(#2)
+
+
+|ADV[lemme:"not"],ADV*,NP{?*[adj:~],AP{?*,#2[adj,last]},#1[last]} |
+		NEGAT(#2)
+
+|ADV[lemme:"not"],NP{DET,AP{ADJ#2},?*} |
+		NEGAT(#2)
+
+|ADV[lemme:"not"],NP{#1[quant,lemme:"enough"],#2[last]}| 
+		NEGAT(#2)
+
+
+
+// not too big or bulky ?
+
+
+// no/not so great
+
+|QUANT[lemme:"no"],ADV*,NP{NADJ#1}|
+	NEGAT(#1)
+|QUANT[lemme:"no"],ADV*,AP{NADJ#1}|
+	NEGAT(#1)
+|QUANT[lemme:"no"],ADV*,AP{ADJ#1}|
+	NEGAT(#1)
+|QUANT[lemme:"not"],ADV*,NP{NADJ#1}|
+	NEGAT(#1)
+|QUANT[lemme:"no"],ADV*,NP{ADJ#1}|
+	NEGAT(#1)
+|QUANT[lemme:"not"],ADV*,NP{ADJ#1}|
+	NEGAT(#1)
+
+// I could no longer recommend
+
+|QUANT[lemme:"no"],IV{adv[lemme:"long",compar],VERB#1}|
+		NEGAT(#1)
+
+// no one
+
+|PRON#1[lemme:"no_one"]|
+	if (~ATTRIB(#1,#2[compar,positive]))
+	NEGAT(#1)
+
+|SC{NP{QUANT[lemme:"no"]},FV{?*,#1[last]}}| 
+		NEGAT(#1)
+
+// none of us
+
+
+if ( QUANTD[neg](#1,#2)  & ~NEGAT(#1))
+	NEGAT(#1)
+
+if ( QUANTD(#1,#2[lexneg])  & ~NEGAT(#1))
+	NEGAT(#1)
+
+//
+|PRON#1[lemme:"nobody"]|
+	NEGAT(#1)
+
+|NP{DIG*,QUANT[lemme:"less"],ADV*,ADJ#1}|
+	NEGAT(#1)
+
+|NP{DIG*,QUANT[lemme:"less"],ADV*,NADJ#1}|
+	NEGAT(#1)
+
+|NP{?,QUANT[lemme:"least"],ADV*,ADJ#1,?[noun,last]}|
+	NEGAT(#1)
+|NP{?,QUANT[lemme:"least"],ADV*,NADJ#1,?[noun,last]}|
+	NEGAT(#1)
+
+|NFV{ADV{QUANT[lemme:"less"],CONJ[lemme:"than"]},VERB#1}}|
+	NEGAT(#1)
+
+|AP{ADV{QUANT[lemme:"less"],CONJ[lemme:"than"]},ADJ#1}|
+	NEGAT(#1)
+
+
+|QUANT[lemme:"less"],AP{?*,#1[last]}| 
+	NEGAT(#1)
+
+|SC{?*,FV{?*,#1[last,lemme:"do"]}}, FV{VERB#2}| 
+	if (NEGAT(#1))
+	NEGAT(#2)
+
+if (^ATTRIB[neg:~](#1,#2) & NEGAT(#2))
+	ATTRIB[neg=+](#1,#2)
+
+// it cannot be nicer 
+
+if ( SUBJ-N(#3,#2) & NEGAT(#3) & ^ATTRIB[neg:~](#2,#1))
+   ATTRIB[neg=+](#2,#1)
+
+|NP{AP{ADJ[lemme:"few"]},ADV*,#1}|
+	NEGAT(#1)
+
+// non-adj
+
+|ADJ#1[positive=+]{ADJ[lemme:"non"],punct,ADJ#2[negative]}|
+	~
+
+|ADJ#1[negative=+]{ADJ[lemme:"non"],punct,ADJ#2[positive]}|
+	~
+
+// non adj 
+   |AP{ADJ[lemme:"non"]}, AP{ADJ#2[negative]} | 
+   NEGAT(#2)
+
+   |AP{ADJ[lemme:"non"]}, AP{ADJ#2[positive]}| 
+   NEGAT(#2)
+
+// it would not be costly
+
+|IV{ADV[lemme:"not"],verb[lemme:"be"]}, AP{?*,ADJ#1}|
+	NEGAT(#1)  
+   
+
+// Neither worked 
+
+|QUANT[lemme:"neither"],FV{*,#1[last,verb]}| 
+	NEGAT(#1)
+
+// there is nothing wrong
+
+|NP{PRON[lemme:"nothing"]},NP{ADV*,#1[last]}|
+	NEGAT(#1)
+
+|NP{PRON[lemme:"nothing"]},SC{NP{ADV*,#1[last]}}|
+	NEGAT(#1)
+
+// I have to say don't buy this printer 
+
+|IV{verb[lemme:"do",contr_neg]}, FV{?*,#1[last]}|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+// it is not book accurate 
+
+if (MOD[post](#1[noun],#2[adj]) & NEGAT(#3) & NUCL(#3,#1))
+	NEGAT(#2)
+
+// it is not as good as 
+|AP#2|
+if (NEGAT(#1) & MOD[post](#1,#2[adj]))
+	NEGAT(#2)
+
+// it is not going to be 
+
+if (NEGAT(#1) & NUCL[vlink](#1[lemme:"go"],#2[lemme:"be"]))
+	NEGAT(#2)
+
+// not ground breaking
+
+|adv[lemme:"not",first], NADJ#1|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+|adv[lemme:"not",first], ADJ#1|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+	
+|conj,adv[lemme:"not"], NADJ#1|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+|conj,adv[lemme:"not"], ADJ#1|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+
+// with conjunctions 
+
+|punct[lemme:":"],adv[lemme:"not"],PP{?*,AP{ADJ}},conj,GV{verb#1[vprog]},PP[last]|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+
+   // there has never been a problem
+
+if ( NUCL[SUBJCOMPL](#1,#2[noun]) & NEGAT(#1))
+	NEGAT(#2)
+
+// love not having : pas de negat sur love 
+
+|SC{?*,FV{?*,#1}}, adv[lemme:"not"], GV{verb#2[prog]} |
+	if (^NEGAT(#1))
+	~
+// no more x
+
+|quant[lemme:"no"],quant[lemme:"more"], #1 |
+	NEGAT(#1)
+|np{quant[lemme:"no"]},quant[lemme:"more"], #1 |
+	NEGAT(#1)
+
+
+// The cast is a limited one ==> the cast is limited.
+
+//if (^ATTRIB(#1,#2[lemme:one]) & DETD(#2,#4) & MOD[pre](#2,#3[adj]))
+//	ATTRIB(#1,#3)
+
+
+////**********************************************///
+
+// DATE MARKING 
+	
+Script:
+
+if (DATE(#1) ){
+	_firstdateindoc=_firstdateindoc+1 ;
+        if (_firstdateindoc:1){
+        _datecurrent=#1[lemme] ;
+        }
+}
+
+
+DependencyRules:
+
+//if (DATE(#1) & (_firstdateindoc:1))
+//	DATEREVIEW(#1)
+
+
+
+// ****************** Rules for Sentiments *********************** 
+
+//*********************************************************************
+// when a modifier is in focus
+//*********************************************************************
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-to],#2) & PREPD(#2,#3[lemme:"to"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-in],#2) & PREPD(#2,#3[lemme:"in"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-about],#2) & PREPD(#2,#3[lemme:"about"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-at],#2)& PREPD(#2,#3[lemme:"at"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-with],#2) & PREPD(#2,#3[lemme:"with"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-from],#2)& PREPD(#2,#3[lemme:"from"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-for],#2)& PREPD(#2,#3[lemme:"for"])   )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-of],#2) & PREPD(#2,#3[lemme:"of"])  )
+	      SENTIMENT(#2,#1)
+
+if ( MOD[post](#1[sentiments,!sentiments:!,topic-on],#2) & PREPD(#2,#3[lemme:"on"])  )
+	      SENTIMENT(#2,#1)
+
+//** Case of a  nationality adjective "Iranian failures"
+
+if ( FRM(#1[sentiments,!sentiments:!],#2))
+	SENTIMENT(#2,#1)
+
+// ** CASE ADV: is designed well
+
+if ( MOD[post](#1,#2[sentiments,!sentiments:!,adv]))
+   	SENTIMENT(#2,#1)
+
+   
+
+//**********************************************************
+// Particular cases of embedment
+//**********************************************************
+
+// I dont recomment anyone to buy this printer
+
+
+if (EMBED(#2,#1[lemme:"recommend",!sentiments:!]) )
+                            SENTIMENT(#1,#2)                               
+
+//**********************************************************
+// for objects, e.g. "I like the cat", the sentiment beeing 
+// expressed on the verb
+//**********************************************************
+
+if ( OBJ-N(#1[sentiments,!sentiments:!,topic-obj],#2) & ~SENTIMENT(#1,?) )
+	SENTIMENT(#2,#1)
+
+if ( CONTENT(#1[sentiments,!sentiments:!,topic-obj],#2) & ~SENTIMENT(#1,?) )
+	SENTIMENT(#2,#1)
+
+if ( OBJ(#1[sentiments,!sentiments:!,topic-obj],#2) & ~SENTIMENT(#1,?) )
+	SENTIMENT(#2,#1)
+//
+// for objects, e.g. "The cat has a problem", the sentiment beeing 
+// expressed by the OBJ itself
+// except for verbs inverting polarity like "decline"
+
+if ( ( OBJ-N(#1[lexneg:~,sentiments:~],#2[sentiments,!sentiments:!]) | CONTENT (#1[lexneg:~,sentiments:~],#2[sentiments,!sentiments:!]) ) & ~SENTIMENT(#2,?)  & SUBJ-N(#1,#3) )
+	SENTIMENT(#3,#2)
+
+//if ( ( OBJ-N(#1[lexneg:~,sentiments:~],#2[positive]) | CONTENT (#1[lexneg:~,sentiments:~],#2[sentiments,!sentiments:!]) )  & NEGAT(#1) & ~SENTIMENT(#2,?)  & SUBJ-N(#1,#3) )
+//	SENTIMENT[negative=+,modified=+](#3,#2)
+
+//if ( OBJ-N(#1[lexneg:~,sentiments:~],#2[negative]) & NEGAT(#1) & ~SENTIMENT(#2,?)  & SUBJ-N(#1,#3) )
+//	SENTIMENT[positive=+,modified=+](#2,#3)
+
+
+// cases where subject has not been found
+
+if ( ( OBJ-N(#1[lexneg:~,sentiments:~],#2[sentiments,!sentiments:!])| CONTENT (#1[lexneg:~,sentiments:~],#2[sentiments,!sentiments:!]) )  & ~SENTIMENT(?,#2) & ~SENTIMENT(#2,?) )
+	SENTIMENT(#1,#2)
+
+
+//*******
+// when the subject is the focus :
+
+if (SUBJ-N(#1[sentiments,!sentiments:!,topic-subj],#2) & ~QUANTD[neg](#2,?))
+	SENTIMENT(#2,#1)
+
+if (SUBJ-N(#1[positive,topic-subj],#2) & QUANTD[neg](#2,?))
+	SENTIMENT[negative=+](#2,#1)
+
+if (SUBJ-N(#1[negative,topic-subj],#2) & QUANTD[neg](#2,?))
+	SENTIMENT[positive=+](#2,#1)
+
+if (EXPERIENCER(#1[sentiments,!sentiments:!,topic-subj],#2) & ~QUANTD[neg](#2,?)  )
+	SENTIMENT(#2,#1)
+
+if (EXPERIENCER(#1[positive,topic-subj],#2) & QUANTD[neg](#2,?))
+	SENTIMENT[negative=+](#2,#1)
+
+if (EXPERIENCER(#1[negative,topic-subj],#2) & QUANTD[neg](#2,?))
+	SENTIMENT[positive=+](#2,#1)
+
+
+//*********************************************************************
+// For Attribs: The cat is nice
+// but for I am happy with the cat, the sentiment links  happy &  cat
+//*********************************************************************
+
+// treat first: it could be better
+
+if (ATTRIB[neg:~](#1,#2) &  HEAD(#4[positive,compar],#2) & ( SUBJ-N(#3,#1) | EXPERIENCER(#3,#1)) & NUCL[modal](#5[lemme:"could"],#3))
+	SENTIMENT[negative=+](#1,#4)
+
+if (ATTRIB[neg:~](#1,#2[positive,compar]) & ~SENTIMENT(#2,?) & (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1)) & NUCL[modal](#5[lemme:"could"],#3))
+	SENTIMENT[negative=+](#1,#2)
+
+// it is nicer
+
+if (ATTRIB[neg:~](#1,#2[!sentiments:!,sentiments,compar]) & ~SENTIMENT(#1,#2))
+   	SENTIMENT(#1,#2).
+
+if (ATTRIB[neg](#1,#2[positive,compar]))
+   	SENTIMENT[negative=+](#1,#2).
+
+if (ATTRIB[neg](#1,#2[negative,compar]))
+   	SENTIMENT[positive=+](#1,#2).
+
+// ATTRIB(speed,better) SUBJ-N_PRE(be,speed) NUCL_VLINK_MODAL(could,be)
+//
+
+//for embed AP: they are more successful.
+if (ATTRIB[neg:~,appos:~](#1,#2) & HEAD(#4[sentiments,!sentiments:!],#2) & ( SUBJ-N(#3,#1) | EXPERIENCER(#3,#1)))
+	SENTIMENT(#1,#4)
+
+if (ATTRIB[neg:~,appos:~](#1,#2[sentiments,!sentiments:!]) & ~SENTIMENT(#2,?) & ~SENTIMENT(#1,#2)  & (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1)) )
+	SENTIMENT(#1,#2) 
+//& ~SENTIMENT(?,#2)
+// our favorite is this movie
+
+if ( ATTRIB[neg:~,appos:~](#1[!sentiments:!,sentiments],#2) & ~SENTIMENT(#2,?) & ~SENTIMENT(?,#2) )
+   	SENTIMENT(#2,#1) 
+
+// the speed and print quality --> need to handle coordination
+
+if (ATTRIB[neg:~,appos:~](#1,#2[sentiments,!sentiments:!]) & COORD(#4,#1) & COORD(#4,#5) & (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1)))
+	SENTIMENT(#1,#2)
+
+
+//he considers the meeting as positive
+if (ATTRIB[neg:~,appos:~](#1,#2[sentiments,!sentiments:!]) & ~SENTIMENT(?,#2) & ~SENTIMENT(#2,?))
+	SENTIMENT(#1,#2)
+
+if (ATTRIB[neg](#1,#2[positive,compar:~]) & ~SENTIMENT(#2,?)& & ~SENTIMENT(?,#2) (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1))   )
+	SENTIMENT[negative=+,modified=+](#1,#2)
+
+
+if (ATTRIB[neg](#1,#2[positive]) & ^SENTIMENT(#2,#3) & (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1))   )
+	SENTIMENT[negative=+,positive=~](#3,#2)
+
+
+if (ATTRIB[neg](#1,#2[negative]) & ^SENTIMENT(#2,#3) & (SUBJ-N(#3,#1) | EXPERIENCER(#3,#1))    )
+	SENTIMENT[negative=~,positive=+](#3,#2)
+
+// FOR Relative embedment 
+// the food, which was above average 
+
+if (  SUBJ-N(#1,#2) & NUCL[subjcompl](#1,#3[sentiments,!sentiments:!]) & ~SENTIMENT(#2,#3))
+           SENTIMENT(#2,#3)
+
+// MOD
+// the quality is there.
+
+if ( LOC[post](#1[cop],#2)  & SUBJ-N(#1,#3[!sentiments:!,sentiments]) ) 
+	SENTIMENT(#1,#3)
+
+//the printer is as bad as it could be 
+
+| PP{PREP[lemme:"as"],AP{ADJ#2}}| 
+ if ( (SUBJ-N(#1,#3) | EXPERIENCER(#3,#1)) & MOD[post](#1[cop],#2[sentiments,!sentiments:!]) & ~NEGAT(#2) )
+  	SENTIMENT(#3,#2)
+	
+
+// For modifiers : this is an ugly person
+// at the moment no restriction (?)
+
+if(MOD[pre](#1[money:~,no-sents:~,verb:~],#2[adv:~,sentiments,!sentiments:!]) )
+// & ~SENTIMENT(#1,?) & ~SENTIMENT(?,#1) )
+	SENTIMENT(#1,#2)
+
+|AP#3{#2,#1}|
+if(MOD[pre](#1[money:~,no-sents:~,verb:~,tempexpr:~],#2[adv,sentiments,!sentiments:!])  & MOD[pre](#4,#1) & HEAD(#4,#5) )
+                SENTIMENT(#4,#3)                                                                         
+
+// case of coordination This is a nice and cool printer
+
+if(MOD[pre](#1[money:~,no-sents:~,verb:~,tempexpr:~],#2[sentiments,!sentiments:!])  & COORD(#3,#2) & COORD(#3,#4) & SENTIMENT(#1,#4) )
+	SENTIMENT(#1,#2)
+
+
+// a driver problem
+
+if(MOD[pre](#2[sentiments,!sentiments:!,noun],#1[money:~,no-sents:~,verb:~,tempexpr:~,adv:~,noun])  & ~SENTIMENT(#1,?) & ~SENTIMENT(?,#1))
+             SENTIMENT(#1,#2)
+
+//it is book accurate 
+
+if (MOD[post](#1[noun,money:~],#2[sentiments,!sentiments:!]) & ~SENTIMENT(#2,?) & ~SENTIMENT(?,#2)) 
+	SENTIMENT(#1,#2)
+
+
+// for adverbs (?)
+
+if (MANNER(#1[verb,trans],#2[sentiments,!sentiments:!]) )
+	SENTIMENT(#1,#2)
+
+
+
+//embed : I recommend that ...
+
+if ( EMBED[complthat](#2,#1[!sentiments:!,sentiments]) &  ~CONTENT(#1,?) & ~OBJ-N(#1,?))
+	SENTIMENT(#2,#1)
+
+
+//********************************************************************************************
+// Some fixed expressions
+
+|SC{?*,FV{?*,VERB#4[lemme:"leave"]}},ADV*,IV{PREP,VERB#2[lemme:"be"],VERB#3[lemme:"desire"]}|
+	if (VDOMAIN[passive](#3,#2))
+	SENTIMENT[negative=+](#3,#2)
+
+
+|SC{?*,FV{?*,VERB#4[lemme:"leave"]}},QUANT,IV{PREP,VERB#2[lemme:"be"],VERB#3[lemme:"desire"]}|
+	if (VDOMAIN[passive](#3,#2))
+	SENTIMENT[negative=+](#3,#2)
+
+// matches the competition
+
+if (SUBJ-N(#1,#3) & OBJ-N(#1[lemme:"match"],#2[lemme:"competition"]))
+		SENTIMENT[positive=+](#2,#3)
+
+
+// specific pattern: recommended: no/yes
+
+
+|SC{?*,FV{VERB#1[lemme:"recommend",positive=~]}},punct,QUANT#2[lemme:"no",negative=+]|
+	SENTIMENT[negative=+](#1,#2)
+
+|SC{?*,FV{VERB#1[lemme:"recommend",positive=~]}},punct,ADV#2[lemme:"yes",positive=+]|
+	SENTIMENT[positive=+](#1,#2)
+
+//X of the year
+if (TEMP[post](#1,#2[lemme:"of the year"]))
+   	SENTIMENT[positive=+](#1,#2)
+
+if (TEMP[post](#1,#2[lemme:"of the month"]))
+   	SENTIMENT[positive=+](#1,#2)
+                    
+// It is not going to be my favorite of comedies 
+
+if(MOD[post](#2[sentiments,!sentiments:!],#1[money:~,no-sents:~,verb:~,tempexpr:~,form:~fnot,prep:~,adv:~]) & ~SENTIMENT(#2,?) & ~SENTIMENT(?,#2) )
+	SENTIMENT(#1,#2)
+
+                                                 
+// high low prices
+if (GLOBALMOD(#1[lemme:"price"],#2[highquantity]))
+	SENTIMENT[negative=+](#1,#2)
+
+if (GLOBALMOD(#1[lemme:"price"],#2[lowquantity]))
+	SENTIMENT[positive=+](#1,#2)
+
+// it is below average
+
+if (PREPD(#1[lemme:"average"],#2[lemme:"below"]) & MOD[post](#3[verb,cop],#1) & SUBJ(#3,#4))
+	SENTIMENT[negative=+](#4,#1)
+
+if (PREPD(#1[lemme:"average"],#2[lemme:"below"]) & ~SENTIMENT(?,#1))
+	SENTIMENT[negative=+](#1,#2)
+
+if (OBJ-N(#3[neg-money],#1) & GLOBALMOD(#1[lemme:"money"],#2[highquantity]))
+	SENTIMENT[negative=+](#3,#1)
+
+if (OBJ-N(#3[neg-money],#1) & ( GLOBALMOD(#1[lemme:"money"],#2[lowquantity]) | QUANTD[neg](#1,#4) ) )
+	SENTIMENT[positive=+](#3,#1)
+
+if (OBJ-N(#3[pos-money],#1) & GLOBALMOD(#1[lemme:"money"],#2[highquantity]))
+	SENTIMENT[positive=+](#3,#1)
+
+if (OBJ-N(#3[pos-money],#1) & ( GLOBALMOD(#1[lemme:"money"],#2[lowquantity]) | QUANTD[neg](#1,#4) ))
+	SENTIMENT[negative=+](#3,#1)
+
+
+
+//save money
+
+if (OBJ-N(#1[pos-money],#2[lemme:"money"]) & ~SENTIMENT(#1,#2))
+		SENTIMENT[positive=+](#1,#2)
+
+if (OBJ-N(#1[neg-money],#2[lemme:"money"]) & ~SENTIMENT(#1,#2))
+		SENTIMENT[negative=+](#1,#2)
+
+
+// high quality 
+
+if (MOD(#1[lemme:"quality"],#2[lemme:"high"]))
+		SENTIMENT[positive=+](#1,#2)
+
+
+if (MOD(#1[lemme:"value"],#2[lemme:"high"]))
+		SENTIMENT[positive=+](#1,#2)
+
+// it looks like X
+
+if (PREPD(#1,#2[lemme:"like"]) & MOD[post](#3[lemme:"look"],#1[sentiments,!sentiments:!]) & SUBJ-N(#3,#4) )
+   SENTIMENT(#1,#4)
+
+// worth the wait
+
+| NP{NOUN#1[lemme:"worth"]},NP#2 |
+    if ( HEAD(#3,#2) )
+		SENTIMENT[positive=+](#1,#3)
+
+// you can do better
+
+if ( GLOBALMOD(#1[lemme:"do"],#2[lemme:"well",compar])  & NUCL(#3[lemme:"can"],#1))
+	SENTIMENT[positive=+](#1,#2)
+
+// a hard time
+
+if ( GLOBALMOD(#1[lemme:"time"],#2[lemme:"hard"]) & GLOBALMOD(#1,#3))
+	SENTIMENT[negative=+](#1,#3)
+	
+
+// it does the work better 
+
+if(MOD[post](#1[verb,lemme:"do"],#2[lemme:"well",compar]))
+                SENTIMENT[positive=+](#1,#2)
+
+// the better 
+
+// it has never performed below perfection
+
+// xxx from hell
+
+if (MOD[post](#1,#2[lemme:"hell"]) & PREPD(#2,#3[lemme:"from"]))
+		SENTIMENT[negative=+](#1,#2)
+
+
+// it could have been better ==> change polarity
+
+
+if (NUCL[vlink,modal](#1,#2) & NUCL[vlink,perfect](#2,#3) & NUCL[subjcompl](#3,#4[compar,positive]) & ^SENTIMENT[positive,modified:~](#5,#4))
+	SENTIMENT[negative=+,positive=~,modified=+](#5,#4)
+	
+
+
+//test
+
+//|noun#1[noun,adj:~]|
+// if ( ~DATE(#1) & ~ORGANISATION(#1) &  ~PRODUCT(#1) &  ~MONEY(#1) &  ~LOCATION(#1))
+//	NOMINAL(#1)
+
+//if (ATTRIB(#1,?) & ^SENTIMENT(#1,#3))
+//                 SENTIMENT[keep=+](#1,#3)
+
+
+// EMPATH
+
+// I leave ORG : negat
+
+if ( OBJ-N(#1[lemme:"leave"],#2) & ORGANISATION(#2) )
+   SENTIMENT[negative=+](#1,#2)
+
+//|NP#1[pron:~]|
+ //       NPSELECT(#1)
+//
+//|NOUN#1[pron:~]|
+//        NPSELECT(#1)
+
+//If (GLOBALMOD(#1[noun],#2[sentiments]))
+ //  MODIFIEDBYPOLAR(#1)

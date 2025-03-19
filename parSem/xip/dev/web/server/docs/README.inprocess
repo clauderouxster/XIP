@@ -1,0 +1,176 @@
+fichier in: /home/grondeau/projets/xip/xip/dev/web/server/docs/README.inprocess
+==================================================================
+utilisation TOMCAT + APACHE httpd
+
+-------------------------------------
+setenv CATALINA_HOME /home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+setenv TOMCAT_HOME  $CATALINA_HOME
+set path=( $CATALINA_HOME/bin $path )
+
+setenv ANT_HOME /home/grondeau/tools/ant-1.6.0
+set path=( $ANT_HOME/bin $path )
+
+setenv JAVA_HOME /home/grondeau/tools/j2sdk1.4.2
+set path=($JAVA_HOME/bin $path)
+setenv CLASSPATH .
+
+setenv HTTPD_HOME /home/grondeau/tools/apache/httpd-2.0.49
+set path=( $HTTPD_HOME/bin $path )
+
+
+-----------------tomcat ----------------------------------
+vi /home/grondeau/tools/apache/jakarta-tomcat-5.0.25/bin/setclasspath.sh
+ # doit etre de path absolu pour permettre de demarrer tomcat de n'importe quel directory
+< TOM_ROOT=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+< CLASSPATH="$CLASSPATH:$TOM_ROOT/webapps/xip/WEB-INF/lib/jxip.jar"
+< LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TOM_ROOT/temp/grondeau/linux"
+
+vi /home/grondeau/tools/apache/jakarta-tomcat-5.0.25/conf/jk2.properties
+add these lines:
+## THIS FILE MAY BE OVERRIDEN AT RUNTIME. MAKE SURE TOMCAT IS STOPED
+## WHEN YOU EDIT THE FILE.
+
+handler.list=apr,request,container,channelJni
+
+# In order to enable jni use any channelJni directive
+channelJni.disabled = 0
+# And one of the following directives:
+apr.jniModeSo=/home/grondeau/tools/apache/httpd-2.0.49/modules/mod_jk2.so
+
+# If set to inprocess the mod_jk2 will Register natives itself
+# This will enable the starting of the Tomcat from mod_jk2
+apr.jniModeSo=inprocess
+
+--------------apache httpd -----------------------------
+creer /home/grondeau/tools/apache/httpd-2.0.49-src a partir du tar file
+mkdir /home/grondeau/tools/apache/httpd-2.0.49
+cd /home/grondeau/tools/apache/httpd-2.0.49-src
+./configure --prefix=/home/grondeau/tools/apache/httpd-2.0.49
+make
+make install
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/httpd.conf
+#Listen 80
+#13.202.220.196 = choranche
+Listen 13.202.220.196:5080
+
+pour demarer/stopper serveur:
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apachectl start
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apachectl stop
+pour tester:
+http://choranche.grenoble.xrce.xerox.com:5080/
+
+--------- connector -----------------
+setenv JAVA_HOME /home/grondeau/tools/j2sdk1.4.2
+which apxs
+si ce n'est pas le path /home/grondeau/tools/apache/httpd-2.0.49/bin alors:
+	set path=(/home/grondeau/tools/apache/httpd-2.0.49/bin $path)
+
+creer /home/grondeau/tools/apache/jakarta-tomcat-connectors-jk2-2.0.4-src a partir du tar file
+cd /home/grondeau/tools/apache/jakarta-tomcat-connectors-jk2-2.0.4-src/jk/native2
+./buildconf.sh 
+./configure  --with-jni --with-apxs2=/home/grondeau/tools/apache/httpd-2.0.49/bin/apxs
+make clean
+make
+cd ../build/jk2/apache2
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apxs -n jk2 -i mod_jk2.so
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apxs -n jk2 -i libjkjni.so
+
+---------------------httpd server ------------------------
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/httpd.conf
+chercher LoadModule et ajouter la ligne:
+LoadModule jk2_module modules/mod_jk2.so
+
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/workers2.properties
+
+[logger]
+level=DEBUG
+
+[config:]
+file=${serverRoot}/conf/workers2.properties
+debug=255
+debugEnv=10
+
+#[uriMap:]
+#info=Maps the requests. Options: debug
+#debug=255
+
+[workerEnv:]
+#info=Global server options
+#timing=1
+debug=255
+
+# Define the comunication channel 
+[channel.jni:jni]
+info=The jni channel, used if tomcat is started inprocess
+
+# Define the parameters for the Java Virtual Machine
+[vm:]
+info=Parameters used to load a JVM in the server process
+#JVM=$(JAVA_HOME)/jre/lib/i386/server/libjvm.so
+JVM=/home/grondeau/tools/j2sdk1.4.2/jre/lib/i386/client/libjvm.so
+#OPT=-Djava.class.path=$(TOMCAT_HOME)/server/lib/tomcat-jni.jar;$(TOMCAT_HOME)/server/lib/tomcat-jk2.jar
+OPT=-Djava.class.path=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25/server/lib/tomcat-jni.jar;/home/grondeau/tools/apache/jakarta-tomcat-5.0.25/server/lib/tomcat-jk2.jar
+#OPT=-Dtomcat.home=$(TOMCAT_HOME)
+OPT=-Dtomcat.home=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+#OPT=-Dcatalina.home=$(TOMCAT_HOME)
+OPT=-Dcatalina.home=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+OPT=-Xmx128M
+#disabled=0
+
+# JNI worker startup handler
+[worker.jni:onStartup]
+info=Command to be executed by the VM on startup. This one will start tomcat.
+class=org/apache/jk/apr/TomcatStarter
+ARG=stard
+#ARG=start
+#disabled=0
+stdout=${serverRoot}/logs/stdout.log
+stderr=${serverRoot}/logs/stderr.log
+
+# JNI worker shutdown handler
+[worker.jni:onShutdown]
+info=Command to be executed by the VM on shutdown. This one will stop tomcat.
+class=org/apache/jk/apr/TomcatStarter
+ARG=stop
+#disabled=0
+
+# Map the Tomcat examples webapp to the Web server uri space
+[uri:/examples/*]
+info=Map the whole webapp
+
+# Map XIP to the Web server uri space
+[uri:/xip/*]
+info=xip mapping
+debug=255
+
+
+test:
+http://choranche.grenoble.xrce.xerox.com:5080/jsp-examples/
+
+
+cp /opt/W3/public/docs/*  /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r  /opt/W3/public/docs/competencies/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/images/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/include/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/stylesheets/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/sys /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+vi /home/grondeau/tools/apache/httpd-2.0.49/htdocs/competencies/content-analysis/homepage.en.html
+rajouter la ligne 141:
+ <li><a href="/xip/page1.jsp">XIP parser</a></li>
+vi /home/grondeau/tools/apache/httpd-2.0.49/htdocs/competencies/content-analysis/robustparsing/home.en.html
+rajouter la ligne 167:
+ <br><br>XIP <a href="/xip/page1.jsp"> demos.</a>
+tester:
+http://choranche.grenoble.xrce.xerox.com:5080/competencies/content-analysis/homepage.en.html
+
+====================================================================================
+site web extern de reference:
+les pages sont dans: /opr/W3/synchro
+http://www.xrce.xerox.com/competencies/content-analysis/homepage.en.html
+====================================================================================
+site de dev:
+les pages sont dans: /opt/W3/public
+http://www2.grenoble.xrce.xerox.com:8003/competencies/content-analysis/tools/xip/guesser.en.html
+====================================================================================
+
+

@@ -1,0 +1,163 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2001 - 2010 Xerox Corporation.  All Rights Reserved.
+//! Author: C. Brun.
+//!
+//!  Date: Nov 2010
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//movies
+
+//fan of gore : not positif
+
+Script: 
+
+|NOUN#1[movie-title]|{
+	_firsttitleindoc=_firsttitleindoc+1 ;
+}
+
+DependencyRules:
+
+#@rulespace=general.domain.movie
+
+|NOUN#1[movie-title]|
+	if ( _firsttitleindoc:1)
+	TOPICREVIEW(#1)
+
+
+if (MOD[post](#1[lemme:"fan",positive=~],#2[filmgenre]) & ^SENTIMENT(#1,#2) )
+	~
+|#1[lemme:"fan",positive=~]| 
+	if (MOD[post](#1,#2[filmgenre]))
+	~
+
+// I recommend you not to watch
+
+if (EMBED[infinit](#1[recommendable],#2) & ^SENTIMENT[positive](#2,#3) & NEGAT(#1))
+	SENTIMENT[negative=+,positive=~,modified=+](#2,#3)
+
+// wait for dvd / rental
+
+if (MOD[post](#1[lemme:"wait"],#2[lemme:"DVD"]) | MOD[post](#1[lemme:"wait"],#2[lemme:"rental"]))
+	SENTIMENT[negative=+](#1,#2)
+
+// i would recommend waiting
+
+if (MOD[post](#1[lemme:"recommend"],#2[lemme:"wait"]))
+	SENTIMENT[negative=+](#1,#2)
+
+if (MOD[post](#1[lemme:"recommend"],#2[lemme:"rent"]))
+	SENTIMENT[negative=+](#1,#2)
+
+if (GLOBALMOD(#1[lemme:"lack"],#2[lemme:"ambition"]))
+		SENTIMENT[negative=+](#1,#2)
+
+
+// the movie reach me
+
+if (OBJ-N(#1[lemme:"reach"],#2[pron,p1]) & SUBJ-N(#1,#3))
+	SENTIMENT[positive=+](#1,#3)
+
+// book accurate
+|ADV[lemme:"not"],NP{NOUN[lemme:"book"]},AP{ADJ#1[lemme:"accurate"]}|
+	if (~NEGAT(#1))
+	NEGAT(#1)
+
+if (MOD[post](#1[lemme:"book"],#2[lemme:"accurate"]))
+	SENTIMENT[positive=+](#1,#2)
+
+
+// He could have done a better job 
+
+//if ( (MAIN[modal](#1) || NUCL[modal](#1,#4)) & ~FUTURE(#1)  & ^SENTIMENT(#2,#3[compar,positive,lemme:"good"]) & (#1<#3))
+//	SENTIMENT[negative=+,changed=+,positive=~](#2,#3).
+	
+
+if (OBJ-N(#1[lemme:"avoid"],#2[movie-related]) |OBJ-N(#1[lemme:"avoid"],#2[pron,p3]) )
+		SENTIMENT[negative=+](#1,#2)
+
+
+// i will not be bothering
+
+if (NUCL[vlink,progress](#2,#1[lemme:"bother"]) & NEGAT(#2) & ^SENTIMENT(#1,#3))
+	SENTIMENT[negative=+,positive=~,modified=+](#1,#3)
+
+// love strendh
+
+if ( ( SUBJ-N(#1[lemme:"lose"],#2[pron,p3]) | SUBJ-N(#1[lemme:"lose"],#2[movie-related])) & OBJ-N(#1,#3[lemme:"strength"]))
+		SENTIMENT[negative=+](#1,#2)
+
+// ----------------------------------
+// Special Epinions structure
+// 
+// ----------------------------------
+
+|NP#3{DIG#1[lemme:"1"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[negative=+](#3)
+
+|NP#3{DIG#1[lemme:"2"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[negative=+](#3)
+
+
+|NP#3{DIG#1[lemme:"4"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[positive=+](#3)
+
+|NP#3{DIG#1[lemme:"5"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[positive=+](#3)
+
+
+//Cons and Pros
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"none"]}, punct|
+	SENTIMENT[positive=+](#1,#2)
+
+|NP{NOUN#1[lemme:"pro"]},punct[form:fcolon],NP{PRON#2[lemme:"none"]}|
+	SENTIMENT[negative=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"nothing"]},punct|
+	SENTIMENT[positive=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"everything"],punct}|
+	SENTIMENT[negative=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{NOUN#2[lemme:"price"]}|
+	SENTIMENT[negative=+](#2)
+
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{#2},punct,NP{#3},punct,NP{#4}|
+	SENTIMENT[negative=+,positive=~](#2), 
+	SENTIMENT[negative=+,positive=~](#3),
+	SENTIMENT[negative=+,positive=~](#4)
+
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{NOUN#2[positive]}|
+	SENTIMENT[negative=+,positive=~](#2)
+
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{NOUN#2[positive:~,negative:~]},punct[comma]|
+	SENTIMENT[negative=+,positive=~](#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],ADV[lemme:"too"],QUANT#2[lemme:"many"]|
+		SENTIMENT[negative=+,positive=~](#2)
+
+
+// ----------------------------------
+// Special Epinions MOVIES  structure
+// 
+// ----------------------------------
+
+
+|NP{AP{ADJ#1[lemme:"bad"]},noun#3[lemme:"part"]},PP,punct, NP{Pron#2[lemme:"nothing"]}}|
+	if (^SENTIMENT(#3,#1))
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2)
+
+
+|NP{AP{ADJ#1[lemme:"bad"]},noun#3[lemme:"part"]},PP,punct, NP{noun#2}}|
+	if (^SENTIMENT[modified=~](#3,#1))
+	SENTIMENT[negative=+,modified=+](#1,#2)
+
+#@rulespace=general.domain

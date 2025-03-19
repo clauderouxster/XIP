@@ -1,0 +1,122 @@
+use("kifliblinear");
+
+//parser p('W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\GRMFILES\GRAM_GEN\gram_gen.grm');
+parser p('/home/sandor/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/KGSOM/GRM/gram_kgsom.grm');
+
+simap indexes;
+iitreemap classif_vecteur;
+
+function indexer(string s) {
+     if (indexes.test(s)==false)
+          indexes[s]=1+indexes.size();
+
+     int idx=indexes[s];
+     classif_vecteur[idx]+=1;
+}
+
+/@
+Le noeud #1 (de XIP) est devenu un node
+node offre beaucoup de méthodes:
+surface(): renvoie la forme de surface
+lemma(): renvoie le lemme
+features(): renvoie un dictionnaire des traits associés au noeud XIP
+pos(): renvoie le part of speech
+offset(): renvoie les offsets
+number(): renvoie un identifiant unique pour chaque noeud
+@/
+
+function enregistrer(node n) {
+     //println(n.surface(),n.lemma(),n.features(),n.pos());
+     indexer(n.surface());
+     indexer(n.pos());
+
+//     ssmap feats=n.features();
+//     if (feats.test("P3"))
+//          indexer("P3");
+}
+
+/@
+d.name() renvoie le nom de la dependance
+d.parameters(): renvoie la liste des arguments de la dependance.
+@/
+
+function dependances(dependency d) {
+     vector params=d.parameters();
+     //println(d.name(),params[0].surface(),params[1].surface());
+     indexer(d.name());
+}
+
+string regle=@"
+script:
+
+|NP#1| {
+     enregistrer(#1);
+}
+     
+
+|#1[terminal]| {
+     enregistrer(#1);
+}
+
+if ($1(#1,#2)) {
+     dependances($1);
+}
+
+"@;
+
+p.addendum(regle,true);
+
+//string cheminxml='w:\Corpora\SemEval16\ABSA\Corpus\English\ABSA-15_Restaurants_Train_Final.xml';
+string cheminxml='/opt/ParSem_db/Corpora/SemEval16/ABSA/Corpus/English/ABSA-15_Restaurants_Train_Final.xml';
+
+vector noeuds;
+function parcours(xml n, self e) {
+     //chaque fois que l'on rencontre la balise text, on la garde dans un sous-vecteur: noeuds = [n]
+     if (n.name()=="text")
+          noeuds.push([n]);
+     //L'opinion etant fourni apres, on la range dans le dernier element du vecteur qui lui-meme pointe vers un vecteur: noeud= [[ntext,nopinion],....[ntext,nopionion,nopionion]]
+     if (n.name()=="Opinion")
+          noeuds.last().push(n);
+}
+
+simap polarites={"negative":0,"positive":1,"neutral":2};
+
+//creation d'un fichier pour la sauvergarde...
+file sauve(_current+"training.ln","w");
+
+xmldoc doc with parcours;
+doc.load(cheminxml);
+
+xml n;
+vector v;
+for (v in noeuds) {
+     string cnt=v[0].content();
+     if (v.size()>1) {
+          classif_vecteur.clear();
+          p.parse(cnt);
+          string pola=v[1]["polarity"];
+          int ipola=polarites[pola];
+          //println(ipola,classif_vecteur);
+          string sortie=ipola+" "+classif_vecteur.join(":"," ");
+          sauve.writeln(sortie.trim());
+     }
+}
+
+sauve.close();
+doc.close();
+println("Fin");
+
+
+file dico(_current+"dicos.kif","w");
+
+dico.writeln("simap indexes="+indexes+";\n");
+dico.writeln("simap polarites="+polarites+";\n");
+dico.close();
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+liblinear train;
+smap options={"c":0.1,"s":"L2R_LR","B":-1,"e":0.01,"v":10};
+
+train.load(_current+"training.ln",options,_current+"polarites");
+
+
+

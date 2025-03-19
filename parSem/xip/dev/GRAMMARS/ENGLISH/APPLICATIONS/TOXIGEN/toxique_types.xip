@@ -1,0 +1,1237 @@
+DependencyRules:
+
+if ( SUBJ-N(#1,#2) )
+	LIXO(#1,#1,#1)
+
+if ( NUCL[subjcompl](#1,#2) )
+	LIXO(#1,#2)
+
+if ( VMODPREP(#1,#2,#3) ) 
+	LIXO(#1,#2,#3)
+
+if ( NMODPREP(#1,#2,#3) )
+	LIXO(#1,#2,#3)
+
+
+
+// Utilisation de empty_sem
+// dependent in 2-args dep.
+if ( HEAD(#1[empty_sem,noun],#10) & NMODPREP(#1,#11,?[prep,lemme:of]) & ^$1(#20,#1) )
+	$1(#20,#11)
+
+// dependent in 3-args dep.
+if ( HEAD(#1[empty_sem,noun],#10) & NMODPREP(#1,#11,?[prep,lemme:of]) & ^$1(#20,#1,#50) )
+	$1(#20,#11,#50)
+
+
+// head in 2-args dep.
+if ( HEAD(#1[empty_sem,noun],#10) & NMODPREP(#1,#11,?[prep,lemme:of]) & ^$1(#1,#20) & #1 < #20 )
+	$1(#1,#11)
+	
+// Rajout de MOD[pre] dans AP{adv, hyphen, adj}
+| AP{#1[adv,notly:~], punct[form:fhyph], adj#2[vprog:+]} |
+	MOD[pre=+](#2,#1)
+
+
+
+// Rectification de tir quand relatives coordonnees et que erreur de desamb sur le dernier pronom relatif (that) pris comme un pronom
+// A voir si effet de bord - Ad-hoc sur ce type de corpus
+| ST{?*, SC{BG{?[form:fthat]}}, ?*[verb:~], SC{?[coord], NP{#1[first,last,form:fthat]}, ?*, FV{?*,#2[last]}}, ?*[verb:~] } | 
+	if ( ^$1(#2,#1) )
+	$1(#2,##Pron[lemme=it]) 
+
+| ST{?*, SC{BG{?[form:fthat]}}, ?*[verb:~], SC{?[coord], NP{#1[first,last,form:fthat]}, ?*, FV}, ?*[verb:~], ?[verb]{?*,#2[last]} } | 
+	if ( ^$1(#2,#1) )
+	$1(#2,##Pron[lemme=it]) 
+
+
+// Rectification de tir avec des expressions complexes de quantifications
+// e.g. A small quantity of... etc. NP a le trait quant:+ et head du NP a le trait quant:+
+if ( MOD[pre](#1[noun_quantity:+],?[adj_quantity]) & NMODPREP(#1,#30,?[prep,lemme:of]) & ^$1(#5,#1) )
+	$1(#5,#30)
+
+
+// Rule 652
+// Rectification du tir car on considerere maintenant dans un meme NP "a AP{clear to yellow} metal"
+// Considering this formulation as a disjonction
+| NP{?*,AP#40{AP#30[colour]{?*,#3[last]}, prep[form:finfto], AP#20[colour]{?*,#2[last]}}, #1[last]} |
+	if ( ~MOD[pre](#1,#2) & ^MOD(#1,#30) )
+	MOD[pre=+](#1,#2),
+	MOD[pre=+](#1,#3),
+	COORD(##Conj[coord=+,lemme=or],#3),
+	COORD(##Conj[coord=+,lemme=or],#2).
+
+// Rule XXXX
+// Same as above when there is no NP but only an AP
+// e.g Acetone is clear to yellow
+| AP{AP#30{?*,nadj#3[last,colour]}, prep[form:finfto], AP{?*,nadj#2[last,colour]} } | 
+	if ( ^ATTRIB(#10,#30) & ~ATTRIB(#10,#3) & ~ATTRIB(#10,#2) )
+	ATTRIB(#10,#3),
+	ATTRIB(#10,#2),
+	COORD(##Conj[coord=+,lemme=or],#3),
+	COORD(##Conj[coord=+,lemme=or],#2).
+
+
+// Rule XXXXX
+// Rectification de tir quand on a dans un NP un participe passe etiquete comme verbe
+// e.g. a purple-to-gray colored metal
+// Donner les relations de modifications manquantes et enlever les erreurs
+| NP#50{?*,AP#1[colour]{?*,#10[colour]}, verb#2[adj:+,partpas:+,colour:+], AP#3*, #4[noun,last]} |
+	MOD[pre=+](#2,#10),
+	MOD[pre=+](#4,#2).
+	
+
+// Rule 653
+// Rectification de tir, coordination avec coordonne + virgule
+| AP[colour]{?*[adj:~,colour:~],#1[colour], ?*, punct[comma], conj#3[coord], #2[last,colour]} |
+	if ( AJCOORD(#1,#2) & ~COORD(#3,#1) )
+	COORD(#3,#1).
+
+// Rule 654
+| AP[colour]{?*[adj:~,colour:~],#1[colour], ?*, punct[comma], conj#3[coord], #2[last,colour]} |
+	if ( AJCOORD(#1,#2) & ~COORD(#3,#2) )
+	COORD(#3,#2).
+
+
+// Rule 655
+// Rectification de tir a l'interieur de AP complexe avec coord AP{yellow, white and gray} 
+| AP{?*,#1[colour], ?*, #7[colour], ?*, #2[colour]} |
+	if ( AJCOORD(#1,#2) & ( COORD(#3,#1) | COORD(#3,#2) ) & ~COORD(#3,#7) )
+	COORD(#3,#7)
+
+// Rule 656
+| AP{?*,#1[prop_entite], ?*, #2[prop_entite]} |
+	if ( AJCOORD(#1,#2) & ATTRIB(#3,#1)  & COORD(#4,#1) & COORD(#4,#5) ) 
+	ATTRIB(#3,#5)
+
+// Rule 657
+| AP{?*,#1[prop_entite], ?*, #2[prop_entite]} |
+	if ( AJCOORD(#1,#2) & NUCL[subjcompl](#7,#1) & COORD(#4,#1) & COORD(#4,#5) ) 
+        NUCL[subjcompl=+](#7,#5)
+
+
+// Rule XXXX
+//| NP{AP#1[first,last]{?*,#3,?*,#5[coord]}} |
+//	if ( AJCOORD(#3,#30) & COORD(#5,#3)  & ^$1(#10,#1) & ~NUCL[subjcompl](#10,#3) ) 
+//	$1(#10,#3),
+//	$1(#10,#30).
+
+
+
+
+//| NP{AP[first]{?*,#1[last]}, #2[noun,last]} |
+//	if ( AJCOORD(#3,#1) & COORD(#4,#3) & ~MOD[pre](#3,#2) )
+//	MOD[pre=+](#3,#2)
+
+
+
+
+// Normalisation preliminaire
+// X is soluble eq. X is able to be/can be dissolved eq. Z dissolves X eq X dissolves (with no OBJECT complement)
+// Previous normalization has been made as "dissolve" is a verb which bears the feature a_ch_o_st (change of state with the middle alternation).
+
+
+
+
+// Travail sur le paragraphe "What is"
+// Rule 658
+// Relation entite
+// Reperer l element dont parle le paragraphe
+if ( SUBJ-N(#1[form:fbe],#2[noun:+]) & NUCL[subjcompl](#1,?[form:fwhat]) )
+	ENTITE(#2)
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// DESCRIPTION
+// 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// NATURE
+
+// Rule XXXXX
+// Forme de l'entite "X is a liquid"
+// Problem if the ENTITY is unknown in the dictionary. In this case lemmas can be different because of upper/lower case.
+if ( ENTITE(#1) & ATTRIB(#2,#3[element:+]) &  ( #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe])  )
+	DESCRIPTION[nature=+](#1,#3)
+
+// Rule 660
+// "It is a liquid"
+if ( ENTITE(#3) & ATTRIB(#1[form:fit],#2[element:+]) ) 
+	DESCRIPTION[nature=+](#3,#2)
+
+// Rule XXXXXXX
+// XXXXXY is a liquid chemical 
+if ( DESCRIPTION[nature](#1,#3) & MOD(#3,#2[element]) )
+	DESCRIPTION[nature=+](#1,#2)
+
+
+// Rule XXXXX
+// XXXX is an insecticide that is a colorless liquid
+if ( DESCRIPTION[nature](#1,#3) & ATTRIB(#3,#2[element]) )
+	DESCRIPTION[nature=+](#1,#2)
+
+
+// COLOUR
+
+// Rule XXXX
+// First possibility : X (or Entity) is NADJ[colour]
+if ( ENTITE(#1) & ATTRIB(#2,#3[colour:+]) & ( #1[lemme]:#2[lemme] | #2[guess:+,maj:+] | #2[guess,proper,mwe]) )
+	DESCRIPTION[colour=+](#1,#3)
+
+// Rule XXXX
+// It is NADJ[colour]
+if ( ENTITE(#3) & ATTRIB(#1[form:fit],#2[colour:+]) ) 
+	DESCRIPTION[colour=+](#3,#2)
+
+// Rule 664
+// Third possibility : X is a NADJ Element (X is a colourless gas) or X is a gas whose color is blue.
+if ( ENTITE(#3) & DESCRIPTION[nature](#3,#4) 
+		& (  MOD(#4,#5[colour,partpas:~]) 
+			| ( NMODGEN(#6[colour,noun],#4) & ATTRIB(#6,#5[colour]) )
+
+		   )
+
+	)
+	DESCRIPTION[colour=+](#3,#5)
+
+// Rule XXXX
+// X is a <adj,colour> colored ELEMENT
+// e.g. X is a purple-to-gray colored metal.
+if ( ENTITE(#3) & DESCRIPTION[nature](#3,#4) 
+		& MOD[pre](#4,#5[colour,adj,partpas])
+		& MOD[pre](#5,#6[colour]) 
+)
+	DESCRIPTION[colour=+](#3,#6)
+
+
+
+// Rule XXXX
+// X is a gas whose color ranges from blue to gray
+if ( ENTITE(#3) & DESCRIPTION[nature](#3,#4) 
+		& NMODGEN(#6[colour,noun],#4) & SUBJ-N(#7[lemme:range],#6)
+		& VMODPREP(#7,#8[colour],?[lemme:from])
+		& VMODPREP(#7,#9[colour],?[lemme:to])
+	)
+	DESCRIPTION[colour=+,disjonc=+](#3,#8),
+	DESCRIPTION[colour=+,disjonc=+](#3,#9).
+
+
+// Rule XXXX
+// 4th possibility X has a NADJ[colour] color
+if ( ENTITE(#3) & SUBJ-N(#1[form:fhave],#2) & ( OBJ-N(#1,#4[lemme:color]) | OBJ-N(#1,#4[lemme:colour]) ) & MOD(#4,#5[colour]) & (#3[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe]) )
+	DESCRIPTION[colour=+](#3,#5)
+
+// Rule XXXX
+// Same as above with "IT" e/g/ It has a red colour
+if ( ENTITE(#3) & SUBJ-N(#1[form:fhave],?[form:fit]) & ( OBJ-N(#1,#4[lemme:color]) | OBJ-N(#1,#4[lemme:colour]) ) & MOD(#4,#5[colour]) )
+	DESCRIPTION[colour=+](#3,#5)
+
+// Rule XXXX
+// 5th possibility X is an ELEMENT that is COLOUR
+if ( DESCRIPTION[nature](#3,#4[element]) & SUBJ-N(#5,#4) & NUCL[subjcompl](#5,#6[colour]) )
+	DESCRIPTION[colour=+](#3,#6)
+
+// Rule XXX
+// 6th possibilility
+// X is a metal with yellow colour
+if ( DESCRIPTION[nature](#1,#2[element]) & NUCL[subjcompl](#3,#2) & VMODPREP(#3,#4[lemme:color],?) & MOD[pre](#4,#6[colour]) )
+	DESCRIPTION[colour=+](#1,#6)
+
+
+// SMELL
+
+// Rule XXXX
+// 1st possibility X has a ADJ odor/smell
+if ( ENTITE(#3) & SUBJ-N(#1[form:fhave],#2) & OBJ-N(#1,#4[noun,smell]) & MOD(#4,#5[adj]) & (#3[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe]) )
+//( OBJ-N(#1,#4[lemme:odor]) | OBJ-N(#1,#4[lemme:smell]) ) & 
+	DESCRIPTION[smell=+](#3,#5)
+
+
+// Rule 670
+// Same as above with "IT" e.g. It has a fruity odor/smell
+if ( ENTITE(#3) & SUBJ-N(#1[form:fhave],?[form:fit]) & OBJ-N(#1,#4[noun,smell]) & MOD(#4,#5[adj]) )
+//( OBJ-N(#1,#4[lemme:odor]) | OBJ-N(#1,#4[lemme:smell]) ) 
+	DESCRIPTION[smell=+](#3,#5)
+
+
+
+// Rule XXXXXX
+// 2nd possibilility
+// X is a metal with adj odor/smell
+if ( DESCRIPTION[nature](#1,#2[element]) & NUCL[subjcompl](#3,#2) & VMODPREP(#3,#4[smell],?) & MOD(#4,#6[adj]) )
+//( VMODPREP(#3,#4[lemme:odor],?) | VMODPREP(#3,#4[lemme:smell],?) ) 
+	DESCRIPTION[smell=+](#1,#6)
+
+// Rule XXXXX
+// 3rd possibility X is an ELEMENT that has a ADJ smell/odor
+if ( DESCRIPTION[nature](#3,#4[element]) & SUBJ-N(#5,#4) & OBJ-N(#5,#6[noun,smell]) & MOD[pre](#6,#7) )
+//( OBJ-N(#5,#6[lemme:odor]) | OBJ-N(#5,#6[lemme:smell] ) ) 
+	DESCRIPTION[smell=+](#3,#7)
+
+// Rule XXXX
+// X is an ELEMENT whose smell/oder is ADJ
+if ( DESCRIPTION[nature](#3,#4[element]) & NMODGEN(#5[noun,smell],#4) & ATTRIB(#5,#7) )
+//( NMODGEN(#5[lemme:odor],#4) | NMODGEN(#5[lemme:smell],#4) ) 
+	DESCRIPTION[smell=+](#3,#7)
+
+
+// Rule XXXX
+// X is an odorless powder
+if ( DESCRIPTION[nature](#1,#2[element]) & MOD(#2,#3[smell:+,adj:+]) )
+	DESCRIPTION[smell=+](#1,#3)
+
+
+// Rule XXXX
+// X has no smell equiv. X is odorless
+if ( ENTITE(#1) & SUBJ-N(#4[form:fhave],#3) & OBJ-N[neg](#4,#5[noun,smell]) & ~NMODPREP(#5,?,?) & ~NMODGEN(#5,?) 
+		& (#3[surface]:#1[surface] | #3[lemme]:#1[lemme] | #1[maj:+,guess:+] | #1[guess,proper,mwe]) )
+	DESCRIPTION[smell=+](#1,##adj[lemme=odorless]). 
+
+
+// Rule XXXXX
+// 4th possibility : it smells like Y
+// Creation of another PREDICATE DESCRIPTION_SMELL2
+// Other kind of generation
+if ( ENTITE(#3) & SUBJ-N(#1[smell:+],?[form:fit]) & VMODPREP(#1,#2,?[lemme:like]) )
+	DESCRIPTION[smell2=+](#3,#2)
+
+
+// Rule XXXXX
+// X smells like Y
+if ( ENTITE(#3) & SUBJ-N(#1[smell:+],#2) & VMODPREP(#1,#4,?[lemme:like]) 
+		& (#3[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe]) )
+	DESCRIPTION[smell2=+](#3,#4)
+
+
+// Rule XXXXX
+// X is a element that smell like Y
+if ( DESCRIPTION[nature](#1,#2[element]) & SUBJ-N(#3[smell],#4) & VMODPREP(#3,#5,?[lemme:like]) )
+	DESCRIPTION[smell2=+](#1,#5)
+
+
+// Rule 707
+// Coordination of descriptions.
+// We have to keep track of the coordinator
+// Disjonction
+if ( ^DESCRIPTION[disjonc:~,conjonc:~](#1,#2) & COORD(#3[lemme:or],#2) & COORD(#3,#20) & #2[prop_entite]:#20[prop_entite] )
+	DESCRIPTION[disjonc=+](#1,#2)
+
+// Rule 708
+// Conjonction AND - We ensure ourselves that the coordination of the description is of the same type
+// e.g. Avoid to have X is explosive, flammable and colorless -> DESCRIPTION_NATURE_CONJONC(X,colorless)
+if ( ^DESCRIPTION[!features:!,disjonc:~,conjonc:~](#1,#2) & COORD(#3[lemme:and],#2) & COORD(#3,#20) & #2[prop_entite]:#20[prop_entite] )
+	DESCRIPTION[conjonc=+](#1,#2)
+
+// Rule XXXX
+// Conjonction comma
+if ( ^DESCRIPTION[!features:!,disjonc:~,conjonc:~](#1,#2) & COORD(#3[comma],#2) & COORD(#3,#20) & #2[prop_entite]:#20[prop_entite] )
+	DESCRIPTION[conjonc=+](#1,#2)
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END of DESCRIPTION
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// PROPERTY
+// 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// PROPERTY
+// Form PROPERTY(<entity>,<action>,<local>,<restriction>)
+// local and restriction are not compulsory. restriction = manner adverb "easily", string indicating a restriction "when heated"
+// Rule XXXX
+// X evaporates
+if ( ENTITE(#1) & OBJ-N(#2[vb_property],#3) & ( #3[lemme]:#1[lemme] | #3[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	PROPERTY(#1,#2,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE])
+
+// Rule 673
+// IT evaporates
+if ( ENTITE(#1) & OBJ-N(#2[vb_property],?[lemme:it]) )
+	PROPERTY(#1,#2,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE])
+
+// Rule XXXXX
+// X is a ELEMENT that VB_PROPERTY (a gas that evaporates)
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_property],#2) )
+	PROPERTY(#1,#3,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE])
+
+
+// ISAJ relation
+// Rule XXXX 
+// e.g. X is flammable eq. X burns 
+if ( ENTITE(#1) & ATTRIB(#3,#8[adj_property]) & ISAJ(#9,#10) & #8[lemme]:#9[lemme] & ( #3[lemme]:#1[lemme] | #3[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	PROPERTY(#1,#10,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#8,#10).
+
+
+// Rule XXXXX
+// possible synonyms of adj_property 
+if ( ENTITE(#1) & ATTRIB(#3,#8[adj_property]) & SYNS(#80,#81) 
+			& #8[lemme]:#81[lemme] 
+			& ISAJ(#9,#90) )
+//			& #8[lemme]:#9[lemme]
+//			& ( #3[lemme]:#1[lemme] | #3[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+
+//	PROPERTY(#1,#10,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+//	LIEN_PAR(#8,#10).
+	PROPERTY(#1)
+
+// Rule XXXX
+// e.g. It is flammable = It burns 
+if ( ENTITE(#1) & ATTRIB(?[lemme:it],#8[adj_property]) & ISAJ(#9,#10) & #8[lemme]:#9[lemme] )
+	PROPERTY(#1,#10,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#8,#10).
+
+// Rule XXXXX
+// X is a flammable <ELEMENT> e.g. X is a flammable gas
+if ( DESCRIPTION[nature](#1,#2) & MOD[pre](#2,#8[adj_property]) & ISAJ(#9,#10) & #9[lemme]:#8[lemme] )
+	PROPERTY(#1,#10,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#8,#10).
+
+
+// Rule 713
+// With relative on the nature
+// eg. X is a gas that is volatile
+if ( DESCRIPTION[nature](#1,#2) & SUBJ-N(#3,#2) & NUCL[subjcompl](#3,#4[adj_property]) 
+				& ISAJ(#9,#10) & #9[lemme]:#4[lemme] 
+	)
+	PROPERTY(#1,#10,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#4,#10).
+
+
+	
+
+// HASN relation 
+// Rule XXXX
+// DESCRIPTION_NATURE et noun_property e.g. X is a liquid with flammability
+if ( DESCRIPTION[nature](#1,#2) 
+		& NUCL[subjcompl](#3,#2) 
+		& VMODPREP(#3,#4[noun_property:+],?[lemme:with]) 
+		& HASN(#5,#6)
+		& #4[lemme]:#5[lemme] 
+	)
+	PROPERTY(#1,#6,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#4,#6).
+
+
+// Rule XXXX
+// noun_property and HASN relation e.g. XX has flammability
+if ( ENTITE(#1) & SUBJ-N(#4,#3) & OBJ-N(#4,#5[noun_property]) 
+		& HASN(#6,#7) 
+		& #6[lemme]:#5[lemme]
+		& ( #3[surface]:#1[surface] | #3[lemme]:#1[lemme] | #3[maj:+,guess:+] | #2[guess,proper,mwe] )
+	)
+	PROPERTY(#1,#7,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#5,#7).
+
+
+// Rule XXXX
+// X catches fire eq. X burns
+// EN COURS
+// if ( ENTITE(#1) & SUBJ-N(#4,#3) 
+
+
+// TURNTO
+// Rule 680
+// X changes/turns (cf. relation RESULT) to a vapor e.q X evaporates // turns to a liquid -> liquefy
+// NOTE : OBJ-N(change/turn,entity) because they are ch-o-state verbs
+if ( ENTITE(#1) & OBJ-N(#2,#3) & ( RESULT(#2,#4[noun_property]) | RESULT(#2,#4[element:+]) )
+		& TURNTO(#40,#9)
+		& #40[lemme]:#4[lemme]
+		& ( #3[lemme]:#1[lemme] | #3[surface]:#1[surface] | #3[maj:+,guess:+] | #2[guess,proper,mwe] )
+	)
+	PROPERTY(#1,#9,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#4,#9).
+
+	
+// Rule XXXX
+// It changes/turns (cf. relation RESULT) to a vapor e.q X evaporates
+// NOTE : OBJ-N(change/turn,entity) because they are ch-o-state verbs
+if ( ENTITE(#1) & OBJ-N(#2,#3[lemme:it]) & RESULT(#2,#4[noun_property]) 
+		& TURNTO(#40,#9) 
+		& #40[lemme]:#4[lemme]
+	)
+	PROPERTY(#1,#9,##Pron[lemme=NONE],##Pron[lemme=NONE],##Pron[lemme=NONE]),
+	LIEN_PAR(#4,#9).
+
+
+
+// Rule 697
+// Specification of the restriction (manner adverb)
+// Disjunction : the first part is when the verb in the property appears in the text (2nd condition to refine, links the verb of an embedded clause)
+// The second part is when the verb is the result of a paraphrase (e.g. XXXXXX changes quickly into a vapor )
+if ( ^PROPERTY(#1,#2,#3,#30,?[lemme:NONE]) &  
+
+					( 
+					    MOD(#2,#4[adv,notly:~,form:~fnot]) 
+					   | 
+//					    ( EMBED(#4,#2) & ~CONNECTOR[subord](#4,?[lemme:but]) )
+//					   |
+					    ( LIEN_PAR(#5,#2) & RESULT(#6,#5) & MOD(#6,#4[adv,notly:~,form:~fnot])  ) // in order to avoid problems with an uncorrectly tagged BUT
+					   | 
+					    ( LIEN_PAR(#10,#2[trace]) & NUCL[subjcompl](#11[form:fbe],#10) & MOD(#11,#4[notly:~,form:~fnot]) )
+					  )
+    )
+	PROPERTY(#1,#2,#3,#30,#4)
+
+
+// Rule XXXX
+// Specification of the MANNER when the property is expressed by an adj_property that is modified by the adverb very
+// X is very volatile
+if ( ^PROPERTY(#1,#2,#3,#30,?[lemme:NONE]) &
+						LIEN_PAR(#20,#2) & MOD(#20,#40[adv_degree])
+)
+	PROPERTY(#1,#2,#3,#30,##Pron[lemme=easily])
+
+					   
+
+// Rule 698
+// Spectification of the local PP[in] or PP[into] 
+if ( ^PROPERTY(#1,#2,?[lemme:NONE],?,#3) & ( 
+					   ( VMODPREP(#2,#4[noun],#9[lemme:in]) | VMODPREP(#2,#4[noun],#9[lemme:into]) ) // the verb appears in the text
+					   | ( LIEN_PAR(#5,#2) & RESULT(#6,#5) & ( VMODPREP(#6,#4[noun],#9[lemme:in]) |  VMODPREP(#6,#4[noun],#9[lemme:into]) ) )  // the verb does not appear in the text but relation RESULT
+
+					   | ( LIEN_PAR(#10,#2) & NUCL[subjcompl](#11[form:fbe],#10) & ( VMODPREP(#11,#4[noun],#9[lemme:in]) | VMODPREP(#11,#4[noun],#9[lemme:into]) ) ) // Result of a normalisation of the kind IS + adj => VERB
+					  ) 
+  )
+	PROPERTY(#1,#2,#4,#9,#3)
+
+// Rule 684
+// Spectification of with modifier PP[with] e.g. XXy mixes with solvents 
+if ( ^PROPERTY(#1,#2,?[lemme:NONE],?,#3) 
+					& ( 
+					   VMODPREP(#2,#4[noun],#9[lemme:with]) // the verb appears in the text
+					   | ( LIEN_PAR(#5,#2) & RESULT(#6,#5) & VMODPREP(#6,#4[noun],#9[lemme:with]) )  // the verb does not appear in the text but relation RESULT
+
+					   | ( LIEN_PAR(#10,#2) & NUCL[subjcompl](#11[form:fbe],#10) & VMODPREP(#11,#4[noun],#9[lemme:with]) ) // Result of a normalisation of the kind IS + adj => VERB
+					  ) 
+   )
+	PROPERTY(#1,#2,#4,#9,#3)
+
+
+// Rule XXXXX
+// Verb is directly negated.
+// With negation, we add a feature neg+ on the property predicate
+// Works when the second argument is the lemma of the verb present in the text e.g. Acetone does not evaporate
+if ( ^PROPERTY[neg:~](#1,#2,#3,#4,#5) & MOD[neg](#2,?) )
+	PROPERTY[neg=+](#1,#2,#3,#4,#5)
+
+// Rule 713
+// Indirectly negated (the negated element is not the verb but a noun/adj that paraphrases the verb
+if ( ^PROPERTY[neg:~](#1,#2,#3,#4,#5) & ( HASN(#10,#2) | ISAJ(#10,#2) | TURNTO(#10,#2) )
+		& ( ?[neg](?,#10) | ( LIEN_PAR(#20,#2) & NUCL[subjcompl](#30,#20) & MOD[neg](#30,?) ) )
+	)
+	PROPERTY[neg=+](#1,#2,#3,#4,#5)
+
+// rule 685
+// With negation and with normalization
+// e.g Acetone does not change easily to a vapor.
+// IMPORTANT we have to specify all the possibilities of lemma
+if ( ^PROPERTY[neg:~](#1,#2[trace:turnto],#3,#30,#4) & MOD[neg](#5,?) & RESULT(#5,#6[lemme:vapor])  )
+	PROPERTY[neg=+](#1,#2,#3,#30,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END of PROPERTY
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+//	ORIGIN
+// 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Natural or manufactured
+// If natural where ?
+
+// Rule 686
+// XXXX is a <adj_origin> <element>
+if ( ENTITE(#1) & ATTRIB(#2,#3[element:+]) & NUCL[subjcompl](#30,#3)   
+		& MOD[pre](#3,#4[adj_origin]) 
+		& ( #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe]) 
+    )
+	ORIGIN(#1,#4),
+	LIEN_PAR(#30,#4).
+
+// Rule XXXX
+// "It is a <adj_origin> <element>"
+if ( ENTITE(#3) & ATTRIB(#1[form:fit],#2[element:+]) 
+		& NUCL[subjcompl](#30,#2) & MOD[pre](#2,#4[adj_origin]) ) 
+	ORIGIN(#3,#4),
+	LIEN_PAR(#30,#4).
+
+
+// Rule XXXX
+// Normalizing the word "manufactured" into the word "man-made"
+if ( ^ORIGIN(#1,?[lemme=manufactured]) )
+	ORIGIN(#1,##adj[lemme=man-made]).
+
+
+// OBJ-N(find,entity) and VMODPREP(find,[noun_origin,nature],?)
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv],#2) &  VMODPREP(#3,#4[noun_origin,nat],?) 
+		& ( #1[surface]:#2[surface] | #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+   )
+	ORIGIN(#1,##adj#5[lemme=natural]),
+	LIEN_PAR(#3,#5).
+
+// Second case OBJ-N(find,entity) & MOD(find,[adj_origin])
+// Rule XXXX
+// XXXXXXY is found/distributed naturally in WWWWW or We can find XXXX naturally --> ORIGIN(XXXX,natural)
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv],#2) & ~ORIGIN(#1,?[lemme:natural])
+		& MOD(#3,#4[adj_origin,notly:~]) & (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	ORIGIN(#1,#4),
+	LIEN_PAR(#3,#4).
+
+
+// Rule XXXXX
+// Same as above with subject "IT"
+if ( ENTITE(#5) & OBJ-N(#3[vb_origin:+,pasv:+],?[form:fit]) & MOD(#3,#4[adj_origin,notly:~]) ) 
+	ORIGIN(#5,#4),
+	LIEN_PAR(#3,#4).
+
+
+// Rule 690
+// Third possibility
+// XXXXY is an <element> that is found naturally --> ORIGIN(XXYX,natural)
+if ( DESCRIPTION[nature](#1,#2) &  OBJ-N(#3[vb_origin,pasv],#2)  & MOD(#3,#4[adj_origin,notly:~]) )
+	ORIGIN(#1,#4),
+	LIEN_PAR(#3,#4).
+
+// Rule XXXXX
+// 4th possibility
+// XXXXY occur naturally
+if ( ENTITE(#1) & SUBJ-N(#3[vb_origin,nat,pasv:~],#2) & MOD(#3,#4[adj_origin,notly:~]) & (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	ORIGIN(#1,#4),
+	LIEN_PAR(#3,#4).
+
+// Rule XXXX
+// Same as above with subject "IT"
+if ( ENTITE(#5) & SUBJ-N(#3[vb_origin,nat,pasv:~],?[form:fit]) & MOD(#3,#4[adj_origin,notly:~]) ) 
+	ORIGIN(#5,#4),
+	LIEN_PAR(#3,#4).
+
+
+// Rule XXXX
+// 5th possibility. Same as above with element and relative XXXX is <element> that occurs naturally
+if ( DESCRIPTION[nature](#1,#2) & SUBJ-N(#3[vb_origin,nat,pasv:~],#2) & MOD(#3,#4[adj_origin,notly:~]))
+	ORIGIN(#1,#4),
+	LIEN_PAR(#3,#4).
+
+
+// Rule XXXX
+// 6th possibility
+// XXXX is produced (by NOUN[human:+] | COUNTRY ) / is made
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],#2) & ( SUBJ-N(#3,?[c_person]) | SUBJ-N(#3,?[proper,place]) | ~SUBJ-N(#3,?) ) & (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	ORIGIN(#1,##adj#10[lemme=man-made]),
+	LIEN_PAR(#3,#10).
+
+// Same as above with IT
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],?[form:fit]) & ( SUBJ-N(#3,?[c_person]) | ~SUBJ-N(#3,?) ) )
+	ORIGIN(#1,##adj#10[lemme=man-made]),
+	LIEN_PAR(#3,#10).
+
+
+// Same as above with element and relative
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_origin,pasv,man],#2) & ( SUBJ-N(#3,?[c_person]) | ~SUBJ-N(#3,?) ) )
+	ORIGIN(#1,##adj#10[lemme=man-made]),
+	LIEN_PAR(#3,#10).
+
+// 7th possibility
+// XXXX is produced by NOUN[c_person:~], in this case we have ORIGIN(<Entity>,natural)
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],#2) & SUBJ-N(#3,?[c_person:~]) 
+		& ~SUBJ-N(#3,?[proper,place]) 
+		& ~ORIGIN(#1,?[lemme:natural])
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+
+   )
+	ORIGIN(#1,##adj#10[lemme=natural]),
+	LIEN_PAR(#3,#10).
+
+// Same as above with IT
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],?[form:fit]) & SUBJ-N(#3,?[c_person:~])  )
+	ORIGIN(#1,##adj#10[lemme=natural]),
+	LIEN_PAR(#3,#10).
+
+
+// Same as above with element and relative
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_origin,man,pasv],#2) &  SUBJ-N(#3,?[c_person:~])  )
+	ORIGIN(#1,##adj#10[lemme=natural]),
+	LIEN_PAR(#3,#10).
+
+// 7th-bis same as above but when the SUBJ-N is human
+// e.g. Ammonia is made by humans
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],#2) & SUBJ-N(#3,?[c_person:+]) & (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) )
+	ORIGIN(#1,##adj#10[lemme=man-made]),
+	LIEN_PAR(#3,#10).
+
+// Same as above with IT
+if ( ENTITE(#1) & OBJ-N(#3[vb_origin,pasv,man],?[form:fit]) & SUBJ-N(#3,?[c_person:+])  )
+	ORIGIN(#1,##adj#10[lemme=man-made]) ,
+	LIEN_PAR(#3,#10).
+
+
+// Same as above with element and relative
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_origin,man,pasv],#2) &  SUBJ-N(#3,?[c_person:+])  )
+	ORIGIN(#1,##adj#10[lemme=man-made]),
+	LIEN_PAR(#3,#10).
+
+
+// 8th possibility
+// XXXX is present SOMEWHERE
+if ( ENTITE(#1) & ATTRIB(#2,#3[lemme:present]) & NUCL[subjcompl](#9,#3) & VMODPREP(#9,#5,#11[form:fin]) & (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) & HEAD(#5,#10[noun:+]) )
+	ORIGIN(#1,##adj[lemme=natural],#10,#11)
+
+
+// Same as above with IT
+if ( ENTITE(#1) & ATTRIB(?[form:fit],#3[lemme:present]) & NUCL[subjcompl](#9,#3) & VMODPREP(#9,#5,#11[form:fin]) & HEAD(#5,#10[noun:+]) )
+	ORIGIN(#1,##adj[lemme=natural],#10,#11)
+
+
+// Same as above with element and relative
+if ( DESCRIPTION[nature](#1,#2) & SUBJ-N(#9,#2) & NUCL[subjcompl](#9,#3[lemme:present]) & VMODPREP(#9,#5,#11[form:fin]) & HEAD(#5,#10[noun:+]) )
+	ORIGIN(#1,##adj[lemme=natural],#10,#11)
+
+
+// Rule 703
+// 9th possibility
+// XXXX occurs as a natural product or XXX is found as a natural powder
+if ( ENTITE(#1) & ( SUBJ-N(#3[vb_origin,pasv:~],#2) | OBJ-N(#3[vb_origin,pasv],#2) )
+		& VMODPREP(#3,#4[element],?[lemme:as])
+		& MOD(#4,#5[adj_origin]) 
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] )
+	)
+	ORIGIN(#1,#5)
+
+
+
+
+// Rule 704
+// Adding the local of the origin and this local is specified PREP[in] e.g. (is found | occurs ) naturally in the YY.
+// IMPORTANT NOTE: LOCAL is not a lexical node BUT THE WHOLE NP
+if (  ^ORIGIN(#1,#4[lemme:natural]) & LIEN_PAR(#3,#4)  & VMODPREP(#3,#5,#11[lemme:in]) & HEAD(#5,#10[noun:+]) )
+	ORIGIN(#1,#4,#10,#11)
+
+// Rule XXXX
+// Adding the local while creating the ORIGIN predicate e.g. XXY is widely distributed in the eartg's crust
+//if ( ENTITE(#1) & ~ORIGIN(#1,?) 
+//		& ( OBJ-N(#3[vb_origin,pasv,nat],#2) | SUBJ-N(#3,[vb_origin,pasv:~](#3,#2) ) )
+//		& VMODPREP(#3,#10,#11[prep,in])
+		
+
+// Rule 705
+// Making some inference. If an entity is found somewhere then it is of natural origin
+// e.g. XXXXY is found in the environment
+if (  ENTITE(#1) 
+		& OBJ-N(#3[vb_origin,pasv,nat],#2) 
+		& VMODPREP(#3,#5[guess:~],#11[lemme:in]) 
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) & HEAD(#5,#10[noun:+]) 
+		& ~ORIGIN(#1,?[lemme:natural],#10,#11) 
+	)
+	ORIGIN(#1,##adj#20[lemme=natural],#10,#11),
+	LIEN_PAR(#3,#20).
+
+// Rule 706
+// Same as above with OBJ-N(?,IT)
+if ( ENTITE(#1) 
+		& OBJ-N(#3[vb_origin,pasv,nat],?[form:fit]) 
+		& VMODPREP(#3,#5[guess:~],#11[lemme:in]) 
+		& HEAD(#5,#10[noun:+]) 
+		& ~ORIGIN(#1,?[lemme:natural],#10,#11) 
+	)
+	ORIGIN(#1,##adj#20[lemme=natural],#10,#11),
+	LIEN_PAR(#3,#20).
+
+
+
+// Rule 731
+// Same as above with element and relative XXXY is a metal that is found in the environment
+if ( DESCRIPTION[nature](#1,#2) 
+		& OBJ-N(#3[vb_origin,pasv,nat],#2) 
+		& VMODPREP(#3,#5[guess:~],#11[lemme:in]) 
+		& HEAD(#5,#10[noun:+])
+		& ~ORIGIN(#1,?[lemme:natural],#10,#11)  
+	)
+	ORIGIN(#1,##adj#20[lemme=natural],#10,#11),
+	LIEN_PAR(#3,#20).
+
+
+
+
+// Completing the ORIGIN predicate when the local is unknown
+if ( ^ORIGIN(#1,#2) )
+	ORIGIN(#1,#2,##pron[lemme=NONE],##pron[lemme=NONE])
+
+
+// Rule XXXX
+// Negation of ORIGIN
+// e.g. X does not occur naturally
+if ( ^ORIGIN[neg:~](#1,#2,#3,#4) & LIEN_PAR(#5,#2) & MOD[neg](#5,?) )
+	ORIGIN[neg=+](#1,#2,#3,#4)
+
+
+
+// Adding a final argument. When the There is a SUBJ-N introduced by by and that is not human:+
+// Then we add the 4th argument with this SUBJ-N. e.g. XXXY is produced in soil by bacteria
+// EN COURS - Il faudra egalement lien_par
+//if ( ^ORIGIN(#1,#2,#3,#4) & LIEN_PAR(#20,#2) & SUBJ-N(#20,#30[pron:~,rel:~]) )
+//	ORIGIN(#1,#2,#3,#4,#30)
+
+// Producer is not present
+//if ( ^ORIGIN(#1,#2,#3,#4) )
+//	ORIGIN(#1,#2,#3,#4,##pron[lemme=NONE])
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END of ORIGIN
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+//	SYNONYM
+// 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Extracting the synonyms of the entity
+
+// It is also called XY
+// It is also known as XY
+
+
+// Rule XXXX
+// First possibility - Xy is called/named WWW
+// In this case ATTRIB relations are extracted through the paraphrase module ( OBJCOMPL)
+// Note, we take the whole NP
+if ( ENTITE(#1) & OBJ-N(#3[vb_syn],#2) 
+		& ATTRIB(#2,#20)
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#20,#30) 
+)
+	SYNONYM(#1,#30)
+	
+// Rule XXXX
+// Same as above with IT
+// IT is also called/names XY
+if ( ENTITE(#1) & OBJ-N(#3[vb_syn],#2[form:fit]) 
+		& ATTRIB(#2,#20)
+		& HEAD(#20,#30) 
+)
+	SYNONYM(#1,#30)
+
+// Rule XXXX
+// Entite is known/designated as XY
+if ( ENTITE(#1) & OBJ-N(#3[vb_syn,prep_intro:as],#2) & VMODPREP(#3,#4,?[lemme:as]) 
+		& ( #1[surface]:#2[surface] | #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] )
+		& HEAD(#4,#40[noun])
+)
+	SYNONYM(#1,#40)
+
+// Rule XXXX
+// Same as above with IT
+if ( ENTITE(#1) & OBJ-N(#3[vb_syn,prep_intro:as],#2[form:fit]) & VMODPREP(#3,#4,?[lemme:as]) 
+		& HEAD(#4,#40[noun])
+)
+	SYNONYM(#1,#40) 
+
+// Rule XXXX
+// XXX is (also) known as
+
+// Rule XXXX
+// 2nd possibility
+// Other names for/or <entity> are COORD domain
+if ( ENTITE(#1) & ATTRIB(#3[lemme:name],#4)
+		& ( NMODPREP(#3,#2,?[lemme:for]) | NMODPREP(#3,#2,?[lemme:of]) )
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#4,#40)
+)
+	SYNONYM(#1,#40)
+
+
+// Rule XXX
+//3rd possibility
+// X has many names as/including <syn> (with possible coordination of synonyms)
+| NP#50 | 
+if ( ENTITE(#1)	& SUBJ-N(#3[lemme:have],#2) 
+		& OBJ-N(#3,#4[noun_syn:+]) 
+		& ( NMODPREP(#4,#5,?[prep,lemme:including]) | NMODPREP(#4,#5,?[prep,lemme:as]) )
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#5,#50)
+)
+	SYNONYM(#1,#50)
+
+
+// Rule XXXX
+// Same as above with IT
+| NP#50 | 
+if ( ENTITE(#1)	& SUBJ-N(#3[lemme:have],?[lemme:it]) 
+		& OBJ-N(#3,#4[noun_syn:+]) 
+		& ( NMODPREP(#4,#5,?[prep,lemme:including]) | NMODPREP(#4,#5,?[prep,lemme:as]) )
+		& HEAD(#5,#50)
+)
+	SYNONYM(#1,#50)
+
+
+// PROBLEM
+// When the synonym entity name is made by a noun:+ (non-guessed word) followed by a guessed word (taken as nadj), 
+// then chunking is bad and we do not have a NP for the whole expression.
+// We recuperate in this case the post-modifier.
+// e.g. carbon hexachloride
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END of SYNONYM
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+//	USE
+// 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// IT IS USED AS NP
+// XX is used in NP
+// XX has been used for <NP>
+// IT IS USED TO MAKE XXXX
+// XX IS A USED <PRODUCT> It is a used pesticide for crops like corn and cotton.
+// Most of X is used to make Y. The remaining is used in textiles...
+// XX is used to <INF_VERB>
+
+// Industries use XX to make 
+// XX is not used for 
+// XX is purified for use in NP
+// Some Products used for NP contain XX
+
+
+// Rule XXXX
+// XX is used or YY use XX Adding the time (now vs. before)
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#2) 
+		& VDOMAIN[perfect:~](#3,?[pres:+,past:~])
+		& ( VMODPREP(#3,#4,#5[lemme:as]) | VMODPREP(#3,#4,#5[lemme:for]) | VMODPREP(#3,#4,#5[lemme:in]) )
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#4,#30[noun])
+)
+	USE[nominal=+](#1,#30,#5,##adv[lemme=now])
+
+
+
+
+
+
+// Rule XXXXX
+// In the past...
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#2) 
+		& ( VDOMAIN(#3,?[past:+,pres:~]) | VDOMAIN[perfect:+](#3,?) )
+		& ( VMODPREP(#3,#4,#5[lemme:as]) | VMODPREP(#3,#4,#5[lemme:for]) | VMODPREP(#3,#4,#5[lemme:in]) )
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#4,#30[noun])
+)
+	USE[nominal=+](#1,#30,#5,##adv[lemme=before])
+
+// Rule XXXX
+// It is used as/in/for NP
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],?[lemme:it]) 
+		& VDOMAIN(#3,?[pres:+,past:~])
+		& ( VMODPREP(#3,#4,#5[lemme:as]) | VMODPREP(#3,#4,#5[lemme:for]) | VMODPREP(#3,#4,#5[lemme:in]) )
+		& HEAD(#4,#30[noun]) 
+)
+	USE[nominal=+](#1,#30,#5,##adv[lemme=now])
+
+// Rule XXXX
+// int the past...
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],?[lemme:it]) 
+		& VDOMAIN(#3,?[past:+,pres:~])
+		& ( VMODPREP(#3,#4,#5[lemme:as]) | VMODPREP(#3,#4,#5[lemme:for]) | VMODPREP(#3,#4,#5[lemme:in]) )
+		& HEAD(#4,#30[noun]) 
+)
+	USE[nominal=+](#1,#30,#5,##adv[lemme=before])
+
+
+// Rule XXXXX
+// Xy is a used pesticide
+// NOTA: Here the we involve a bare noun and not the NP
+if ( ENTITE(#1) & ATTRIB(#2,#3)
+		& SUBJ-N(?[pres:+,past:~],#2) 
+		& MOD[pre](#3,#4[adj_use])
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+)
+	USE[nominal=+](#1,#3,##prep[lemme=as],##adv[lemme=now])
+
+
+// Rule XXXX
+// Same as above in the past
+if ( ENTITE(#1) & ATTRIB(#2,#3)
+		& SUBJ-N(?[past:+,pres:~],#2) 
+		& MOD[pre](#3,#4[adj_use])
+		& ( #1[surface]:#2[surface] | #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+)
+	USE[nominal=+](#1,#3,##prep[lemme=as],##adv[lemme=before])
+
+
+// Rule XXXX
+// X has use(noun) including X
+if ( ENTITE(#1) & SUBJ-N(#20[lemme:have,pres:+,past:~],#2) & OBJ-N(#20,#3[noun,lemme:use])
+		& ( NMODPREP(#3,#4,?[lemme:including]) | VMODPREP(#20,#4,?[lemme:including]) )
+		& HEAD(#4,#40[noun])
+		& ( #1[surface]:#2[surface] | #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] )
+)
+	USE[nominal=+](#1,#40,##prep[lemme=in],##adv[lemme=now])		
+
+// Same as above in the past
+if ( ENTITE(#1) & SUBJ-N(#20[lemme:have,pres:~,past:+],#2) & OBJ-N(#20,#3[noun,lemme:use])
+		& ( NMODPREP(#3,#4,?[lemme:including]) | VMODPREP(#20,#4,?[lemme:including]) )
+		& HEAD(#4,#40[noun])
+		& ( #1[surface]:#2[surface] | #1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] )
+)
+	USE[nominal=+](#1,#40,##prep[lemme=in],##adv[lemme=before])		
+
+
+
+// rule 744
+// X is used to <INF> + OBJ or Industry used acetone to make XXX
+// NOTE: We take the whole NP for OBJ
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#2) 
+		& VDOMAIN[perfect:~](#3,?[pres:+,past:~])
+		& EMBED[infinit](#4,#3) 
+		& OBJ-N(#4,#5)
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#5,#50) 
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=now])
+
+
+// rule XXXX
+// X was used to <INF> + OBJ
+// past
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#2) 
+		& ( VDOMAIN(#3,?[past:+,pres:~]) | VDOMAIN[perfect:+](#3,?) )
+		& EMBED[infinit](#4,#3)
+		& OBJ-N(#4,#5)
+		& (#1[lemme]:#2[lemme] | #2[maj:+,guess:+] | #2[guess,proper,mwe] ) 
+		& HEAD(#5,#50) 
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=before])
+
+
+// Rule XXXX
+// Same as above with subject IT
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#6[lemme:it]) 
+		& VDOMAIN[perfect:~](#3,?[pres:+,past:~])
+		& EMBED[infinit](#4,#3)
+		& OBJ(#4,#5)
+		& HEAD(#5,#50) 
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=now])
+
+// Rule XXXX
+// Subject IT and past
+if ( ENTITE(#1) & OBJ-N(#3[vb_use],#6[lemme:it]) 
+		& ( VDOMAIN(#3,?[past:+,pres:~]) | VDOMAIN[perfect:+](#3,?) )
+		& EMBED[infinit](#4,#3)
+		& OBJ(#4,#5)
+		& HEAD(#5,#50) 
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=before])
+
+
+// Rule XXXXX
+// X is a ELEMENT used to make YY
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_use],#2) 
+				& VDOMAIN[perfect:~](#3,?[pres:+,past:~])
+				& EMBED[infinit](#4,#3)
+				& OBJ-N(#4,#5)
+				& HEAD(#5,#50)
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=now])
+
+
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_use],#2) 
+				& ( VDOMAIN(#3,?[past:+,pres:~]) | VDOMAIN[perfect:+](#3,?) )
+				& EMBED[infinit](#4,#3)
+				& OBJ-N(#4,#5)
+				& HEAD(#5,#50)
+)
+	USE[infinitival=+](#1,#4,#50,##adv[lemme=before])
+
+// Rule XXXX
+// X is a ELEMENT used as Y
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_use],#2)
+				& ( VDOMAIN(#3,?[past:+,pres:~]) | VDOMAIN[perfect:+](#3,?) )
+				& VMODPREP(#3,#4,?[lemme:as])
+	)
+	USE[nominal=+](#1,#4,##prep[lemme=as],##adv[lemme=before])
+
+				
+			
+if ( DESCRIPTION[nature](#1,#2) & OBJ-N(#3[vb_use],#2)
+				& VDOMAIN[perfect:~](#3,?[pres:+,past:~])
+				& VMODPREP(#3,#4,?[lemme:as])
+	)
+	USE[nominal=+](#1,#4,##prep[lemme=as],##adv[lemme=now])
+
+				
+
+
+// Second stage : from USE_NOMINAL and USE_INFINITIVAL to the general USE predicate
+
+// Rule XXXX
+// We have constructed both USE_NOMINAL and USE INFINITIVAL that have to merge
+// e.g. Industries use acetone as a pesticide to kill insects 
+// -> USE_NOMINAL(acetone,pesticide,as,now) and USE_INFINITIVAL(acetone,kill,insects,now)
+if ( ^USE[nominal](#1,#20,#3[prep],#4) & USE[infinitival](#1,#10,#11,?) 
+		& HEAD(#2,#20)
+		& ( ?(#2,#10) | ?(#10,#2) )
+	)
+	USE[nominal=~,infinitival=~](#1,#20,#3,#10,#11,#4)
+
+
+// If we have a USE_NOMINAL and if the name (resulting product) is the normalized subject of some action 
+// In this case the preposition is AS
+// It is/was used as a pesticide to control algae USE(entite,pesticide,as,now/before,control,algae)
+if ( ^USE[nominal](#1,#20,#3[lemme:as],#6) & HEAD(#2,#20) & ( SUBJ-N(#4,#2) | MOD[post,infinit](#2,#4) ) & OBJ-N(#4,#5) & HEAD(#5,#50[noun]) )
+	USE[nominal=~](#1,#20,#3,#4,#50,#6) 
+
+	
+// From USE_INFINITIVAL alone to the general USE predicate When no other USE predicate exists
+if ( ^USE[infinitival:+](#1,#2,#30,#4) & ~USE[infinitival:~,nominal:~](#1,?,?,#2,#30,?) )
+	USE[infinitival=~](#1,##Pron[lemme=NONE],##Pron[lemme=NONE],#2,#30,#4)
+
+
+// From USE_NOMINAL alone 
+if ( ^USE[nominal](#1,#20,#3,#4) )
+	USE[nominal=~,infinitival=~](#1,#20,#3,##Pron[lemme=NONE],##Pron[lemme=NONE],#4)
+
+// If we have related USE[infinitival] and USE_big
+if ( ^USE[infinitival](#1,#2,#3,?) & USE[infinitival:~,nominal:~](#1,#10,#20,#2,#3,#4) )
+	~
+
+
+// 3rd Stage. Adding feature ALONE:+ on use, when the preposition, if there is one, is "AS" or if there is no preposition at all
+if ( ^USE[alone:~,combined:~,derived:~](#1,#2,#3[lemme:as],#4,#5,#6) )
+	USE[alone=+](#1,#2,#3,#4,#5,#6)
+
+// Adding feature alone:+ when we do not have any other features
+if ( ^USE[alone:~,combined:~,derived:~](#1,#2,#3,#4,#5,#6) )
+	USE[alone=+](#1,#2,#3,#4,#5,#6)
+	
+// Cleaning
+if ( USE(#1,#2,#3,#4,#5,#6) & ^USE(#1,?[lemme:NONE],?,#4,#5,#6) )
+	~
+
+// Adding a feature neg:+ when the verb USE is negated
+// It is not used as a pesticide.
+if ( ^USE[neg:~](#1,#2,#3[prep],#4,#5,#6) & HEAD(#20,#2) & VMODPREP(#50[vb_use],#20,#3) & MOD[neg](#50,?) )
+	USE[neg=+](#1,#2,#3,#4,#5,#6)
+
+// It is not used to make plastic
+if ( ^USE[neg:~](#1,#2,#3,#5[verb],#4,#6) & EMBED[infinit](#5,#50[vb_use]) & MOD[neg](#50,?) )
+	USE[neg=+](#1,#2,#3,#5,#4,#6)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END of USES
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+// Dealing with coordination
+// Using the adhoc feature
+// ORIGIN uses the NP node
+
+
+
+// Coordinated NPs when there are not introduced by any preposition, or if the preposition is the same
+| NP#40 | 
+if ( ORIGIN(#1,#2,#20,#21) & HEAD(#3,#20) & COORD[adhoc](#5,#3) & COORD[adhoc](#5,#4) & HEAD(#4,#40) 
+			   & ( ( PREPD(#3,#21) & PREPD(#4,#21) ) | ~PREPD(#3,?) )
+			   & ~ORIGIN(#1,#2,#40,#21) )
+	ORIGIN(#1,#2,#40,#21)
+
+// Second case, Coordinated NPs when the first NP is introduced with some preposition and other NP have different prepositions
+// e.g It occurs naturally in plants, trees, gases, forest fires, and AS a product.
+| NP#40 | 
+if ( ORIGIN(#1,#2,#20,#21) & HEAD(#3,#20) & COORD[adhoc](#5,#3) & COORD[adhoc](#5,#4) & HEAD(#4,#40) 
+			   & PREPD(#3,#21) & PREPD(#4,#22) & #21 < #22 
+			   & ~ORIGIN(#1,#2,#40,?) )
+	ORIGIN(#1,#2,#40,#22)
+
+
+// Property uses the lexical node
+// Using directly the nodes
+if ( PROPERTY(#1,#2,#3,#4,#5) & COORD[adhoc](#6,#3) & COORD[adhoc](#6,#7) & ~PROPERTY(#1,#2,#7,#4,#5) )
+	PROPERTY(#1,#2,#7,#4,#5)
+
+//if ( COORD[adhoc](#1,#2) )
+//	LIXO(#1,#1,#1,#1)
+
+// Property coordination
+// using indirect links LIEN_PAR
+if ( PROPERTY(#1,#2,#3,#4,#5) & LIEN_PAR(#20,#2)  & COORD[adhoc](#6,#20)  ) //& COORD[adhoc](#6,30) )
+//& ISAJ(#31,#40) & #30[lemme]:#31[lemme] & ~PROPERTY(#1,#40,#3,#4,#5) )
+//	PROPERTY(#1,#40,#3,#4,#5)
+	LIXO(#1,#1,#1)
+
+// Synonims with COORD_ADHOC
+// Attention on sort un NP et pas un noeud lexical ???
+| NP#20 | 
+if ( SYNONYM(#1,#20) & HEAD(#2,#20) & COORD[adhoc](#6,#2) & COORD[adhoc](#6,#3) & HEAD(#3,#30[noun]) & ~SYNONYM(#1,#30)  ) 
+	SYNONYM(#1,#30)
+
+
+// USE and coordination
+// First, coordination of the last (5th) element
+if ( USE[alone:+](#1,#20,#3,#7,#4,#50) & HEAD(#5,#50) & COORD(#10,#5) & COORD(#10,#6) & HEAD(#6,#60) & ~USE(#1,#20,#3,#7,#4,#60) )
+	USE[alone=+](#1,#20,#3,#7,#4,#60)
+
+
+// USE and coordination
+// Second, coordination of the 4th element
+if ( USE[alone:+](#1,#20,#3,#7,#40,#50) & HEAD(#4,#40) & COORD(#10,#4) & COORD(#10,#6) & HEAD(#6,#60) & ~USE(#1,#20,#3,#7,#60,#50) )
+	USE[alone=+](#1,#20,#3,#7,#60,#50)
+
+
+// USE and coordination
+// Coordination of the second element
+if ( USE[alone:+](#1,#20,#3,#4,#5,#6) & HEAD(#2,#20) & COORD(#10,#2) & COORD(#10,#7) & HEAD(#7,#70[noun]) & ~USE(#1,#70,#3,#4,#5,#6) )
+	USE[alone=+](#1,#70,#3,#4,#5,#6)
+
+
+
+// PROBLEME QUAND ENTITE EST COMPLEXE
+if ( ^ENTITE(#1) & MOD[pre](#1,#2) & HEAD(#1,#10) )
+	ENTITE(#10)
+ 
+
+if ( ^DESCRIPTION(#1,#4) & ENTITE(#10) & HEAD(#1,#10) )
+	DESCRIPTION(#10,#4)
+
+if ( ^SYNONYM(#1,#4) & ENTITE(#10) & HEAD(#1,#10) )
+	SYNONYM(#10,#4)
+
+if ( ^ORIGIN(#1,#2,#3,#4) & ENTITE(#10) & HEAD(#1,#10) ) 
+	ORIGIN(#10,#2,#3,#4)
+
+if ( ^PROPERTY(#1,#2,#3,#4,#5) & ENTITE(#10) & HEAD(#1,#10) )
+	PROPERTY(#10,#2,#3,#4,#5)
+
+if ( ^USE(#1,#2,#3,#4,#5,#6) & ENTITE(#10) & HEAD(#1,#10) )
+	USE(#10,#2,#3,#4,#5,#6)
+
+

@@ -1,0 +1,103 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      basic rules for additional lexicon entries
+# 
+# LANGUAGE:     DUTCH
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      07-Aug-2007 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -e "read lex LEX.lexc"  -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+# apostrophe
+define APO [
+  "\u0027"	# [']	APOSTROPHE
+| "\u2018"	# [‘]	LEFT SINGLE QUOTATION MARK
+| "\u2019"	# [’]	RIGHT SINGLE QUOTATION MARK
+];
+
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+ ];
+multi char sigma net
+define TAG
+
+
+define BD	[ %- | %  | .#. ];
+
+define MB	"^+" ;
+
+define SPEC	MB ;
+
+define GENDER	[ %+Masc | %+Fem | %+Neut | %+MF | %+M | %+F | %+N ];
+
+define Cons	[b|c|d|f|g|h|k|l|m|n|p|q|r|s|t|v|w|x|z];
+define Vowel	[a|e|i|o|u];
+
+
+
+# ----------------------------------------------------------------
+read regex [
+	0 <- SPEC
+
+
+# optional hyphens
+.o.	%- <- [ "[-]" | "(-)" ]
+
+.o.	%+Adj <- %+NAdj 
+.o.	%+Noun <- %+NAdj 	|| _ $[GENDER]
+
+# ------------------------------------------------------------------------------
+.o.	LEX 
+
+# ------------------------------------------------------------------------------
+
+.o.	TAG -> 0
+
+# hyphen or space
+.o.	"[-]" -> [ %  | %- ]
+# hyphen or nothing
+.o.	"(-)" -> [ 0 | %- ]
+
+
+
+# long vowels
+.o.	{aa} -> a	|| _ Cons MB e		# Amerikaan -> Amerikane ??
+.o.	{ee} -> e	|| _ Cons MB e		# Angolees -> Angolese ??
+.o.	{oo} -> o	|| _ Cons MB e		# Pool -> Pole ??
+.o.	{uu} -> u	|| _ Cons MB e		# buur -> buren
+
+
+# short vowels
+#.o.	b -> b b	|| Cons Vowel _ MB e	n	# ?
+#.o.	d -> d d	|| Cons Vowel _ MB e	n	# ?
+#.o.	k -> k k 	|| Cons Vowel _ MB e	n	# vak -> vakken
+#.o.	s -> s s	|| Cons Vowel _ MB e	n	# adres -> adressen
+#.o.	t -> t t	|| Cons Vowel _ MB e	n	# kat -> katten
+
+# f/v and s/z
+#.o.	s -> z		|| Vowel _ MB e 	# huis -> huizen
+#.o.	f -> v		|| Vowel _ MB e 	# leef -> leven
+
+# genitive -s
+
+.o.	MB -> %'	|| Vowel _ s .#.	# Korea's
+.o.	MB s -> %'	|| [s|x|z] _ .#.	# Parijs'
+#.o.	MB -> 0		|| _ s .#.		# Hollands
+
+
+.o. 	SPEC -> 0
+
+];
+
+
+
+

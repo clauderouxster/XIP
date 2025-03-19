@@ -1,0 +1,104 @@
+parser p(_current+"english-refl-json.grm");
+
+vector results;
+int sent;
+svector listfeats=["AWAPARA","ANALYTIC","CAPABILITY","CONTEXT",
+     "SHIFT","SPECIFIC","OTHERREFL","COURSE","SIMPLEVAL",
+     "REDUCED", "VAGUE"
+];
+
+function incremente() {
+     sent++;
+}
+
+function stock(dependency d) {
+     ssmap feats=d.features();
+     string key;
+     svector keeps;
+     primemap res;
+     bool awapara=false;
+
+     for (key in listfeats) {
+          if (feats.test(key)==true) {
+               if (key=="AWAPARA")
+                    awapara=true;
+               keeps.push(key);
+          }
+     }
+
+     //     printlnerr(keeps,feats);
+
+     string surfaces;
+     int idep;
+     for (idep in <0,d.parameters().size(),1>) {
+          if (idep)
+               surfaces+=" ";
+          surfaces+=d.parameters()[idep].surface();
+     }
+
+     if (results.size()>0 and results[-1]["id"]==sent) {
+          if (results[-1]["AWAPARA"]==false and awapara==true)
+               results[-1]["AWAPARA"]=true;
+
+          if (results[-1].test(d.name())) {
+               results[-1][d.name()].push(surfaces);
+               results[-1][d.name()+"_F"].push(keeps);
+          }
+          else {
+               results[-1][d.name()]=[surfaces];
+               results[-1][d.name()+"_F"]=[keeps];
+          }
+     }
+     else {
+          res["id"]=sent;
+          res["AWAPARA"]=awapara;
+          res["md"]=[];
+          res[d.name()]=[surfaces];
+          res[d.name()+"_F"]=[keeps];
+          results.push(res);
+     }
+
+}
+
+function addtheword(node n) {
+     if (results.size()>0 and results[-1]["id"]==sent) {
+          results[-1]["md"].push(n.surface());
+     }
+     else {
+          primemap res;
+          res["id"]=sent;
+          res["AWAPARA"]=false;
+          res["md"]=[n.surface()];
+          results.push(res);
+     }
+}
+
+
+string rule = @"
+Script:
+
+incremente();
+
+if (SENT$1(#1) | IMPSENT$1(#1) | REFLSENT$1(#1) | ORGANISATION$1(#1) | LOCATION$1(#1) | LOCORG$1(#1) | PERSON$1(#1) | AUTHOR$1(#1) | CONCEPT$1[REFLSENT](#1) | CONCEPT$1[REFLSENT](#1,#2) | CONCEPT$1[REFLSENT](#1,#2,#3) | CONCEPT$1[REFLSENT](#1,#2,#3,#4) | CONTEXT$1(#1)) {
+     stock($1);
+}
+
+|#1[MD]| {
+     addtheword(#1);
+}
+
+
+
+"@;
+
+p.addendum(rule,true);
+
+//string phrase="We propose the design and implementation of effective Social Learning Analytics (SLA) present significant challenges.";
+//p.parse(phrase);
+
+int nb;
+p.parsexml(_args[0],0,nb);
+
+println(results.json().utf8());
+
+

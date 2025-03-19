@@ -1,0 +1,348 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : cosmetics.xip
+//!   Date       : 10/02/2003
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// CH - May 2002
+// This file modifies (change of names, addition of features) some of the dependencies created
+// in dependency.xip, in order to be in accordance to the reference document about dependencies
+// 
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+DependencyRules:
+
+
+
+// Rule 590
+// A enlever apres eval.
+if ( ^SUBJ[pre:~,post:~](#1,#2) & #2 < #1 )
+	SUBJ[pre=+](#1,#2)
+
+// Rule 591
+if ( ^SUBJ[pre:~,post:~](#1,#2) & #1 < #2 )
+	SUBJ[post=+](#1,#2)
+
+// Rule 592
+if ( ^OBJ[pre:~,post:~](#1,#2) & #2 < #1 )
+	OBJ[pre=+](#1,#2)
+
+// Rule 593
+if ( ^OBJ[pre:~,post:~](#1,#2) & #1 < #2 ) 
+	OBJ[post=+](#1,#2)
+
+// Rule 
+// enlever apres eval
+//if ( AGENT(#1,#2) )
+//	MOD[post=+](#1,#2)
+
+
+
+// Rule 594
+// Correct SUBJ_POST that have been wrongly calculated
+// Esp. Problematic for biotip texts
+if ( SUBJ[pre](#1,?) & ^SUBJ[post](#1,?) )
+	~
+
+
+// Rule XXXXXX
+// if two subjects on the left for the same verb, then the nearest is the right one
+if ( SUBJ[pre](#1,#2) & ^SUBJ[pre](#1,#3) & #3 < #2 )
+   ~
+
+
+
+/// recuperation de VDOMAIN verbe seul sous top (transfere dans dependency.xip)
+
+
+// Rule 654
+// Transformation all *MOD into MOD dependencies
+if ( ^VMOD(#1,#2) | ^NMOD(#1,#2) | ^ADJMOD(#1,#2) | ^QUANTMOD(#1,#2) | ^ADVMOD(#1,#2) )
+	MOD(#1,#2)
+
+
+
+// Rule 598
+// Changing MOD[COMPLTHAT] dependencies (completives) to OBJ dependencies
+if ( ^MOD[complthat](#1,#2) )
+	OBJ(#1,#2)
+
+// Rule 599
+// Adding the feature NONREF to a non-referential subjet "there" followed by a copula which as an indefinite NP as a subject compelemnt 
+| SC{#2,FV|{#1}} |
+if ( ^SUBJ(#1,#2[form:fthere]) & VDOMAIN(#5[cop],#1) & NUCL(#5,#3) & DETD(#3,#4[indef]) )
+	SUBJ[nonref=+](#1,#2)
+	
+// Rule 600
+// Adding the feature NONREF to a non-referential subject "it" followed by a copula of by an impersonal verb
+
+
+// Rule 601
+// Changing feature name NEGAT to NEG
+if ( ^?[negat](#1,#2) )
+	?[negat=~, neg=+](#1,#2)
+
+// Rule 602
+// Changing dependency COMPOUND with take (e.g. take place) to dependency OBJ[post]
+if ( ^COMPOUND(#1[form:ftake],#2[noun]) & #1 < #2 )
+	OBJ[post=+](#1,#2)
+
+
+// Rule 603
+// Cleaning erroneous SUBJ dependency in the context NP1 ( NP2 FV ....), when both NP1 and NP2 are subject of FV
+| ?[verb]{?*,#30[verb]}, ?*[verb:~], NP#1, punct[form:fopar], NP#2, FV{?*,#3[last]}, ?*, punct[form:fcpar] | 
+	if ( HEAD(#10,#1) & HEAD(#20,#2) & ^SUBJ[pre](#3,#10) & SUBJ[pre](#3,#20) & ~OBJ(#30,#10) )
+	OBJ(#30,#10)
+
+// Rule 604
+// Cleaning redundancy
+// If we have finite verb followed by an object which is also the subject of a non-finite verb 
+// AND if at the same time the finite verb and non-finite verb are linked by an OBJ[infinit] dependency
+// THEN this OBJ[infinit] dependency is destroyed.
+// e.g. He wants Mary to go *OBJ[infinit]
+if ( OBJ[post](#1,#2) & SUBJ[nfinit](#3,#2) & ^OBJ[infinit,post](#1,#3) )
+	~
+
+// Rule 605
+// Modifiers attachment in the context MAKE + NOUN + PP introducing an ING form
+// e.g. The country has made big strides towards developping human capital
+// *MOD(made,developping) but MOD(strides,developping)
+if ( OBJ(#1[form:fmake],#2) & ^MOD[post](#1,#3[vprog,prog]) & #2 < #3 )
+	MOD(#2,#3).
+
+
+// Rule 606
+// Changing feature contrl:+ into nfinit:+ in subj dependencies
+if ( ^$1[contrl](#1,#2) )
+	$1[contrl=~, nfinit=+](#1,#2)
+
+
+// Rule 607
+// If it exists at the same time a NUCL[padjunct] and a MOD between the same arguments, then delete NUCL[padjunct]
+// If there is only a NUCL[padjunct] then change it to MOD
+if ( ^NUCL[padjunct](#1,#2) & MOD(#1,#2)  )
+	~
+
+// Rule 608
+if ( ^NUCL[padjunct](#1,#2) & ~MOD(#1,#2) )
+	MOD[post=+](#1,#2)
+
+
+// Rule 609
+// Harmonization of CONNECTOR relations
+// 1) if connector_subord involving that, then connector_complthat
+// 2) if connector_subord_complthat, then connector_complthat
+
+if ( ^CONNECTOR[subord:+,complthat:~](#1[form:fthat],#2) )
+	CONNECTOR[subord=~,complthat=+](#1,#2)
+
+// Rule 610
+if ( ^CONNECTOR[subord:+,complthat:+](#1,#2) )
+	CONNECTOR[subord=~](#1,#2)
+
+
+
+
+
+// Rule 611
+// Inverting the order of the CONNECTOR dependency 
+// arg1 is the verb and arg2 is the conjunction
+if ( ^CONNECTOR(#1,#2) )
+	CONNECTOR(#2,#1)
+
+
+// Rule 612
+// Transformation CONNECTOR_PRE_LOC|MANNER to MOD_PRE_LOC|MANNER
+if ( ^CONNECTOR[pre:+](#1,#2[wh:+]) )
+	MOD(#1,#2)
+
+// pb ordre a corriger
+// Rule 613
+if ( ^CONNECTOR[pre:+](#1[wh:+],#2) )
+	MOD(#2,#1)
+
+
+// PROBLEMES VUS DANS LE GROS CORPUS BNC. IL FAUT LES TRACER VOIR DE QUOI IL S'AGIT. POUR LA LIVRAISON D'AVRIL ON LAISSE COMME CA POUR L'INSTANT
+// Taking away undesirable features to COORD
+// Rule 614
+if ( ^COORD[dur:+](#1,#2) )
+	COORD[dur=~](#1,#2)
+// Rule 615
+if ( ^COORD[loc:+](#1,#2) )
+	COORD[loc=~](#1,#2)
+// Rule 616
+if ( ^COORD[temp:+](#1,#2) )
+	COORD[temp=~](#1,#2)
+// Rule XXX
+if ( ^DETD[temp:+](#1,#2) )
+	DETD[temp=~](#1,#2) 
+// Rule 617
+if ( ^HEAD[neg:+](#1,#2) )
+	HEAD[neg=~](#1,#2)
+// Rule 618
+if ( ^HEAD[temp:+](#1,#2) )
+	HEAD[temp=~](#1,#2)
+// Rule 619
+if ( ^IOBJ[post,neg](#1,#2) )
+	MOD(#1,#2)
+// Rule 620
+if ( ^IOBJ[pre:+](#1,#2) )
+	MOD(#1,#2)
+// Rule 621
+if ( ^IOBJ[sentence:+](#1,#2) )
+	MOD(#1,#2)
+// Rule 622
+if ( ^IOBJ[relativ:+](#1,#2) )
+	MOD(#1,#2)
+// Rule 623
+if ( ^MAIN[interrog:+](#1) )
+	MAIN[interrog=~](#1) 
+// Rule 624
+if ( ^QUANTD[loc:+](#1,#2) )
+	QUANTD[loc=~](#1,#2)
+// Rule 625
+if ( ^QUANTD[temp:+](#1,#2) )
+	QUANTD[temp=~](#1,#2) 
+// Rule 626
+//if ( ^PARTICLE(#1,#2) )
+//	NUCL[particle=+](#1,#2)
+// Rule 627
+if ( ^AGENT[neg:+](#1,#2) )
+	AGENT[neg=~](#1,#2)
+// Rule 628
+if ( ^NUCL[temp:+](#1,#2) )
+	NUCL[temp=~](#1,#2)
+// Rule 629
+if ( ^NUCL[post:+](#1,#2) )
+	NUCL[post=~](#1,#2)
+// Rule 630
+if ( ^NUCL[sentence:+](#1,#2) )
+	NUCL[sentence=~](#1,#2)
+
+// Rule 631
+if ( ^$1[pre:+,post:+](#1,#2) & #1 < #2 )
+	$1[pre=~](#1,#2)
+
+// Rule 632
+if ( ^$1[pre:+,post:+](#1,#2) & #2 < #1 )
+	$1[post=~](#1,#2)
+
+
+// Rule 633
+// Inverting the order of the PREPD dependency
+// arg1 is the noun, arg2 is the preposition
+// Deleting features associated to PREPD
+if ( ^PREPD(#1,#2) )
+	PREPD[features=~](#2,#1)
+
+
+
+// Rule 634
+// In compound verb "have got" the head is "have" and not "got"
+if ( NUCL[perfect,vlink](#1[form:fhave],#2[form:fget]) &   ^$1(#2,#3) & #2 < #3   )
+	$1(#1,#3)
+
+
+
+///////////////////////////////////////////////////////////////////////
+// 
+// Support verbs and collocations
+// 
+///////////////////////////////////////////////////////////////////////
+
+// Rule 635
+if ( OBJ(#1[form:ftake],#2[support_f:obj,support:ftake]) ) 
+	SUPPORT(#1,#2)
+
+
+// Rule 636
+// In case of quantified NP  with a quantification of the form QUANT PP(of) eg. All of London, The whole of the country etc. or NOUN[numer] PP(of) e.g. Thousands of people, 
+// All relations involving the quantifier as a dependent are changed in order to involve the quantified noun this quantifier quantifies
+| NP{?*,quant#1};PP{prep,NP{?*,quant#1}};NP{?*,#1[last,num]};PP{prep,NP{?*,#1[last,num]}};
+  NP{?*,#1[last,numer]};PP{prep,NP{?*,#1[last,numer]}};
+  NP{?*,#1[last,dig]};PP{prep,NP{?*,#1[last,dig]}};
+  NP{?*,#1[last,percent]};PP{prep,NP{?*,#1[last,percent]}}, PP#2{prep[form:fof]} |
+	if ( HEAD(#3,#2) & QUANTD(#3,#1) &  ^?(#4,#1)   )
+	?(#4,#3)
+//	LIXO(#4).
+
+// Rule 637
+// Quantified NPs of the form NP[quant] PP[of]
+// All the relations involving the quantifier as a head are changed in order to involve the quantified NP this quantifier quantifies
+// e.g. All of the risks to be taken *MOD(all,taken)
+// precedence in order to avoid to destroy HEAD(quant,quant) relations
+| NP{?*,quant#1};PP{prep,NP{?*,quant#1}};NP{?*,#1[last,num]};PP{prep,NP{?*,#1[last,num]}};
+  NP{?*,#1[last,numer]};PP{prep,NP{?*,#1[last,numer]}};
+  NP{?*,#1[last,dig]};PP{prep,NP{?*,#1[last,dig]}};
+  NP{?*,#1[last,percent]};PP{prep,NP{?*,#1[last,percent]}}, PP#2{prep[form:fof]} |
+	if ( HEAD(#3,#2) & QUANTD(#3,#1) & ^?(#1,#4) & #1 < #4 )
+	?(#3,#4)
+
+
+
+// Rule XXXX
+// special treatment for ORD PP[of] month_name (third of October)
+| NP{?*,num#2[ord:+,last:+]}, PP{prep[lemme:of], NP[tempexpr]{?*,#1[last,month]}} |
+	if ( ^OBJ(#9,#1) & QUANTD(#1,#2) )
+	MOD[temp=+](#9,#1)	
+
+
+/////////////////////////////////////////
+// 
+// MISSING ARGUMENTS OF ING-FORMS
+// 
+/////////////////////////////////////////
+
+// Rule XXXX
+// e.g. It's good for customers needing more illumination
+| PP#1, GV{verb#2[first,last,vprog:+]} |
+	if ( ~SUBJ(#2,?) & ~MOD[agentif:+](?,#2) & HEAD(#3,#1) & OBJ(#2,?) )
+	SUBJ[pre=+](#2,#3)
+
+	
+
+/////////////////////////////////////////
+// 
+// For contrastive evaluation only
+// 
+/////////////////////////////////////////
+
+// Rule 
+//| NP{?*,#1[last]}
+//if ( ^MOD[pre](#1,#2) | ^DETD(#1,#2[pron,gen] ) )
+//	LIXO(#1,#2)
+
+
+
+
+
+
+
+// Higher level dependencies
+// Defining at which level of embedment the verbs are
+// Using numerical variables and comparing them in order to solve unsolved attachments
+// e.g. While emphasizing that technical details were not fully worked out, Pelham said his resolution would seek to set aside the privilege resolution, which the House voted through 87-31. 
+// level 1: said, level 11: emphasizing, level 111: worked out, level 12: seek, level 121: set aside, level 1211: voted
+//////////////////////////////////////////
+
+
+
+// CLEANING
+if ( OBJ[t_relat:+](#1,#2) )
+	OBJ[t_relat=~](#1,#2)
+
+if ( SUBJ[t_relat:+](#1,#2) )
+	SUBJ[t_relat=~](#1,#2) 
+
+
+
+

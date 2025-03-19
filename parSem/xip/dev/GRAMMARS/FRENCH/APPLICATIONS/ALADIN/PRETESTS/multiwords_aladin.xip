@@ -1,0 +1,117 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File: multiwords_aladin.xip
+//! Author : Caroline Hagege
+//! Aout 2009
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Désambiguïsation:
+
+
+
+// ##########################################
+// CH - regles de desamb specifiques aux textes medicaux
+//############################################
+
+// Si chaine "herpes" il s'agit de herpès sans accent et non du pluriel du 
+// nom feminin "herpe"
+1> noun[fem:+,lemme:"herpe",pl:+] %= noun[vir_sus=+,masc=+,sg=+,p3=+].
+
+
+
+1> noun[lemme:"°"] %= noun[noun=+,unit_temper=+] .
+
+
+// doppler, scanner
+1> noun<exam>, verb = noun | adj[body_part] | .
+1> noun<exam>, verb = noun | prep[lemme:de], (det), ?[body_part] | .
+
+// Problemes avec separation et sauts de ligne. 2eme occurrence de Date est prise comme verbe
+// Date d'entrée :[T+0J] Date de sortie : [T+15J]
+1> noun<lemme:date>, verb<lemme:dater> = noun | (prep[lemme:de]), noun[lemme:"entrée"] | .
+
+1> noun<lemme:date>, verb<lemme:dater> = noun | (prep[lemme:de]), noun[lemme:sortie] | .
+
+
+Multimots:
+
+// POUR TRAITER LES BALISES D'ANONYMISATION
+
+3> "(Pré)[N,n][O,o][M,m] : %[PERSONNE%]" = noun[proper=+, person=+, anon=+, ident_patient=+].
+
+3> "Né%(e%) le %[AGE_PATIENT = (%d)%d%]" = noun[proper=+, date=+, anon=+,ident_patient=+].
+
+3> "[PERSONNE]" = noun[proper=+,person=+, anon=+] .
+3> "[LIEU]" 	= noun[proper=+,lieu=+, anon=+] .
+
+3> "[T-(%d)(%d)%d[J,M,A]]"	    = noun[date_alad=+, anon=+].
+
+
+
+// ELEMENTS DANS EN-TETE
+
+3> "COMPTE RENDU" = noun[sg=+,masc=+] .
+3> "Compte [R,r]endu" = noun[sg=+,masc=+] .
+
+
+// Date d'entrée et Date de sortie
+3> "[D,d]ate d'entrée" = noun[sg=+,fem=+] .
+3> "[D,d]ate de sortie" = noun[sg=+,fem=+] .
+
+
+// autres multiwords : indices
+
+3> "[s,S]oin(s) de paroi"	      = noun[pl:+,masc=+,weak_cure=+] .
+
+3> "aggravation respiratoire" = noun[sg=+,fem=+,diagnostic=+] .
+
+3> "[e,E]mbolie pulmonaire"	      = noun[sg=+,fem=+,diagnostic=+] .
+3> "[e,E]mbolies pulmonaires"	      = noun[pl=+,fem=+,diagnostic=+] .
+
+3> "poussée fébrile" = noun[sg=+,fem=+,temperature=+] .
+3> "poussées fébriles" = noun[pl=+,fem=+,temperature=+] .
+
+3> "dégradation septique" = noun[sg=+,fem=+,infec_sus=+] .
+3> "maladie nosocomiale" = noun[sg=+,fem=+,infec_sus=+] .
+3> "maladies nosocomiales" = noun[pl=+,fem=+,infec_sus=+] .
+
+3> "[c,C]ollection purulente" = noun[sg=+,fem=+,autre_infec=+] .
+3> "[c,C]ollections purulentes" = noun[pl=+,fem=+,autre_infec=+] .
+
+3> "contexte septique"	  = noun[sg=+,masc=+,autre_infec=+] .
+
+3> "gouttelette purulente" = noun[sg=+,fem=+,autre_infec=+] .
+3> "gouttelettes purulentes" = noun[pl=+,fem=+,autre_infec=+] .
+
+3> "voie veineuse" = noun[sg=+,fem=+,autre_dispo=+] .
+
+3> "intervention chirurgicale" = noun[sg=+,fem=+,temp_anchor:t0,intervchir=+] .
+
+3> "suite opératoire" = noun[sg=+,fem=+] .
+3> "suites opératoires" = noun[pl=+,fem=+] .
+
+3> "chirurgie au laser" = noun[sg=+,fem=+,intervchir=+] .
+
+3> "prise en charge" = noun[sg=+, fem=+, temp_anchor=t0] .
+
+3> "J (%d)%d" = noun[sg=+] .
+
+Séquence: 
+
+5> noun[date_alad=+,anon=+] = ?[form:fopar,punct], noun[date_alad], ?[form:fcpar] .
+
+// sometimes second date is missing from the abstracts
+7> noun[interval_alad=+,anon=+] @= prep[lemme:de], noun[date_alad,anon,interval_first=+], prep[lemme:"à"], (noun[date_alad,anon,interval_last=+] ) .
+
+
+// for combinations that have to be performed before the applications of general rules (specific prefix with medical features)
+
+
+
+
+// enlever date_alad quand J[0-9]+ modifie allogreffe
+8> ? @= noun[lemme:"allogreffe"], punct, noun[date_alad=~], punct .

@@ -1,0 +1,165 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Center Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 -2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP portuguese grammar
+//!   filename   : entit_time_dependency.xip
+//!   author	  : C. Hagege
+//!   description:  Refinement of temporal entities when contextual
+//!                 information is needed.
+//!   Date       : February 2008
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+//////////////////////////////////////////////////////////////////////////////
+// Marking rules
+// Adding features open_left:+ and open_right:+ on temporal nodes which denotes
+// an open interval on one side.
+//////////////////////////////////////////////////////////////////////////////
+
+// Example: a partir de 25 de Janeiro
+
+| PP#1[open_right=+]{prep[lemma:"a_partir_de",first];prep[lemma:"depois_de",first]} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: desde 5 de Janeiro
+| PP#1[open_right=+]{prep[lemma:"desde",first]} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: desde o início da manhã
+| PP#1[open_right=+]{PP[first]{prep[lemma:"desde",first]}} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: A seguir a 5 de Janeiro
+| PP#1[open_right=+]{prep[lemma:"a seguir a",first];prep[lemma:"após",first]} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: Até 5 de Janeiro
+| PP#1[open_left=+]{prep[lemma:"até",first]} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: Antes de 5 de Janeiro
+| PP#1[open_left=+]{prep[lemma:"antes_de",first]} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+// Example: Antes da manhã de 5 de Janeiro
+| PP#1[open_left=+]{PP[first]{prep[lemma:"antes_de",first]}} |
+	if ( NE[tempo,t-absolut](#1) | NE[tempo,hora](#1) )
+	~
+
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//////////////////////////////////////////////////////////////////////////////
+
+
+// Durante o Natal is a duration with a permanency verb and is not otherwise.
+// Chegou durante o Natal, chegou na altura do Natal VS Ficou em casa durante o Natal
+
+// Example: Ficou em casa durante o Natal
+| PP#2{#3[lemma:durante]} |
+if (PREPD(#1[feast_event],#3[lemma:durante]) & MOD[post](?[permanency:+],#1) )
+	NE[tempo=+,duration=+](#2)
+
+
+// else "durante o Natal" corresponds to a date
+// Example: Chegou durante o Natal
+| PP#2{#3[lemma:durante]} |
+if (PREPD(#1[feast_event],#3[lemma:durante]) & MOD[post](?[permanency:~],#1) & ~NE[tempo](#2) )
+	NE[tempo=+,date=+,tref-enunc=+](#2)
+
+
+// Datas genericas
+// A little dubious but lets try
+| NP#2{?*,#1[noun,date:+,feast_event]} |
+if ( ^NE[tempo,date](#1) & SUBJ(?,#1) )
+	NE[features=~,tempo=+,generico=+](#1) .
+
+// A Primavera é um tempo lindo.
+| NP#2{art[def],?*,#1[noun,season]} |
+if ( ( ^NE[tempo,date](#2) | ~NE(#2) ) & SUBJ(?,#1) )
+	NE[features=~,tempo=+,generico=+](#2) .
+
+// o ano de 2003 foi um ano feliz
+| NP#2{art[def], ?*, #1[time,year]} |
+if ( ( ^NE[tempo,date](#2) | ~NE(#2) ) & SUBJ(?,#1) )
+	NE[features=~,tempo=+,generico=+](#2) .
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Destroying interpretation of temporal expression for efemeride
+// e.g. o 25 de Abril abriu horizontes ao país.
+//////////////////////////////////////////////////////////////////////////////
+// RUNHAREM
+// if a temporal expression of type absolute date is also subject or direct object of a verb,
+// then it is not a temporal expression but an event (efemeride)
+// Example: comemorou o 25 de Abril. 
+| NP#2{?*,#1[noun,date:+,tipo_tempref:absolut,century:~,year:~,last]} |
+if ( ^NE[tempo,date](#2) & ( MOD[post](?[lemma:comemorar],#1) | MOD[post](?[lemma:celebrar],#1) ) )
+	NE[features=~,event=+,ephem=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Durations that are induced by the predicate
+// 
+// if NP time_meas temporal expressions are not marked as NE and if these expressions 
+// are temporal modifiers of demorar, durar
+// then they are durations 
+if ( (MOD[temporal,post](#1[lemma:durar],#2) | MOD[temporal,post](#1[lemma:demorar],#2) )  & ~NE[tempo](#2) )
+	NE[tempo=+,duration=+](#2).
+
+// if PP time_meas introduced by cerca_de modifier of durar,demorar then it is a duration 
+if ( (MOD[post](#1[lemma:durar],#2) | MOD[post](#1[lemma:demorar],#2) )  & ~NE[tempo](#2) & PREPD(#2,?[lemma:"cerca_de"]) & HEAD(#2,#4) )
+	NE[tempo=+,duration=+](#4).
+
+///////// AFTER FIRST RUNHAREM
+
+// Xerox specific tokenization
+// if absolut date having format 4 digits hifen 4 digits then it is an interval
+// example: 1907-1908
+| #1[lemma:"%*%d%d%d%d-%d%d%d%d"] |
+if ( ^NE[tempo,date,t-absolut](#1) )
+NE[features=~,tempo=+,interval=+](#1)
+
+
+// cleaning "sempre" as temporal expression
+if ( ^NE[tempo](#1[lemma:sempre]) )
+~
+
+
+// contar com + NE[tempo] + de voo
+// in this case this is not a NE[temp] but a quantity
+| PP#1{prep[lemma:com], ?*, #2[time,last]} | 
+if ( ^NE[tempo](#1) & MOD[post](?[lemma:contar], #2)  )
+	NE[features=~,quant=+](#2)
+
+// somar + NE[tempo] + de voo
+| NP#1{?*, #2[time,last]} | 
+if ( ^NE[tempo](#1) & MOD[post](?[lemma:somar], #2)  )
+	NE[features=~,quant=+](#2)
+
+// deleting NE[tempo] finishing with presentes when there is not any temporal word before
+// nos presentes vs.
+| #1{?*[time:~], ?[last,lemma:presente,pl:+]; ?[last,lemma:futuro,pl:+]} | 
+if ( ^NE[tempo](#1) )
+	~
+
+
+// MARTELANCO PARA RECUPERAR PROBLEMAS.
+// ISTO E SO PARA O HAREM E PARA CAROLINE
+if ( NE[tempo,t-absolut](#1[lemma:"entre %+e %+"]) )
+	NE[tempo=+,interval=+](#1)
+
+

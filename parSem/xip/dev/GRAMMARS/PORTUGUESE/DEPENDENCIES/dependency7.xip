@@ -1,0 +1,72 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency7.xip                                             !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating and correcting some SUBJ-CDIR dependencies      !
+//!                                                                            !
+//!   Dependencies handled in this file:  SUBJ-OBJ Adjustements                !
+//!                                                                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency7.xip,v 1.5 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CONTROL VERBS and INFINITIVES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Verbs bearing feature s_np_inf followed by NP and by infinitive
+// In this case NP is dir object of the verb and subject of the infinitive
+// And the infinitive is a direct object of the main verb.
+//
+// Example: Deixou o Pedro comer a sopa.
+//
+| ?[verb]{?*,#1[last,s_np_inf]}, NP#3, VINF{?*,#2[last]} |
+if ( HEAD(#4,#3) & CDIR[post](#1,#4) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+	SUBJ[pre=+](#2,#4),
+	CDIR[post=+,inf=+](#1,#2).
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CORRECT PROBLEMS WITH INFINITIVES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// 1st part of the rule
+// Correcting erroneous SUBJ[inf] when there is a bad chunking
+// PARA O PEDRO is taken as a PP
+//
+// It was also generating the bad dependency SUBJ[post,inf](vim,comer)
+// that this 2 rules are correcting.
+//
+// Example: Vim para o Pedro poder comer o bolo.
+//
+| PP#1 |
+if ( HEAD(#2,#1) & SUBJ[pre](#3[inf],#2) & ^SUBJ[post,inf](#4,#3) )
+MOD[features=~,post=+,inf=+](#4,#3)
+
+// 2nd part of the rule
+// We also have to delete the erroneous dependency MOD involving the bad constructed PP
+//
+// Example:  Vim para o Pedro comer o bolo
+// we delete MOD(vim,Pedro)
+//
+| PP#1 |
+if ( HEAD(#2,#1) & SUBJ[pre](#3[inf],#2) & MOD[post,inf](#4,#3) & ^MOD[post](#4,#2) )
+~

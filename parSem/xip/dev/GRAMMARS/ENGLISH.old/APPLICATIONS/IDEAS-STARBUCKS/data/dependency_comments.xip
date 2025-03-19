@@ -1,0 +1,538 @@
+Script:
+
+iftest(@_xtd.title->Test())  { print("<title>\n");}
+iftest(@_xtd.idea->Test())  { print("<idea>\n");}
+iftest(@_xtd.content->Test())  { print("<content>\n");}
+iftest(@_xtd.comments->Test())  { print("<comments>\n");}
+iftest(@_xtd.comment->Test())  { print("<comment>\n");}
+
+
+DependencyRules:
+
+//context sensitive features
+
+//disagreewneg
+//I don't think
+
+| #1[disagreewneg,agree=+] |
+if ( NEGAT(#1) )
+  ~.
+
+// This isn't a terrible[neg-op] idea;
+//MOD_KNOW_PRE(idea,terrible)
+//NUCL_KNOW_SUBJCOMPL(isn't,idea)
+
+| #2[neg-op=+] |
+if ( MOD(#1,#2[lemme:terrible]) & NUCL(#3[surface:isn't],#1) )
+   ~.
+
+
+//propagate NEGA
+//his is NOT true,
+//NUCL_NEGA_SUBJCOMPL(is,true)
+//SUBJATTR(This,true)
+
+if ( NUCL[nega,subjcompl](#1,#2) & ^SUBJATTR(#3,#2) )
+   SUBJATTR[nega=+](#3,#2).
+
+//It isn't true.
+//SUBJATTR(It,true)
+//NEGAT(isn't)
+//NUCL_SUBJCOMPL(isn't,true)
+
+if ( NUCL[subjcompl](#1,#2) & ^SUBJATTR(#3,#2) & NEGAT(#1) )
+   SUBJATTR[nega=+](#3,#2).
+
+//propagate NEG
+
+if ( ^QUANTD(#1,#2[lemme:zero]) )
+   QUANTD[neg=+](#1,#2).
+
+//{SC{Personally , NP{I} FV{like}} NP{the idea}
+//SUBJ-N_PRE(like,I)
+
+| SC{?+, NP{#1[lemme:I]}, FV{#2[lemme:like]}}, NP{?+, #3[lemme:idea]} |
+if ( SUBJ-N(#2,#1) )
+   OBJ(#2,#3).
+
+
+
+| #1[agree] |
+if (@_xtd.comment->Test() & ~NEGAT(#1) & ~MOD(#1[agree],#2[disagree]) & ~MOD[neg](#1,#3) )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   POTAGREE(#2).
+
+| #1[agree] |
+if (@_xtd.comment->Test() & NEGAT(#1) & ~MOD(#1[agree],#2[disagree]) & ~MOD[neg](#1,#3) )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   POTDISAGREE(#2).
+
+| #1[disagree] |
+if (@_xtd.comment->Test() & ~NEGAT(#1) & ~MOD[neg](#1,#3) )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   POTDISAGREE(#2).
+
+| #1[disagree] |
+if (@_xtd.comment->Test() & NEGAT(#1) & ~MOD[neg](#1,#3) )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   POTAGREE(#2).
+
+//ditto
+
+| #1[lemme:ditto] |
+if ( ^POTAGREE(#2) )
+   AGREE(#2).
+
+| #1[lemme:amen] |
+if ( ^POTAGREE(#2) )
+   AGREE(#2).
+
+| #1[lemme:bingo] |
+if ( ^POTAGREE(#2) )
+   AGREE(#2).
+
+//subjectless verbs
+
+| #1[agree,verb,nfin:~] |
+if ( ~SUBJ-N(#1,#2) & ^POTAGREE(#3) )
+   AGREE(#3).
+
+if ( ~SUBJ-N(#1,#2) & ^AGREE(#3) & SUBJ(#1,#2) )
+   POTAGREE(#3).
+
+| #1[disagree,verb,nfin:~] |
+if ( ~SUBJ-N(#1,#2) & ^POTDISAGREE(#3) )
+   DISAGREE(#3).
+
+if ( ~SUBJ-N(#1,#2) & ^DISAGREE(#3) & SUBJ(#1,#2) )
+   POTDISAGREE(#3).
+
+//subject is I
+
+if ( ^POTDISAGREE(#1) & SUBJ(#2[disagree],#3[lemme:I]) )
+   DISAGREE(#1).
+
+if ( ^POTDISAGREE(#1) & SUBJ-N(#2[disagree],#3[lemme:I]) &  ~DISAGREE(#1) )
+   DISAGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ(#2[agree],#3[lemme:I]) )
+   AGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ-N(#2[agree],#3[lemme:I]) & ~AGREE(#1) )
+   AGREE(#1).
+
+if ( ^POTDISAGREE(#1) & SUBJ(#2[agree],#3[lemme:I]) )
+   DISAGREE(#1).
+
+if ( ^POTDISAGREE(#1) & SUBJ-N(#2[agree],#3[lemme:I]) &  ~DISAGREE(#1) )
+   DISAGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ(#2[disagree],#3[lemme:I]) )
+   AGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ-N(#2[disagree],#3[lemme:I]) & ~AGREE(#1) )
+   AGREE(#1).
+
+//subject is we
+
+if ( ^POTDISAGREE(#1) & SUBJ(#2[disagree],#3[lemme:we]) )
+   DISAGREE(#1).
+
+if ( ^POTDISAGREE(#1) & SUBJ-N(#2[disagree],#3[lemme:we]) &  ~DISAGREE(#1) )
+   DISAGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ(#2[agree],#3[lemme:we]) )
+   AGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ-N(#2[agree],#3[lemme:we]) & ~AGREE(#1) )
+   AGREE(#1).
+
+// cup votes up
+//SUBJ_PRE(votes up,cup)
+
+if ( ^POTDISAGREE(#1) & SUBJ(#2[disagree],#3[lemme:cup]) )
+   DISAGREE(#1).
+
+if ( ^POTDISAGREE(#1) & SUBJ-N(#2[disagree],#3[lemme:cup]) &  ~DISAGREE(#1) )
+   DISAGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ(#2[agree],#3[lemme:cup]) )
+   AGREE(#1).
+
+if ( ^POTAGREE(#1) & SUBJ-N(#2[agree],#3[lemme:cup]) & ~AGREE(#1) )
+   AGREE(#1).
+
+
+//determiner is my
+
+if ( ^POTDISAGREE(#1) & DETD(#2[disagree],#3[lemme:I]) )
+   DISAGREE(#1).
+
+if ( ^POTAGREE(#1) & DETD(#2[agree],#3[lemme:I]) )
+   AGREE(#1). 
+
+//I'm really in support of putting
+//MOD_POST('m,support)
+//SUBJ_PRE('m,I)
+
+if ( MOD[post](#1,#2[agree]) & SUBJ(#1,#3[lemme:I]) & ^POTAGREE(#4) )
+   AGREE(#4)
+
+//I can't say I 'm really in support of
+//NEGAT(say)
+//EMBED_COMPLTHAT('m,say)
+//MOD_POST('m,support)
+
+if ( NEGAT(#1) & EMBED(#2,#1) & MOD[post](#2,#3[agree]) & ^AGREE(#4) )
+   ~.
+   
+if ( NEGAT(#1) & EMBED(#2,#1) & MOD[post](#2,#3[disagree]) & ^DISAGREE(#4) )
+   ~.
+   
+
+| #1[advagree,start] |
+if (@_xtd.comment->Test() )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   AGREE(#2).
+
+| #1[advdisagree,start] |
+if (@_xtd.comment->Test() )
+	TEMPORARY(#1).
+
+| TOP#2{?+} |
+if ( ^TEMPORARY(#1) )
+   DISAGREE(#2).
+
+| TOP#3{?+} |
+if (@_xtd.comment->Test() & $1(#1[pos-op],#2[explicite,noun]) & ~NEGAT(#1) & ~MOD[neg](#1,#3) )
+   AGREE(#3).
+
+| TOP#3{?+} |
+if (@_xtd.comment->Test() & $1(#1[explicite,noun],#2[pos-op])  & ~NEGAT(#2) & ~MOD[neg](#2,#3) )
+   AGREE(#3).
+
+| TOP#3{?+} |
+if (@_xtd.comment->Test() & $1(#1[neg-op],#2[explicite,noun]) & ~NEGAT(#1) & ~MOD[neg](#1,#3) )
+   DISAGREE(#3).
+
+| TOP#3{?+} |
+if (@_xtd.comment->Test() & $1(#1[explicite,noun],#2[neg-op])  & ~NEGAT(#2) & ~MOD[neg](#2,#3) )
+   DISAGREE(#3).
+
+//Not everyone has a printer so e-mailing a coupon would not be such a good idea.
+//MOD_NEG(be,not)
+//NUCL_SUBJCOMPL(be,idea_EXPLICITE:+)
+
+if ( MOD[neg](#1,#3) & NUCL[subjcompl](#1,#2[explicite]) & ^AGREE(#4))
+   DISAGREE(#4).
+
+//I don't think putting the notice on a normal transaction receipt would be a good idea.
+//NEGAT(think)
+//EMBED_PROG(putting,think)
+
+
+//Of course the post office would love the idea.
+//NUCL_VLINK_MODAL(would,love_POS-OP:+)
+
+if ( $1(#1[pos-op],#2[explicite]) & NUCL[modal](#3[lemme:would],#1) & SUBJ(#3,#4[lemme:~I]) & ^AGREE(#5) )
+   ~.
+
+//You can believe what you want, but putting your opinion as fact is not a great idea.
+//NUCL_NEGA_KNOW_SUBJCOMPL(is,idea_EXPLICITE:+)
+//QUALIF(idea_EXPLICITE:+,great_POS-OP:+)
+//AGREE
+
+if ( ^AGREE(#1) & $1(#2[explicite],#3[pos-op]) & NUCL[nega](#4,#2) )
+   DISAGREE(#1).
+
+//Interesting!
+
+| #1[pos-op,start] |
+if (@_xtd.comment->Test())
+   TEMPORARY(#1).
+
+| TOP#3{?+} |
+if ( ^TEMPORARY(#1) )
+   AGREE(#3).
+
+
+//Not true at all, frankly.
+//TOP{Not AP{true}
+
+| #1[lemme:not,start], AP{#2[pos-judg]} |
+if (@_xtd.comment->Test())
+   TEMPORARY(#1,#2).
+
+| TOP#3{?+} |
+if ( ^TEMPORARY(#1,#2) )
+   DISAGREE(#3).
+
+//That is actually completly untrue.
+//SUBJATTR(That,untrue)
+
+| TOP#3{?+} |
+if ( @_xtd.comment->Test() & SUBJATTR(#1[start],#2[neg-judg]) )
+   DISAGREE(#3).
+
+| TOP#3{?+} |
+if ( @_xtd.comment->Test() & SUBJATTR[nega:~](#1[start],#2[pos-judg]) )
+   AGREE(#3).
+
+| TOP#3{?+} |
+if ( @_xtd.comment->Test() & SUBJATTR[nega](#1[start],#2[pos-judg]) )
+   DISAGREE(#3).
+
+| #1[pos-judg,start] |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1).
+
+| #1[form:fquest] |
+if (^TEMPORARY(#2) )
+   ~.
+
+| TOP#3{?+} |
+if ( ^TEMPORARY(#1) )
+    AGREE(#3).
+  
+
+| #1[neg-judg,start] |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1).
+
+| TOP#3{?+} |
+if ( ^TEMPORARY(#1) )
+    DISAGREE(#3).  
+
+//Soy does not mimic estrogen - sentences that begin with a negated statement
+//SUBJ-N_PRE(mimic,Soy)
+//NUCL_NEGA_VLINK_INSIST(does,mimic)
+
+| TOP#3{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1,#2[start,pron:~]) & NUCL[nega](#4[lemme:do],#1)  & ~DETD(#2,?) & ~ANTECEDENT(#2,#5))
+    DISAGREE(#3). 
+
+//Denmark doesn't need STARBUCKS.
+
+| TOP#3{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1,#2[start,pron:~]) & NUCL[insist](#4[surface:doesn't],#1)  & ~DETD(#2,?) & ~ANTECEDENT(#2,#5))
+    DISAGREE(#3). 
+
+//I would also love to see unsweetened almond milk offered.
+//SUBJ-N_PRE(love,I)
+//MOD_PRE(love,also)
+
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1[disagree:~],#2[lemme:I]) & MOD(#1,#3[lemme:also]) )
+    AGREE(#4). 
+
+| #1[lemme:thanks,start] |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1).
+
+| #1[lemme:thank,start] |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1) )
+   AGREE(#4).
+
+//I have been suggesting this idea for years.
+//SUBJ-N_IDEADEP(suggesting,I)
+//OBJ_IDEADEP_INNOVATE_KNOW_POST(suggesting,idea)
+//COORDINATE_TIME(suggested,PAST)
+
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1[explicite,past],#2[lemme:I]) )
+    AGREE(#4).
+  
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1[explicite],#2[lemme:I]) & OBJ(#1,#5) & TIMEX3(#3) & TEMP(#5,#3) )
+    AGREE(#4).
+
+//I started suggesting healthier items years ago
+//SUBJ-N_IDEADEP_GRPR(suggesting,I)
+//TEMP_IDEADEP_POST_T_RELAT(suggesting,years ago)
+
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1[explicite],#2[lemme:I]) & TEMP(#1,#3) )
+     AGREE(#4).
+
+//It makes perfect sense.
+//OBJ_INNOVATE_PROD_POST(makes,sense)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:sense]) & ~NEGAT(#1) & ~QUANTD[neg](#2,#3) )
+     AGREE(#4).
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:good_sense]) & ~NEGAT(#1) & ~QUANTD[neg](#2,#3) )
+     AGREE(#4).
+
+//NEGAT(make)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:sense]) & NEGAT(#1) )
+     DISAGREE(#4).
+ 
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:good_sense]) & NEGAT(#1) )
+     DISAGREE(#4).
+ 
+//QUANTD_NEG(sense,no)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:sense]) & QUANTD[neg](#2,#3) )
+     DISAGREE(#4).
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:good_sense]) & QUANTD[neg](#2,#3) )
+     DISAGREE(#4).
+
+//does this make sense to anybody?
+
+| #5[form:fquest] |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:sense]) & ~NEGAT(#1) & ~QUANTD[neg](#2,#3) & ^AGREE(#4) )
+   DISAGREE(#4).
+
+| #5[form:fquest] |
+if ( @_xtd.comment->Test() & OBJ(#1[lemme:make],#2[lemme:good_sense]) & ~NEGAT(#1) & ~QUANTD[neg](#2,#3) & ^AGREE(#4) )
+   DISAGREE(#4).
+
+//You have to be kidding
+//SUBJ-N_PRE(kidding,You)
+
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ-N(#1[lemme:kid],#2[lemme:you]) )
+     DISAGREE(#4).
+
+//I, too, miss the little quotes.
+//NP{I} , too
+
+| NP{#1[lemme:I,last]}, (?), #2[lemme:too] |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1,#2).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1,#2) )
+   AGREE(#4).
+
+//Please get almond milk at Starbucks!
+//MOD_INNOVATE_SUBCAT_POST(Please_STBX:+,Starbucks_STBX:+)
+//OBJ_INNOVATE_POST(Please_STBX:+,milk_STBX:+)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & $1(#1[lemme:please],#2[stbx,pron:~]) )
+     AGREE(#4).
+
+//PLEASE add unsweetened almond milk as an option for those of us that do not drink dairy.
+//MOD_INNOVATE_PRE(add,PLEASE)
+//OBJ_INNOVATE_POST(add,milk)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & $1(#1,#2[lemme:please]) & $2(#1,#3[stbx,pron:~]) )
+     AGREE(#4).
+
+//Almond milk and coconut milk would be awesome.
+//SUBJ_CONDITIONAL_IDEADEP_PRE(would,milk)
+//NUCL_CONDITIONAL_IDEADEP_DRINK_DRINK-FOOD_VLINK_MODAL(would,be)
+//NUCL_SUBJCOMPL(be,awesome)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & SUBJ(#1[lemme:would],#2[stbx,pron:~]) & NUCL(#1,#3) & NUCL(#3,#5[pos-op]) )
+     AGREE(#4).
+
+//Unsweetened Almond Milk would be a great alternative to milk.
+//MOD_PRE(alternative,great)
+//SUBJATTR(Almond Milk,alternative)
+//SUBJ_CONDITIONAL_IDEADEP_PRE(would,Almond Milk)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & MOD(#1,#2[pos-op]) & $1(#3[stbx],#1) & $2(#5[surface:would],#3) )
+     AGREE(#4).
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & MOD(#1,#2[pos-op]) & $1(#3[stbx],#1) & $2(#5[surface:wouldn't],#3) )
+     DISAGREE(#4).
+
+//It would be great to see unsweetened almond milk added to what Starbu<cks offers.
+//OBJ-N(see,almond milk)
+//NP{great} IV{to see}
+
+| ?{#1[pos-op]}, IV#4{?, #2} |
+if ( @_xtd.comment->Test() & OBJ(#2,#3[stbx]) )
+   TEMPORARY(#1,#4).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1,#2) )
+   AGREE(#4).
+
+//almond milk, yes!
+//{NP{NOUN{almond milk}} , NP{yes} !}
+
+| ?{?*, #1[stbx]}, ?, ?{#2[lemme:yes]} |
+if ( @_xtd.comment->Test() )
+     TEMPORARY(#2).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1) )
+   AGREE(#4).
+
+//But I vote this down.
+//MOD_POST(vote,down)
+//SUBJ_PRE(vote,I)
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & MOD(#1[lemme:vote],#2[lemme:down]) & SUBJ(#1,#3[lemme:I]) )
+   DISAGREE(#4).   
+
+
+| TOP#4{?+} |
+if ( @_xtd.comment->Test() & MOD(#1[lemme:vote],#2[lemme:up]) & SUBJ(#1,#3[lemme:I]) )
+   AGREE(#4). 
+
+//SOUNDS AWESOME!
+//{SC{FV{SOUNDS}} AP{AWESOME} !}
+  
+| ?{FV{#1[lemme:sound]}}, ?{#2[pos-op]} |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1,#2).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1,#2) )
+   AGREE(#4).
+
+
+| ?{FV{#1[lemme:sound]}}, ?{#2[neg-op]} |
+if ( @_xtd.comment->Test() )
+   TEMPORARY(#1,#2).
+
+| TOP#4{?+} |
+if ( ^TEMPORARY(#1,#2) )
+   DISAGREE(#4).
+
+if ( ^AGREE(#1) & AGREE(#1) )
+   ~.
+
+
+if ( ^DISAGREE(#1) & AGREE(#1) )
+   ~.

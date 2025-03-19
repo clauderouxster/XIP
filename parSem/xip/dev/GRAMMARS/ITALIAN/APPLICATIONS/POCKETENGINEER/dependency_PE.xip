@@ -1,0 +1,249 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : dependency_PE.xip
+//!
+//!   Content:	definition of dependency PEUNIT for Pocket Engineer Aplication
+//!
+//!   Language:	ITALIAN
+//!
+//!   Date       : 02 June 2006
+//!
+//!   Author     : Giovanni Depau
+//!  
+//!x
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+// Split up SCs, which only get in the way.
+Reshuffling:
+20> SC{?-#1} = #1.
+
+
+
+
+DependencyRules:
+
+// Make a single chunk out of the entire verb group, rather than
+// having the FV and the IV/NVF in separate chunks.  Ignoring
+// dependencies because I don't know an easy way to test them and
+// this should be pretty reliable anyway.
+
+Reshuffling:
+
+5> FV#1,NFV#2 = FV{#1,#2}.
+5> FV#1,IV#2 = FV{#1,#2}.
+
+
+
+
+DependencyRules:
+
+10> |FV#1{FV#2,NFV#3}|
+if (HEAD(#4,#3))
+  HEAD(#4,#1).
+
+10> |FV#1{FV#2,IV#3}|
+if (HEAD(#4,#3))
+  HEAD(#4,#1).
+
+10> |IV#1{IV#2,NFV#3}|
+if (HEAD(#4,#3))
+  HEAD(#4,#1).
+
+10> |GV#1{GV#2,NFV#3}|
+if (HEAD(#4,#3))
+  HEAD(#4,#1).
+
+
+
+Reshuffling:
+// A top-level AP, NP, PP, or ?[verb] is a PEU.
+15> AP#1 = PEU{#1}, where (~mother(#1,#2)).
+15> NP#1 = PEU{#1}, where (~mother(#1,#2)).
+15> PP#1 = PEU{#1}, where (~mother(#1,#2)).
+15> FV#1 = PEU{#1}, where (~mother(#1,#2)).
+15> IV#1 = PEU{#1}, where (~mother(#1,#2)).
+15> GV#1 = PEU{#1}, where (~mother(#1,#2)).
+15> NFV#1 = PEU{#1}, where (~mother(#1,#2)).
+15> ADVP#1 = PEU{#1}, where (~mother(#1,#2)).
+
+
+DependencyRules:
+// Assign heads to PEUs created above.
+
+20> |PEU#1{AP#2}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{NP#2}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{PP#2}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{[FV#2]}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{[IV#2]}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{[GV#2]}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{[NFV#2]}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+20> |PEU#1{[ADVP#2]}|
+if (HEAD(#3,#2))
+  HEAD(#3,#1).
+
+
+//An NP followed by an AP
+22> |PEU#1{NP}, PEU#2{AP}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+22> |PEU#1{PP}, PEU#2{AP}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+
+
+//An NP followed by a Symbol
+23> |PEU#1{NP}, PEU#2{symbol}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+//An ADVP and an IV
+|PEU#1{ADVP}, PEU#2{IV}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+
+//An ADVP and the element that precedes
+|PEU#1, PEU#2{ADVP}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+//An ADVP between Verb and Obj
+|PEU#1{FV}, PEU#2{ADVP}, PEU#2{ADVP}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COMBINE(#1, #2).
+
+
+//Coordination:
+DependencyRules:
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & COORDITEMS(#3,#4))
+  COMBINE(#1,#2).
+
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & OBJ_COORD(#3,#4))
+  COMBINE(#1,#2).
+
+
+
+// Verb and its object
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & OBJ(#3,#4))
+  COMBINE(#1,#2).
+
+//An ADVP between FV and Obj
+|PEU#1{FV}, PEU#2{ADVP}, PEU#4{ADVP}|
+	if (HEAD(#10,#1) & HEAD(#20,#2) & HEAD(#40,#4) & OBJ(#10,#40))
+	COMBINE(#1, #2, #4).
+
+
+//An ADVP between IV and Obj
+|PEU#1{IV}, PEU#2{ADVP}, PEU#4{ADVP}|
+	if (HEAD(#10,#1) & HEAD(#20,#2) & HEAD(#40,#4) & OBJ(#10,#40))
+	COMBINE(#1, #2, #4).
+
+//An ADVP between NFV and Obj
+|PEU#1{NFV}, PEU#2{ADVP}, PEU#4{ADVP}|
+	if (HEAD(#10,#1) & HEAD(#20,#2) & HEAD(#40,#4) & OBJ(#10,#40))
+	COMBINE(#1, #2, #4).
+
+
+//Verb and VMod
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & VMOD(#3,#4))
+  COMBINE(#1,#2).
+
+//Noun and Apposition
+30> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & NMOD_APP(#3,#4))
+COMBINE(#1,#2).
+
+//Noun and NMOD
+30> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & NMOD(#3,#4))
+  COMBINE(#1,#2).
+
+
+//Coordination : IV
+32> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & COORD_Verb(#3,#4))
+  COMBINE(#1,#2).
+
+
+// Forms of the verb "essere" are combined with whatever follows (could be an NP, AP).
+35> |PEU#1,PEU#2|
+if (HEAD(#3[form:fessere],#1))
+  COMBINE(#1,#2).
+
+
+//Nominal Predicate of the Verb Essere
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & OBJPRED(#3,#4))
+  COMBINE(#1,#2).
+
+
+//Aux Avere + pastparticiple
+25> | PEU#1,PEU#2 |
+if (HEAD(#3,#1) & HEAD(#4,#2) & DOMIN(#3,#4))
+  COMBINE(#1,#2).
+	
+
+
+
+
+Reshuffling:
+50> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}, PEU#7 {?-#8}= #1{#2, #4, #6, #8}, where(COMBINE(#1, #3) & COMBINE(#3, #5) & COMBINE(#5, #7)).
+55> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}= #1{#2, #4, #6}, where(COMBINE(#1, #3) & COMBINE(#3, #5)).
+60> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2, #4}, where(COMBINE(#1, #3)).
+
+
+
+variables:
+
+string _norm;
+string _surf;
+
+
+
+DependencyRules:
+// Mark PEUNITs and compute their normalized forms.
+
+|PEU#1|	
+if (normalize(#1, _norm) & _surf = #1[surface] )
+    PEUNIT(#1,##PENORM[lemma=_norm],##PESURF[lemma=_surf]).
+

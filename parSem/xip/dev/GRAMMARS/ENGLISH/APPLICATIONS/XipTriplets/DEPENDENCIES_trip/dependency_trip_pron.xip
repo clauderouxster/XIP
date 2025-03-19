@@ -1,0 +1,334 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : triplets pronoms
+//!   filename   : dependency_trip_pron.xip
+//!   Date       : 2005
+//!   Author     : Maud
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+//*****************************************************************
+// NAMED ENTITIES
+// Pour transformer une dependance NE en trait et affecter ce trait 
+// au noeud concerne. Cela permet ensuite d'afficher cette information
+// au niveau du noeud (Node Display)
+//**********************************
+
+// Pour faire affecter le trait de la dep au noeud concerne
+
+Script: 
+
+1> if (PERSON(#1)){
+
+  #1[person=+];
+}
+
+1> if (ORGANISATION(#1)){
+
+   #1[orga=+];
+}
+//attention, faire difference entre le trait /org/ et le trait /orga/(->celui-ci issu de la dependance)
+
+1> if (EVENT(#1)){
+
+   #1[evt=+];
+}
+
+1> if (LOCORG(#1[!country:+!, !city:+!, !contin:+!])){
+
+   #1[locorg=+];
+}
+
+
+
+// Pour faire "descendre" le trait a ts les noeuds fils
+
+1> |Noun[person:+]{?*,Noun#1}| {
+     #1[person=+];
+	}
+
+1> |Noun[evt:+]{?*,Noun#1}| {
+    #1[evt=+];
+	}
+
+1> |Noun[orga:+]{?*,Noun#1}| {
+    #1[orga=+];
+	}
+
+1> |Noun[locorg:+]{?*,Noun#1}| {
+    #1[locorg=+];
+	}
+
+
+DependencyRules:
+
+//************
+// MODIFIERS: 
+// Transformation des dependances MOD en MOD-T.
+// Ne sont gardees que certaines dependances mettant en relation 
+// certaines categories syntaxiques.
+//*********************************
+
+/// N de N :
+if(MOD[!pre:+!,!post:+!,proper:~](#1[noun:+, nadj:~],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+
+/// N de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[noun:+, nadj:~],#2[noun:+, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[noun:~, nadj:+],#2[noun:~, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de N :
+if(MOD[!pre:+!,!post:+!](#1[noun:~, nadj:+],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// V de N :
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// N de V :
+if(MOD[!pre:+!,!post:+!](#1[noun:+,nadj:~],#2[verb:+]))
+	MOD-T(#1,#2).
+
+/// V de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[noun:~, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de V :
+if(MOD[!pre:+!,!post:+!](#1[noun:~,nadj:+],#2[verb:+]))
+	MOD-T(#1,#2).
+
+/// N de ADJ:
+if(MOD[!pre:+!,!post:+!](#1[noun:+,nadj:~],#2[adj:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// ADJ de N  
+if(MOD[!pre:+!,!post:+!](#1[adj:+],#2[noun:+,nadj:~]))
+	MOD-T(#1,#2).
+
+
+/// V de V
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[verb:+]))
+	MOD-T(#1,#2).
+
+
+//****************
+// Determinants :
+//****************
+if ($16(#1,#2) & DETD(#1,#3[!det:+!]))
+      $16(#1,#2)
+
+if ($17(#2,#1) & DETD(#1,#3[!det:+!]))
+      $17(#2,#1)
+
+if ($18(#1,#2) & QUANTD(#1,#3[!card:+!]))
+      $18(#1,#2)
+
+if ($18(#2,#1) & QUANTD(#1,#3[!card:+!]))
+      $18(#2,#1)
+
+
+
+
+//***********************
+// PREPOSITIONS + PRONOMS:
+//*********************** 
+
+// Objectif : faire apparaitre la preposition
+// dans la dependance.On ne peut pas faire remonter
+// la chaine de caracteres donc on passe par
+// un trait.
+
+
+// Exemple : "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// MOD-T(NOUN:organisation,NOUN:seminar)
+// PREPD(NOUN:seminar,PREP:of)
+// On construit:
+// PREP_OF(NOUN:organisation,NOUN:seminar)
+
+// Pour les pronoms :
+// Creation d'un noeud fictif:
+// "SOMEBODY" pour ceux issus d'un pronom personnel
+// "PERSON" pour ceux issus d'une Entite Nommee.
+
+
+//s'applique aux deps sans pronoms
+if((MOD(#1,#2[pronpers:~])| LOC (#1,#2)) & PREPD(#2,#3[!form_prep:!]))
+       // TOTOprep(#1,#2,#3),
+	PREP(#1,#2).
+
+//attention modif avec trait pron_trip!!
+if(MOD(#1,#2[pron_trip]) & PREPD(#2,#3[!form_prep:!]))
+       // TOTOprepSB(#1,#2,#3),
+	PREP(#1,##Pron[lemme=PERSON]).
+
+// Pour les prep avec un nom de lieu
+// MODIF CARO: effacer la dependance la plus precise
+if((MOD(#1,#2[locorg:+]) | LOC (#1,#2[locorg:+])) & PREPD(#2,#3[!form_prep:!]) & ^PREP(#1,#2))
+      //  TOTOprepSW(#1,#2,#3),
+	PREP(#1,##fict[lemme=SOMEWHERE]).
+
+// Pour les prep avec un nom de personne
+if((MOD(#1,#2[person:+])) & PREPD(#2,#3[!form_prep:!]))
+      //  TOTOprepPers(#1,#2,#3),
+	PREP(#1,##fict[lemme=PERSON]).
+
+
+if (MOD(#1,#2) &  PREPD(#2,#3[!form_prep:!]))
+	PREP(#1,#2).
+
+//*************************
+// VERB-PARTICLE + PRONOMS
+//*************************
+
+
+// Exemple : "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// NUCL(VERB:take,ADV:over)
+// OBJ-N(VERB:take,NOUN:organisation)
+// On construit :
+// PREP_P_OVER(VERB:take,NOUN:organisation)
+
+
+
+// Config normale:
+// "Mickey kept away the dog from Minnie."
+// PREP_P_AWAY(VERB:kept,NOUN:dog)
+
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3[person:~,pronpers:~])))
+              //  TOTO(#1,#2,#3),
+		PREP(#1,#3).
+
+
+// Avec une Personne:
+// "Mickey kept away the dog and Jacques Chirac from Minnie."
+// PREP_P_AWAY(VERB:kept,NOUN:dog)
+// PREP_P_AWAY(VERB:kept,NOUN_PERSON:+:Chirac_PERSON:+)
+// PREP_P_AWAY(VERB:kept,PRON:PERSON)
+
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3[person:+])))
+              //  TOTO(#1,#2,#3),
+		PREP(#1,#3),
+	        PREP(#1,##fict[lemme=PERSON]).
+
+
+// Avec un Pronom:
+// "Mickey kept away the dog and I from Minnie."
+// PREP_P_AWAY(VERB:kept,NOUN:dog)
+// PREP_P_AWAY(VERB:kept,PRON:SOMEBODY)
+
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3[pronpers:+])))
+               // TOTO(#1,#2,#3),
+		PREP(#1,#3),
+	        PREP(#1,##fict[lemme=SOMEBODY]).
+
+
+
+//************
+// PRONOMS
+// Remplacement des pronoms personnels par une entite fictive "SOMEONE"
+// **********
+//NOTE CB: pour extraire proprement les regles
+// on efface la dependance la moins generale :^
+// EN PLUS SOMEBODY--> PERSON pour un matching plus large
+//attention modif!!
+if (^$10(#1,#2[pron_trip]))
+         $10(#1,##fict[lemme=PERSON]).
+
+if (^$11(#1[pron_trip],#2))
+         $11(##fict[lemme=PERSON], #2).
+
+if (^SUBJ-N(#1,#2[person:+]))
+         SUBJ-N(#1,##fict[lemme=PERSON]).
+
+if (^OBJ-N(#1,#2[person:+]))
+         OBJ-N(#1,##fict[lemme=PERSON]).
+
+
+// "He wanted to destroy Paris."
+// OBJ-N(destroy,Paris_LOCORG:+_CITY:+)
+// OBJ-N(destroy,SOMEWHERE)
+if (^OBJ-N(#1,#2[locorg:+]))
+         OBJ-N(#1,##fict[lemme=SOMEWHERE]).
+
+
+// "He left Paris 2 years ago."
+// LOC(left,Paris_LOCORG:+_CITY:+)
+// LOC(left,SOMEWHERE)
+if (^LOC(#1,#2[locorg:+]))
+         LOC(#1,##fict[lemme=SOMEWHERE]).
+
+
+// "He gave Mary a present"
+if (^RCP(#1,#2[person:+]))
+         RCP(#1,##fict[lemme=PERSON]).
+
+//*************
+// EFFACEMENTS:
+//*************
+
+//doublons - Preferences :
+
+if (^MOD-T(#1,#2) & RCP(#1,#2))
+	~     
+
+if (^IOBJ(#1,#2) & IOBJ_RCP(#1,#2))
+	~      
+
+//if (^MOD-T(#1,#2) & MOD[temp:+](#1,#2))
+//	~     
+
+if (^MOD-T(#1,#2) & PREP(#1,#2))
+	~   
+
+if (^OBJ-N(#1,#2) & PREP(#1,#2))
+	~   
+
+//pronoms + aux + conj :
+
+if (^$3(#1[aux:+],#2) )
+	~
+
+if (^$4(#1,#2[aux:+]) )
+	~
+
+if (^$5(#1[conj:+],#2) )
+	~
+
+if (^$6(#1,#2[conj:+]) )
+	~
+
+if (^$7(#1[dig:+],#2) )
+	~
+
+if (^$8(#1,#2[dig:+]) )
+	~
+
+//dependances particulieres:
+
+
+if (^$9[sentence:+](#1,#2))
+	~
+
+// pronoms
+if (^$1(#1,#2[pronpers:+]) & $2(#1,#3[fict:+]))
+	~
+
+//determinants
+
+if (^$12(#1,#2) & $12[deter:+](#1,#2))
+	~  
+
+if (^$15(#1,#2) & $15[quanti:+](#1,#2))
+	~     
+
+if(^$16(#1,#2) &  $16(#1,#2))
+	~
+

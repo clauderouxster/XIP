@@ -1,0 +1,491 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : LGNumber.xip                                                !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede & João Loureiro                                 !
+//!   Revision   : Diogo Oliveira, 2010/May, 2010/October                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!  Numbers  and compound measure units                                       !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+// Adds "frac" feature on numbers (represented with digits) containing a comma
+////////////////////////////////////////////////////////////////////////////////
+
+|num[surface:"%d+[%,]%d+", card, frac=+] |~
+
+|num[surface:"%d"],     ?[surface:h, t-meas=+] |~
+|num[surface:"1%d"],    ?[surface:h, t-meas=+] |~
+|num[surface:"2[0-4]"], ?[surface:h, t-meas=+] |~
+
+
+Sequence:
+
+//NJM+JB, 2013/06/02
+// Example: O Pedro comprou dezenas e dezenas de livros.
+// Example: O Pedro fez centenas e centenas de horas de trabalho.
+1> noun = #1[!features:!,sem-measother,card,pl], conj[lemma:e], #2[sem-measother,card,pl], where(#1[lemma]::#2[lemma]).
+
+//NJM+JB, 2013/06/02
+// Example: O Pedro comprou dúzias e dúzias de ovos.
+1> noun = #1[!features:!,sem-measother,pl], conj[lemma:e], #2[sem-measother,pl], where(#1[lemma]::#2[lemma]).
+
+
+//DCO, 2011/02/01
+// Em 2003 gravaram um CD ao vivo no Hangar 110 --> 110 não é VALOR QUANTIDADE
+1> ? @= ?[maj,foreign], num[dig,rom:~,ord:~,time:~,t-meas:~,curr:~,virtual=+].
+
+//DCO, 2011/02/01
+// Example: por duas vezes, três vezes...
+1> ? @= (prep), num[rom:~,time:~,t-meas:~,curr:~,virtual=+], ?[lemma:vez].
+
+//DCO, 2011/02/01
+// derrotar "o onze", vencer "o onze" - onze não é VALOR QUANTIDADE
+//DCO, 2011/02/07
+// o "onze" do Olhanense... não é quantidade.
+1> ? @= ?[lemma:derrotar];?[lemma:vencer], art, ?[lemma:onze,virtual=+].
+1> ? @= ?[lemma:"onze",virtual=+], prep[lemma:"de"], (art[def]), ?[SEM-Hcollective,SEM-Hinstitution,SEM-sport-club].
+
+// DCO 31-01-2011
+// e.g. Model 500, Beethoven 800
+1> ? @= noun[proper,maj], num[virtual=+], ?*[SEM-unitype:~].
+
+//DCO, 2011/02/01
+// Example: "31 da Armada" : 31 não é VALOR QUANTIDADE
+// Solução temporária. Inserir no léxico? Fazer termo composto no RuDriCo?
+1> ? @= num[lemma:31,virtual=+], prep[lemma:de], art[lemma:o], noun[lemma:armada].
+
+//DCO, 2011/02/01
+// Números precedidos de "número" ou "volume" não são VALOR QUANTIDADE
+1> noun[num=+,virtual=+] @= ?[lemma:número];?[lemma:"n.º"];?[lemma:"nº"];?[lemma:"n."];?[lemma:volume], num[rom:~,ord:~,time:~,t-meas:~,curr:~,virtual=+].
+
+//DCO, 2011/02/01
+// Números de páginas não são VALOR QUANTIDADE
+1> ? @= ?[surface:"p."];?[surface:"pg."], num[virtual=+].
+
+//DCO, 2011/02/01
+// Example: capítulo 140 do Livro dos Mortos
+// Example: página 12 do Código Da Vinci
+//
+// Estes números não representam quantidades (VALOR-QUANTIDADE), mas sim locais virtuais
+1> ? @= ?[lemma:capítulo];?[lemma:apêndice];?[lemma:parágrafo];?[lemma:página], num[dig,rom:~,ord:~,frac:~,time:~,quant:~,location=+,virtual=+,documents=+].
+
+//DCO, 2010/12/28
+// Enumerações não são quantidades
+// Example: 1 - Escreva o seu nome
+// Example: 1. Escreva o seu nome
+1> ? @= num[start,dig,ord:~,frac:~,rom:~,time:~,virtual=+], punct[lemma:"-"];punct[lemma:"."], ?*.
+
+//DCO, 2010/12/29
+// NIFs, BIs e Cartão de Cidadão não são quantidades
+1> ? @= ?[lemma:número], (prep[lemma:de]), ?[lemma:identificação], ?[lemma:fiscal], num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+1> ? @= ?[surface:NIF], num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+1> ? @= ?[lemma:"bilhete de identidade"];?[surface:BI], (?[lemma:"n.º"];(?[lemma:n], ?[lemma:º])), num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+1> ? @= ?[lemma:cartão], (prep[lemma:de]), ?[lemma:cidadão], (?[lemma:"n.º"];(?[lemma:n], ?[lemma:º])), num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+1> ? @= ?[surface:CC], (?[lemma:"n.º"];(?[lemma:n], ?[lemma:º])), num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+
+//DCO, 2010/12/29
+// Números de telefone e/ou de telemóvel não são quantidades
+1> ? @= ?*, ?[lemma:telefone];?[lemma:telemóvel], (?[lemma:"n.º"];(?[lemma:n], ?[lemma:º])), num+[dig,ord:~,frac:~,rom:~,time:~,virtual=+].
+
+//DCO, 2010/07/06 (update 2010/10/03)
+// Resultados desportivos têm os traços quant e sports_results (categoria VALOR, tipo RESULTADOS_DESPORTIVOS)
+// Example: 2-0, 6-7 (7/9), (1-1)
+1> ? @= num[lemma:"%d\-%d",time:~,quant=+,sports_results=+], ?[SEM-unitype:~,noun:~,adj:~].
+
+//DCO, 2010/10/03
+// Example: 6-0 (7/9), 6-0 (7-9)
+1> NUM[quant=+,sports_results=+] @= | num[quant,sports_results], punct[paren,left] | num[dig,ord:~,rom:~,curr:~,virtual:~,time:~,t-meas:~], punct[lemma:"/"], num[dig,ord:~,rom:~,curr:~,virtual:~,time:~,t-meas:~] | punct[paren,right] |.
+
+//DCO, 2010/12/28
+// Adicionado ?[surface:a] para suportar "Entre 1880 a 1930" (aparece na Coleção Dourada)
+1>  ? = prep[lemma:"entre"], num[lemma:"1%d%d%d",time=+,t-year=+];num[lemma:"20%d%d",time=+,t-year=+], conj[lemma:e];?[surface:a], num[lemma:"1%d%d%d",time=+,t-year=+];num[lemma:"20%d%d",time=+,t-year=+].
+
+1>  ? = prep[lemma:"desde"];prep[lemma:"de"], num[lemma:"1%d%d%d",time=+,t-year=+];num[lemma:"20%d%d",time=+,t-year=+], ?[surface:a];?[surface:até], num[lemma:"1%d%d%d",time=+,t-year=+];num[lemma:"20%d%d",time=+,t-year=+].
+
+1>  ? = prep[lemma:"entre"],                  num[time=+,t-year=+], conj[lemma:e],               num[time=+,t-year=+], ?[lemma:aC].
+1>  ? = prep[lemma:"desde"];prep[lemma:"de"], num[time=+,t-year=+], ?[surface:a];?[surface:até], num[time=+,t-year=+], ?[lemma:aC].
+
+
+1> num[t-hora-string,time] @= num, ?[surface:h,t-meas], num[surface:"%d%d"],  ?[surface:m, t-meas=+].
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// This rule is needed in order to avoid to treat as a compound number
+// a t-date coordination
+// This rule has to be applied before the rules on complex numbers below
+// Example: 15, 16 e 17 de novembro -> avoid to have (16 e 17) like a num
+///////////////////////////////////////////////////////////////////////////////
+1> ? @= (num[dig,t-date=+], punct[comma]), num[dig,t-date=+], conj[lemma:e], num[dig,t-date=+], (prep[lemma:de]), ?[time] .
+
+
+////////////////////////////////////////////////////////////////////////////////
+// This rule is needed in order to avoid to treat as a compound number
+// quarters (in an hour expression)
+// This rule has to be applied before the rules on complex numbers below
+// Example: 2 e 3 quartos -> avoid to have (2 e 3) like a num
+///////////////////////////////////////////////////////////////////////////////
+1> ? @= num[t-hour=+], conj[lemma:e], num[card,t-minute=+], ?[lemma:quarto] .
+
+////////////////////////////////////////////////////////////////////////////////
+// This rule is needed in order to avoid to treat as a compound number
+// nos anos 30 e 40
+// This rule has to be applied before the rules on complex numbers below
+// Example: anos 20 e 30 -> avoid to have (20 e 30) like a num
+///////////////////////////////////////////////////////////////////////////////
+1> ? @= |?[lemma:ano,pl]| num[card,t-date=+,t-year=+];num[dig,t-date=+,t-year=+], conj[lemma:e], num[card,t-date=+,t-year=+];num[dig,t-date=+,t-year=+].
+
+1> ? @= |?[lemma:século,pl]| num[rom,time=+], conj[lemma:e], num[rom,time=+].
+
+
+////////////////////////////////////////////////////////////////////////////////
+// COMPOUND MEASURE UNITS
+// (USED ONLY BY XEROX, KEEP ITFOR COMPATIBILITY)
+////////////////////////////////////////////////////////////////////////////////
+1> noun[lemma="quilómetro por hora", SEM-speed=+]        @= ?[lemma:quilómetro], ?[surface:por], ?[surface:hora].
+1> noun[lemma="metro-por-segundo", SEM-speed=+]          @= ?[lemma:metro], ?[surface:por], ?[surface:segundo].
+1> noun[lemma="m3-por-segundo", SEM-flowrate=+]          @= ?[lemma:metro], ?[lemma:cúbico], ?[surface:por], ?[surface:segundo].
+1> noun[lemma="quilograma-m2", SEM-inercia=+]            @= ?[lemma:quilograma], ?[lemma:metro], ?[lemma:quadrado].
+1> noun[lemma="quilograma-por-m3", SEM-density=+]        @= ?[lemma:quilograma], ?[surface:por], ?[surface:metro], ?[surface:cúbico].
+1> noun[lemma="rotação-por-segundo", SEM-speed=+]        @= ?[lemma:rotação], ?[surface:por], ?[surface:minuto].
+1> noun[lemma="milímetro-de-mercúrio", SEM-pressure=+]   @= ?[lemma:milímetro], ?[surface:de], ?[surface:mercúrio].
+1> noun[lemma="quilograma-força", SEM-massforce=+]       @= ?[lemma:quilograma], ?[surface:força].
+1> noun[lemma="quilograma-força", SEM-massforce=+]       @= ?[lemma:quilograma-força].
+1> noun[lemma="milha-marítima", SEM-length=+]            @= ?[lemma:milha], ?[lemma:marítima].
+1> noun[lemma="grau-Celsius", SEM-temperature=+]         @= ?[lemma:grau], ?[surface:Celsius].
+1> noun[lemma="grau-kelvin", SEM-temperature=+]          @= ?[lemma:grau], ?[surface:kelvin].
+1> noun[lemma="grau-Fahrenheit", SEM-temperature=+]      @= ?[lemma:grau], ?[surface:Fahrenheit].
+1> noun[lemma="grau-centígrado", SEM-temperature=+]      @= ?[lemma:grau], ?[lemma:centígrado].
+1> noun[lemma="grau-Celsius", SEM-temperature=+]         @= ?[surface:º], ?[surface:C].
+1> noun[lemma="quilómetro-por-hora", SEM-speed=+]        @= ?[surface:km], ?[surface:\/], ?[surface:h].
+1> noun[lemma="metro-por-segundo", SEM-speed=+]          @= ?[surface:m],  ?[surface:\/], ?[surface:s].
+1> noun[lemma="quilograma-m2", SEM-inercia=+]            @= ?[surface:kg], ?[surface:-], ?[surface:m2].
+1> noun[lemma="m3-por-segundo", SEM-flowrate=+]          @= ?[surface:m3], ?[surface:\/], ?[surface:s].
+1> noun[lemma="m2", SEM-area=+]                          @= ?[lemma:metro], ?[surface:quadrado];?[surface:quadrados].
+1> noun[lemma="m3", SEM-volume=+]                        @= ?[lemma:metro], ?[lemma:cúbico].
+1> noun[lemma="percentagem", SEM-percentage=+]           @= ?[surface:por], ?[surface:cento].
+
+
+
+//NJM+JB, 2013/06/02
+// Example: O Pedro comprou quilos e quilos de farinha.
+1> noun = #1[!features:!,pl], conj[lemma:e], #2[pl], where(#1[lemma]::#2[lemma]).
+
+
+////////////////////////////////////////////////////////////////////////////////
+// QUANTIFIED NPs have to bear special feature quant:+
+////////////////////////////////////////////////////////////////////////////////
+
+// "Um pouco"
+3> NP[quant=+] = ?[lemma:um], ?[lemma:pouco] .
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// NUM - Approximate quantities
+//                                João Loureiro/2007
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: meia dezena
+5> num[card=+,frac=+] = ?[lemma:meio,maj:~];?[lemma:meia], num.
+
+// Example: vinte e quatro quintos
+// Example: dois meios
+// Example: um quinto
+//
+// CH added restriction in order to avoid problems with complex temporal expressions
+
+//DCO, 2011/01/31
+// Esta regra precisa de ser revista!
+// Example:  "A Internet é UM MEIO global de comunicação ..."
+//7> num[frac=+] = | ?+[t-meas:~], ?[conj:~] | num;?[lemma:um], num[frac];?[lemma:meio,maj:~];?[lemma:meia,maj:~].
+
+
+// Example: vinte e tanto(s) / tanta(s)
+// Example: trinta e tal / tais
+// Example: quarenta e muito(s) / muita(s)
+// Example: cem mil e pouco(s) / pouca(s)
+//
+9> num[SEM-fuzzy=+] = num, ?[lemma:e], ?[lemma:muito].
+9> num[SEM-fuzzy=+] = num, ?[lemma:e], ?[lemma:pouco].
+9> num[SEM-fuzzy=+] = num, ?[lemma:e], ?[lemma:tal].
+9> num[SEM-fuzzy=+] = num, ?[lemma:e], ?[lemma:tanto].
+9> num[SEM-fuzzy=+] = num, ?[lemma:e], ?[lemma:pico,pl].
+
+// Example: ele comeu x batatas
+//
+10> ? = ?[surface:x, SEM-fuzzy=+].
+10> ? = ?[surface:n, SEM-fuzzy=+, num=+].
+
+
+//NJM+JB, 2011/05/16
+// joins the integer and fractional part of a number
+//
+// Example: dois e meio
+// Example: cinco e três quartos
+//
+11> num =  num, ?[lemma:e], num[frac];?[lemma:meio,frac=+].
+
+
+
+//DCO, 2010/06/16
+// De X para Y <qualquer unidade sem ser tempo>
+// De 1000 (cuanzas) para 2000 cuanzas
+12> num[card=+,SEM-fuzzy=+] = |?[lemma:de]| num[dig,time:~], (?[t-meas:~]), ?[lemma:para], num[dig,time:~] |?[t-meas:~]|.
+
+//ANDREIA, 2011
+12> num[card=+, time=+] = |?[lemma:de]| num[dig];num[card], (?[t-meas]), ?[lemma:para], num[dig];num[card] |?[t-meas]|.
+
+
+//ANDREIA, 2011
+// Example: de 2 horas em 2 horas
+// Example: de 2 em 2 horas
+//
+12> adv[time=+, t-frequency=+] = ?[lemma:de], num, (?[t-meas]), ?[lemma:em], num, ?[t-meas].
+
+
+// Example: de 2 em 2
+// Example: de 2 em 2 metros
+//
+12> num[card=+,SEM-fuzzy=+] @=  ?[lemma:de],  num[dig,time:~], ?[surface:em], num[dig,time:~], (?[SEM-unitype,t-meas:~]).
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Valores do tipo Classificação
+////////////////////////////////////////////////////////////////////////////////
+
+// These rules can be changed replacing the "?" with a regular expression!!
+
+// Nestes exemplos os [] estão mal usados <------------------------------------------????????????? NJM
+// [ficou em] 2º/segundo [lugar]
+// [estar em] 2º/segundo [lugar]
+// [no] 2º/segundo [lugar ficou]
+// [em] 2º/segundo [lugar está]
+// [obteve o] 2º/segundo [lugar]
+// [encontra-se atualmente em] 2º/segundo [lugar]
+// [ocupa atualmente o] 2º [lugar]
+// [o] 2º [lugar pertence]
+// [o] 2º [lugar foi para]
+// [assegurou] 2º [lugar]
+// [chegou em] 2º [lugar]
+// [partiu em] 2º [lugar]
+// [manteve o] 2º [lugar]
+// [ganhou o] 2º [lugar]
+// [alcançou o] 2º [lugar]
+// [terminou (a corrida) em] 2º [lugar]
+// [começou (a corrida) em] 2º [lugar]
+// [acabou (a corrida) em] 2º [lugar]
+// [desceu para o] 2º [lugar]
+// [subir para o] 2º [lugar]
+// [desceu ao] 2º [lugar]
+// [subiu ao] 2º [lugar]
+// [ascendeu ao] 2º [lugar]
+// 2ª [posição]
+//
+
+//DCO, 2010/10/03
+//
+17> ? @= ?[lemma:"enésimo lugar",quant=+,classific=+];?[lemma:"enésima posição",quant=+,classific=+].
+
+//DCO, 2010/07/26
+// Ficámos em primeiro lugar ex-equo
+17> adv[quant=+, classific=+] @= |?[lemma:ficar];?[lemma:estar];?[lemma:chegar];?[lemma:partir]| ?[lemma:"em enésimo lugar"], ?[lemma:ex-equo].
+
+// Ficámos na primeira posição ex-equo
+17> adv[quant=+, classific=+] @= |?[lemma:ficar];?[lemma:estar];?[lemma:chegar];?[lemma:partir]| ?[lemma:"em enésimo posição"], ?[lemma:ex-equo].
+
+// Fiquei em último lugar
+17> ?[quant=+, classific=+] @= |?[lemma:ficar];?[lemma:estar];?[lemma:chegar];?[lemma:partir]| ?[lemma:"em enésimo lugar"].
+
+// Cheguei na segunda posição
+17> ?[quant=+, classific=+] @= |?[lemma:ficar];?[lemma:estar];?[lemma:chegar];?[lemma:partir]| ?[lemma:"em enésimo posição"].
+
+// Acabei em quinto lugar
+17> ?[quant=+, classific=+] @= |?[lemma:começar];?[lemma:iniciar];?[lemma:acabar];?[lemma:terminar]| ?[lemma:"em enésimo lugar"].
+
+// Ele encontra-se em quinto lugar
+17> ?[quant=+, classific=+] @= |?[lemma:encontrar], pron[ref], (adv)| ?[lemma:"em enésimo lugar"].
+
+// Ela encontra-se na terceira posição
+17> ?[quant=+, classific=+] @= |?[lemma:encontrar], pron[ref], (adv)| ?[lemma:"em enésimo posição"].
+
+// Em primeiro lugar, ficou o Benfica
+// Em segundo lugar ficou o Braga
+// Em terceiro lugar está o Porto
+17> ? @= ?[lemma:"em enésimo lugar",quant=+,classific=+], (punct[comma]) |?[lemma:ficar];?[lemma:estar]|.
+
+// Na primeira posição, ficou o Benfica
+// Na terceira posição, está o Porto
+17> ? @= ?[lemma:"em enésimo posição",quant=+,classific=+], (punct[comma]) |?[lemma:ficar];?[lemma:estar]|.
+
+// Ele obteve facilmente o primeiro lugar na corrida
+// Ela assegurou o terceiro lugar
+17> PP[quant=+, classific=+] @= |?[lemma:obter];?[lemma:assegurar];?[lemma:manter];?[lemma:ganhar];?[lemma:alcançar];?[lemma:ocupar], (adv)| ?[lemma:o], ?[lemma:"enésimo lugar",quant=+,classific=+].
+
+// Ele alcançou a segunda posição
+17> PP[quant=+,classific=+] @= |?[lemma:obter];?[lemma:assegurar];?[lemma:manter];?[lemma:ganhar];?[lemma:alcançar];?[lemma:ocupar], (adv)| ?[lemma:o], ?[lemma:"enésimo posição",quant=+,classific=+].
+
+// O Benfica desceu/subiu para o segundo/primeiro lugar
+17> PP[quant=+,classific=+] @= |?[lemma:descer];?[lemma:subir]| ?[lemma:para], ?[lemma:o], ?[lemma:"enésimo lugar",quant=+,classific=+].
+
+// O Benfica desceu/subiu para a segunda/primeira posição
+17> PP[quant=+,classific=+] @= |?[lemma:descer];?[lemma:subir]| ?[lemma:para], ?[lemma:o], ?[lemma:"enésimo posição",quant=+,classific=+].
+
+// O Benfica descendeu/ascendeu ao segundo/primeiro lugar
+17> PP[quant=+,classific=+] @= |?[lemma:descender];?[lemma:ascender]| ?[lemma:a], ?[lemma:o], ?[lemma:"enésimo lugar",quant=+,classific=+].
+
+// O Benfica descendeu/ascendeu à segunda/primeira posição
+17> PP[quant=+,classific=+] @= |?[lemma:descender];?[lemma:ascender]| ?[lemma:a], ?[lemma:o], ?[lemma:"enésimo posição",quant=+,classific=+].
+
+// O primeiro lugar coube/pertence a Usain Bolt.
+17> noun[quant=+,classific=+] @= ?[lemma:o], ?[lemma:"enésimo lugar"] |?[lemma:caber];?[lemma:pertencer]|.
+
+// A primeira posição coube/pertence a Usain Bolt.
+17> noun[quant=+,classific=+] @= ?[lemma:o], ?[lemma:"enésimo posição"] |?[lemma:caber];?[lemma:pertencer]|.
+
+// O primeiro lugar vai para ...
+17> noun[quant=+,classific=+] @= ?[lemma:o], ?[lemma:"enésimo lugar"] |?[lemma:ir], ?[lemma:para]|.
+
+// A primeira posição vai para ...
+17> noun[quant=+,classific=+] @= ?[lemma:o], ?[lemma:"enésimo posição"] |?[lemma:ir], ?[lemma:para]|.
+
+// Fui o primeiro classificado na corrida
+17> ?[quant=+,classific=+] @= |?[lemma:ser], ?[lemma:o]| ?[lemma:"enésimo classificado"].
+
+// O terceiro classificado foi o FCP
+17> noun[quant=+,classific=+] @= ?[lemma:o], ?[lemma:"enésimo classificado"] |?[lemma:ser]|.
+
+// 18 pontos
+// 18,5 valores
+18> ? @= num[ord:~,quant=+,classific=+] |?[lemma:ponto]|.
+18> ? @= num[ord:~,quant=+,classific=+] |?[lemma:valor]|.
+
+///////////////////////////
+// RESULTADOS DESPORTIVOS
+//DCO, 2010/07/28
+///////////////////////////
+
+///////////////
+// VITÓRIAS //
+//////////////
+
+//DCO, 2011/02/07
+// (...) na posição de vencedor por 2 bolas a 1
+18> PP @= | ?[lemma:"vencedor"] | ?[lemma:"por"], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], (?[surface:"bola"];?[surface:"bolas"]), ?[lemma:a], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~].
+
+// ganhar (ao Real Madrid) (por) 2-0
+18> ? @= |?[lemma:ganhar], (adv), (?[lemma:a], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*, (?[lemma:por])| num[lemma:"%d+\-%d+",quant=+,sports_results=+].
+
+// ganhar (ao Real Madrid) por 2 (bolas) a 1
+18> PP @= |?[lemma:ganhar], (adv), (?[lemma:a], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], (?[surface:bola];?[surface:bolas]), ?[lemma:a], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~].
+
+// vencer/derrotar (o Real Madrid) (por) 2-0
+18> ? @= |?[lemma:vencer];?[lemma:derrotar], (adv), (?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| (?[lemma:por]), num[lemma:"%d+\-%d+",quant=+,sports_results=+].
+
+// vencer/derrotar (o Real Madrid) por 2 (bolas) a 0
+18> PP @= |?[lemma:vencer];?[lemma:derrotar], (adv), (?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], (?[surface:bola];?[surface:bolas]), ?[lemma:a], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~].
+
+// ganhar (ao Real Madrid) por uma diferença de 2 bolas/golos
+18> PP[quant=+,sports_results=+] @= |?[lemma:ganhar], (adv), (?[lemma:a], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], ?[surface:uma], ?[surface:diferença], prep[lemma:de], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:bola];?[surface:bolas];?[surface:golo];?[surface:golos].
+
+// vencer/derrotar (o Real Madrid) por uma diferença de 2 bolas/golos
+18> PP[quant=+,sports_results=+] @= |?[lemma:vencer];?[lemma:derrotar], (adv), (?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], ?[surface:uma], ?[surface:diferença], prep[lemma:de], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:bola];?[surface:bolas];?[surface:golo];?[surface:golos].
+
+///////////////
+// DERROTAS //
+//////////////
+
+// perder (com o Real Madrid) (por) 2-0
+18> ? @= |?[lemma:perder], (adv), (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| (?[lemma:por]), num[lemma:"%d+\-%d+",quant=+,sports_results=+].
+
+// perder (com o Real Madrid) por 2 (bolas) a 0
+18> PP @= |?[lemma:perder], (adv), (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], (?[surface:bola];?[surface:bolas]), ?[lemma:a], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~].
+
+// perder (com o Real Madrid) por uma diferença de 2 bolas/golos
+18> PP[quant=+,sports_results=+] @= |?[lemma:perder], (adv), (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[lemma:por], ?[surface:uma], ?[surface:diferença], prep[lemma:de], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:bola];?[surface:bolas];?[surface:golo];?[surface:golos].
+
+//////////////
+// EMPATES //
+/////////////
+
+// empatar (com o Real Madrid) (a/por) 2-2/2 igual
+18> ? @= |?[lemma:empatar], (adv), (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| (?[surface:a];?[lemma:por]), num[lemma:"%d+\-%d+",quant=+,sports_results=+] ; (num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:igual]).
+
+// empatar (com o Real Madrid) a 2 bolas
+18> ? @= |?[lemma:empatar], (adv), (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[surface:a], num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:bola];?[surface:bolas].
+
+// o empate (com o Real Madrid) a/por 1-1/1 bola
+18> ? @= |(?[lemma:o]), ?[lemma:empate], (?[lemma:com], ?[lemma:o]), (?+[maj]), (prep, (art), ?+[maj])*| ?[surface:a];?[lemma:por], num[lemma:"%d+\-%d+",quant=+,sports_results=+] ; (num[sports_results=+,frac:~,time:~,t-meas:~], ?[surface:bola];?[surface:bolas]).
+
+/////////////
+// OUTROS //
+////////////
+
+// O Benfica fez (o) 2-0
+18> ? @= |?[lemma:fazer]| (?[lemma:o]), num[lemma:"%d+\-%d+",quant=+,sports_results=+].
+
+// O jogo acabou/estava 2-0/2 igual
+18> ? @= |?[lemma:acabar];?[lemma:estar]| num[lemma:"%d+\-%d+",quant=+,sports_results=+] ; (num[quant=+,sports_results=+,frac:~,time:~,t-meas:~], ?[surface:igual]).
+
+
+// Example: aos 41'
+//
+18> noun[quant=+, classific=+] @= |?[lemma:a], ?[lemma:o]| num[dig], symbol[quote].
+18> noun[quant=+, classific=+] @= |punct[paren,left]|      num[dig], symbol[quote] |punct[paren,right]|.
+
+// Example: o [primeiro] Imperador
+//
+19> ? @= |?[lemma:o]| num[ord, quant=+, classific=+] |noun[maj]|.
+
+
+// Example: frequentou o 4º ano
+// Example: frequentou a 4ª classe
+// Example: equivalência ao 12º ano
+// Example: equivalência à 4ª classe
+// Example: aluno do 12º ano
+// Example: aluno da 4ª classe
+// Example: 12º ano de escolaridade
+//
+20> ? @=   |?[lemma:frequentar], ?[lemma:o]|               ?[quant=+, classific=+]  |?[lemma:ano]|.
+20> ? @=   |?[lemma:frequentar], ?[lemma:o]|               ?[quant=+, classific=+]  |?[lemma:classe]|.
+20> ? @=   |?[lemma:equivalência], ?[lemma:a], ?[lemma:o]| ?[quant=+, classific=+]  |?[lemma:ano]|.
+20> ? @=   |?[lemma:equivalência], ?[lemma:a], ?[lemma:o]| ?[quant=+, classific=+]  |?[lemma:classe]|.
+20> ? @=   |?[lemma:aluno], ?[lemma:de], (?[lemma:o])|     ?[quant=+, classific=+]  |?[lemma:ano]|.
+20> ? @=   |?[lemma:aluno], ?[lemma:de], (?[lemma:o])|     ?[quant=+, classific=+]  |?[lemma:classe]|.
+
+20> ? @= ?[quant=+, classific=+]  |?[lemma:ano], ?[lemma:de], ?[lemma:escolaridade]|.
+
+
+
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+//MOVED FROM THE CHUNKER ON 2008/02/01
+/////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
+
+// compound mesasure (adds feature: measother)
+// Example: quilos por metro cúbico
+//
+22> noun[time=+, t-frequency=+] @= ?[t-meas], ?[lemma:por], ?[t-meas].
+22> noun[time=+, t-frequency=+] @= ?[t-meas], ?[lemma:a], art[lemma:o], ?[t-meas].
+22> noun[time=+, t-frequency=+] @= ?[t-meas], ?[lemma:"a o dia"].
+22> noun[SEM-measother=+]       @= ?[SEM-unitype], ?[lemma:por], ?[SEM-unitype].
+
+// Example: euros à hora
+//
+22> noun[SEM-measother=+] @= ?[SEM-unitype], ?[lemma:a], art[lemma:o], ?[SEM-unitype].
+22> noun[SEM-measother=+] @= ?[SEM-unitype], adv[lemma:"a o dia"].
+

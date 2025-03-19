@@ -1,0 +1,980 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	dependencies.xip
+//! Encoding:	UTF-8
+//! Content:	dependency rules
+//!
+//! Language:	DUTCH
+//!
+//! Author:	Anne Schiller, Joeri Honnef
+//!
+//! Date: 	07-Mar-2007	:: initial version
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+//####################### DETERMINERS ######################
+
+// Quoted NP's with a determiner in front of it.
+// (ex: 'De |'recente ontwikkelingen'|')
+|NP{det#1, punct[quote], adj, noun#2, punct[quote]}|
+	DETERM(#2, #1).
+
+| NP{det#1, (adj;num;punct[comma])+, noun#2} |
+	DETERM(#2, #1).
+
+|det#1, NP{noun#2[proper, cap]} |
+	DETERM(#2, #1).
+
+// (ex: 'geen mensen')
+| NP{num#1, (adj;adv)*, noun#2[month:~]} |
+	DETERM(#2, #1).
+
+
+// (ex: 'veel berichten')
+// Added the contraint that is can not be preceded by
+// an num like in this construction: 
+// (ex: 'Een veel lager dodental')
+// Perhaps this extra constraint is a bit too specific.
+| ~num, quant#1, NP{(adj;adv)*, noun#2} |
+	DETERM(#2, #1).
+
+// (ex: 'driehonderd aardige mensen')
+|NP{num#1, NP{(adj;adv)*, noun#2}}|
+	DETERM(#2, #1).
+
+
+|NP{det#1, noun#2, conj[coord], noun#2[chead]}|
+	DETERM(#2, #1).
+
+// (ex: 'Van onze verslaggeefster.')
+|NP{det#1, noun[weekday], adj, noun#2}|
+	if (~DETERM(#2, #1))
+	DETERM(#2, #1).
+
+// (ex: 'Van onze verslaggeefster.')
+|NP{det#1, noun#2[last]}|
+	if (~DETERM(#2, #1))
+	DETERM(#2, #1).
+
+
+
+//####################### ADJECTIVE MODIFIERS ################
+
+// NB. This section needs some further work.
+
+// (ex: 'Een stenen gooiende menigte.')
+// (ex: 'Ontaardde in |fel anti-Aziatisch geweld|.')
+|NP{?*, (adj#1)+;adv#1;noun#1[weekday], adj#2, ?*,noun}|
+	ADJMOD(#2, #1).
+
+//####################### MAIN VERBS ######################
+
+// In this rule I added the pastpart feature because sometimes auxiliaries are 
+// not recognized appropiately.
+// (ex: 'werd gedoopt')
+| verb#1[modal:~, aux:~] | 
+	VMAIN(#1).
+
+// Some verbs like 'worden' in pastpart have the aux feature ...
+// but should be a main verb:
+| verb#1[aux, pastpart] | 
+	VMAIN(#1).
+
+//####################### AUXILIARIES IN SUBCLAUSES ######################
+
+
+// A subclause with a Verb cluster containing a finite aux verb followed by the past participle
+// The second verb could also be an inf because some pastpart forms of verbs are the same as the inf 
+// form, like:
+// (ex: 'hebben overtreden')
+| SC{?*, VC{verb#1[aux], verb#2[pastpart];verb#2[inf]}}|
+	AUXIL(#2, #1).
+
+// (ex: 'Hij weet niet of hij zich misdragen zou hebben.') 
+| SC{?*, VC{verb#2[aux:~, modal:~], verb[modal], verb#1[aux]}}|
+	AUXIL(#2, #1).
+
+
+// A subclause with no Verb Cluster but with a finite aux verb followed by the past participle
+// with something in between the verbs else it would have been a VC ...
+// (ex: SC{... fin-verb ... past-participle})
+|SC{verb#1[aux], ?+, verb#2[pastpart]}|
+	AUXIL(#2, #1).
+
+// (ex: 'Hij herinnert zich niet dat zij zich misdragen hadden.')
+|SC{?*, VC{verb#2[modal:~, aux:~], verb#1[aux]}}|
+	AUXIL(#2, #1).
+
+
+//####################### LEFTOVER AUXILIARIES ######################
+
+// Follow the TOP node directly so TOP is used to make sure they are not
+// contained by an SC(subclause)
+
+// A Verb cluster containing a finite aux verb followed by the past participle
+// (ex: ... fin-verb past-participle)
+| TOP{?*, VC{verb#1[aux], verb#2[pastpart]}}|
+	AUXIL(#2, #1).
+
+// A Verb cluster containing a finite aux verb preceded by the past participle
+// (ex: ... past-participle fin-verb)
+| TOP{?*, VC{verb#1[pastpart], verb#2[aux]}}|
+	AUXIL(#1, #2).
+
+// No Verb Cluster but a finite aux verb followed by the past participle
+// with something in between the verbs, else it would have been a VC ...
+// The last part of the rule also covers infinitive verbs because some 
+// have the same form as the past particple.
+// NB. this could be a bit too strong. NFR
+// (ex: ... fin-verb ... past-participle)
+// Enable there to be a conj in between because of the next example:
+// (ex: 'ABN Amro heeft de resultaten in het eerste kwartaal zoals beloofd flink verbeterd.')
+// Just don't allow for sc's
+| TOP{?*, verb#1[modal:~, aux], ?*[sc:~, comma:~], verb#2[pastpart] ; verb#2[inf] ; verb#2[fin, pl] }|
+	AUXIL(#2, #1).
+
+|TOP{?*, VC{verb#2[modal:~, aux:~], verb[aux:~], verb#1[aux]}}|
+	AUXIL(#2, #1).
+
+// (ex: 'Zij |hebben| zich moeten |misdragen|.')
+|TOP{?*, verb#1[aux], ?*[sc:~],  VC{verb[modal], verb#2}}|
+	AUXIL(#2, #1).
+
+// (ex: 'Zij zouden 	zich moeten |hebben misdragen|.')
+|TOP{?*, verb, ?*, VC{verb[modal], verb#1[aux], verb#2[modal:~, aux:~]}}|
+	AUXIL(#2, #1).
+
+
+//####################### MODALS ######################
+
+// A subclause with a Verb cluster containing a finite modal verb followed 
+// by the past participle.
+|SC{?*, VC{ verb#1[modal], verb#2[inf, modal:~]}}|
+	MODAL(#2, #1).
+
+// (ex: 'Hij weet niet of hij zich misdragen zou hebben.') 
+// NFR perhaps the modal should be attached to the main verb
+| SC{?*, VC{verb[aux:~, modal:~], verb#1[modal], verb#2[aux]}}|
+	MODAL(#2, #1).
+
+// (ex: 'Miljonair Berezovski wil Poetin met geweld bestrijden')
+|verb#1[modal], ?*, VC{verb#2[inf, modal:~]}|
+	MODAL(#2, #1).
+
+|verb#1[modal], ?*, VC{verb#2[inf, modal], verb}|
+	MODAL(#2, #1).
+
+
+|VC{verb#1[inf, modal], verb#2[modal:~]}|
+	if (~MODAL(#3,#4))
+	MODAL(#1, #2).
+
+
+// modal ... aux-inf pastpart ... 
+|verb#1[modal], ?*, VC{verb#2[aux], verb[pastpart]}|
+	MODAL(#2, #1).
+
+// modal ... aux-inf pastpart ...
+|verb#1[modal], ?*, VC{verb[pastpart], verb#2[aux]}|
+	MODAL(#2, #1).
+
+// (ex: 'Zij zouden zich |misdragen moeten hebben|.')
+|TOP{?*, VC{verb, verb#1[modal], verb#2[aux]}}|
+	MODAL(#2, #1).
+
+
+// (ex: 'Zij hebben zich |moeten misdragen|.')
+|TOP{?*, VC{ verb#1[modal], verb#2}}|
+	MODAL(#2, #1).
+
+// (ex: 'Zij |zouden| zich moeten hebben misdragen.')
+|TOP{?*, verb#1[modal], ?*, VC{verb#2[modal], verb[aux], verb}}|
+	MODAL(#2, #1).
+
+// Slightly different form than previous one.
+// (ex: 'Zij |zouden| zich |misdragen moeten hebben|.')
+|TOP{?*, verb#1[modal], ?*, VC{verb, verb#2[modal], verb[aux]}}|
+	MODAL(#2, #1).
+
+//Zij zouden zich misdragen.
+// (ex: 'Met de vervroegde samenvatting van de cijfers 
+//       in het eerste kwartaal wil ABN Amro naar eigen zeggen ‘volledige openheid’ geven. ')
+|TOP{?*, verb#1[modal], ?*, verb#2[aux:~, modal:~]}|
+	MODAL(#2, #1).
+
+//####################### VERB OBJECT(S) @ SC LEVEL ######################
+
+| SC{?*, verb#1[fin], ?*, VC{?+, verb#2[inf]}}|
+	VOBJ(#1, #2).
+
+// (ex: ' ... |hadden geprobeerd| de man |te vinden|.')
+| SC{?*, VC{verb[fin, aux], verb#1[pastpart]}, ?*, VC{?+, verb#2[inf]}}|
+	 VOBJ(#2, #1).
+
+// (ex: ' ... |hadden de man | geprobeerd | in de garage te vinden|.')
+| SC{?*, verb[fin, aux], ?*, verb#1[pastpart], ?*, VC{?+, verb#2[inf]}}|
+	 VOBJ(#2, #1).
+
+//####################### VERB OBJECT(S) @ TOP LEVEL ######################
+
+// (ex: 'De mensen hebben de man geprobeerd te vinden in de garage.')
+| verb[fin, aux], ?*, verb#1[pastpart], ?*, VC{?+, verb#2[inf]}|
+	 VOBJ(#2, #1).
+
+|TOP{?*, verb#1[aux:~, modal:~], ?*[sc:~], VC{ptcl, verb#2[inf]}}|
+	 VOBJ(#1, #2) .
+
+// (ex: 'Hij zou zich moeten misdragen.')
+|TOP{?*, verb#1[modal], ?*, VC{verb#2[modal], verb[aux:~, modal:~]}}|
+	VOBJ(#2, #1).
+
+|TOP{?*, punct[comma], verb#1[modal:~, aux:~], ?*[comma:~, sc:~], verb#2[modal:~, aux:~], punct[comma]}|
+	VOBJ(#1, #2).
+
+//####################### LEFTOVER MAIN VERBS ######################
+
+// If we find an aux verb which is not already functioning as an 
+// aux we will assign it VMAIN.
+|TOP{?*, verb#1[aux], ?*}|
+	if (~AUXIL(#2, #1))
+	VMAIN(#1).
+
+// De-marking of mainverbs which are preceded by the determiner 'het'.
+|?*, NP[inf]{det[lemma:het],?*, verb#1}|
+	if (^VMAIN(#1))
+	~.
+
+|SC{?*, verb#1[aux], ?*}|
+	VMAIN(#1).
+
+//####################### NOUN MODIFIERS (NMOD) ######################
+
+|NP{?*, adj#1*, noun#2}|
+	NMOD(#2, #1).
+
+// NP = adj, num, noun.
+|NP{adj#1, num#2, noun#3}|
+	NMOD(#3, #2), NMOD(#2, #1).
+
+//####################### REFLEXIVE VERBS ###########################
+
+// (ex: 'Zij herinnert zich de auto.')
+// (ex: 'Zij herinnert het zich.')
+// (ex: 'Peter wast zich  twee keer per dag.')
+// (ex: 'Hackers richten zich op directeuren en hun familie')
+// (ex: 'Al Gore stort zich volledig op het klimaat.')
+// (ex: 'Microsoft voelt zich niet gebonden aan GPLv3.')
+// (ex: 'Robbie Williams stort zich in het geloof.')
+
+
+//####################### REFLEXIVE VERBS @ SUBCLAUSE LEVEL ############
+
+|SC{conj, NP{pron[refl:~]}, NP{pron#1[refl]}, VC{verb#2[aux:~], verb[aux]}}|
+	REFLEX(#2, #1).
+
+|SC{conj, NP{pron[refl:~]}, NP{pron#1[refl]}, verb#2[aux:~, modal:~]}|
+	REFLEX(#2, #1).
+
+// (ex: 'Hij weet niet of hij zich misdragen zou hebben.') 
+| SC{conj, NP{pron[refl:~]}, NP{pron#1[refl]}, VC{verb#2[aux:~, modal:~], verb[modal], verb#1[aux]}}|
+	REFLEX(#2, #1).
+
+
+//####################### REFLEXIVE VERBS @ TOP LEVEL #######################
+
+
+|TOP{?*, verb, NP{pron#1[refl]}, VC[inf_te]{ptcl, verb#2[inf]}}|
+	REFLEX(#2, #1).
+
+//(ex: 'Zij zouden zich misdragen hebben moeten voelen.')
+//(ex: 'Hij zou    	zich 	           moeten misdragen.')
+|TOP{NP{pron[refl:~]}, verb#2[modal], NP{pron#1[refl]}, ~verb}|
+	REFLEX(#2, #1).
+
+// (ex: 'Zij herinnert zich de auto.')
+// (ex: 'Zij hebben zich moeten misdragen.')
+//Zij hebben 	zich  	 moeten misdragen.
+|TOP{NP{pron#1[refl:~]}, verb#2, NP{pron#3[refl]}, ~VC}|
+	if(#1[person]:#3[person] & ~REFLEX(#4, #3))
+	REFLEX(#2, #3).
+
+// (ex: 'Luuk zal zich waarschijnlijk vervelen in het museum.')
+// (ex: 'Communicatieadviseur Dig Istha herinnert zich nog hoe het fenomeen ontstond.')
+|TOP{?*, NP{?*, noun}, verb#2, NP{pron#3[refl]}, ?*}|
+	if(~REFLEX(#4, #3))
+	REFLEX(#2, #3).
+
+// (ex: 'De held van morgen laat zich vormen door de adoratie voor de held van vandaag.')
+|TOP{?*, verb, NP{pron#1[refl]}, verb#2[inf]}|
+	if(~REFLEX(#2, #1))
+	REFLEX(#2, #1), OBJ(#2, #1).
+
+|TOP{NP{pron[refl:~]}, verb#1, NP{pron#2[refl]}, VC{verb[modal], (verb[aux]), verb#3[aux:~, modal:~]}}|
+	if(~REFLEX(#1, #2))
+	REFLEX(#3, #2).
+
+// (ex: 'Zij zouden zich misdragen moeten hebben.')
+|?*, NP{pron[refl:~]}, verb, NP{pron#1[refl]}, VC{verb#2[modal:~, aux:~], verb[modal], verb[aux]}|
+	REFLEX(#2, #1).
+
+// (ex: 'Zouden zij zich wel aan de regels hebben gehouden.')
+// TOP contraint is left out. Could (rarely) occur in subclauses.
+|verb#2, NP{pron[refl:~]}, NP{pron#1[refl]}, ?*|
+	REFLEX(#2, #1).
+
+//####################### NEGATIONS USING 'NIET' ###############################
+
+// (ex: 'Dat is niet de auto van mijn vader.')
+|adv#1[lemma:niet], NP{(det;quant), (adj;adv)*, noun#2}, PP|
+	NEGAT(#2, #1).
+
+// (ex: 'Sara en Simone zijn niet op dieet.')
+|adv#1[lemma:niet], PP{prep, NP{(det;quant), (adj;adv)*, noun#2}}|
+	NEGAT(#2, #1).
+
+// (ex: 'Hij koopt het boek niet. (maar steelt het).')
+|adv#1[lemma:niet], punct[sent]|
+	if (VMAIN(#2))
+	NEGAT(#2, #1).
+
+// (ex: 'Hij koopt het boek niet. (maar steelt het).')
+|?+, verb#1, adv#2[lemma:niet], NP{(det;quant), (adj;adv)*, noun#3}|
+	if (VMAIN(#1))
+	NEGAT(#1, #2).
+
+// (ex: 'Nederlands is niet moeilijk.')
+|?+, verb#2, adv#1[lemma:niet], ~PP|
+	NEGAT(#2, #1).
+
+// (ex: 'Simone houdt niet van koken.')
+|adv#1[lemma:niet], PP{prep, verb#2[inf]}|
+	NEGAT(#2, #1).
+
+// (ex: 'Simone houdt niet van koken.')
+|?+, verb#1, adv#2[lemma:niet], PP{prep, verb[inf]}|
+	if (VMAIN(#1))
+	NEGAT(#1, #2).
+
+//####################### NEGATIONS USING 'GEEN' #################
+
+|NP{num#1[lemma:geen], noun#2}, ?* |
+	NEGAT(#2, #1).
+
+// (ex: 'Geen enkele betoger werd geraakt.')
+|NP{num#1[lemma:geen], det, (adj)*, noun#2}, ?*|
+	NEGAT(#2, #1).
+
+//####################### SUBJECT @ TOPLEVEL ############################################
+
+// VS
+// (ex: 'Als  ik geen college heb, ga ik naar de universiteit om te studeren.')
+|TOP{SC, punct[comma], verb#2, NP{pron#1[pers]}, ?*}|
+	SUBJ(#2, #1).
+
+
+//###########
+// OVS
+// NFR  PRON[DEM] verb PROPERNAME;NP
+// Quite a specific rule. Could perhaps be merged with other more general rules ...
+// (ex: 'Ach ach, dat wordt een slachting.')
+|TOP{?*, NP{pron#1[dem]}, verb#2, NP{?*, noun#3};NP{pron#3[pers]}, ?*}|
+	if(~SUBJ(#5, #6) & ~OBJ(#7, #8))
+	SUBJ(#2, #1), OBJ(#2, #3).
+
+// NFR Special rule for the pronoun 'het' which can be pers...
+// This rule should be further merged with the other Subject Object rules!
+|TOP{?*, NP{?*, noun#3}, ?*[comma:~], verb#2, NP{pron#1[surface:het]},?*}|
+	if(~SUBJ(#5, #6) & ~OBJ(#7, #8) )
+	SUBJ(#2, #3), OBJ(#2, #1).
+
+// SVO
+// Actually the same rule as the previous but here it covers a more distant mainverb
+// subject-verb-object-vc
+|TOP{?*, NP{?*, noun#3}, ?*[comma:~], verb#2, NP{pron#1[pers, nom]}, ?*}|
+	if(~SUBJ(#5, #6) & ~OBJ(#7, #8) )
+	SUBJ(#2, #1), OBJ(#2, #3).
+
+// NFR
+// This rule should be further merged with the other Subject Object rules!
+|TOP{?*, NP{?*, noun#3}, ?*[comma:~], verb#2, NP{pron#1[dem]};NP{pron#1[pers, nom:~]}, ?*}|
+	if(~SUBJ(#5, #6) & ~OBJ(#7, #8) )
+	SUBJ(#2, #3), OBJ(#2, #1).
+
+// SVO
+// Actually the same rule as the previous but here it covers a more distant mainverb
+// subject-verb-object-vc
+// (ex: 'Ook |Istha| ziet |het fenomeen| de laatste tijd toenemen. ')
+|TOP{?*, NP{?*, noun#3};NP{pron#3[pers]}, ?*[comma:~], verb#2, NP{pron#1[dem]};NP{pron#1[pers, nom:~]};NP{?*, noun#1[proper:~,weekday:~, nobj:~]}, ?*}|
+	if(~SUBJ(#5, #6) & ~OBJ(#7, #8) )
+	SUBJ(#2, #3), OBJ(#2, #1).
+
+//###########
+
+// SV
+// A subject which is a NE like the name of a bank directly followed by the fin verb.
+// The extra constraints in the if part are there to prevent SUBJ construction if there
+// is already another SUBJ found which occurs in front of the cap lexical.
+|TOP{?*, NP[cap]{?*, noun#1[cap]}, verb#2[fin], ?*}|
+	if (~SUBJ(#2, #1) & ~SUBJ(#2, #3) & #3 < #1)
+	SUBJ(#2, #1).
+
+
+//###########
+// OVS
+// NFR  PRON[DEM] verb PROPERNAME;NP
+// Quite a specific rule. Could perhaps be merged with other more general rules ...
+|TOP{NP{pron#1[dem]}, verb#2[aux:~, modal:~], NP{?*, noun#3[nobj:~]};NP{pron#3[pers]}, ?*}|
+	if(~SUBJ(#2, #1) & ~SUBJ(#2, #3) & ~OBJ(#2, #3) & ~OBJ(#2, #3))
+	SUBJ(#2, #3), OBJ(#2, #1).
+
+// SVO
+// Note: added the question mark in between the NP and the verb since 
+// there can occur a lot in between. For the previous rule this does not
+// hold, it is very hard to put pp's or other categories between the verb 
+// and the demonstrative pronoun.
+|TOP{NP{?*, noun#3};NP{pron[pers]}, ?*, verb#2[aux:~, modal:~], NP{pron#1[dem]}, ?*}|
+	if(~SUBJ(#2, #1) & ~SUBJ(#2, #3) & ~OBJ(#2, #3) & ~OBJ(#2, #3))
+	SUBJ(#2, #3), OBJ(#2, #1).
+
+//###########
+
+
+
+//###########
+// OVS
+// (ex: 'Dit heeft president Pervez Musharraf donderdag gezegd.')
+// When there is a dem pronoun in front of the aux verb and there is a AUXIL dependency
+// we try to find the subject between the aux and the pastpart.
+|TOP{NP{pron#1[dem]}, verb#2, ?*, NP{?*, noun#3}, ?*, verb#4}|
+	if(~SUBJ(#5, #6) & AUXIL(#4, #2))
+	SUBJ(#4, #3), OBJ(#4, #1).
+
+// SVO
+// (ex: 'President Pervez Musharraf heeft dit  donderdag gezegd.')	
+// When there is a dem pronoun in front of the aux verb and there is a AUXIL dependency
+// we try to find the subject between the aux and the pastpart.
+|TOP{NP{?*, noun#3}, ?*, verb#2, NP{pron#1[dem]}, ?*, verb#4}|
+	if(~SUBJ(#5, #6) & AUXIL(#4, #2))
+	SUBJ(#4, #3), OBJ(#4, #1).
+//###########
+
+
+//###########
+
+// The next two rules hold for simple sentences with one
+// main verb and SVO or OVS order where SUbject is a propername
+// and object is the demonstrative pronoun.
+
+// SVO
+//Propernames in front of the mainverb are the subject.
+|TOP{ NP[proper]{?*, noun#1}, ?*, verb#2, ?*[proper:~]}|
+	if (~SUBJ(#3, #4) & ~AUXIL(#5, #6)  )  
+	SUBJ(#2, #1).
+
+// Propernames after the mainverb are the subject.
+// (ex: 'Met de vervroegde samenvatting van de cijfers 
+//       in het eerste kwartaal wil ABN Amro naar eigen zeggen ‘volledige openheid’ geven. ')
+|TOP{?*, verb#2, NP[proper]{?*, noun#1} }|
+	if (  ~SUBJ(#2, #1))  
+	SUBJ(#2, #1).
+
+//############
+
+|TOP{NP{?*, noun#1}, verb#2, ?*[comma:~], NP{?*, noun#3[nobj:~]}, ?*}|
+	if(VMAIN(#2) & ~SUBJ(#2, #1) & ~OBJ(#2, #3))
+	SUBJ(#2, #1), OBJ(#2, #3).
+
+// (ex: 'In West-Europa heeft lang het geloof bestaan dat toekomstige wielerkampioenen 
+//      de passie voor de sport met de paplepel ingegoten dienen te krijgen.')
+|TOP{PP*, verb[aux], ?*, NP{?*, noun#1}, ?*, verb#2[pastpart]}, ?*|
+	if(VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'De held van morgen laat zich vormen door de adoratie voor de held van vandaag.')
+|TOP{NP{?*, noun#1}, ?*, verb[modal], NP{pron[refl]}, ?*, verb#2[inf], ?*}|
+	if(VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'Een aantal mensen is inmiddels teruggekeerd en speelt weer een belangrijke rol in 
+//       het bedrijfsleven van het Oost-Afrikaanse land.')
+// A rule to find one subject that belongs to two verbs('terugkeren' and 'spelen' in this case.)
+|TOP{ ?*, NP{pron#1[pers]};NP{(det;num), (adj;adv)*, noun#1}, verb#2[fin], ?*, verb#3[pastpart], conj[coord], verb#4[fin], ?*}|
+	if(AUXIL(#3, #2) & ~SUBJ(#2, #1) & (#2[number] : #4[number]))
+	SUBJ(#3, #1), SUBJ(#4, #1).
+
+// Same sort of rule as the previous one but a bit more complex pattern:
+// 'prep-verb1-subj[np]-sc-verb2' where the subject belongs both to verb1 and verb2.
+// (ex: 'In een verklaring schrijven de 24 |leden| van de raad dat ze buiten de procedure zijn gehouden 
+//       en plaatsen daarom grote |vraagtekens| bij de handelwijze van Wolfowitz.')
+|TOP{ ?*, verb#1, NP{pron#2[pers]};NP{(det;num), (num;adj;adv)*, noun#2}, ?*, SC, conj[coord], verb#3, ?*, NP{pron#4[pers]};NP{(det;num), (num;adj;adv)*, noun#4}}|
+	if(~SUBJ(#1, #2)  & (#1[number] : #3[number]))
+	SUBJ(#1, #2), OBJ(#3, #4).
+
+
+// NFR
+// Subject comes after the main verb which is in this case 'zijn'
+// (ex: 'Er zijn nog geen berichten over slachtoffers.')
+// (cex: 'Zonder die opleiding is het winnen van de klassiekers bijna onbegonnen werk.')
+|TOP{?*[np:~], verb#2, ?*[comma:~], NP{pron#1[pers];noun#1[proper]};NP{?*, noun#1;verb#1[inf]}; NP[inf]{?*, verb#1}, ?*[sc:~]}|
+	if(VMAIN(#2) & ~SUBJ(#3, #4))
+	SUBJ(#2, #1).
+
+
+|TOP{(adv;PP)*, verb#2, NP{pron#1[pers]}, ?*}|
+	if (VMAIN(#2) & #2[number] : #1[number] & ~SUBJ(#2, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'Volgens zijn ploegleider een topmoment in de Australische wielergeschiedenis.')
+|TOP{PP*, NP{?*, noun#1}, PP*}|
+	if(~VMAIN(#3) & ~SUBJ(#3))
+	SUBJ(#1).
+
+// VS
+// (ex: ''Misschien dat er een paar foto's in de krant komen', zei hij ironisch.')	
+|TOP{?*, SC, punct[comma], verb#2, NP{pron#1[pers];noun#1[proper]}; NP{(det), (adj;adv)*, noun#1}}|
+	if(VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+// SV
+// (ex: 'Geen van hen wilde naar het meer gaan.')
+|TOP{num#1[lemma:geen], PP*,verb#2, ?*}|
+	SUBJ(#2, #1).
+	
+// VS
+// (ex: 'Bovendien zijn volgens de BBC Oezbeekse militanten slechts op zeer kleine schaal betrokken bij de strijd in Afghanistan. ')
+// (ex: 'Ook had het Pakistaanse leger ontkend dat het aan het offensief van de stammen deelnam. ')
+|TOP{adv*, verb[aux], ?*, NP{pron#1[pers]}; NP{(det), (adj;adv)*, noun#1}, ?*[comma:~], verb#2, ?*}|
+	if(VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+
+// SV
+// (ex: 'Nog twee Oegandezen zijn om het leven gekomen, een vermoedelijke plunderaar die werd doodgeschoten
+//       door beveiligingsbeambten en een voorbijganger die door verdwaalde kogels is geraakt.')
+// (ex: 'De man was compleet gestoord.')
+|TOP{adv*, PP*, NP{pron#1[pers]}; NP{(det;num), (adj;adv)*, noun#1}, verb[aux], ?*[comma:~], verb#2, ?*}|
+	if(VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+// SV
+// (ex: 'De Australische winnaar, Stuart O’Grady, en de Duitse nummer drie, Steffen Wesemann, groeiden 
+//       op in een land zonder wegcultuur.')
+// A big enumeration of names followed by the main verb and some pp's following.
+|TOP{NP{?*, ^noun#1}, ?*[sc:~], verb#2, ?*[pastpart:~]}|
+	if ( VMAIN(#2) & ~SUBJ(#3, #4))
+	SUBJ(#2, #1).
+
+// VSO
+// (ex: 'Samen met de Ronde van Vlaanderen wordt het verleden in Parijs-Roubaix graag geromantiseerd.')
+|TOP{?*, verb#1[aux], NP{?*, noun#2[weekday:~, nobj:~]};NP{pron#2}, ?*[comma:~], NP{pron#3};NP{?*, noun#3[nobj:~]}, ?*, verb#4[pastpart] }|
+	if (~SUBJ(#5, #4) & ~OBJ(#4, #3))
+	SUBJ(#4, #2), OBJ(#4, #3).
+
+
+
+// Remove the main verb dependency from verbs that act as verbobjects.
+if (VOBJ(#2, #1) & ^VMAIN(#1)) ~.
+
+// SV
+// NFR specific rule
+// (ex: 'Het pannenkoeken bakken ging compleet verkeerd.')
+|TOP{NP[start]{det[lemma:het], noun#4[pl], verb#1[pl]}, ?*, verb#2, ?*[sent:~]}|
+	if(VMAIN(#2) & ^SUBJ(#2, #4))
+	~, SUBJ(#2, #1).
+
+// SV
+// (ex: '|Dat| is niet mogelijk met democratische middelen.')
+// (ex: '|Het| is niet mogelijk met democratische middelen.')
+// (ex: '|Ik| ga vaak naar de universiteit.')
+|TOP{adv*, PP*, NP{pron#1}, verb#2, ?*}|
+	if(VMAIN(#2) & ~SUBJ(#3, #4))
+	SUBJ(#2, #1).
+
+// SVO
+// (ex: 'Je moet er niets achter zoeken.')
+|TOP{NP{pron#1[pers]}, verb#2, ?*[conj:~, sc:~, comma:~], NP{?*, noun#3};NP{pron#3}, ?*}|
+	if (~SUBJ(#6, #7) & VMAIN(#4) & ~OBJ(#8, #9))
+	SUBJ(#4, #1), OBJ(#4, #3).
+
+// VS
+// (ex: 'Woensdag staat het duel met Kazachstan op het programma.')
+//
+|TOP{ noun[nobj]; noun[weekday], verb#1, ?*, NP{?*, noun#2}, ?*}|
+	if ( ~SUBJ(#3, #4) & VMAIN(#1))
+	SUBJ(#1, #2).
+	
+// VSO
+// (ex: 'Om 12.56 uur passeert de man hardlopend het 25-kilometerpunt op de Laan van Zuid.')
+|TOP{?*, verb#1, NP{?*, noun#2}, ?*, NP{?*, noun#3}, ?*}|
+	if(~SUBJ(#4, #5) & VMAIN(#1) & ~OBJ(#6, #7))
+	SUBJ(#1, #2), OBJ(#1, #3).
+
+// (ex: 'Er is niets aan de hand.')
+|TOP{?*, verb#1[aux, pred], NP{pron#2[indef]}, ?*}|
+	if(~SUBJ(#3, #4) & VMAIN(#1) & ~OBJ(#6, #7))
+	SUBJ(#1, #2).
+
+// (ex: 'Maar de drie renners op het podium van zondag hadden het meeste van horen zeggen.')
+|TOP{?*, NP{?*, noun#1}, ?*, verb#2[aux], ?*, NP{?*, noun#4[nobj:~, weekday:~, month:~];quant#4;verb#4}, ?*, verb#3, ?*}|
+	if(VMAIN(#3) & ~SUBJ(#5, #6) & ~OBJ(#6, #7))
+	SUBJ(#3, #1), OBJ(#3, #4).
+
+// NFR
+// (ex: 'Deze zaak tast de geloofwaardigheid van de Wereldbank aan, 
+//        |zei minister| Bert Koenders voor Ontwikkelingssamenwerking vrijdag na afloop van de ministerraad. ')
+// Adde dan extra contraint which requires a mainverb before the comma.
+|TOP{?*, punct#3[comma], verb#1, NP{?*, noun#2[last]};NP{pron#2[pers]}, ?*}|
+	if (~SUBJ(#1, #2) & VMAIN(#4) & #4 < #3)
+	SUBJ(#1, #2)
+
+// (ex: 'Natuurlijk hebben we dat eerst bij de makers van Zembla geprobeerd, maar hun weergave bleef subjectief.	')
+// (ex: 'Of de advertenties echt gewerkt heeft, laat Holland Casino nog onderzoeken, maar Woldbergs gevoel zegt hem van wel.')
+|TOP{?*, punct[comma], conj[lemma:maar], NP{?*, noun#1[last]};NP{pron}, verb#2, ?*}|
+	if(~SUBJ(#2, #1))
+	SUBJ(#2, #1).
+
+
+// Simple rule to find subjects which are just companies.
+// Like:
+// (ex: 'Chipsol did ...')
+// (ex: 'TNT was ...')
+|TOP{?*, NP[cap]{noun#1}, verb#2, ?*}|
+	if (~SUBJ(#2, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'We hadden een inhoudelijke boodschap, dan ben je aangewezen op dagbladadvertenties.')
+// verb[fin]-pron-verb[pastpart]
+|TOP{?*, conj, verb#1[fin], NP{pron#2}, verb#3[pastpart], ?*}|
+	if (~SUBJ(#1, #2) & AUXIL(#1, #3))
+	SUBJ(#3, #2).
+
+// This rule will find subjects in coordinated phrases where there is often no object.
+|TOP{?*, verb#2[lemma:zijn], NP{pron#1}, ?*}|
+	if(~SUBJ(#2,#1))
+	SUBJ(#2,#1).
+	
+// (ex: 'Het fenomeen bestond natuurlijk al langer, maar nu |lijkt het een trend|: de paginagrote advertenties 
+//       in dagbladen waarmee bedrijven, instellingen en individuen hun bezoedelde imago trachten te herstellen 
+//       of hun visie op de zaak nog eens toelichten.')
+|TOP{?*, verb#1[fin], ?#2[surface:het], NP{?*, noun#3[last]}, ?*}|
+	if (~SUBJ(#1, #2) & ~OBJ(#1, #3))
+	SUBJ(#1, #2) , OBJ(#1, #3).
+	
+
+//####################### SUBJECT @ SC-LEVEL ############################################
+
+
+// (ex: 'Een vreemdeling |die| |de Noord-Franse hel| trotseert.')
+// (ex:'Een vreemdeling |die| |het| trotseert.')
+// (ex:'Een vreemdeling |die| |dat| trotseert.')
+// (ex:'Een vreemdeling |die| |het| helemaal heeft gemaakt.')
+// refine this rule a bit by requiring an NP in front of the relpron.
+|?*, NP{?*, noun};PP{prep, NP{?*, noun}}, (punct[comma]), SC{NP{pron#1[rel, pron, neut]}, ?*, NP{?*, noun#2};NP{pron#2}, ?*, verb#3;VC{?*, verb#3}}|
+	if(VMAIN(#3) & ~SUBJ(#4, #5) & ~OBJ(#6, #7))
+	SUBJ(#3, #1), OBJ(#3, #2).
+
+// (ex: ''s Maandags laat ga ik laat naar de universiteit omdat |ik| dan college |heb| om zeven uur 's avonds.')
+// (ex: 'Musharraf sprak de hoop uit dat ook |de stamleden| in het aangrenzende Noord-Waziristan de wapens |oppakken| 
+//       tegen de buitenlandse militanten, die voor het merendeel van Oezbeekse afkomst zijn.')
+// First dive into the subclause, then find the personal pronoun and the mainverb. The mainverb should occur after 
+// the pronoun. We constrain this by using the ordering operator '>'.
+// In the next example sentence we find the unpers relative pronoun as being the subject of the inf_te construct
+// at the end of the last subclause.
+// (ex: 'Het leger zei toen dat de stammen alleen in actie waren gekomen tegen Oezbeekse militanten omdat 
+//       deze hadden geprobeerd een lokale stamleider te doden.')
+//
+// (cex: 'O’Grady poogde de waarde van zijn zege te vergelijken met het olympisch goud dat hij veroverde in Athene.')
+// dat Pakistan veroverde
+|SC[inf_te:~]{ conj, adv*, NP{pron#1}; NP{pron#1[pers]}; NP{(det), (adj;adv)*, noun#1}, ?*, verb#2 ; VC{?*, verb#2, ?*}, ?*}|
+	if(VMAIN(#2) & ~SUBJ(#3, #1) & ~VOBJ(#2, #4))
+	SUBJ(#2, #1).
+
+// (ex: 'Het leger zei toen dat de stammen alleen in actie waren gekomen tegen Oezbeekse militanten omdat 
+//       |deze| hadden geprobeerd een lokale stamleider te |doden|.')
+// (ex: '|Het is| voor het eerst dat Pakistan toegeeft stammen militaire steun te bieden om buitenlandse strijders 
+//       aan te pakken die aan Al Qaida gelieerd zouden zijn.')
+// (ex: 'Sommige betogers stelden dat |de politie| zonder aanleiding begon |te schieten| en dat daarmee de betoging 
+//       uit de hand is gelopen.')
+|SC{(conj), NP{pron#1[neut, dem:~];noun#1[proper]};NP{(det;num), (adj;adv)*, noun#1}, ?*, verb#2; VC{?*, verb#2}, ?*, VC[inf_te]{?*, verb#3[inf]}}|
+	if(VMAIN(#3) & ~SUBJ(#4, #1) & ~VOBJ(#6, #4))
+	SUBJ(#3, #1).
+	
+// (ex: 'Het is voor het eerst dat Pakistan toegeeft stammen militaire steun te bieden om buitenlandse strijders 
+//       aan te pakken |die aan Al Qaida gelieerd zouden zijn.|')
+|SC{NP{pron#1[neut, dem:~]},?*, VC{?*, verb#3[modal:~, aux:~]}}|
+	if(VMAIN(#3) & ~SUBJ(#4, #1) & #3 < #1)
+	OBJ(#3, #1).
+
+|SC{NP{pron[rel, pron, neut]}, ?*, NP{?*, noun#1}, ?*, VC[inf_te]{ptcl, verb#2[inf]}}|
+	if(VMAIN(#2) & ~SUBJ(#2, #1))
+	SUBJ(#2, #1).
+
+// (ex: '..... , een vreemdeling |die| werd doodgeschoten door beveiligingsbeambten.')
+// (ex: ''Herstellen van een fout beeld |dat| door de media is ontstaan', zegt Laurens Woldberg, 
+//        woordvoerder van Holland Casino.')
+|NP{?*, noun};PP{prep, NP{?*, noun}}, (punct[comma]), SC[inf_te:~]{NP{pron#1[rel]}, ?*[pron:~, comma:~], verb#2;VC{?*, verb#2}, ?*}|
+	if (~SUBJ(#2, #1) & VMAIN(#2) & ~SUBJ(#3, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'Het leger zei toen dat de stammen alleen in actie waren gekomen tegen 
+//       Oezbeekse militanten omdat |deze| hadden geprobeerd een lokale stamleider te doden.')
+|SC{conj[subord], NP{pron#1[dem]}, VC{verb[aux], verb}, ?*, VC{ptcl, verb#3} }|
+	if ( VMAIN(#3) & ~SUBJ(#3, #1) )
+	SUBJ(#3, #1).
+
+// (ex: 'Het is voor het eerst dat Pakistan toegeeft stammen militaire steun te bieden 
+//       om buitenlandse strijders  aan te pakken |die aan Al Qaida gelieerd zouden zijn.|')
+|SC{NP{pron#1[dem]}, ?*, VC{verb#2+}}|
+	if (VMAIN(#2))
+	SUBJ(#2, #1).
+
+
+// (ex: 'Nooit bereikte hij met de besten het Velodrome, terwijl zijn ploegmaat 
+//       Fabian Cancellara bij de start in Compiège nog doceerde dat |je| |Parijs-Roubaix| 
+//       eerst moet verliezen om er te kunnen winnen.')
+|SC{NP{pron#1[dem, neut]};NP{conj[subord]}, NP{pron#2[pers]};NP{?*, noun#2[last]}, ?*, NP{?, noun#3}, ?*, VC{?*, verb#4[aux:~, modal:~]}}|
+	if (~SUBJ(#4, #2) & ~OBJ(#4, #3) & VMAIN(#4))
+	SUBJ(#4, #2), OBJ(#4, #3).
+
+
+// (ex: 'Veel geloof heeft Istha, die het in een verleden sporadisch heeft gedaan, niet in het middel.')
+|NP{?*, noun};PP{prep, NP{?*, noun}}, (punct[comma]), SC{NP{pron#1[rel]}, NP{pron#2[surface:het]}, ?*, verb#3;VC[inf_te:~]{?*, verb#3}, ?*}|
+	if (VMAIN(#3))
+	SUBJ(#3, #1), OBJ(#3, #2).
+
+// (ex: 'De raad van bestuur van de Wereldbank liet vrijdag weten dat Wolfowitz nooit toestemming heeft gekregen 
+//       voor de forse loonsverhoging |die hij op eigen houtje zou hebben geregeld|. ')
+// (ex: '..... , een vreemdeling |die| werd doodgeschoten door beveiligingsbeambten.')
+
+//AS@29/09/2010: !!!!  CHECK VARIABLES !!!!!
+//AS |NP{?*, noun#1};PP{prep, NP{?*, noun}}, (punct[comma]), SC{NP{pron#1[rel]}, NP{pron#2[pers]}, ?*, verb#3;VC[inf_te:~]{?*, verb#3}, ?*}|
+|NP{?*, noun};PP{prep, NP{?*, noun}}, (punct[comma]), SC{NP{pron#1[rel]}, NP{pron#2[pers]}, ?*, verb#3;VC[inf_te:~]{?*, verb#3}, ?*}|
+	if (~SUBJ(#3, #2) & ~SUBJ(#3, #1) & VMAIN(#3))
+	SUBJ(#3, #2).
+
+
+// (ex: 'Hoe |de betoging| plotseling gewelddadig werd, is niet duidelijk.')
+|TOP{SC{?*[pron:~], NP{?*, noun#1}, ?*, verb#2}, ?*}|
+	if (~SUBJ(#2, #1) & VMAIN(#2))
+	SUBJ(#2, #1).
+
+|TOP{SC{NP{pron#1}, NP{?*, noun#2}, ?*, verb#3}, ?*}|
+	if (~SUBJ(#3, #1) & ~OBJ(#3, #2) & VMAIN(#3))
+	SUBJ(#3, #1), OBJ(#3, #2).
+
+|SC[inf_te]{NP{pron#1}, verb[fin], NP{?*, noun#3}, ?*[sc:~], VC[inf_te]{?*, verb#2}}|
+	if (~SUBJ(#2, #1) & ~OBJ(#5, #3))
+	SUBJ(#2, #1), OBJ(#2, #3).
+
+// NFR perhaps not even a valid SC ...
+|SC{conj[lemma:maar], ?*, verb#1, NP{?*, noun#2[last]}}|
+	if(~SUBJ(#1, #2))
+	SUBJ(#1, #2).
+
+|SC[inf_te]{NP{pron#1}, ?*[sc:~], VC[inf_te]{?*, verb#2}}|
+	if (~SUBJ(#2, #1))
+	SUBJ(#2, #1).
+
+// (ex: 'Het fenomeen bestond natuurlijk al langer, maar nu lijkt het een trend: de paginagrote advertenties 
+//       in dagbladen waarmee |bedrijven, instellingen en individuen hun bezoedelde |imago| trachten te herstellen| 
+//       of hun visie op de zaak nog eens toelichten. ')
+|SC[inf_te]{(NP{noun#1}, punct[comma])+, NP{noun#1},conj[surface:en], NP{noun#1},  NP{?*, noun}, (verb), VC[inf_te]{?*, verb#2}}|
+	SUBJ(#2, #1).
+	
+|SC[inf_te]{NP{noun#1}, conj[surface:en], NP{noun#1}, NP{?*, noun}, (verb), VC[inf_te]{?*, verb#2}}|
+	SUBJ(#2, #1).
+
+|SC[interrog]{NP{pron#1}, verb#2, NP{?*, noun#3}}|
+	if(~SUBJ(#2, #1) & ~OBJ(#2, #3))
+	SUBJ(#2, #1), OBJ(#2, #3)
+
+
+//####################### OBJECT @ TOPLEVEL ############################################
+
+// VSO
+// (ex: 'Zonder die opleiding is het winnen van de klassiekers bijna onbegonnen werk.')
+// (ex: 'O’Grady haalde zondag wel herinneringen op aan de zege van Hennie Kuiper in 1983.') (no VSO...)
+|TOP{?*[pron:~ ], verb#3[pastpart:~], ?*[conj:~, comma:~], NP{?*, noun#1[weekday:~, nobj:~];verb#1}, ?*}|
+	if(VMAIN(#3) & ~SUBJ(#3, #1) & ~OBJ(#5, #6) & SUBJ(#3, #4) & #4<#3 )
+	OBJ(#3, #1).
+
+// SUBJ ... FIN-VERB ... CONJ ... FIN-VERB ... OBJ ...
+// A rule to find the object in a sentence with a conj which splits the sentence in two 
+// parts with both a finite verb.
+// (ex: 'OGrady groeide op in Australië en had zondag lak aan die filosofieën.')
+|TOP{NP{?*, noun}, ?*, verb#1, ?*, conj, ?*, verb#2, (NP{pron#7}), ?*, NP{?*, noun#3[weekday:~, month:~, nobj:~]}, ?*}|
+	if(~OBJ(#4, #5) & VMAIN(#1) & VMAIN(#2) & SUBJ(#4, #5) & #5 < #1)
+	SUBJ(#2, #7), OBJ(#2,#3).
+
+// SVO
+// (ex: 'Hij kreeg er pas drie jaar na dato een video van in handen.')
+// (ex: 'Het maakte van de winnaar zondag een vreemdeling in de Hel.')
+// (ex: 'ABN Amro heeft maandag vervroegd de resultaten bekendgemaakt over het afgelopen kwartaal.')
+|TOP{?*, verb#1, ?*[conj:~, sc:~, comma:~], NP{?*, noun#2[weekday:~, month:~, nobj:~]}, ?*}|
+	if (~OBJ(#3, #4)  & SUBJ(#5, #6) & #6 < #1 & ~SUBJ(#1, #2))
+	OBJ(#1, #2).
+
+// VSO
+// (ex: 'Zonder die opleiding is het winnen van de klassiekers bijna onbegonnen |werk|.')
+// One main verb and the subject and object occur after it. VSO
+|TOP{?*, verb#1, ?*[sc:~], NP, ?*[sc:~, comma:~], NP{?*, noun#2}}|
+	if( ~OBJ(#4, #5) & SUBJ(#1, #3) & ~SUBJ(#1, #2) & #3 > #1)
+	OBJ(#1, #2)
+	
+// SVO
+// (ex: 'O’Grady poogde de waarde van zijn zege te vergelijken met het olympisch goud dat hij veroverde in Athene.')
+|TOP{?*, verb, ?*, NP{?*, noun#1;verb#1}, ?*, VC[inf_te]{ptcl, verb#3}}|
+	if(VMAIN(#3) & ~SUBJ(#3, #1) & ~OBJ(#4, #1))
+	OBJ(#3, #1).
+// SVO
+// (ex: 'Nederland stond maandag na de eerste periode op gelijke hoogte met de Fransen, 1-1.') 
+|TOP{ NP{?*, noun#1};NP{pron#1[pers]}, ?*, verb#2, ?*, num#3}|
+	if(SUBJ(#2, #1) & ~OBJ(#4, #5) & VMAIN(#2))
+	OBJ(#2, #3).
+
+//####################### OBJECT @ SC-LEVEL #############################################
+
+// (ex: 'Het fenomeen bestond natuurlijk al langer, maar nu lijkt het een trend: de paginagrote advertenties 
+//       in dagbladen waarmee |bedrijven, instellingen en individuen hun bezoedelde |imago| trachten te herstellen| 
+//       of hun visie op de zaak nog eens toelichten. ')
+|SC{?*, NP{?*, noun#1}, (verb), VC[inf_te]{?*, verb#2}}|
+	if (~OBJ(#2, #1))
+	OBJ(#2, #1).
+
+// (ex: 'Het was de eerste keer |dat hij |de beelden| van kasseien en met modder besmeurde renners zag|.')
+|SC{conj[subord], NP{pron#1};NP{?*, noun#1[proper]}, ?*, NP{?*, noun#2[proper]};NP{?*, noun#2[last]}, ?*, verb#3;VC{?*, verb#3}}|
+	if (~OBJ(#3, #2) &  SUBJ(#3, #1) & ~SUBJ(#3, #2))
+	OBJ(#3, #2).
+
+// (ex: 'Het leger zei toen dat de stammen alleen in actie waren gekomen tegen Oezbeekse militanten |omdat deze hadden geprobeerd |een lokale stamleider| te doden|.')
+|SC{conj[subord], NP{pron#1};NP{?*, noun#1;noun#1[proper]},?*, VC{verb[aux], verb}, ?*, NP{?*, noun#2;noun#2[proper]}, ?*, VC[inf_te]{ptcl, verb#3}, ?*}|
+	if (~OBJ(#3, #2) & ~OBJ(#3, #5) & SUBJ(#3, #1) & ~SUBJ(#3, #2))
+	OBJ(#3, #2).
+
+// If there is no NP after the rel pron or propername which is on its turn after the demonstrative pronoun in the 
+// beginning of a subclause it is highly likely that the demonstrative pronoun is the object! Hard to check...
+// (ex: 'O’Grady poogde de waarde van zijn zege te vergelijken met het olympisch goud dat hij veroverde in Athene.')
+|TOP{?*, SC{ NP{pron#1[rel]}, NP{pron#2[pers]}, verb#3, ?*}}|
+	if(SUBJ(#3, #2) & ~OBJ(#3, #1) & VMAIN(#3))
+	OBJ(#3, #1).
+
+// (ex: ' ... dat je |Parijs-Roubaix| eerst moet verliezen om ...')
+|SC{ NP{pron[rel]}, NP{pron#1[pers]};NP{?*, noun#1[last]}, NP{?*, noun#2[last]}, ?*, VC{?*, verb#3}}|
+	if (VMAIN(#3) & ~SUBJ(#4, #1) & ~OBJ(#5, #2))
+	SUBJ(#3, #1), OBJ(#3, #2)
+
+|SC{?*, NP{?*, noun#1}, ?*, NP{?*, noun#2[country:~, guessed:~]}, ?*, verb#3}, punct[comma], verb|
+	if (SUBJ(#3, #1) & ~OBJ(#3, #2))
+	OBJ(#3, #2).
+
+// SOV
+// (ex: 'De raad van bestuur van de Wereldbank liet vrijdag weten |dat Wolfowitz nooit |toestemming| heeft gekregen| 
+//       voor de forse loonsverhoging die hij op eigen houtje zou hebben geregeld.')
+//|SC[inf_te:~]{ conj, adv*, NP, ?*,NP{(det), (adj;adv)*, noun#1[nobj:~]}, ?*, verb#2 ; VC{?*, verb#2, ?*}, ?*}|
+//	if(VMAIN(#2) & ~OBJ(#3, #4) & ~VOBJ(#2, #1))
+//	OBJ(#2, #1).
+
+// (ex: 'De bewindsman, die volgende week de voorjaarsvergadering van de Wereldbank bijwoont, wil precies weten 
+//       wat er is gebeurd voordat hij conclusies trekt.')
+|TOP{?*, PP{prep, NP{?*, noun;verb}};NP{?*, noun;verb}, (punct[comma]),  SC{NP{pron#1}, ?*[sc:~, comma:~], NP{?*, noun#2[nobj:~]}, ?*[sc:~, comma:~], verb#3}}|
+	if (~SUBJ(#3, #1) & ~OBJ(#3, #2) & ~VOBJ(#3, #4))
+	SUBJ(#3, #1), OBJ(#3, #2).
+
+//################ INF_TE ###########
+
+// (ex: 'om buitenlandse strijders  aan te pakken')
+|SC[inf_te]{conj, NP{?*, noun#1},?*[np:~], VC{?*, verb#2}}|
+	OBJ(#2, #1).
+
+// (ex: 'eten voor de daklozen te bieden')
+|SC[inf_te]{NP{?*, noun#1},?*[np:~], VC{?*, verb#2}}|
+	if(~OBJ(#3, #4))
+	OBJ(#2, #1).
+
+// (ex: 'stammen |militaire steun| te bieden')
+|SC[inf_te]{NP{?*, noun#1},?* , NP{?*, noun#2}, VC{?*, verb#3}}|
+	OBJ(#3, #2).
+
+//################ END INF_TE section ###########
+
+
+//####################### PREDICATIVEs (PRED) ###################
+// Note: predicative adjectives never change form.
+
+//|NP{(det;quant), (adj;adv)*, pron#1;noun#1}, ?*, verb#3[pred], ~adv[lemma:niet], adj#2* ; adv#2; quant#2 ; NP{(det;quant), (adj;adv)*, noun#2}|
+//	if(~AUXIL(#3, #4))
+//	PRED(#1, #2).
+
+// (ex: 'O’Grady was toen al 13.')
+// (ex: 'O’Grady was toen al 13e.')
+|TOP{?*, NP{(det;quant), (adj;adv)*, pron#1;noun#1};NP{noun[proper]}, verb#2[pred], adv*, num#3}|
+	if (~PRED(#4, #5))
+	PRED(#1, #3)
+
+// (ex: 'Het was de eerste keer dat hij de beelden van kasseien en met modder besmeurde renners zag.')
+|?*, verb#1[pred], NP{?*, noun#4}|
+	if ( VMAIN(#1) & SUBJ(#3, #2) &  #2 < #1 & ~PRED(#2, #4))
+	PRED(#2, #4).
+
+// (ex: 'De man was opeens compleet gestoord.')
+|?*, verb#1[pred], ?*[conj:~], adv*, adj#2|
+	if ( VMAIN(#1) & SUBJ(#3, #4) &  #4 < #1 & ~PRED(#5, #6))
+	PRED(#4, #2).
+
+// (ex: 'Soms is die boodschap over de hoofden van de aangesprokenen bedoeld voor een groter publiek, 
+//       maar ook |dat| is vaak |overbodig|. ')
+|?*, verb#1[pred], ?*, adv, adv#2[deriv_adj]|
+	if ( VMAIN(#1) & SUBJ(#3, #4) &  #4 < #1 & ~PRED(#5, #6))
+	PRED(#4, #2).
+		
+// (ex: 'Dat is niet mogelijk met democratische middelen.')	
+|TOP{?*[sc:~, comma:~], verb#1[pred], ?*[comma:~], adv#2[DERIV_ADJ], ?*}|
+	if ( VMAIN(#3) & SUBJ(#3, #4) &  #4 < #1 & ~PRED(#5, #6) & ~NEGAT(#7, #2))
+	PRED(#4, #2).
+
+//####################### PREDICATIVEs (PRED) @ SC LEVEL ###################
+
+// (ex: 'Hoe de betoging plotseling gewelddadig werd, is niet duidelijk.')
+// (ex: 'Ze vonden dat president Bush niet erg gezellig was.')
+// Since 'niet is also an adverb I exclude it from being used in the rule
+// using this not very frequently used HMM_PTKNEG feature.
+// AS@28/09/2010 :replace "HMM_" marker
+//|SC{?*, NP{?*, noun#1}, ?*, (adv[HMM_PTKNEG:~]), adv#2[DERIV_ADJ, HMM_PTKNEG:~], ?*, verb[pred]}|
+|SC{?*, NP{?*, noun#1}, ?*, (adv[not:~]), adv#2[DERIV_ADJ, not:~], ?*, verb[pred]}|
+	if(~PRED(#3, #4))
+	PRED(#1, #2).
+
+// Postprocessing of OBJ
+if ( ^SUBJ(#1,#2) & MODAL(#3,#1) & AUXIL(#4,#3) )
+	SUBJ(#4,#2).
+
+if ( ^OBJ(#1,#2) & MODAL(#3,#1) & AUXIL(#4,#3) )
+	OBJ(#4,#2).
+
+// The auxiliary should not be the mainverb.
+if ( ^SUBJ(#1,#2) & AUXIL(#3,#1) )
+	SUBJ(#3,#2).
+
+// The modal should not be the mainverb.
+if ( ^SUBJ(#1,#2) & MODAL(#3,#1) )
+	SUBJ(#3,#2).
+
+// Postprocessing of OBJ
+// The auxiliary should not be the mainverb.
+if ( ^OBJ(#1,#2) & AUXIL(#3,#1) )
+	OBJ(#3,#2).
+
+// The modal should not be the mainverb.
+if ( ^OBJ(#1,#2) & MODAL(#3,#1) )
+	OBJ(#3,#2).
+
+// If 
+if (^SUBJ(#1, #2) & VOBJ(#1,#3)) 
+	SUBJ(#3,#2).

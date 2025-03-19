@@ -1,0 +1,570 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	dependencies.xip
+//! Content:	dependency rules for the german XIP grammar (without HMM)
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller, Sigrid Maurel
+//!
+//! Created: 	17-Jan-2006
+//! Updated:	06-Sep-2006
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+// noun rules
+
+// modifier of the noun
+| ap{?*, adja#1}, #2[noun,last] |
+	NMOD(#2, #1).
+
+| ap{?*, adja#1[last]}, (punct[comma]), ap{?*, adja#3[last]}, #2[noun,last] |
+	if ( #1[case]:#2[case] & #1[number]:#2[number] & #3[case]:#2[case] & #3[number]:#2[number] ) 
+	NMOD(#2, #1).
+
+| num#1[first], #2[noun, last] |
+	NMOD(#2, #1).
+
+| np{?*, #1[last]}, pp{prep[lemma:von], np[nom:+]{?*,  #2[last]}} |
+	NMOD(#1, #2).
+
+// another modifier of the noun
+| ap{?*, adja#1[last]}, ?*[np:~; subord:~], (punct[comma]; conj[coord]), np{?*, ap, #2[last]} |
+	if ( #1[case]:#2[case] & #1[number]:#2[number] ) 
+	NMOD(#2, #1).
+
+// 8.9. "der Grüne Hans-Christian Ströbele", "der Fußballer Michael Ballack"
+| np{?*, #2[last]}, np[human]{?*, #1[last]} |
+	NMOD(#2, #1).
+
+
+
+// modifier of the next noun, perhaps not really a modifier
+| np#3{?*, ap{?*, adja#1}, noun#5}, ?*[verb:~], punct[comma]; conj[coord], np#4{?*[det:~], #2[last]} |
+	if ( #3[number]:#4[number] & #3[case]:#4[case] & NMOD(#5, #1) )
+	NMOD2(#2, #1).
+
+// another modifier of the next noun, perhaps not really a modifier
+| ap{?*, adja#1[last]}, ?*, (punct[comma]; conj[coord]), np{?*, ap{?*, adja#2[last]}, noun}, ?*[verb:~], punct[comma]; conj[coord], np{?*[det:~], #3[last]} |
+	if ( #1[number]:#3[number] & #1[case]:#3[case] )
+	NMOD2(#3, #1).
+
+// coordinated nouns
+| np{?*, #1[last]}, (pp; adv)*, conj[coord:+, subord:~], np{?*, #2[last, rel:~]} |
+	if ( #1[case]:#2[case] )
+	COORDITEMS(#1, #2).
+
+| np{?*, #1[last]}, punct[comma]; conj[coord:+, subord:~], np{?*, #3[last, rel:~]}, conj[coord:+, subord:~], np{?*, #2[last, rel:~]} |
+	if ( #1[case]:#3[case] & COORDITEMS(#3, #2) )
+	COORDITEMS(#1, #2).
+
+// im Spanischen nur zwischen Konjunktion und Nomen (punct#2[comma];)
+| np{?*,#1[last]}, (pp; adv)*, conj#2[coord:+, subord:~], np{?*,#3[last, rel:~]} |
+	if ( COORDITEMS(#1, #3) )
+	COORD(#2, #1), COORD(#2, #3).
+
+// possessive noun "das Auto seines Vaters"
+| np{?*,#1[last]}, np[gen:+]{det[poss:+], #2[last]} |
+	POSS(#1,#2) .
+
+
+// adjectiv rules
+
+// modifier of the adjectiv
+| adv#1, adja#2[last] |
+	ADJMOD(#2, #1).
+
+| adjp#1, adja#2[last] |
+	if ( #1[pred:+] )
+	ADJMOD(#2, #1).
+
+if ( NMOD(#2, #1) & ^NMOD(#2, #3) & ADJMOD(#1, #3) ) ~ .
+
+// "die auf dem Tisch stehende Lampe"
+| pp{?*, np{?*, #1[last]}}, np{ap{?*, adja#2[last]}, ?*} |		//, conv_verb:+
+	ADJMOD(#2, #1).
+
+// "die Äpfel essenden Kinder"
+| np{?*, #1[last]}, np{ap{?*, adja#2[last]}, ?*} |			//, conv_verb:+
+	ADJMOD(#2, #1).
+
+
+
+// coordinated adjectives
+| ap{?*, #1[adj], punct[comma]; conj[coord:+, subord:~], ?*, #2[adj]} |
+	if ( #1[case]:#2[case] & #1[number]:#2[number] )
+	COORDITEMS-A(#1, #2).
+
+| #1[adj], punct[comma]; conj[coord:+, subord:~], #2[adj] |
+	if ( #1[case]:#2[case] & #1[number]:#2[number] & ~COORDITEMS-A(#1, #2) )
+	COORDITEMS-A(#1, #2).
+
+
+// preposition rules
+
+// coordinated pps
+| pp{prep#1, np{?*, #2[last]}}, ?*, conj[coord], pp{prep#3, np{?*, #4[last]}} |
+	if ( #1[lemma]::#3[lemma] & #2[case]:#4[case] )
+	COORDITEMS-P(#2, #4).
+
+| pp{prep#1, np{?*, #2[last]}}, (pp), conj[coord], np{?*, #4[last]} |
+	if ( #2[case]:#4[case] & #2[number]:#4[number] )
+	COORDITEMS-P(#2, #4).
+
+if ( COORDITEMS$1(#1, #3) & COORDITEMS-P(#2, #3) & COORD$2(#4, #1) & COORD$3(#4, #3) )
+	~$1, ~$2, ~$3 .
+
+
+
+// verb rules
+
+//
+// | vfin{verb#1[modal:~, aux:~, v1]},?*[finite:~,subord:~], ?#2[pref] | 
+//      if (conc=#2[lemma]+#1[lemma] & #1[lemma=conc] )
+//	vmain(#1).
+//
+
+| vfin{verb#1[modal:~, aux:~]} | 
+	vmain(#1).
+
+// auxiliary verbs
+// sentence clause:
+| vfin{verb#1[aux]}, ?*[verb:~, finite:~, aux:~, punct:~, subord:~], verb#2[verb, finite:~] |
+	vmain(#2), AUXIL(#1, #2).
+
+// subclause:
+| verb#2[verb, finite:~], vfin{verb#1[aux]} |
+	vmain(#2), AUXIL(#1, #2).
+
+// past participles
+| vfin{verb#1[aux_ppast, lemma:~werden]}, ?*[finite:~, subord:~, punct:~], #2[verb, finite:~, ppast:+, inf:~] |
+	VPAST(#2).
+
+// passive
+| vfin{verb#1[aux, lemma:werden]}, ?*[finite:~, subord:~, punct:~], #2[verb, finite:~, ppast:+] |
+	VPASSIVE(#2).
+
+// modal verbs
+| vfin{verb#1[modal]}, ?*[finite:~, subord:~, punct:~], #2[verb, inf:+, finite:~] |
+	vmain(#2), MODAL(#1, #2).
+
+// modifier of the verb
+| vfin{verb#1[modal:~, aux:~]}, (adv), adjp#2 |
+	VMOD(#1, #2).
+
+| vfin{verb#1[modal:~, aux:~]}, (adv), ptcl#2[!neg:!], adjp#3 |
+	VMOD(#1, #2, #3).		// VMOD(#1, #3).
+
+| vfin{verb#1[modal:~, aux:~]}, adv#2, ?[adj:~] |
+	VMOD(#1, #2).
+
+| adv#2, vfin{verb#1[modal:~, aux:~]} |
+	VMOD(#1, #2).
+
+| vfin{verb#1[modal:~, aux:~]}, (np[nom]; pp; adv), pp{prep[novmod:~], ?*, np{?*, #2[last]}} |
+	VMOD(#1, #2).
+
+// negated verb
+| vfin{verb#1}, ?*[punct:~, verb:~], (verb[ppast]), ptcl#2[neg:+] |
+	NEGAT(#1).		//NEGAT(#1, #2).
+
+// reflexiv verbs
+// sich
+| vfin{?*,#1[last, aux:~, modal:~]}, np#2{pron[refl:+]} |	// "er beeilt sich"
+	REFLEX(#1, #2).
+
+| vfin{?*,#1[last]}, np#2{pron[refl:+]}, verb#4 |		// "er hatte sich beeilt"
+	REFLEX(#4, #2).
+
+| vfin{?*,#1[last]}, np#3[nom], np#2{pron[refl:+]}, verb#4 |	// "musste er sich beeilen"
+	if ( #1[number]:#3[number] )
+	REFLEX(#4, #2).
+
+// mich, dich, uns, euch
+| np{?*,#1[last]}, vfin{?*,#2[last, aux:~, modal:~]}, np#3{pron[acc:+]}; np#3{pron[dat:+]} |	// "ich beeile mich"
+	if ( #1[number]:#3[number] & #2[number]:#3[number] & #1[gender]::#3[gender] )
+	REFLEX(#2, #3).
+
+| np{?*,#1[last]}, vfin{?*,#2[last]}, np#3{pron[acc:+]}; np#3{pron[dat:+]}, verb#4 |		// "ich hatte mich beeilt"
+	if ( #1[number]:#3[number] & #2[number]:#3[number] & #1[gender]::#3[gender] )
+	REFLEX(#4, #3).
+
+| vfin{?*,#1[last]}, np#3[nom], np#2{pron[acc:+, quant:~]}; np#2{pron[dat:+, quant:~]}, verb#4 |		// "musste ich mich beeilen"
+	if ( #1[number]:#3[number] )
+	REFLEX(#4, #2).
+
+// coordinated verbs (punct[comma];)
+| vfin{?*,#1[last]}, ?*[verb:~, punct:~], conj[coord:+, subord:~], ?*[verb:~, punct:~], vfin{?*,#2[last]} |
+	if ( #1[number]:#2[number] )		//& #1[person]:#2[person]
+	COORDITEMS-SC(#1, #2).
+
+// modifier of a second verb (punct[comma];)
+| vfin{verb#1[modal:~, aux:~]}, conj[coord], vfin{?*,#2[last]}, (adv), adjp#3 |
+	if ( COORDITEMS-SC(#1, #2) )
+	VMOD2(#1, #3).
+
+// verb with prefix
+| vfin{verb#1[modal:~, aux:~, v1]}, ?*[verb:~, punct:~], ?#2[pref, adv:~] | 
+	VPREF(#1, #2).
+
+// predicates
+// auch negierte Prädikate?	//(ptcl#[neg:+])
+| np{?*, #1[last]}, vfin{verb[pred:+]}, (adv; adja;adjp)*, np{?*, #2[last]}; #2[adj, pred:+], punct; ?[coord] |
+	PRED(#1, #2).
+
+| np{?*, #1[last]}, vfin, np{?*, #2[last]}, #3[adj] |
+	PRED(#2, #3).
+
+
+// determiner rules
+
+| det#1[first, !def:!, !dem:!, !neg:!, !poss:!, !quant:!, !wh:!], ?*, noun#2[last]; np{?*, #2[last]} |
+	if ( #1[agr]:#2[agr] ) 
+	DETERM(#2, #1).
+
+| num#1[first, !num:!], ?*[det:~, noun:~, np:~], noun#2[last]; np{?*[det:~], #2[last]} |
+	DETERM(#2, #1).
+
+
+
+// Rules for genetive (possessive) modifier "Vaters Freunde", "meines Vaters Auto"
+// more bad resultats than good ones -> commented
+//| np[gen:+]{?*, #1[last, gen:+]}, np[nom]{?*, #2[last, pers:~]} |
+//	MOD-GEN(#2,#1) .
+
+
+
+// subject
+// Rules for SUBJ :
+// Prädikate als Subjekte ausschließen?	& ~PRED(#1, #20)
+//| np#3[nom, rel:~]{?*, #1[last]}, (np[gen]; num), ((adj), adv; pp)*, vfin{?*, #2[last, v2:~]} |
+//| np#3[nom, rel:~]{?*, #1[last]}, ?*[verb:~, punct:~, coord:~], vfin{?*, #2[last]} |		//, v2:~	WARUM?
+// "Der niedersächsische Ministerpräsident Christian Wulff (CDU) warnte, Kritik in einem "solchen Stil" sollte unterbleiben."
+// "Zeit ist nur noch bis Freitag: Dann steht die Abstimmung über die Föderalismusreform im Bundestag an - dort ist eine Zweidrittelmehrheit erforderlich."
+// 17.8. "Der Chef des Deutschen Gewerkschaftsbundes, SOMMER, hat die Manager des Allianz-Konzerns heftig attackiert."	-> + '(punct[comma], np{noun[proper]}, punct[comma])'
+| np#3[nom, rel:~]{?*, #1[last]}, ?*[verb:~, comma:~, quote:~, colon:~, subord:~, coord:~], (punct[comma], np{noun[proper]}, punct[comma]), vfin{?*, #2[last]} |		// punct -> subord, Klammern haben punct-feature, lemma:~-
+	if ( #2[number]:#3[number] & ~MOD-GEN(#10, #1) )
+	SUBJ(#2, #1) .
+
+// Human subject:
+| np#3{?*, #1[last, lastname:+, proper:+]}, vfin{?*, #2[last]} |
+	if ( ~SUBJ(#2, #1) & #2[person]:#3[person] & #2[sg] )
+	SUBJ(#2, #1) .
+
+// Numerical subject:
+| num#1, ?*[verb:~, punct:~],  vfin{?*, #2[last]} |
+	if ( #2[number]:#1[number] )
+	SUBJ(#2, #1) .
+
+// Subjekt eines Relativsatzes
+// "Der Mann, der eine Zigarette raucht, spaziert im Park."
+| punct[comma:+], np#4[!rel:+, nom], ?*[punct:~], vfin{?*, #2[last]} |
+	if ( #2[number]:#4[number] & #2[person]:#4[person] )
+	SUBJ(#2, #4).
+
+// "(wenn) es Frühling wird" -> wird später in SUBJ[bg=+] umbenannt
+// 11.8. "Das haben WIR Konsumenten seit den neunziger Jahren lernen müssen." -> kein NS, kein SUBJ_BG, 2x SUBJ(wir) -> PB!
+| conj, np{pron#4[pers:+, nom]}, np#3[nom]{?*, #1[last]}, (pp; adv; np[gen])*, vfin{?*,#2[last]} |
+	if ( ^SUBJ(#2, #1) & #2[number]:#4[number] )	// & ~SUBJ(#2, #4) ???
+	SUBJ(#2, #4).			// directly: SUBJ[bg=+](#2, #4) ???
+
+// Fragesätze
+// "Denkst du ... ?"
+| vfin[start:+]{?*, #2[last]}, (np{pron[refl]}), np#3[nom]{?*, #1[last]}, ?*, punct[end, quest:+] |
+	if ( #2[number]:#3[number] ) 
+	SUBJ(#2,#1) .
+
+// "Mit den Taschentüchern winkend, verabschiedeten sich die Eltern"
+| punct[comma:+], (adv), vfin{?*,#2[last]}, np{pron[refl]}, np#3[nom:+]{?*, #1[last, pers:~]} | 
+	if ( #2[number]:#3[number] ) 
+	SUBJ(#2,#1) .
+
+// unpersönliches Subjekt
+// "es regnet"
+if ( ^SUBJ(#2, #1) & #2[!imperso:!] & #1[pron, p3, neut] )
+	SUBJ(#2, #1).
+
+
+// Sätze, die mit einer Konjunktion anfangen, sind Nebensätze
+| conj#3[subord:+, start]; adv#3[wh:+, start], np[nom]{?*, #4[last]}, ?*[punct:~], vfin{?*, #5[last]} |
+	if ( ^SUBJ(#5, #4) )
+	SUBJ[bg=+](#5, #4) .
+
+| conj#3[subord:+, start]; adv#3[wh:+, start], np[nom]{?*, #4[last]}, ?*[punct:~], vfin{?*, #5[last]} |
+	if ( ~SUBJ[bg:+](#5, #4) & #5[number]:#4[number] )
+	SUBJ[bg=+](#5, #4) .
+
+// Sätze, die mit einem Verb anfangen, werden als Nebensätze markiert, siehe nächste Regel
+// "Kommt er morgen, können wir alles besprechen."
+// 10.8. "In diese mißliche Lage geraten vermutlich/ADJ Klippenmöwen, " -> + ';adj'
+// 10.8. "Eine abschließende Entscheidung haben SICH die Partei- und Fraktionschefs der Koalition vorbehalten." -> + '; np{pron[refl]}'
+// 11.8. "Sie fressen Erbsensuppe und BRAUCHEN keine Antibiotika."
+// 16.8. "Nach viertaegiger Debatte votierten PP[in namentlicher Abstimmung] 409 Abgeordnete fuer den Etat und 149 dagegen." -> + '; pp'
+| vfin[start:~]{?*, #2[last]}, (adv; ?[adj]; np{pron[refl]}; pp)*, np#3[nom]{?*, #1[last]} | 
+	if ( #2[number]:#1[number] & ~SUBJ(#2, #5) & ~COORDITEMS-SC(#4, #2) ) 
+	SUBJ(#2, #1) .
+
+| vfin[start:+]{?*, #2[last]}, np#3[nom]{?*, #1[last]}, ?*, punct[end, quest:~] |
+	if ( #2[number]:#3[number] ) 
+	SUBJ[bg=+](#2,#1) .
+
+// "Auf welchem Bahnsteig der Zug fahre, wollte er wissen."
+| pp#1[start, wh:+], np{?*, #2[last]}, vfin{?*, #3[last]}, punct[comma:+] |
+	if ( ^SUBJ(#3, #2) )
+	SUBJ[bg=+](#3, #2) .
+
+// "Wir gehen baden, sollte die Sonne scheinen."
+| ?[pron:~], vfin{?*, #2[last]}, np#3[nom]{?*,#1[last]} | 
+	if ( ^SUBJ(#2,#1) & #2[modal:+] & SUBJ(#5, #4) & #5 < #2 )
+	SUBJ[bg=+](#2,#1).
+
+
+// several subjects
+// und + Pluralverb
+| np[nom]{?*, #1[last]}, (pp; adv)*, conj[coord], np[nom]{?*, #2[last]}, (pp; adv)*, vfin{?*, #3[last]} |
+	if ( COORDITEMS(#1, #2) & #3[pl:+, sg:~] & ^SUBJ(#3, #2) ) ~ .
+
+| np[nom]{?*, #1[last]}, (pp; adv)*, conj[coord], np[nom]{?*, #2[last]}, (pp; adv; np[gen])*, vfin{?*, #3[last]} |
+	if ( COORDITEMS(#1, #2) & #3[pl:+, sg:~] ) 
+	SUBJ(#3, #1), SUBJ(#3, #2), SUBJ[coord=+](#3, #1, #2).
+
+
+// oder/beziehungsweise + Singularverb
+| np[nom]{?*, #1[last]}, (pp; adv)*, (punct[comma]), conj[coord], np[nom]{?*, #2[last]}, (pp; adv)*, vfin{?*, #3[last]} |
+	if ( COORDITEMS(#1, #2) & #3[sg:+] & SUBJ(#2, #3) ) 
+	SUBJ(#3, #1).
+
+// subject of several verbs; (only with coordinational conjunction, otherwise too much subjects of subordinated clauses (punct[comma];))
+//| np[nom]{?*, #1[last]}, (pp;adv)*, vfin{?*, #2[last]}, conj[coord], vfin{?*,#3[last]} |
+	if ( SUBJ(#2,#1) & COORDITEMS-SC(#2,#3) & ~SUBJ(#3, #4) )
+	SUBJ(#3,#1).
+
+// several subjects of several verbs
+| np[nom]{?*, #1[last]}, (pp; adv)*, conj[coord], np[nom]{?*, #2[last]}, (pp; adv)*, vfin{?*,#3[last]}, ?*[verb:~], conj[coord], vfin{?*,#4[last]} |
+	if ( SUBJ(#3, #1) & SUBJ(#3, #2) & COORDITEMS-SC(#3, #4) ) //& #4[pl]
+	SUBJ(#4, #1), SUBJ[coord=+](#4, #1, #2).
+
+// negated subject
+| ptcl[!neg:!], np[nom]{?*, #1[last]}, ?*, vfin{?*, #2[last]} |
+	if ( ^SUBJ(#2, #1) )
+	SUBJ(#2, #1).
+
+// subject with subordinate-clause between verb and subject
+| np#1[nom]{?*, #2[last]}, (np[gen]), punct[comma:+], ?*[finite:~, punct:~], punct[comma:+], vfin{?*, #5[last]} |
+	if ( ~SUBJ(#3, #2) & ~SUBJ(#5, #4) & #1[number]:#5[number] ) 
+	SUBJ(#5, #2).
+
+| np#1[nom]{?*, #2[last]}, punct[comma:+], ?*[finite:~, punct:~], punct[comma:+], vfin{?*,#5[last]}, conj[coord], vfin{?*,#6[last]}  |
+	if ( SUBJ(#5, #2) & COORDITEMS-SC(#5, #6) )
+	SUBJ(#6, #2).
+
+| np[nom]{?*, #1[last]}, (pp; adv)*, conj[coord], np[nom]{?*, #2[last]}, punct[comma:+], ?*[finite:~, punct:~], punct[comma:+], vfin{?*,#5[last]}  |
+	if ( SUBJ(#5, #2) & COORDITEMS(#1, #2) )
+	SUBJ(#5, #1).
+
+| np[nom]{?*, #1[last]}, (pp; adv)*, conj[coord], np[nom]{?*, #2[last]}, punct[comma:+], ?*[finite:~, punct:~], punct[comma:+], vfin{?*,#5[last]}, conj[coord], vfin{?*,#6[last]}  |
+	if ( SUBJ(#5, #1) & SUBJ(#5, #2) & COORDITEMS-SC(#5, #6) )
+	SUBJ(#6, #1).
+
+
+// deletion of second "subject" if there is yet one before it, otherwise also to much objects
+// hypothese: it is more probably to have the subject before the verb, even if a subject after the verb is syntactically possible
+// a sentence like "die Eltern sehen die Kinder" is always ambig, but at a first look the first np (die Eltern) is detected as subject
+// a sentence like "die Äpfel essen die Kinder" is syntactically ambig, but only semantics tell us, that the first np (die Äpfel) cannot be the subject
+
+if ( SUBJ(#3, #1) & ^SUBJ(#3, #2) & #1<#2 & ~COORDITEMS(#1, #2) ) ~.
+
+
+// objects
+// Rules for OBJ_DAT :
+| np#3[dat:+]{?*,#1[last]}; np#3{pron#1[refl:+]}, (pp;adv)*, vfin{?*,#2[last]}, np{?*,#10[last]} |
+	if ( SUBJ(#2, #10) )
+	OBJ[dat=+](#2, #1) .		//OBJ_DAT(#2, #1) .
+
+| np{?*,#10[last]}, (pp;adv)*, vfin{?*, #2[last]}, ?*[subord:~, punct:~, verb:~], np#3[dat:+]{?*,#1[last]}; np#3{pron#1[refl:+]} |
+	if ( SUBJ(#2, #10) & ~PRED(#10, #1) & ~SUBJ(#5, #1) )
+	OBJ[dat=+, acc=~](#2, #1) .		//OBJ_DAT(#2,#1).
+
+| np{?*,#10[last]}, (pp;adv)*, vfin{?*, #2[last]}, ?*[subord:~, punct:~, verb:~], np#3[dat:+]{?*,#1[last]}; np#3{pron#1[refl:+]}, ?*[subord:~], verb#5 |
+	if ( SUBJ(#5, #10) & AUXIL(#2,#5) )
+	OBJ[dat=+](#5, #1) .		//OBJ_DAT(#5,#1).
+
+
+// Rules for OBJ_ACC :
+| np#3[acc:+]{?*, #1[last]}, (pp;adv)*, vfin{?*, #2[last]}, np{?*, #10[last]} |
+	if ( SUBJ(#2, #10) )
+	OBJ[acc=+](#2, #1) .		//OBJ_ACC(#2, #1) .
+
+| np{?*, #10[last]}, (pp; adv; np[gen:+])*, vfin{?*, #2[last]}, ?*[subord:~, punct:~, verb:~], np#3[acc:+]{?*, #1[last]} |
+	if ( SUBJ(#2, #10) & ~PRED(#10, #1) & ~SUBJ(#5, #1) & #2[lemma:~sein] )
+	OBJ[acc=+](#2, #1) .		//OBJ_ACC(#2,#1) .
+
+| np{?*, #10[last]}, (pp;adv)*, vfin{?*, #2[last]}, ?*[subord:~, punct:~, verb:~], np#3[acc:+]{?*, #1[last]}, ?*[subord:~], verb#5 |
+	if ( SUBJ(#5, #10)  & AUXIL(#2,#5) )
+	OBJ[acc=+](#5, #1) .		//OBJ_ACC(#5,#1) .
+
+// "den Eltern geben die Kinder die Bücher"
+| np#1[dat:+]{?*, #2[last]},(pp;adv)*, vfin{?*, #3[last]}, np[nom]{?*, #4[last]}, np#5[acc:+]{?*, #6[last]} |
+	if ( SUBJ(#3, #4) & OBJ[dat:+](#3, #2) )
+	OBJ[acc=+](#3, #6) .		//OBJ_ACC(#3, #6) .
+
+// "Indem Oma zum Essen kommt, beglückt sie uns alle."
+// "Am 11. April 1945 befreiten die Amerikaner das Lager." -> punct oder PP am Satzanfang
+| punct[comma:+]; pp[start], vfin{?*, #2[last]}, np#3[nom]{?*, #1[last]}, np#5[acc:+]{?*, #4[last]} |
+	if ( SUBJ(#2, #1) )
+	OBJ[acc=+](#2, #4) .		//OBJ_ACC(#2, #4) .
+
+
+
+// Rules for OBJ_GEN : "er verkauft das Auto meines Vaters" -> OBJ_GEN(^=verkaufen,Vater)
+// oder nur "echte" Gen-objekte ("wir gedenken der Verlierer" -> OBJ_GEN(gedenken,Verlierer)), also wo das Verb einen Gen verlangt? dazu bräuchte Verb aber evtl ein Gen-feature
+| np#3[gen:+]{?*,#1[last]}, (pp;adv)*, vfin{?*,#2[last]}, np{?*,#10[last]} |
+	if ( SUBJ(#2, #10) )
+	OBJ[gen=+](#2, #1) .		//OBJ_GEN(#2, #1) .
+
+| np{?*,#10[last]}, (pp;adv)*, vfin{?*,#2[last]}, ?*[subord:~, punct:~], np#3[gen:+]{?*, #1[last]} |
+	if ( SUBJ(#2, #10) & ~PRED(#10, #1) & ~SUBJ(#5, #1) )
+	OBJ[gen=+](#2, #1) .		//OBJ_GEN(#2,#1) .
+
+
+// wenn Hilfsverbkonstruktion vorhanden, wird Subjekt/Objekt mit dem Vollverb angezeigt, und nicht mit dem flektierten Hilfsverb
+// "es würde regnen"
+if ( ^SUBJ(#3, #1) & AUXIL(#3, #2) & #2[!imperso:!] & #1[pron, p3, neut] )
+	SUBJ(#2, #1).
+
+if ( ^SUBJ(#2,#1) & AUXIL(#2, #4) )
+	SUBJ(#4,#1) .
+
+if ( ^OBJ[dat:+](#2,#1) & AUXIL(#2, #4) )
+	OBJ[dat=+](#4, #1).
+
+if ( ^OBJ[acc:+](#2,#1) & AUXIL(#2, #4) )
+	OBJ[acc=+](#4, #1) .
+
+if ( ^OBJ[gen:+](#2,#1) & AUXIL(#2, #4) )
+	OBJ[gen=+](#4, #1) .
+
+
+
+
+// Rules for OBJ_SENT : bg{(conj; adv), }
+| np[nom]{?*, #1[last]}, ?*[finite:~], vfin{?*, #2[last]}; verb#2[ppast:+], ?*[verb:~, finite:~, subord:~], (punct[comma:+]), adv#3[wh:+]; np#3[rel:+]; conj#3[subord:+, coord:~]; conj#3[infzu:+] |
+	if ( SUBJ(#2, #1) )
+	OBJ[sent=+](#2, #3) .		//OBJ_SENT(#2, #3) .
+
+| vfin{?*,#2[last]}, np[nom]{?*, #1[last]}, (pp; adv)*, ?*[verb:~, finite:~], (punct[comma:+]), conj#3[subord:+]; adv#3[wh:+] |
+	if ( SUBJ(#2, #1) )
+	OBJ[sent=+](#2, #3) .		//OBJ_SENT(#2, #3) .
+
+
+
+
+// Rules for the subject of a subordinated clause		// (bg{(conj; adv), }
+
+| (punct[comma:+]), conj#3[subord:+, coord:~]; adv#3[wh:+], np[nom]{?*, #4[last]}, (?[adj]; adv; pp)*, (np), vfin{?*, #5[last]} |
+	if ( SUBJ(#2, #1) & ^SUBJ(#5, #4) )
+	SUBJ[bg=+](#5, #4) .
+
+| (punct[comma:+]), ?[coord:~], np[nom, start:~]{?*, #4[last]}, (pp;adv)*, (np[acc]), vfin{?*, #5[last, subjc]} |
+	if ( SUBJ(#2, #1) & ^SUBJ(#5, #4) & #5[number]:#4[number] & ~COORDITEMS(#1, #4) & #1<#4 )
+	SUBJ[bg=+](#5, #4) .
+
+// 16.8. #5: subjc->nursubjc
+| (punct[comma:+]), np[nom, start:~]{?*, #4[last]}, (pp;adv)*, (np[acc]), vfin{?*, #5[last, nursubjc]}, ?*[finite:~], verb#6 |
+	if ( SUBJ(#2, #1) & ^SUBJ(#6, #4) & #5[number]:#4[number] )
+	SUBJ[bg=+](#6, #4) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last, nursubjc]}, ?*[finite:~], (punct[comma:+]), vfin{?*,#5[last]}, np[nom]{?*,#4[last]} |
+	if ( ^SUBJ(#2, #1) & SUBJ(#5, #4) )
+	SUBJ[bg=+](#2, #1) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last, nursubjc]}, ?*[finite:~], verb#6, (punct[comma:+]), vfin{?*,#5[last]}, np[nom]{?*,#4[last]} |
+	if ( ^SUBJ(#6, #1) & SUBJ(#5, #4) )
+	SUBJ[bg=+](#6, #1) .
+
+| vfin{?*, #2[last]}, np[nom]{?*,#1[last]}, ?*[finite:~], (punct[comma:+]), conj#3[subord:+]; adv#3[wh:+], np[nom]{?*,#4[last]}, ?*[finite:~], vfin{?*, #5[last]} |
+	if ( SUBJ(#2, #1) & OBJ[sent:+](#2, #3) & ^SUBJ(#5, #4) )
+	SUBJ[bg=+](#5, #4) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last]}, ?*[finite:~], (punct[comma:+]), conj#3[subord:+]; np#3[rel:+]; adv#3[wh:+], (np), np[nom]{?*,#4[last]}, (pp;adv)*, vfin{?*,#5[last]} |
+	if ( SUBJ(#2, #1) & OBJ[sent:+](#2, #3) & ^SUBJ(#5, #4) )
+	SUBJ[bg=+](#5, #4) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last]}, ?*[finite:~], verb#6, (punct[comma:+]), conj#3[subord:+]; np#3[rel:+]; adv#3[wh:+], (np), np[nom]{?*,#4[last]}, (pp;adv)*, vfin{?*,#5[last]} |
+	if ( SUBJ(#6, #1) & OBJ[sent:+](#6, #3) & ^SUBJ(#5, #4) )
+	SUBJ[bg=+](#5, #4) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last]}, ?*[finite:~], (punct[comma:+]), conj#3[subord:+]; adv#3[wh:+], vfin{?*, #5[last, subjc:+]}, np[nom]{?*, #4[last]} |
+	if ( SUBJ(#2, #1) & ^SUBJ(#5, #4) & OBJ[sent:+](#2, #3) )
+	SUBJ[bg=+](#5, #4) .
+
+| np[nom]{?*, #1[last]}, vfin{?*, #2[last]}, ?*[finite:~], (punct[comma:+]), conj#3[subord:+]; adv#3[wh:+], vfin{?*, #5[last, subjc:+]}, np[nom]{?*, #4[last]}, (pp;adv)*, verb#6 |
+	if ( SUBJ(#2, #1) & ^SUBJ(#6, #4) & OBJ[sent:+](#2, #3) )
+	SUBJ[bg=+](#6, #4) .
+
+
+if ( ^SUBJ[bg:+](#2,#1) & AUXIL(#2, #4) )
+	SUBJ[bg=+](#4,#1) .
+
+// passive Subject
+if ( ^SUBJ(#2, #1) & VPASSIVE(#2) )
+	SUBJ[pass=+](#2, #1) .
+
+
+
+// if no subject available
+// nominative NP will be the theme
+
+// "22.06.2006"
+| np#1{noun[date:+]} |
+	if ( mother(#1, #2) & #2[cat:0] &  ~VMAIN(#4) )		// test if np is directly under TOP
+	THEMA(#1).
+
+// "Ohne Fett kein Lernerfolg ."
+
+| np#1[nom:+]{?*, #2[last]} |
+	if ( mother(#1, #5) & #5[cat:0] & ~THEMA(#1) &  ~VMAIN(#4) & ~SUBJ(#3, #2) & ~OBJ(#3, #2) )	// & ~THEMA(#6)??
+	THEMA(#1).
+
+
+// "Wegen massiven Widerstands in der SPD-Fraktion IST es allerdings fraglich, ob die notwendige Zwei-Drittel-Mehrheit im Parlament erreicht werden kann."
+// "Aber wenn es schon keine schnelle Lösung geben KANN, warum dann nicht gleich eine richtige?"
+if ( ^THEMA(#1) & SUBJ(#2, #3) & (#2[aux, finite] | #2[modal, finite]) ) ~ .
+
+
+
+
+
+/
+// subclauses
+
+// mit einleitender Konjunktion
+| punct[comma:+], bg{(conj; adv), conj#1[subord:+]}, ?*[finite:~, punct:~], vfin{?*, #2[last]} |
+	CONNECT(#2, #1).		//wenn punct in Klammern, werden Sätzte, die mit einer konj anfangen 2x etikettiert, wenn punct nicht in Klammern, werden Sätze nicht etikettiert, bei denen vor der Konjunktion kein Komma steht
+
+| bg{conj#1[subord:+, start:+]}, ?*[finite:~, punct:~], vfin{?*,#2[last]} |
+	CONNECT(#2, #1).
+
+// erweiterter Infinitiv
+| bg{(conj; adv), conj#1[infzu:+]}, ?*[finite:~, punct:~], infzu{?*,#2[last]} |
+	CONNECT[infzu=+](#2, #1).
+
+// Relativsätze
+| bg{np#1[rel:+]}, ?*[finite:~, punct:~], #2[verb] |
+	CONNECT[rel=+](#2, #1).
+
+// Frageadverbien
+| bg{adv#1[wh:+]}, ?*[finite:~, punct:~], vfin{?*,#2[last]} |
+	CONNECT[wh=+](#2, #1).
+
+| bg{np#1[wh:+, pron:+]}, ?*[finite:~, punct:~], vfin{?*,#2[last]} |
+	CONNECT[wh=+](#2, #1).
+
+// Präposition mit Relativ- oder Interrogativpronomen
+| bg{pp[rel:+]{prep#1[first]}}, ?*[finite:~, punct:~], vfin{?*,#2[last]} |
+	CONNECT(#2, #1).
+\

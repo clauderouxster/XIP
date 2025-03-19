@@ -1,0 +1,71 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2008 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : localgramEntitLast.xip
+//!
+//!   Content:	definition of higher level local grammar rules for
+//!   		combining named entities
+//!
+//!   Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//!   Date       : Sept 2008
+//!
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// After all basic local grams compounds NE and corrections
+
+
+Sequence:
+
+// Presidente de ORG
+// Presidente del Gobierno;de la Republica
+5> noun[mwe=+,human=+] @= noun[surface:"Presidente"], prep[lemma:de], (art), noun[mwe:+,org:+] .
+
+// taking away some person names (huracán Gustav)
+10> ? @= | ?[lemma:"huracán"] | noun[firstname=~,human=~] .
+
+// grouping together elements marked as NE by contextual rules
+10> noun[mwe=+,human=+] @= ?[start_human:+], ?*[maj:+], ?[end_human:+] .
+
+// concatenation of location units
+10> noun[mwe=+,location=+] @= ?[start_loc:+], ?*, ?[end_loc:+] .
+
+// concatenation of org units
+10> noun[mwe=+,org=+] @= ?[maj,start_org], (prep;art;?[maj,end_org])*, ?[maj,end_org] .
+
+
+// concatenation Hijos/Hermanos con nombre de empresa
+// Hijos de X Y (y) Z SL
+10> noun[mwe=+,company=+] @=  ?[relative,maj], prep[lemma:de], noun[mwe,org].
+
+
+// guessed named followed by lastanme gives person name
+10> noun[mwe=+,prop=+,human=+] @= ?[src:guess,maj], ?[lastname] | ?[maj:~] | .
+
+// grouping together sequences of guessed capital tokens
+// eg. Mirta Petrocini
+10> noun[mwe=+,prop=+,src=guess] @= | ?[maj:~] | ?[src=guess,maj:+,toutmaj:~], ?+[src:guess,maj:+,toutmaj:~] .
+10> noun[mwe=+,prop=+,src=guess] @= | | ?[src=guess,maj:+,toutmaj:~], ?+[src:guess,maj:+,toutmaj:~] .
+
+
+
+/// typing guessed untyped proper nouns using context (grouped and not grouped)
+20> ? = noun[prop:+,src:guess,human=+] | punct[comma], ?[surface:quien] | .
+
+
+
+// coordination of locations
+20> ? = | noun[prop,location], punct[comma] | noun[prop,src:guess,location=+] | punct[comma], noun[prop,location] | .
+
+
+
+// join together sequencies of guessed nouns in upper case
+20> noun[prop=+,maj=+,mwe=+] @= noun[maj:+,toutmaj:+,src:guess], ?*[noun,maj,toutmaj,src:guess], noun[maj:+,toutmaj:~,src:guess] .

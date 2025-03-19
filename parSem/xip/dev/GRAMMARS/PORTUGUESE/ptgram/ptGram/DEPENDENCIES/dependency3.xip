@@ -1,0 +1,3671 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency3.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Supported on the Jorge Baptista Ph.D Dissertation                        !
+//!                                                                            !
+//!   Dependencies handled in this file:   PREPD                               !
+//!                                        VLINK                               !
+//!                                        VHEAD                               !
+//!                                        VDOMAIN                             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Variables: //(used only for debuging)
+
+string DepSubsVerb;    //in which you declare a string variable
+string DepSubsDet;     //in which you declare a string variable
+string DepSubsFD;      //in which you declare a string variable
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// VLINK DEPENDENCY (between the verbs belonging to a verbal chain)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/02/18 (added the possibility to have a NP between the two verbs)
+//NJM+JB, 2011701/20 (added the possibility to have a PP between the two verbs)
+// Example: começou a acordar
+//
+| VMOD#1;VTEMP#1;VASP#1;SC{?*,VMOD#1};SC{?*,VTEMP#1};SC{?*,VASP#1},
+  (NP{PRON};NP{noun[surface:se]}), (NP{PRON};NP{noun[surface:se]}), (ADVP;PP;NP)*,
+  #2[verb]
+|
+ if ( HEAD(#3,#1) & HEAD(#4,#2) )
+   VLINK(#3,#4)
+
+//NJM+JB, 2011/02/18 (added the possibility to have a NP between the two verbs)
+//NJM+JB, 2011/01/20 (added the possibility to have a PP between the two verbs)
+//NJM+JB, 2010/12/30
+// Example: começou a, lentamente, acordar
+//
+| VMOD#1;VTEMP#1;VASP#1;SC{?*,VMOD#1};SC{?*,VTEMP#1};SC{?*,VASP#1},
+  (NP{PRON};NP{noun[surface:se]}),(NP{PRON};NP{noun[surface:se]}),
+  PUNCT[comma], (ADVP;PP;NP)*, PUNCT[comma],
+  #2[verb]
+|
+ if ( HEAD(#3,#1) & HEAD(#4,#2) )
+   VLINK(#3,#4)
+
+//NJM+JB, 2011701/20 (added the possibility to have a PP between the two verbs)
+// Example: está convencido
+//
+| VCOP#1;SC{?*,VCOP#1},
+  (NP{PRON};NP{noun[surface:se]}),(NP{PRON};NP{noun[surface:se]}), (ADVP;PP;NP)*,
+  VCPART#2
+|
+ if ( HEAD(#3,#1) & HEAD(#4,#2) )
+   VLINK(#3,#4)
+
+//NJM+JB, 2011701/20 (added the possibility to have a PP between the two verbs)
+//NJM+JB, 2010/12/30
+// Example: está, certamente, convencido
+//
+| VCOP#1;SC{?*,VCOP#1},
+  (NP{PRON};NP{noun[surface:se]}),(NP{PRON};NP{noun[surface:se]}), (ADVP;PP;NP)*,
+  PUNCT[comma], (ADVP;PP;NP)*, PUNCT[comma], (ADVP;PP;NP)*,
+  VCPART#2
+|
+ if ( HEAD(#3,#1) & HEAD(#4,#2) )
+   VLINK(#3,#4)
+
+
+//NJM+JB, 2009/03/27 (they seem not to be necessary)
+//
+//| VPP#1, (NP{PRON};NP{noun[surface:se]}), ADVP*, VINF#2;VGER#2;VCOP#2 |
+// if ( HEAD(#3,#1) & HEAD(#4,#2) )
+//   VLINK(#3,#4)
+//
+//| VINF#1;VGER#1;SC{?*,VINF#1};SC{?*,VGER#1}, (NP{PRON};NP{noun[surface:se]}), ADVP*, VINF#2 |
+// if ( HEAD(#3,#1) & HEAD(#4,#2) )
+//   VLINK(#3,#4)
+
+//NJM+JB, 2011/01/18, 2011/03/15
+//Any AUXILIARY verb in gerund form can link to other verb (vinf or vcop) to form a chain
+//
+// Example: devendo os alunos ser oficialmente integrados  -> VLINK(devendo,ser)
+// Example: O Pedro foi-se pondo a ler                     ->   XXXXX NO VLINK IN THIS CASE
+//
+| VGER#1[verbalfeat];SC{?*,VGER#1[verbalfeat]}, (NP{PRON};NP{noun[surface:se]}), (NP);ADVP*;PP*, VINF#2;VCOP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) )
+   VLINK(#3,#4)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// VHEAD DEPENDENCY (beteween each verb and the last verb of a verbal chain
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Applies the transitive relation on VLINK, generating the VDOMAIN dependency
+//   first rule : assures it is the end of the chain and introduces a VHEAD
+//                (can be a singleton chain)
+//   second rule: iteratively creates to the right a new VHEAD
+//
+// Example: poderia ter de continuar -> VHEAD(continuar,continuar)
+//
+| #1[verb] |
+ if ( HEAD(#2,#1) & ~VLINK(#2, ?) )
+   VHEAD(#2,#2)
+
+
+// Example: poderia ter de continuar
+//            -> VHEAD(poderia,continuar)
+//            -> VHEAD(ter,continuar)
+//            -> VHEAD(continuar,continuar)
+//
+ if ( VHEAD(#1,#2) & VLINK(#3,#1) )
+   VHEAD(#3,#2)
+
+
+// Rules to copy "verbalfeat" features to the main verb of a verbal chain
+//
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[deont])      & HEAD(#2,#4) & #4[deont=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[obrig])      & HEAD(#2,#4) & #4[obrig=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[pass])       & HEAD(#2,#4) & #4[pass=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[futu])       & HEAD(#2,#4) & #4[futu=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[terminat])   & HEAD(#2,#4) & #4[terminat=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[durativo])   & HEAD(#2,#4) & #4[durativo=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[incoat])     & HEAD(#2,#4) & #4[incoat=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[frequentat]) & HEAD(#2,#4) & #4[frequentat=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[iterat])     & HEAD(#2,#4) & #4[iterat=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[imperfect])  & HEAD(#2,#4) & #4[imperfect=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[impessoal])  & HEAD(#2,#4) & #4[impessoal=+]) ~
+ if ( VHEAD(#1,#2) & HEAD(#1,#3[passive])    & HEAD(#2,#4) & #4[passive=+]) ~
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// VDOMAIN DEPENDENCY (beteween the first and the last verb of a verbal chain
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: poderia ter de continuar -> VDOMAIN(poderia,continuar)
+//
+ if ( VHEAD(#1,#2) & ~VLINK(?,#1) & ~VDOMAIN(#1,#2) )
+  VDOMAIN(#1,#2)
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PREPD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: os restantes chefes de amanhã -> PREPD(amanhã,de)
+// Example: os chefes dos grupos          -> PREPD(grupos,de)
+//
+| PP#1{prep#2,?*,#3} |
+ if ( HEAD(#3,#1) )
+   PREPD(#3,#2)
+
+// Example: para alimentar            -> PREPD(alimentar,para)
+// Example: para poder ter alimentado -> PREPD(alimentar,para)
+//
+| prep#1, ?{verb#2}, ?*, VINF{verb#4} |
+ if ( VDOMAIN(#2,#4) & ~PREPD(?,#1) )
+   PREPD(#4,#1)
+
+//NJM+JB, 2011/03/30
+// PREPD between a preposition and the head of the NP that is determined by
+// the relative pronoun "cujo"
+//
+// Example: O lugar de cuja coisa tinha ardido -> PREPD(coisa,de)
+//
+| prep#1, SC{?[lemma:cujo], ?*[noun:~], #2[noun]} |
+ if ( HEAD(#3,#2) & ~PREPD(?,#1) )
+   PREPD(#3,#1)
+
+// PREPD between a preposition and a WH- pronoun
+//
+// Example: A rapariga a quem ligou                       -> PREPD(quem,a)
+// Example: O Pedro queixou-se de que tinha de fazer isso -> PREPD(que,de)
+// Example: A laranja da qual o Pedro fez sumo era doce   -> PREPD(qual,de)
+//
+| prep#1, SC{#2[first,qu];#2[first,surface:qual]} |
+ if ( ~PREPD(?,#1) )
+   PREPD(#2,#1)
+
+
+
+// Distributing dependencies related with coord
+//
+// Examples : Entre o coração e a memória vive a saudade. -> PREPD(memoria,entre)
+if ( COORD(#1,#2) & COORD(#1,#3[pp_not_np]) & PREPD(#2,#4) & #2 < #3 & ~PREPD(#3,#4) )
+   PREPD(#3,#4).
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Rules to compute a modification when an adverb is found near a verb
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/01/17
+// The adverb is after de SC and before another verb
+//
+// Example: depois de ingerir copiosamente este líquido, você fez isso -> MOD(ingerir,copiosamente)
+//
+| sc#3, advp#1{adv}, ?*[verb:~,scfeat:~,coord:~,sub:~], ?[verb] |
+ if ( HEAD(#2,#3) & HEAD(#4,#1) & VDOMAIN(#2,#5) & ~MOD(?,#4) )
+   MOD[post=+](#5,#4)
+
+//NJM+JB, 2011/01/17
+// Example: Depois de ter começado a ingerir copiosamente o líquido, o Pedro fez isso -> MOD(ingerir,copiosamente)
+//
+| #3[verb], advp#1{adv}, ?*[verb:~,scfeat:~,coord:~,sub:~], ?[verb] |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#3) & HEAD(#4,#1) & ~MOD(?,#4) )
+   MOD[post=+](#2,#4)
+
+
+
+
+
+//NJM+JB, 2010/12/22 (new restrictions on the non-verb tokens)
+// The adverb is before the verb
+//
+// Example: não continua a compreender -> MOD(compreender,não)
+//
+| advp#1{adv}, ?*[verb:~,scfeat:~,coord:~,sub:~], #3[verb] |
+ if ( VDOMAIN(#2,#5) & HEAD(#2,#3) & HEAD(#4,#1) & ~MOD(?,#4) )
+   MOD[pre=+](#5,#4)
+
+//NJM+JB, 2011/01/21 (simplified, since we are not building the verbal node)
+// The adverb is inside the begining of verb chunk
+//
+// Example: pode ter  eventualmente  de comer -> MOD(comer,eventualmente)
+// Example: pode ter, eventualmente, de comer -> MOD(comer,eventualmente)
+// Example: temos já de resolver o problema   -> MOD(resolver,já)
+//
+| #1[verb]{verb#2, ?*, adv#3} |
+ if ( VDOMAIN(#2,#4) & HEAD(#2,#1) & ~MOD(?,#3) )
+   MOD[pre=+](#4,#3)
+
+//NJM+JB, 2011/01/21 (simplified, since we are not building the verbal node)
+// The adverb is inside the middle of verb chunk
+//
+// Example: teve de ir, eventualmente, a nadar -> MOD(nadar,eventualmente)
+//
+| #1[verb]{verb#2, ?*, adv#3}  |
+ if ( VHEAD(#2,#4) & HEAD(#2,#1) & ~MOD(?,#3) )
+   MOD[pre=+](#4,#3)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PREDSUBJ DEPENDENCY (between the verb that supports a predicative noun
+//                      and that noun)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+//========================================================
+//========================================================
+// VSUP = SER DE
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: O Zé é [de alimento]PP [muito grande]PP -> PREDSUBJ(é,alimento)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#3{prep[lemma:de],?*,noun#4<Sserde,detE>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC [de alimento]PP [muito grande]PP -> PREDSUBJ(sido,alimento)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#3{prep[lemma:de],?*,noun#4<Sserde,detE>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+](#2,#4)
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: O Zé é [de falta]PP    [de categoria]PP [muito grande]PP -> PREDSUBJ(é,categoria) MOD[neg](categoria,falta)
+// Example: O Zé é [de ausência]PP [de categoria]PP [muito grande]PP -> PREDSUBJ(é,categoria) MOD[neg](categoria,ausência)
+// Example: O Zé é [de excesso]PP  [de categoria]PP [muito grande]PP -> PREDSUBJ(é,categoria) MOD[pos](categoria,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:de],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+,faltade=+](#2,#4), 
+   MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:de],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+,faltade=+](#2,#4), 
+   MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem sido]SC [de falta]PP    [de categoria]PP [muito grande]PP -> PREDSUBJ(sido,categoria) MOD[neg](categoria,falta)
+// Example: O Zé [que tem sido]SC [de ausência]PP [de categoria]PP [muito grande]PP -> PREDSUBJ(sido,categoria) MOD[neg](categoria,ausência)
+// Example: O Zé [que tem sido]SC [de excesso]PP  [de categoria]PP [muito grande]PP -> PREDSUBJ(sido,categoria) MOD[pos](categoria,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:de],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+,faltade=+](#2,#4), 
+   MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:de],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detE=+,faltade=+](#2,#4), 
+   MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: O Zé é de uma coragem.
+// Example: O Zé é de uma grande coragem.
+// Example: O Zé é de uma coragem grande.
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#3{prep[lemma:de],art[lemma:"um"],?*,noun#4<Sserde,detumm>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC de uma coragem.
+// Example: O Zé [que tem sido]SC de uma grande coragem.
+// Example: O Zé [que tem sido]SC de uma coragem grande.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#3{prep[lemma:de],art[lemma:"um"],?*,noun#4<Sserde,detumm>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: O Zé é [de uma falta]PP    [de coragem]PP [muito grande]PP -> PREDSUBJ[](é,coragem) MOD[neg](coragem,falta)
+// Example: O Zé é [de uma ausência]PP [de coragem]PP [muito grande]PP -> PREDSUBJ[](é,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé é [de um excesso]PP   [de coragem]PP [muito grande]PP -> PREDSUBJ[](é,coragem) MOD[pos](coragem,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:de],art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detumm,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+,faltade=+](#2,#4), 
+   MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:de],art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detumm,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+,faltade=+](#2,#4), 
+   MOD[pos=+](#4,#6)
+
+// Example: O Zé [que tem sido]SC [de uma falta]PP    [de coragem]PP -> PREDSUBJ[](é,coragem) MOD[neg](coragem,falta)
+// Example: O Zé [que tem sido]SC [de uma ausência]PP [de coragem]PP -> PREDSUBJ[](é,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé [que tem sido]SC [de um excesso]PP   [de coragem]PP -> PREDSUBJ[](é,coragem) MOD[pos](coragem,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:de],art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detumm,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:de],art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detumm,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: O Zé é [da confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#3{prep[lemma:do],?*,noun#4<Sserde,detdef>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC [da confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#3{prep[lemma:do],?*,noun#4<Sserde,detdef>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: O Zé é [da falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,falta)
+// Example: O Zé é [da ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé é [do excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:do],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detdef,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), PP#5{prep[lemma:do],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detdef,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem sido]SC [da falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: O Zé [que tem sido]SC [da ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé [que tem sido]SC [do excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:do],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detdef,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), PP#5{prep[lemma:do],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sserde,detdef,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sserde=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = TER
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: O Zé tem [muitos caprichos]NP -> PREDSUBJ[](tem,caprichos)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Ster,detE>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [caprichos]NP -> PREDSUBJ(tido,caprichos)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Ster,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+](#2,#4)
+
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [falta]NP    [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé tem [ausência]NP [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé tem [excesso]NP  [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[pos](caprichos,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [falta]NP [de muita caprichos]PP   -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé [que tem tido]SC [ausência]NP [de caprichos]PP      -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé [que tem tido]SC [muito excesso]NP [de caprichos]PP -> PREDSUBJ(tido,caprichos) MOD[pos](caprichos,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detE,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: O Zé tem [uma abertura]NP           -> PREDSUBJ[](tem,organização)
+// Example: O Zé tem [uma grande abertura]NP    -> PREDSUBJ[](tem,organização)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Ster,detumm>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC de uma abertura.
+// Example: O Zé [que tem sido]SC de uma grande abertura.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Ster,detumm>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [uma falta]NP    [de coragem]PP        -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,falta)
+// Example: O Zé tem [uma ausência]NP [de grande coragem]PP -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé tem [um grande excesso]NP [de coragem]PP   -> PREDSUBJ[](tem,coragem) MOD[pos](coragem,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Ster,detumm,faltade>} |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Ster,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+// Example: O Zé [que tem tido]SC [uma falta]NP    [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,falta)
+// Example: O Zé [que tem tido]SC [uma ausência]NP [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé [que tem tido]SC [um excesso]NP   [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[pos](coragem,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: O Zé tem [o agrado]PP [da Ana]PP -> PREDSUBJ[](tem,agrado)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#3{?[def],?*,noun#4<Ster,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [o agrado]PP [da Ana]PP -> PREDSUBJ[](tido,agrado)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#3{?[def],?*,noun#4<Ster,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,falta)
+// Example: O Zé tem [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé tem [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: O Zé [que tem tido]SC [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé [que tem tido]SC [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Ster,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Ster=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = HAVER
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: Há [muita tradição]NP -> PREDSUBJ[](haver,tradição)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Shaver,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+](#2,#4)
+
+// Example: Desde ontem [que tem havido]SC [tradição]NP -> PREDSUBJ(havido,tradição)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Shaver,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+](#2,#4)
+
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: Há [falta]NP    [de tradição]PP -> PREDSUBJ[](tem,tradição) MOD[neg](tradição,falta)
+// Example: Há [ausência]NP [de tradição]PP -> PREDSUBJ[](tem,tradição) MOD[neg](tradição,ausência)
+// Example: Há [excesso]NP  [de tradição]PP -> PREDSUBJ[](tem,tradição) MOD[pos](tradição,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: Desde ontem [que tem havido]SC [falta]NP [de muita confiança]PP   -> PREDSUBJ(havido,tradição) MOD[neg](confiança,falta)
+// Example: Desde ontem [que tem havido]SC [ausência]NP [de confiança]PP      -> PREDSUBJ(havido,tradição) MOD[neg](confiança,ausência)
+// Example: Desde ontem [que tem havido]SC [muito excesso]NP [de confiança]PP -> PREDSUBJ(havido,tradição) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: Há [um estilo]NP           -> PREDSUBJ[](haver,estilo)
+// Example: Há [um grande estilo]NP    -> PREDSUBJ[](haver,estilo)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Shaver,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+](#2,#4)
+
+// Example: Desde ontem [que tem havido]SC um estilo.
+// Example: Desde ontem [que tem havido]SC um grande estilo.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Shaver,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: Há [uma falta]NP    [de estilo]PP        -> PREDSUBJ[](haver,estilo) MOD[neg](estilo,falta)
+// Example: Há [uma ausência]NP [de grande estilo]PP -> PREDSUBJ[](haver,estilo) MOD[neg](estilo,ausência)
+// Example: Há [um grande excesso]NP [de estilo]PP   -> PREDSUBJ[](haver,estilo) MOD[pos](estilo,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Shaver,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Shaver,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+// Example: Desde ontem [que tem havido]SC [uma falta]NP    [de estilo]PP -> PREDSUBJ[](havido,estilo) MOD[neg](estilo,falta)
+// Example: Desde ontem [que tem havido]SC [uma ausência]NP [de estilo]PP -> PREDSUBJ[](havido,estilo) MOD[neg](estilo,ausência)
+// Example: Desde ontem [que tem havido]SC [um excesso]NP   [de estilo]PP -> PREDSUBJ[](havido,estilo) MOD[pos](estilo,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: Há [a habilidade]PP [da Ana]PP -> PREDSUBJ[](haver,habilidade)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#3{?[def],?*,noun#4<Shaver,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+](#2,#4)
+
+// Example: Desde ontem [que tem havido]SC [a habilidade]PP [da Ana]PP -> PREDSUBJ[](havido,habilidade)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#3{?[def],?*,noun#4<Shaver,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: Há [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](haver,confiança) MOD[neg](confiança,falta)
+// Example: Há [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](haver,confiança) MOD[neg](confiança,ausência)
+// Example: Há [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](haver,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: Desde ontem [que tem havido]SC [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: Desde ontem [que tem havido]SC [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: Desde ontem [que tem havido]SC [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Shaver,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Shaver=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = FAZER
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: O Zé tem [muitos caprichos]NP -> PREDSUBJ[](tem,caprichos)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sfazer,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [caprichos]NP -> PREDSUBJ(tido,caprichos)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sfazer,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+](#2,#4)
+
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [falta]NP    [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé tem [ausência]NP [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé tem [excesso]NP  [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[pos](caprichos,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [falta]NP [de muita caprichos]PP   -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé [que tem tido]SC [ausência]NP [de caprichos]PP      -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé [que tem tido]SC [muito excesso]NP [de caprichos]PP -> PREDSUBJ(tido,caprichos) MOD[pos](caprichos,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: O Zé tem [uma abertura]NP           -> PREDSUBJ[](tem,organização)
+// Example: O Zé tem [uma grande abertura]NP    -> PREDSUBJ[](tem,organização)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sfazer,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC de uma abertura.
+// Example: O Zé [que tem sido]SC de uma grande abertura.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sfazer,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [uma falta]NP    [de coragem]PP        -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,falta)
+// Example: O Zé tem [uma ausência]NP [de grande coragem]PP -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé tem [um grande excesso]NP [de coragem]PP   -> PREDSUBJ[](tem,coragem) MOD[pos](coragem,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sfazer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sfazer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+// Example: O Zé [que tem tido]SC [uma falta]NP    [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,falta)
+// Example: O Zé [que tem tido]SC [uma ausência]NP [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé [que tem tido]SC [um excesso]NP   [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[pos](coragem,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: O Zé tem [o agrado]PP [da Ana]PP -> PREDSUBJ[](tem,agrado)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#3{?[def],?*,noun#4<Sfazer,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [o agrado]PP [da Ana]PP -> PREDSUBJ[](tido,agrado)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#3{?[def],?*,noun#4<Sfazer,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,falta)
+// Example: O Zé tem [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé tem [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: O Zé [que tem tido]SC [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé [que tem tido]SC [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"fazer"];PASTPART#2[lemma:"fazer"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sfazer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sfazer=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = DAR
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: O Zé tem [muitos caprichos]NP -> PREDSUBJ[](tem,caprichos)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sdar,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [caprichos]NP -> PREDSUBJ(tido,caprichos)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sdar,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+](#2,#4)
+
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [falta]NP    [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé tem [ausência]NP [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé tem [excesso]NP  [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[pos](caprichos,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [falta]NP [de muita caprichos]PP   -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé [que tem tido]SC [ausência]NP [de caprichos]PP      -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé [que tem tido]SC [muito excesso]NP [de caprichos]PP -> PREDSUBJ(tido,caprichos) MOD[pos](caprichos,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: O Zé tem [uma abertura]NP           -> PREDSUBJ[](tem,organização)
+// Example: O Zé tem [uma grande abertura]NP    -> PREDSUBJ[](tem,organização)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sdar,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC de uma abertura.
+// Example: O Zé [que tem sido]SC de uma grande abertura.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sdar,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [uma falta]NP    [de coragem]PP        -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,falta)
+// Example: O Zé tem [uma ausência]NP [de grande coragem]PP -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé tem [um grande excesso]NP [de coragem]PP   -> PREDSUBJ[](tem,coragem) MOD[pos](coragem,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sdar,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sdar,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+// Example: O Zé [que tem tido]SC [uma falta]NP    [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,falta)
+// Example: O Zé [que tem tido]SC [uma ausência]NP [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé [que tem tido]SC [um excesso]NP   [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[pos](coragem,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: O Zé tem [o agrado]PP [da Ana]PP -> PREDSUBJ[](tem,agrado)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#3{?[def],?*,noun#4<Sdar,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [o agrado]PP [da Ana]PP -> PREDSUBJ[](tido,agrado)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#3{?[def],?*,noun#4<Sdar,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,falta)
+// Example: O Zé tem [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé tem [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: O Zé [que tem tido]SC [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé [que tem tido]SC [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"dar"];PASTPART#2[lemma:"dar"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sdar,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sdar=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = EXERCER
+//========================================================
+//========================================================
+
+// Determinante = <E>
+//
+// Example: O Zé tem [muitos caprichos]NP -> PREDSUBJ[](tem,caprichos)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sexercer,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [caprichos]NP -> PREDSUBJ(tido,caprichos)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<Sexercer,detE>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+](#2,#4)
+
+
+// Determinante = <E> with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [falta]NP    [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé tem [ausência]NP [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé tem [excesso]NP  [de caprichos]PP -> PREDSUBJ[](tem,caprichos) MOD[pos](caprichos,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [falta]NP [de muita caprichos]PP   -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,falta)
+// Example: O Zé [que tem tido]SC [ausência]NP [de caprichos]PP      -> PREDSUBJ(tido,caprichos) MOD[neg](caprichos,ausência)
+// Example: O Zé [que tem tido]SC [muito excesso]NP [de caprichos]PP -> PREDSUBJ(tido,caprichos) MOD[pos](caprichos,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{?*[art:~],noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detE,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detE=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Determinante = UM + MODIF
+//
+// Example: O Zé tem [uma abertura]NP           -> PREDSUBJ[](tem,organização)
+// Example: O Zé tem [uma grande abertura]NP    -> PREDSUBJ[](tem,organização)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sexercer,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+](#2,#4)
+
+// Example: O Zé [que tem sido]SC de uma abertura.
+// Example: O Zé [que tem sido]SC de uma grande abertura.
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#3{art[lemma:"um"],?*,noun#4<Sexercer,detumm>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+](#2,#4)
+
+
+// Determinante = UM + MODIF with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [uma falta]NP    [de coragem]PP        -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,falta)
+// Example: O Zé tem [uma ausência]NP [de grande coragem]PP -> PREDSUBJ[](tem,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé tem [um grande excesso]NP [de coragem]PP   -> PREDSUBJ[](tem,coragem) MOD[pos](coragem,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sexercer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],art*[lemma:"um"],?*,noun#4<Sexercer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+// Example: O Zé [que tem tido]SC [uma falta]NP    [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,falta)
+// Example: O Zé [que tem tido]SC [uma ausência]NP [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[neg](coragem,ausência)
+// Example: O Zé [que tem tido]SC [um excesso]NP   [de coragem]PP -> PREDSUBJ[](tido,coragem) MOD[pos](coragem,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{art[lemma:"um"],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detumm,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detumm=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+// Determinante = ARTIGO_DEFINIDO
+//
+// Example: O Zé tem [o agrado]PP [da Ana]PP -> PREDSUBJ[](tem,agrado)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#3{?[def],?*,noun#4<Sexercer,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [o agrado]PP [da Ana]PP -> PREDSUBJ[](tido,agrado)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#3{?[def],?*,noun#4<Sexercer,detdef>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+](#2,#4)
+
+
+// Determinante = ARTIGO_DEFINIDO with negation "falta de" and similar expressions
+//
+// Example: O Zé tem [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,falta)
+// Example: O Zé tem [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé tem [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](é,confiança) MOD[pos](confiança,excesso)
+//
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| #1[vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+// Example: O Zé [que tem tido]SC [a falta]PP    [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,falta)
+// Example: O Zé [que tem tido]SC [a ausência]PP [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[neg](confiança,ausência)
+// Example: O Zé [que tem tido]SC [o excesso]PP  [de confiança]PP [da Ana]PP -> PREDSUBJ[](sido,confiança) MOD[pos](confiança,excesso)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:falta];noun[surface:ausência]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+,faltade=+](#2,#4), MOD[neg=+](#4,#6)
+
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"exercer"];PASTPART#2[lemma:"exercer"], ?-}}, (ADVP), NP#5{art[lemma:o],?*,noun[surface:excesso]}, PP#3{prep[lemma:de],?*,noun#4<Sexercer,detdef,faltade>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[Sexercer=+,detdef=+,faltade=+](#2,#4), MOD[pos=+](#4,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// NCLASS = pessoa
+// VSUP = ser (E + uma pessoa) de N w
+//========================================================
+//========================================================
+
+// Example: O Zé é uma pessoa de (uma) coragem extraordinária
+//     é[vsup]
+//     PREDSUBJ(é,pessoa), PREDSUBJ(é,coragem),
+//     SUBJ(pessoa,Zé), SUBJ(coragem,Zé)
+//     MOD(coragem,extraordinária)
+
+
+// Example: O Zé é [uma pessoa]NP [de (boa) musculatura]PP -> PREDSUBJ(é,confiança), PREDSUBJ(é,pessoa)
+//
+| #1[vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP),
+  NP#5{art*,?*,noun#6}, PP#3{prep[lemma:de],?*,noun#4[SerPessoa]} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[SerPessoa=+](#2,#4), PREDSUBJ[SerPessoa=+](#2,#6)
+
+// Example: O Zé [que tem sido]SC [uma pessoa]NP [de (grande) musculatura]PP -> PREDSUBJ(sido,confiança), PREDSUBJ(sido,pessoa)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), NP#5{art*,?*,noun#6}, PP#3{prep[lemma:de],?*,noun#4[SerPessoa]} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[SerPessoa=+](#2,#4), PREDSUBJ[SerPessoa=+](#2,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = haver N em N0
+//========================================================
+//========================================================
+
+// Type: Haver N [em NO]PP
+// Example: Há palidez na face da rapariga
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<ShaverNemN0>}, PP#5{prep[lemma:em];prep[lemma:no],?*,noun#6} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) & ~COMPL(#4,#6) )
+   PREDSUBJ[ShaverNemN0=+](#2,#4), COMPL(#4,#6)
+
+// Type: [em NO]PP Haver N
+// Example: na face da rapariga há palidez
+//
+| PP#5{prep[lemma:em];prep[lemma:no],?*,noun#6}, PP*, #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), NP#3{?*[art:~,first],?*,noun#4<ShaverNemN0>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) & ~COMPL(#4,#6) )
+   PREDSUBJ[ShaverNemN0=+](#2,#4), COMPL(#4,#6)
+
+
+// Type: Haver [em NO]PP N
+// Example: Há na face da rapariga palidez
+//
+| #1[vsup=+]{VERB#2[lemma:"haver"];PASTPART#2[lemma:"haver"], ?-}, (ADVP), PP#5{prep[lemma:em];prep[lemma:no],?*,noun#6}, PP*, NP#3{?*[art:~,first],?*,noun#4<ShaverNemN0>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) & ~COMPL(#4,#6) )
+   PREDSUBJ[ShaverNemN0=+](#2,#4), COMPL(#4,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = ser um N da parte de Nhum
+//========================================================
+//========================================================
+
+// Example: Foi (uma) burrice (da parte do Zé) ele ter feito isso
+//     PREDSUBJ(ser,burrice)
+//     COMPL(burrice,Zé)
+//     COMPL(burrice,ele ter feito isso) <------- não é calculado aqui
+//
+| #1{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), NP#3{art*,?*,noun#4<Sserumdpd>}, PP#5{prep{prep[lemma:do],noun[lemma:parte],prep},?*,noun#6} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) & ~COMPL(#4,#6) )
+   PREDSUBJ[Sserumdpd=+](#2,#4), COMPL[POS=+](#4,#6)
+
+| #1{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}, (ADVP), NP#3{art*,?*,noun#4<Sserumdpd>}, PP#5{prep{prep[lemma:do],noun[lemma:parte],prep},?*,noun#6} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & PREDSUBJ[Sserumdpd=+](#2,#4) & ~COMPL(#4,#6) )
+   COMPL[POS=+](#4,#6)
+
+| SC{?*,#1[last]{VERB#2[lemma:"ser"];PASTPART#2[lemma:"ser"], ?-}}, (ADVP), NP#3{art*,?*,noun#4<Sserumdpd>}, PP#5{prep{prep[lemma:do],noun[lemma:parte],prep},?*,noun#6} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & ~PREDSUBJ(#2,#4) & ~COMPL(#4,#6) )
+   PREDSUBJ[Sserumdpd=+](#2,#4), COMPL[POS=+](#4,#6)
+
+
+
+
+
+//========================================================
+//========================================================
+// VSUP = ter o N de Vinf w
+//========================================================
+//========================================================
+
+// Example: O Zé teve a coragem de fazer isso
+//     PREDSUBJ(ter,coragem)
+//     COMPL(coragem,fazer isso)
+//
+| #1[vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}, (ADVP), NP#3{?*[art,first],?*,noun#4<SterodeVinf>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[SterodeVinf=+](#2,#4)
+
+// Example: O Zé [que tem tido]SC [caprichos]NP -> PREDSUBJ(tido,caprichos)
+//
+| SC{?*,#1[last,vsup=+]{VERB#2[lemma:"ter"];PASTPART#2[lemma:"ter"], ?-}}, (ADVP), NP#3{?*[art,first],?*,noun#4<SterodeVinf>} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ[SterodeVinf=+](#2,#4)
+
+
+
+
+
+//      DepSubsDet=$1[pndet] + ";prepa_+" &
+//      print("DepSubsDet1="+DepSubsDet+"\n") &
+//      print("DepSubsDet2="+#2[pndet]+"\n") &
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// HANDLING COMPLEMENTS ON PREDICATIVE NOUNS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+//========================================================
+//========================================================
+// PREP = A (prepA)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"ao"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepA>)
+  PREDSUBJ[prep1A=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = COM (prepCOM)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"com"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepCOM>)
+  PREDSUBJ[prep1COM=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = DA PARTE DE (prepDPD)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepDPD>)
+  PREDSUBJ[prep1DPD=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = DE (prepDE)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"de"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepDE>)
+  PREDSUBJ[prep1DE=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = EM (prepEM)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"em"];prep[lemma:"no"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepEM>)
+  PREDSUBJ[prep1EM=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = ENTRE (prepENTRE)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"entre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepENTRE>)
+  PREDSUBJ[prep1ENTRE=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = EM RELAÇÃO A / RELATIVAMENTE A (prepERA)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#4{prep{?[lemma:"relativamente"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepERA>)
+  PREDSUBJ[prep1ERA=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = JUNTO DE (prepJD)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"junto"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepJD>)
+  PREDSUBJ[prep1JD=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = PARA (prepPARA)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"para"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepPARA>)
+  PREDSUBJ[prep1PARA=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = PARA COM (prepPC)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep{?[lemma:"para"],prep},?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepPC>)
+  PREDSUBJ[prep1PC=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = PERANTE (prepPERANTE)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"perante"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepPERANTE>)
+  PREDSUBJ[prep1PERANTE=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = POR (prepPOR)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"por"];prep[lemma:"pelo"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepPOR>)
+  PREDSUBJ[prep1POR=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+
+//========================================================
+//========================================================
+// PREP = SOBRE (prepSOBRE)
+//========================================================
+//========================================================
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserde,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserde,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserde,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserde,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserde,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Ster,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Ster,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Ster,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Ster,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Ster,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SterodeVinf,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SterodeVinf,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sserumdpd,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sserumdpd,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Shaver,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Shaver,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Shaver,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Shaver,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Shaver,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sfazer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sfazer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sfazer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sfazer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sfazer,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sdar,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sdar,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sdar,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sdar,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sdar,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sexercer,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sexercer,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sexercer,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[Sexercer,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<Sexercer,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[ShaverNemN0,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<ShaverNemN0,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detE](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detE,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detEm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detEm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detumm](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detumm,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+| #3, PP#4{prep[lemma:"sobre"],?*} |
+  if (^PREDSUBJ[SerPessoa,detdef](#1,#2) & HEAD(#2,#3) & HEAD(#5,#4) & #2<SerPessoa,detdef,prepSOBRE>)
+  PREDSUBJ[prep1SOBRE=+](#1,#2), COMPL(#2,#5)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// GENERAL RULES HANDLING COPULAS and NOUNS and COPULAS and ADJECTIVES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2010/11/19
+// Example: o problema é alguns dos seus alunos -> PREDSUBJ(é,alunos)
+//
+| #1{VERB#2[cop];PASTPART#2[cop], ?-}, (ADVP), NP#3, PP#5 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6,#5) & QUANTD(#6,#4) & ~PREDSUBJ(#2,#4) )
+   PREDSUBJ(#2,#6)
+
+//NJM+JB, 2011/01/19
+// Example: O Pedro disse que estava tudo perdido
+//
+| SC#1{?*,?{VERB#2[cop];PASTPART#2[cop]}}, (ADVP), NP#5, (ADVP), NP#3;AP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(#2,#7) & HEAD(#4,#3) & HEAD(#6[lemma:tudo],#5) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#7,#4),
+   SUBJ[pre=+](#7,#6)
+
+//NJM+JB, 2011/01/19
+// Example: estava tudo doente
+//
+| #1{VERB#2[cop];PASTPART#2[cop], ?-}, (ADVP), NP#5, (ADVP), NP#3;AP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6[lemma:tudo],#5) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4),
+   SUBJ[post=+](#2,#6)
+
+
+//NJM+JB, 2013/01/16
+// Example: estavam todos contentes -> PREDSUBJ(estavam,contentes)
+//                                    
+| #1{verb#2[cop];pastpart#2[cop], ?-}, (ADVP), NP#5, (ADVP), AP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & HEAD(#6[lemma:todo],#5) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4)
+
+
+
+// Example: O Zé é um rapaz
+// Example: O Zé continua inteligente
+// Example: O Zé fica cansado
+// Example: O Zé está confiante
+// Example: O Zé é lindo
+//
+// Example: O Zé que tinha sido um rapaz bonito
+// Example: O Zé que podia continuar inteligente
+// Example: O Zé que tinha de ficar cansado
+// Example: O Zé que podia estar confiante
+// Example: O Zé que já tinha sido lindo
+//
+| #1{?*, VERB#2[cop];PASTPART#2[cop], ?-}, (ADVP), NP#3;AP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4)
+
+// Example: O Zé é dos mais compridos
+//
+| #1{?*, VERB#2[cop];PASTPART#2[cop], ?-}, (ADVP), PP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & PREPD(#4,#5[lemma:de]) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4)
+
+// Example: O Zé que é um rapaz bonito    -> PREDSUBJ(ser,bonito)
+// Example: O Zé que continua inteligente -> PREDSUBJ(continua,inteligente)
+// Example: O Zé que fica cansado         -> PREDSUBJ(fica,cansado)
+// Example: O Zé que está confiante       -> PREDSUBJ(está,confiante)
+// Example: O Zé que é lindo              -> PREDSUBJ(é,lindo)
+//
+| SC{?*,#1{VERB#2[cop];PASTPART#2[cop]}}, (ADVP), NP#3;AP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4).
+
+// Example: O Zé que é dos mais lindos -> PREDSUBJ(é,lindo)
+//
+| SC{?*,#1{VERB#2[cop];PASTPART#2[cop]}}, (ADVP), PP#3 |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & PREPD(#4,#5[lemma:de]) & ~PREDSUBJ(#2,?) )
+   PREDSUBJ(#2,#4).
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// GENERAL RULES HANDLING COPULAS and PREPOSITIONS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2013/05/08
+// Example: O Pedro está ao pé do João -> PREDSUBJ(está,ao pé de)
+//                                     -> MOD(ao pé de,João)
+//
+| #1{VERB#2[cop];PASTPART#2[cop]}, (ADVP), PP#3{prep#5[preploc], ?-} |
+ if ( HEAD(#2,#1) & VDOMAIN(?,#2) & HEAD(#4,#3) & ~PREDSUBJ(#2,#5) & ~PREPD(?[SEM-unitype],#5[lemma:a]) )
+   PREDSUBJ(#2,#5),
+   MOD[post=+](#5,#4).
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  ADJECTIVES THAT ARE PREDICATIVE
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+// PREPOSITION: a (prepA)
+//
+// Example: O Zé é (muito) aberto a falar com os pais -> COMPL(aberto,falar)
+//
+| AP#1{?*,adj#2[prepA]}, PP#3{prep[lemma:"a"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1A=+](#2,#4)
+
+// PREPOSITION: com (prepCOM)
+//
+// Example: O Zé é (muito) esquisito com a comida -> COMPL(esquisito,comida)
+//
+| AP#1{?*,adj#2[prepCOM]}, PP#3{prep[lemma:"com"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1COM=+](#2,#4)
+
+// PREPOSITION: com (prepDPD)
+//
+// Example: ???
+//
+| AP#1{?*,adj#2[prepDPD]}, PP#3{prep{prep[lemma:"do"],noun[lemma:"parte"], prep},?*} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1DPD=+](#2,#4)
+
+
+// PREPOSITION: de (prepDE)
+//
+// Example: A fruta é agradável de paladar -> COMPL(agradável,paladar)
+//
+| AP#1{?*,adj#2[prepDE]}, PP#3{prep[lemma:"de"]};PP#5{prep[lemma:"do"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1DE=+](#2,#4)
+
+// PREPOSITION: com (prepEM)
+//
+// Example: A lei é aplicável em todo o país -> COMPL(aplicável,país)
+//
+| AP#1{?*,adj#2[prepEM]}, PP#3{prep[lemma:"em"]};PP#3{prep[lemma:"no"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1EM=+](#2,#4)
+
+// PREPOSITION: com (prepENTRE)
+//
+// Example: A lei é impopular entre os estudantes  -> COMPL(impopular,estudantes)
+//
+| AP#1{?*,adj#2[prepENTRE]}, PP#3{prep[lemma:"entre"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1ENTRE=+](#2,#4)
+
+// PREPOSITION: com (prepERA)
+//
+// Example: A Zé é autónoma em relação aos estudos -> COMPL(autónoma,estudos)
+//
+| AP#1{?*,adj#2[prepERA]}, PP#3{prep{?[lemma:"em"],?[lemma:"relação"],prep},?*};PP#3{prep{?[lemma:"relativamente"],prep},?*} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1ERA=+](#2,#4)
+
+// PREPOSITION: com (prepJD)
+//
+// Example: A Zé é impopular junto dos colegas -> COMPL(impopular,colegas)
+//
+| AP#1{?*,adj#2[prepJD]}, PP#3{prep{?[lemma:"junto"],prep},?*} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1JD=+](#2,#4)
+
+// PREPOSITION: com (prepPARA)
+//
+// Example: A selecção é importante para os trabalhadores -> COMPL(importante,trabalhadores)
+//
+| AP#1{?*,adj#2[prepPARA]}, PP#3{prep[lemma:"para"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1PARA=+](#2,#4)
+
+// PREPOSITION: com (prepPC)
+//
+// Example: O Zé é indelicado para com todos os professores -> COMPL(indelicado,professores)
+//
+| AP#1{?*,adj#2[prepPC]}, PP#3{prep{?[lemma:"para"],prep},?*} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1PC=+](#2,#4)
+
+// PREPOSITION: com (prepPERANTE)
+//
+// Example: Os alunos são muito fingidos perante os professores -> COMPL(fingidos,professores)
+//
+| AP#1{?*,adj#2[prepPERANTE]}, PP#3{prep[lemma:"perante"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1PERANTE=+](#2,#4)
+
+// PREPOSITION: com (prepPOR)
+//
+// Example: A batata é divisível por dois -> COMPL(divisível,dois)
+//
+| AP#1{?*,adj#2[prepPOR]}, PP#3{prep[lemma:"por"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1POR=+](#2,#4)
+
+// PREPOSITION: com (prepSOBRE)
+//
+// Example:
+//
+| AP#1{?*,adj#2[prepSOBRE]}, PP#3{prep[lemma:"sobre"]} |
+ if ( PREDSUBJ(?,#2) & HEAD(#4,#3) & ~COMPL(#2,#4) )
+   COMPL[prep1SOBRE=+](#2,#4)
+

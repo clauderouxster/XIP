@@ -1,0 +1,109 @@
+# ============================================================================
+# CONTENT:      (x)fst script for modifying morph. lexicon (for tagger)
+#
+# LANGUAGE:     PORTUGUESE
+# ENCODING:	UTF-8 [€àâáäã]
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      06-Aug-2001	AS: based on files by Caroline Hagege
+# UPDATED:	20-Apr-2005	AS: modified boundary symbols
+# UPDATED:	04-Aug-2006	AS: converted to UTF-8
+# ============================================================================
+# USAGE:        fst -utf8 -s <LexFST> -l [ThisFile]
+# ============================================================================
+
+# ----------------------------------------------------------------
+echo >>> tag name changes 
+substitute symbol 0 for %+Place 
+substitute symbol %+Country for %+Pay
+substitute symbol %+City for %+Cit
+substitute symbol %+Pers for %+P
+
+
+define LEX
+
+echo >>> remove some categories
+
+define CAT [
+	%+Punc		# redefined in spec-punct
+|	%+WordPart	# handled in multi words
+|	%+Item		# ignore (prefer segmentation in token + punctuation)
+|	%+Sit		# ignore this reading (keep only "+Adv")
+|	%+Prop		# redefined in lex-XXX.lexc files
+|	%+Title		# redefined in lex-names.lexc
+|	%+Prep		# redefined in lex-func.lexc
+|	%+Art		# redefined in lex-func.lexc
+|	%+Det		# redefined in lex-func.lexc
+|	%+Conj		# redefined in lex-func.lexc
+];
+
+define LEX	~$[CAT] .o. LEX ;
+
+
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+define SEP	SPC:" " ;
+# ----------------------------------------------------------------
+echo >>> removals
+regex 	[
+	# non clitical pronouns (redefined in lex-func.lexc)
+	~$[%+Verb] %+Pron ?*
+
+# ------------------------------------------------------------------------------
+# Removing nada as Present Indicative Verb (3P - sing) and Imperative (2P - sing) 
+# Removing the contractions Prep+o/a o/a being considered as Demonstratives
+# Removing the common noun "açor" (makes confusion with Açores (islands), 
+# don't know what it means and can't find it in the "Aurelio" 
+# Removing the form "aquela" "aquelas" "aqueles" and "aquele" 
+# from the verb "aquelar" 
+# Removing "um" and "uma" as cardinal, as the mapping states that Cardinals
+# will be mapped onto QUANT_P and we already have "um" as QUANT_S 
+# (mapping from %+Pron/%+Art %+Indef)
+# Removing "então" augmentative form of "ente" as NOUN (we only want the Adverb)
+# Removing the form "destes" considered as the verb dar, 2nd pers plural, 
+# which is not
+# used anymore in modern Portuguese
+# So we will avoid an useless ambiguity between PREPDEM and VERB
+# removing the acceptation PREP+um/a as PREPDET. PREPQUANT_S is enough 
+# and already exists
+
+# Suppression de XX et XY comme noms propres (combinaisons chromosomiques). 
+# XX cree de plus une classe d'ambiguites inutile avec DIG
+# On supprime les tags grama/NOUN, litro/NOUN etc. car si on les laisse, le
+# systeme va donner a "G" deux etiquettes, LETTER et NOUN ce qui n'est pas 
+# correct.
+# on les rajoutera , en minuscule seulement dans la section TagAdd
+
+| {nadar} %+Verb [ %+PresInd %+3P | %+Impv %+2P ] %+Sg		# "nada"
+| {nada} %+Noun %+Masc %+Sg
+	
+| {açor} %+Noun %+Masc ? 			
+| {estevar} %+Verb ?^2 %+Sg			
+| {aquelar} %+Verb %+PresSubj ? %+Sg		
+| {aquelar} %+Verb %+Impv [%+2P|%+3P] %+Sg 
+| {aquelar} %+Verb %+PresInd [%+2P|%+3P] %+Sg
+| {um} %+Num %+Card ?			
+| {ente} %+Noun %+Aug %+Masc %+Sg  
+| {dar} %+Verb %+Perf %+2P %+Pl 	
+| [ a | à | o | e | é ]	%+Let		
+| [ c m | m m | m ]	%+Dig %+Rom 	
+| {não}			%+Interj	
+| {gente} 		%+Interj	
+| {fez}			%+Noun %+Masc %+Sg
+| {nem}			%+Adv %+Neg
+| {vário} 		%+Adj ?* %+Pl	
+| {no} SPC {entanto}	 	%+Adv		
+| {baixo}		%+Adv
+| {em} SPC {cima}		%+Interj
+| {tanto} 		%+Noun %+Masc %+Sg
+
+];
+define REMOVE
+
+
+regex ~[REMOVE] .o. LEX;
+

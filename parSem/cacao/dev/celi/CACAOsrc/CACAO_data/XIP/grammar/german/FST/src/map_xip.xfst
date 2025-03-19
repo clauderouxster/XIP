@@ -1,0 +1,94 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		(x)fst
+# CONTENT:	mappings for XIP added to lookup output
+# AUTHOR:	Anne Schiller
+# DATE:		27-Jul-2005
+# -------------------------------------------------------------------------
+# USAGE: 	fst -s multichars.fst -l [ThisFile]
+# -------------------------------------------------------------------------
+
+# NOTES:
+# -  XIP requires the following input format:
+#	word <tab> lemma <tab> tags
+#    where tags must start with a "+" and must not be mixed with normal characters
+# - tags are interpreted from left to right,
+#   derivational tags must therefore be removed or renamed
+
+define SIG
+
+read regex SIG & [ %+ ?+ ];
+multi char sigma net
+define MORTAG
+
+read regex SIG & [ %^ ?+ ];
+multi char sigma net
+define MARKER
+
+define TAG	[ MORTAG ] - [] ;
+
+
+# derivation markers
+define DRV   "^{" | "^}" | "^]"  ;
+define SEP   "^=" ;
+define CPD   ["^#" | "^-" ];
+
+
+define CONVADJ 	%+Adj [%+Pos|%+Comp|%+Sup] "^]" ;
+define CONVVERB	%+Verb [%+PPast | %+PPres ] "^]" ;
+define CONVINF	%+Inf  "^]" ;
+
+define CONVTAG	[ %+convAdj | %+convVerb | %+convInf ];
+
+
+read regex [
+# add derivational tags
+     [..] -> %+convAdj		|| CONVADJ _
+.o.  [..] -> %+convVerb 	|| CONVVERB _
+.o.  [..] -> %+convInf  	|| CONVINF _
+
+# remove any tag before derivation marker and compound boundary
+.o.   [CONVTAG|MORTAG] -> 0  || _ $[ DRV | CPD | SEP ]
+
+# compound categories
+.o.  	%+Verb -> %+CVerb,
+	%+Noun -> %+CNoun,
+	%+Prop -> %+CProp,
+	%+Adj -> %+CAdv,
+	%+Pref -> %+Trunc
+		|| _ $%+Cpd
+
+
+# change boundary symbols
+#.o. "^]" ->  %+derivConv
+#.o. "^}" ->  %+derivSuff
+
+
+.o. "^]" ->  0
+.o. "^}" ->  %^ %}
+
+.o. "^{" ->  %^ %{
+.o. "^=" ->  %^ %=
+.o. "^/" ->  %^ %/
+.o. "^#" ->  %^ %#
+.o. "^-" ->  %^ %-
+
+.o. "^|" -> 0
+.o. "[*" ->  0
+.o. "*]" ->  0
+ 
+
+# add a plus before other markers
+.o.   [..] -> %+ || $[ TAG ] _ MARKER
+
+
+
+].i ;
+
+
+
+

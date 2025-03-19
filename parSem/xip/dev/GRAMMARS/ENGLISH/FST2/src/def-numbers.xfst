@@ -1,0 +1,91 @@
+# ============================================================================
+# CONTENT:      basic written numerals
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      24-Apr-2006
+# ============================================================================
+# USAGE:        xfst 	-l [ThisFile]
+# ============================================================================
+
+# ------------------------------------------------------------------------------
+# BASIC DEFINITIONS
+# ------------------------------------------------------------------------------
+# white space
+define WS	%  ;
+
+# define dash
+define DASH	%- ;
+
+define FDASH	%/:%-	;	# one-thirds -> one/three
+
+# ordinal ending:
+define TH 	0:{th} ;
+
+define CARDUNIT [
+  {one} | {two} | {three} | {four} | {five} 
+| {six} | {seven} | {eight} | {nine}
+];
+
+define ORDUNIT [
+  {one}:{first} | {two}:{second} | {three}:{third} | {four} TH  | {five}:{fifth} 
+| {six} TH | {seven} TH | {eight}:{eighth} | {nine}:{ninth}
+];
+
+define CARDTEEN [
+  {ten} | {eleven} | {twelve} | {thirteen} | {fourteen}
+| {fifteen} | {seventeen} | {eighteen} | {nineteen} 
+];
+
+define ORDTEEN [
+  [ CARDTEEN TH ] .o. [ {twelveth} -> {twelfth} ]
+];
+
+define CARDTY [
+  {twenty} | {thirty} | {forty} | {fifty} | {sixty}
+| {seventy} | {eighty} | {ninety} 
+];
+
+define ORDTY [
+  [ CARDTY TH ] .o. [ {yth} -> {ieth} ]
+];
+
+define BIG [
+  {hundred} | {thousand} | [m | b | t r | z | g a z ] {illion} 
+];
+
+define CARD [
+   {zero} | CARDUNIT | CARDTEEN | CARDTY (DASH CARDUNIT) | BIG
+];
+
+define ORD [
+   ORDUNIT | ORDTEEN | ORDTY | CARDTY DASH ORDUNIT | BIG TH
+];
+
+define FRACT ORD .o. ~[ {first} | {second} ];
+
+define FRACT1 {one} FDASH FRACT ;			# e.g. one-third
+define FRACT2 [ CARDUNIT - {one} ] FDASH FRACT 0:s;	# e.g. two-thirds
+
+
+# -----------------------------------------------------------------------
+define SGPL	[ %+Sg:0 (%+Gen:{'s}) | %+Pl:s (%+Gen:{'}) ];
+
+read regex [
+	CARD	[ %+Num:0 %+Card:0 | %+Noun:0 %+Card:0 SGPL ]
+|	ORD	%+Num:0 %+Ord:0
+#|	FRACT	%+Num:0 %+Fract:0
+|	FRACT	%+Noun:0 %+Fract:0 SGPL
+|	FRACT1	%+Noun:0 %+Fract:0 %+Sg:0
+|	FRACT2	%+Noun:0 %+Fract:0 %+Pl:0
+
+# derivations:
+|	CARD {fold}	%+Adj:0 %+Pos:0
+]
+.o.
+[
+	y -> {ie} || _ s
+];
+

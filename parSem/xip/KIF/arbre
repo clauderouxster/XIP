@@ -1,0 +1,158 @@
+#x_parse_file("C:\\ANL\\Mekalinga\\ANL\\Mekalinga\\simple\\test\\generation.xip",FULL);
+#Formalisme de test: Nous allons fournir une grammaire pour analyser des chaines de type: X = X*,X+,Z,(X[i:o,j:x]).
+#x_parse_string("GV(#1,#2){Noun$#1(#2),Verb$#1(#3)}|",m_generation,False)
+#x_parse_string("$#1[test](#1,#2) &",m_elementif,False)
+
++generation
+
+longestmatch := %@ %=
+
+shortestmatch := %=
+
+arrow := %- %>
+
+match := longestmatch|shortestmatch|arrow
+
+^name := [A-Z|a-z|%é|%à|%è|%ç|%ê|%î|%ô|%â|%û|%ù|%Ç|%À|%É|%È|%Ë|%Ê|%Ï|%Î|%Û|%Ü|%ä|%ë|%ï|%ö|%ü|%_]+
+
+=number := [0-9]+
+
+var := %# number
+
+pos := name^%?
+
+=layer := [0-9]+
+
+kleene := %*^%+
+
+featonto := [%@ name]+
+
+feat := featonto^name^[%$ $stack]
+
+valmin :=  name^number^%+^%-^%*^%#^%?^neg
+<valquote :=  %" .+ %"
+
+neg := %~
+
+valnorm := valquote^valmin
+valneg := neg [valquote^valmin]
+
+val := valneg^valnorm
+
+featvalbloque := feat %: %!
+featvalfree := %! feat %: %!
+featvalfreeinstance := %! feat %= val
+featvaltest := feat %: val  
+featvalinstance := feat %= val  
+feature := featvalfree^featvalbloque^featvalfreeinstance^featvaltest^featvalinstance^feat
+featurenext := %, feature
+
+valeurontologie := %@ name
+featontologie := %[ valeurontologie valeurontologie* %]
+
+listefeature := feature featurenext*
+
+features := %[ listefeature %]
+featuresreading := %< (%*) listefeature %>
+
+nodefeatures := %[ listefeature %]
+
+subtree := %{ listecategory %}
+
+category := [var^[pos (kleene) (var)]] (kleene) (nodefeatures) (subtree)
+
+categorysequence := %,  [categoryopt^category]
+categoryexclusive := %; [categoryopt^category]
+
+categorynext := categorysequence^categoryexclusive
+
+categoryopt := %( listecategory %) (kleene)
+
+listecategory := [categoryopt^category] categorynext*
+
+pointeur := %$
+
+vardepbase := %$ (pointeur) number
+
+vardepnode := %$ (pointeur) %# number
+
+vardep := vardepbase^vardepnode
+
+namedep := %?^name
+
+dependency := [[[namedep (vardep)]^vardep] (features) %( listecategory %)]^vardep^%?
+
+subdependency := %{ listedependencies %}
+
+adependency := dependency (subdependency)
+
+dependencynext := %, adependency
+
+listedependencies := adependency dependencynext*
+
+generation := listedependencies %}
+
+
+
+#Elements de dependance
+#On peut avoir les cas suivants:
+# dependency: $1 / $#1 / $1(#1,#2) etc...
+# tests: 
+#    EGAUX_ONTOLOGIE         #1[@ontologie] :: #2[@ontologie]
+#    COMPATIBLES_ONTOLOGIE   #1[@ontologie] : #2[@ontologie]
+#    AFFECTATION_ONTOLOGIE   #1[@ontologie] = {#2 | #3..}
+#    COMPATIBLES_LECTURE     #1<tr>:#2<tr>
+#    AFFECTATION_LECTURE     #1<tr>={...}
+#    EGAUX_LECTURE           
+#    COMPATIBLES             #1[tr]:#2[tr]
+#    EGAUX                   #1[tr]::#2[tr]
+#    EGALITE                 #1:#2   
+#    INFERIEUR               #1<#2
+#    SUPERIEUR               #1>#2   
+#    INF_TRAITS              #1[tr]< ch | #2 | #2[tr]
+#    SUP_TRAITS              #1[tr]> ch | #2 | #2[tr]
+#    SUP_EGAL_TRAITS         #1[tr]<= ch | #2 | #2[tr]
+#    INF_EGAL_TRAITS         #1[tr]>= ch | #2 | #2[tr]
+#    AFFECTATION             #1[tr]={...}
+#    TEST                    #1[tr]
+
+etou := %|^%&
+varexpression := etou var
+
+egauxontologie := var featontologie (neg) %: %: var featontologie
+compatibleontologie := var featontologie (neg) %: var featontologie
+affectationontologie := var featontologie %= %{ var varexpression* %}
+compatiblelecture :=  var featuresreading (neg) %: var featuresreading
+egauxlecture := var featuresreading (neg) %: %: var featuresreading
+affectationlecture :=  var featuresreading %= %{ var varexpression* %}
+compatibletrait :=  var features (neg) %: var features
+egauxtrait := var features (neg) %: %: var features
+affectationtrait :=  var features %= %{ var varexpression* %}
+egalite := var (neg) %: var
+inferieur := var %< var
+superieur := var %> var
+inftraits := var features %< number^[var (features)]
+suptraits := var features %> number^[var (features)]
+infegaltraits := var features %< %= number^[var (features)]
+supegaltraits := var features %> %= number^[var (features)]
+
+testsimple := var features
+
+operateurmathematique := %+^%-^%*^%/
+chaine := %" name %"
+valeurnumerique := [0-9]+ (%. [0-9]+)
+parenthesees := %( expression %)
+expression := [chaine^valeurnumerique^operateurmathematique^parenthesees^procedure^name]+
+
+parametresuivant := %, parametre
+parametre := [var^vardep^expression]
+parametres :=  parametre parametresuivant*
+procedure := name %( parametres %)
+
+
+choix := %#^%^
+testdependency := (neg^choix) dependency
+namestruct := %, name
+displaystruct := $display %( name namestruct* %)
+elementif := [displaystruct^testdependency^procedure^egauxontologie^compatibleontologie^affectationontologie^egauxlecture^affectationlecture^compatibletrait^egauxtrait^affectationtrait^egalite^inferieur^superieur^inftraits^suptraits^infegaltraits^supegaltraits^testsimple] {%|^%&^%)^%.}
+

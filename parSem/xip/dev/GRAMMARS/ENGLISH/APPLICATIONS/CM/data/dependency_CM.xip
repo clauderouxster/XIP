@@ -1,0 +1,1201 @@
+DependencyRules:
+
+////////////////////////////////////////////
+////////////// I. Preprocess //////////////
+////////////////////////////////////////// 
+
+
+////////////// context sensitive word features ////////////// 
+
+//she has been on comfort measures.
+//MOD_POST(been,comfort_CM:+ measures_CM:+)
+
+| #1[posact=+] |
+if ( MOD[post](#1[lemme:be],#2[cm]) )
+   ~.
+
+//going to declare
+//NUCL_VLINK(going_POSACT:+,declare)
+
+| #1[lemme:go,posact=~] |
+if ( NUCL[vlink](#1,#2) )
+   ~.
+
+//she is going to likely progress 
+//NFV{go_POSACT:+} PP{to AP{likely}}
+
+|  NFV{#1[lemme:go,posact=~]}, PP{?[lemme:to], ?+}} |
+   ~.
+
+//pt is in home hospice care and his wife has power of attorney .
+
+| #1[lemme:be,pres,posact=+] |
+if ( ~NUCL(#1,?)  & SUBJ[pre](#1,#2[patient]) )
+   ~.
+
+//The patient was seen with hospice
+//MOD_POST(seen,hospice_CM:+)
+//MAIN_PASSIVE(seen)
+
+| #1[lemme:see,posact=+] |
+if ( MOD(#1,#2[lemme:hospice]) & MAIN[passive](#1) )
+   ~.
+
+//concept of hospice
+//MOD_POST(#1concept,#2hospice)
+//PREPD(#2hospice,#3of)
+
+| #1[cm=+] |
+if ( MOD[post](#1[transp],#2[cm]) & PREPD(#2,#3[lemme:of]) )
+   ~.
+
+// if a keyword is the premodifier of a noun, which is a head of a chunk, the entire chunk will take the feature CM
+//hospice evaluation
+//MOD_PRE(#1evaluation,#2hospice_CM:+)
+//HEAD(#1evaluation,#3hospice_CM:+ evaluation)
+//NP#3{#2hospice_CM:+ #1evaluation_CM:+}
+
+| #3np[cm=+]{#2, #1} |
+if ( MOD[pre](#1,#2[cm]) & HEAD(#1,#3) & ^$1(#4,#1) )
+   $1(#4,#3).
+
+| #3np[cm=+]{#2, #1} |
+if ( MOD[pre](#1,#2[cm]) & HEAD(#1,#3) & ^$1(#1,#4) )
+   $1(#3,#4).
+
+// link passive objects to SUBJ
+//hospice care was decided
+//SUBJ_PRE(was,hospice_CM:+ care_CM:+)
+//NUCL_INTENT_VLINK_PASSIVE(was,decided)
+
+if ( SUBJ[pre](#1,#2) & NUCL[passive](#1,#3) & ~OBJ-N(#3,#2) )
+   OBJ-N(#3,#2).
+
+//I/we have been asked
+//VDOMAIN_PERFECT_PASSIVE(#1asked,#2have)
+//NUCL_INTENT_VLINK_PASSIVE(#3been,#1asked)
+//SUBJ_NORELDEP_PRE(#2have,#4I)
+
+| #1[posmod=+] |
+if ( VDOMAIN[passive](#1[lemme:ask]ask,#2) & NUCL[passive](#3,#1) & SUBJ(#2,#4[p1]) )
+   ~.
+
+
+////////////// create new MODALITIES ////////////// 
+
+
+////Extensive discussions were held with the family regarding hospice care and nursing home care and the family eventually decided that they wanted the patient to be discharged to a hospice Calvary until the patient was discharged in a stable condition.
+//MODALITIES_OTHER(discharged)
+//MODALITIES_MAIN(#1decided,#2wanted)
+//OBJ-N_GRPR(#4discharged,#3patient)
+//COORDINATE_TARGET(#2wanted,#3patient)
+//IV{to be discharged}
+
+| IV{?+, #4[last]} |
+if ( ^MODALITIES(#1,#2) & $1(#2,#3) & OBJ-N(#4[verb],#3) & ~MODALITIES(#1,#2,#4) & #2~:#4 )
+   MODALITIES(#1,#2,#4).
+
+
+//Family has decided after another family meeting to take the patient home on home hospice.
+//MODALITIES_OTHER(take)
+//IV{to take}
+//MODALITIES_MAIN(decided)
+
+| iv{?[lemme:to],#1} |
+if ( MODALITIES(#1) & MODALITIES(#2[sc_toinf:+]) & #2 < #1 )
+   MODALITIES(#2,#1).
+
+////////////// dependencies that are not relevant for CM ////////////// 
+
+if ( ^HEAD(#1,#2) )
+   HEAD[noreldep=+](#1,#2).
+
+if ( ^SREL(#1,#2) )
+   SREL[noreldep=+](#1,#2).
+
+if ( ^S0(#1,#2) )
+   S0[noreldep=+](#1,#2).
+
+if ( ^S1(#1,#2) )
+   S1[noreldep=+](#1,#2).
+
+if ( ^S2(#1,#2) )
+   S1[noreldep=+](#1,#2).
+
+if ( ^S1H(#1,#2) )
+   S1H[noreldep=+](#1,#2).
+
+if ( ^NCOORD(#1,#2) )
+   NCOORD[noreldep=+](#1,#2).
+
+if ( ^COORD(#1,#2) )
+   COORD[noreldep=+](#1,#2).
+
+if ( ^$1[pre](#1,#2) )
+   $1[noreldep=+](#1,#2).
+
+if ( ^MOD[pre,noreldep](#1,#2[posmod]) )
+   $1[noreldep=~](#1,#2).
+
+////////////// extensions of dependencies with compound CM ////////////// 
+
+| #3np[cm]{#2, #1} |
+if ( ^$1(#4,#1) )
+   $1(#4,#3)
+
+| #3np[cm]{#2, #1} |
+if ( ^$1(#1,#4) )
+   $1(#3,#4)
+
+| #3np[cm]{#2, #1} |
+if ( ^$1(#4,#5,#1) )
+   $1(#4,#5,#3)
+
+| #3np[cm]{#2, #1} |
+if ( ^$1(#4,#5,#6,#1) )
+   $1(#4,#5,#6,#3)
+
+
+////////////// create CM and CMDEP ////////////// 
+
+
+| #1[cmword] |
+if ( ~CM(#1) )
+   CM(#1).
+
+
+| TOP#1{ ?+ } |
+if ( CM(#2) )
+   CMSENT(#1).
+
+/////////////////////////////////////////////////////////////////////
+////////////// II. Marking dependencies and sentences ////////////// 
+///////////////////////////////////////////////////////////////////
+
+///////////// idiosyncratic cases /////////////
+
+//brain death protocol
+
+//MOD_NORELDEP_PRE(protocol_POSACT:+,brain_CM:+ death_CM:+)
+
+if ( ^CMSENT(#1) & MOD[pre](#2[lemme:protocol],#3[cm]) )
+   CMSENT[posit=+](#1).
+
+///////////// CMDEP with pronoun /////////////
+
+//She was more interested in Home Hospice_CM:+ so that is being arranged_POSACT:+ .
+//OBJ-N(VERB_POSACT:+:#2arranged_POSACT:+,PRON:#1that)
+//SC{BG{CONJ{so}} NP{PRON{#1that}} FV{VERB{is}}}
+
+| SC{BG{?}, NP{#1[pron,lemme:that]}, ?+} |
+if ( OBJ-N(#2[posact],#1) & CM(#3) & #3 < #1 )
+   CMDEP(#1,#2).
+
+///////////// CMDEP with patient /////////////
+/
+if ( $1(#1[patient],#2[posact]) | $1(#1[posact],#2[patient]) )
+   CMDEP(#1,#2).
+
+if ( $1(#1[patient],#2[posmod]) | $1(#1[posmod],#2[patient]) )
+   CMDEP(#1,#2).
+\
+
+///////////// CMDEP with CM /////////////
+
+if ( ^$1[noreldep:~](#1[noun],#2[cm]) & #1 < #2 )
+   $1[cmdep=+](#1,#2).
+
+if ( ^$1[noreldep:~](#1[noun],#2[cm]) & #2 < #1 )
+   $1[cmdep=+](#2,#1).
+
+if ( ^$1[noreldep:~](#1[verb],#2[cm])  & #1 < #2 )
+   $1[cmdep=+](#1,#2).
+
+if ( ^$1[noreldep:~](#1[verb],#2[cm])  & #2 < #1 )
+   $1[cmdep=+](#2,#1).
+
+if ( ^$1[noreldep:~](#1[adj],#2[cm])  & #1 < #2 )
+   $1[cmdep=+](#1,#2).
+
+if ( ^$1[noreldep:~](#1[adj],#2[cm])  & #2 < #1 )
+   $1[cmdep=+](#2,#1).
+
+///////////////////////////////////////
+
+if ( ^$1[noreldep:~](#1[cm],#2[adj])  & #1 < #2 )
+   $1[cmdep=+](#1,#2).
+
+if ( ^$1[noreldep:~](#1[cm],#2[adj])  & #2 < #1 )
+   $1[cmdep=+](#2,#1).
+
+
+//////////////////////////////////////////
+
+
+////////////// dependencies of dependencies of CM ////////////////
+
+//hospice would be innappropriate .
+//ARGUMENT_CMDEP_ASUBJ(hospice_CM:+,innappropriate)
+//ARGUMENT_CMDEP_SUBJ(hospice_CM:+,be)
+
+if ( ^$1[cmdep,noreldep:~](#1,#2) & $2[cmdep,noreldep:~](#1,#3) & #2 < #3 )
+   PRECMDEP[cmdep=+](#1,#2,#3)
+
+if ( PRECMDEP[cmdep](#1,#2,#3) & ^$2[cmdep](#1,#3) )
+   $2[cmdep=~](#1,#3).
+
+///////////// CM is part of the MODALITIES ////////////////
+
+//Patient is NOT brain dead.
+//MODALITIES_CMDEP_MAIN(is,brain_CM:+ dead_CM:+)
+
+if ( CM(#1) & MODALITIES(#2,#1) )
+   CMDEP(#2,#1).
+
+if ( CM(#1) & MODALITIES(#2,#1) & CMDEP(#2,#1) & ^$1[cmdep](#3,#1) )
+   $1[cmdep=~](#3,#1).
+
+
+//////////// CMDEP = MODALITIES ///////////
+
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#1,#2,#3) )
+   CMDEP(#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & CMDEP(#1,#2,#3) & MODALITIES(#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3).
+
+
+/////// CMDEP =/= MODALITIES ///////////
+
+//Attending advised hospice care , no further treatment .
+//MOD_CMDEP_PRE(#3advised,#2hospice care)
+//OBJ_CMDEP_POST(#1Attending,#2hospice care)
+//MODALITIES_OTHER(#1Attending)
+
+if ( MODALITIES(#1) & $1[cmdep](#1,#2) & $2[cmdep](#3,#2) & #1 < #3 & #3 < #2 )
+   CMDEP(#1,#3,#2).
+
+
+//In the next few weeks if she proceeds with the Hospice plan and does not revoke Hospice 
+//MODALITIES_OTHER(proceeds_POSACT:+,plan_POSMOD:+)
+//MOD_NORELDEP_PRE(plan_POSMOD:+,Hospice_CM:+)
+
+if ( MODALITIES(#1,#2) & MOD[pre](#2,#3[cm]) )
+   CMDEP(#1,#3,#2).
+
+//His daughters clearly understand the philosophy of hospice and I do feel that he would qualify for inpatient hospice on the basis of dyspnea alone.
+//MOD_CMDEP_SUBCAT_POST(qualify,hospice_CM:+)
+//MODALITIES_MAIN(understand,feel,qualify)
+
+if ( MODALITIES(#1,#2,#3) & $1[cmdep](#3,#4) )
+   CMDEP(#1,#2,#3,#4).
+
+//I do not feel that hospice would be innappropriate .
+//ARGUMENT_CMDEP_SUBJ(hospice_CM:+,be,innappropriate)
+//MODALITIES_OTHER(feel,be,innappropriate)
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#4,#2,#3) & #4 < #1 )
+   CMDEP(#4,#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & MODALITIES(#4,#2,#3) & CMDEP(#4,#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3).
+
+//the attending are in agreement amongst themselves presently for comfort care
+//MOD_CMDEP_EVNT_POST(are,comfort_CM:+ care_CM:+)
+//MODALITIES_OTHER(attending,are,agreement)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#3,#1,#4) &  #3 < #1 & #4 < #2 )
+   CMDEP(#3,#1,#4,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#3,#1,#4) & CMDEP(#3,#1,#4,#2) )
+   $1[cmdep=~](#1,#2).
+
+//make the decision for comfort care only
+//MOD_CMDEP_GRPR_SUBCAT_POST(#1make,#2comfort_CM:+ care_CM:+ only)
+//MODALITIES_OTHER(#1make,#3decision)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#1,#3) & #1 < #3 & #3 < #2 )
+    CMDEP(#1,#3,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#1,#3) & CMDEP(#1,#3,#2) )
+   $1[cmdep=~](#1,#2).
+
+
+//Neurosurgeon, Dr. Cherqui, evaluated the patient, is admitting him to her service, and it seems that she is going to declare him brain dead .
+//OBJCOMPL_CMDEP_POST(going,declare,brain_CM:+ dead_CM:+)
+//MODALITIES_MAIN(seems,declare)
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#4,#2) & #4 < #1 & #1 < #2 ) 
+   CMDEP(#4,#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & MODALITIES(#4,#2) & CMDEP(#4,#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3).
+
+
+//We discussed comfort care with the patient's daughter, and she discussed with the brothers.
+//OBJ-N_CMDEP(discussed,comfort_CM:+ care_CM:+,discussed)
+//MODALITIES_MAIN(discussed)
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#1) )
+   CMDEP(#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & MODALITIES(#1) & CMDEP(#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3)
+
+//Subjective spoke with wife and they wish comfort care .
+//OBJ_CMDEP_POST(wish,comfort_CM:+ care_CM:+)
+//MODALITIES_MAIN(wish)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#1) )
+   CMDEP(#1,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#1) & CMDEP(#1,#2) )
+   $1[cmdep=~](#1,#2).
+
+
+//She did have some improvement briefly, but the family ultimately decided to place her on comfort care.
+//PRECMDEP_CMDEP_POST(decided,place,comfort_CM:+ care_CM:+)
+//MODALITIES_ANNEX(decided,place)
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#1,#2) & #1 < #2 & #2 < #3 )
+   CMDEP(#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & MODALITIES(#1,#2) & CMDEP(#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3).
+
+
+// She was made DNR-CC and was given some palliative medication.
+// PRECMDEP_CMDEP_POST(was,made,DNR_CM:+ -_CM:+ CC_CM:+)
+//MODALITIES_MAIN(made)
+
+if ( $1[cmdep](#1,#2,#3) & MODALITIES(#2) )
+   CMDEP(#1,#2,#3).
+
+if ( ^$1[cmdep](#1,#2,#3) & MODALITIES(#2) & CMDEP(#1,#2,#3) )
+   $1[cmdep=~](#1,#2,#3).
+
+// if the CMDEP is composed by two clauses, we just keep the 2nd clause
+// She remained comfortable, until she passed after approximately 30 hours on comfort care measures .
+//CMDEP(remained,passed,comfort_CM:+ care_CM:+ measures_CM:+)
+//MODALITIES_ANNEX(passed)
+//MODALITIES_MAIN(remained,comfortable)
+
+if ( ^CMDEP(#1,#2,#3) & MODALITIES(#2) & MODALITIES(#1,#3) )   
+   CMDEP(#2,#3).
+
+//The plan was to also consider hospice evaluation and Psychiatry consult once the patient's acute need was met as in giving the patient comfort care .
+//PRECMDEP_CMDEP_POST(consider,hospice_CM:+ evaluation)
+//MODALITIES_MAIN(plan,was,consider,hospice_CM:+ evaluation)
+
+if ( $1[cmdep](#2,#3) & MODALITIES(#4,#1,#2,#3) & #4 < #1 & #1 < #2) 
+   CMDEP(#4,#1,#2,#3).
+
+if ( ^$1[cmdep](#2,#3) & MODALITIES(#4,#1,#2,#3) & CMDEP(#4,#1,#2,#3) )
+   $1[cmdep=~](#2,#3).
+
+//Due to the patient's poor prognosis, the oncology team approached the healthcare proxy and hospice care was decided with DNR/DNI, and the patient was discharged to hospice care .
+//OBJ-N_CMDEP(hospice_CM:+ care_CM:+,decided)
+//MODALITIES_OTHER(decided)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#2) )
+   CMDEP(#1,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#2) & CMDEP(#1,#2) )
+   $1[cmdep=~](#1,#2).
+
+//I discussed with them different options, but ultimately had recommended consideration of extubation and comfort care measures .
+//MOD_CMDEP_SUBCAT_POST(consideration,comfort_CM:+ care_CM:+ measures_CM:+)
+//MODALITIES_ANNEX(recommended,consideration)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#3,#1) & #3 < #1 )
+   CMDEP(#3,#1,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#3,#1) & CMDEP(#3,#1,#2) )
+   $1[cmdep=~](#1,#2).
+
+//She appears to be brain dead or severely brain damaged .
+//NUCL_CMDEP_SUBJCOMPL(be,brain_CM:+ dead_CM:+)
+//MODALITIES_MAIN(appears,be,brain_CM:+ dead_CM:+)
+
+if ( $1[cmdep](#1,#2) & MODALITIES(#3,#1,#2) & #3 < #1 )
+    CMDEP(#3,#1,#2).
+
+if ( ^$1[cmdep](#1,#2) & MODALITIES(#3,#1,#2) & CMDEP(#3,#1,#2) )
+   $1[cmdep=~](#1,#2).
+
+
+//I explained to him the philosophy of hospice
+//MODALITIES_MAIN(explained)
+//OBJ_POST(explained,philosophy)
+//MOD_CMDEP_POST(philosophy,hospice_CM:+)
+
+if ( MODALITIES(#1) & OBJ[cmdep:~,sentence:~](#1,#2) & MOD[cmdep](#2,#3) & ~CMDEP(#1,#3) )
+   CMDEP(#1,#3).
+
+//I recommend at this point for the primary team to discuss with the family the option of hospice and end of life care.
+//MODALITIES_MAIN(recommend,discuss)
+//OBJ-N(discuss,option)
+//PRECMDEP_CMDEP_POST(option,hospice_CM:+,end_CM:+ of_CM:+ life_CM:+ care_CM:+)
+
+if ( MODALITIES(#1,#2) & $1(#2,#3) & $2[cmdep](#3,#4,#5) )
+   CMDEP(#1,#2,#3,#4,#5).
+
+
+/// if their are two CMDEPs for the same CM
+
+//I think she is dying and recommend comfort measures only, which is consistent with the family's and patient's wishes.
+
+//CMDEP(recommend,comfort_CM:+ measures_CM:+ only_CM:+)
+//CMDEP(think,comfort_CM:+ measures_CM:+ only_CM:+)
+
+if ( ^CMDEP(#1,#2) & CMDEP(#3,#2) & #1 < #3 )
+   ~.
+
+//On 04/09/2012, she was seen on rounds, referral was made to Calvary inpatient hospice awaiting decision whether she will be accepted.
+//CMDEP(seen,made,hospice_CM:+)
+//CMDEP(referral,made,hospice_CM:+)
+
+if ( ^CMDEP(#1,#2,#3) & CMDEP(#4,#2,#3) & #1 < #4 )
+   ~.
+
+
+////////// weak CMDEP //////////////////
+
+//Mark sentences that have no CMDEP
+
+if ( ^CMSENT(#1) & ( ~CMDEP(?,?) & ~CMDEP(?,?,?) & ~CMDEP(?,?,?,?) & ~CMDEP(?,?,?,?,?) ) )
+   CMSENT[nocmdep=+](#1).
+
+//////////// CM is a passive SUBJ ////////////////
+
+//Family said their goodbyes and patient was taken from ICU to the OR where comfort measures were given and patient was extubated.
+//OBJ-N_CMDEP(comfort_CM:+ measures_CM:+,given)
+
+if ( CMSENT[nocmdep](#5) & CM(#7) & OBJ-N(#7,#8) )
+   CMDEP[weak=+,posit=+,posmod=+](#7,#8).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+
+//////////// CM is an active SUBJ ////////////////
+
+if ( CMSENT[nocmdep](#1) & SUBJ(#2,#3[cm]) & $1(#2,#4) & #2 < #4 & #3 < #4 )
+   CMDEP(#3,#2,#4).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#3,#2,#4) )
+   CMSENT[nocmdep=~](#1).
+
+
+///////////////// other //////////////////
+
+//Mr. Hartshaw is a 71-year-old gentleman whom I have been asked to see to discuss goals of care and palliative care/hospice with his family members."
+
+| fv{?*,#1[verb,noun:~,last]} |
+if ( ~VERB(#1) )
+  VERB(#1).
+
+| NFV{?*,#1[verb,noun:~,last]} |
+if ( ~VERB(#1) )
+  VERB(#1).
+
+| IV{?*,#1[verb,noun:~,last]} |
+if ( ~VERB(#1) )
+  VERB(#1).
+
+if ( CMSENT[nocmdep](#1) & CM(#2) & VERB(#3) & #3 < #2 )
+   CMDEP[weak=+](#3,#2).
+
+if ( ^CMDEP(#3,#2) & CMDEP(#3,#2) )
+   ~.
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( ^VERB(#1) )
+   ~. 
+
+
+
+
+//Mr. Hartshaw is a 71 - year - old gentleman whom I have been asked to see to discuss goals of care and palliative care / hospice with his family members .
+
+//CMDEP_WEAK(discuss,hospice)
+//MODALITIES_OTHER(asked,see,discuss,goals)
+
+if ( ^CMDEP[weak](#1,#2) & MODALITIES(#3,#4,#1,#5) & #5 < #2 )
+   CMDEP[weak](#3,#4,#1,#5,#2).
+
+
+
+//////////////////////////////////////////////////////////
+////////////// II. Marking polarity /////////////////////
+////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////
+///////// II/a. Polarity outside the CMDEP //////////////
+////////////////////////////////////////////////////////
+
+
+/////////// positive marker outside the CMDEP ////////////
+
+
+//PREPD(brain_CM:+ death_CM:+,c / w)
+
+| #1[posmark=+] |
+if ( $1(#1[cm],#2[posmark]) | $1(#2[posmark],#1[cm]) )
+   ~. 
+
+//On 12/23/2011, pain better controlled, setting up home hospice on 12/24/2011, for discharge to home with home hospice.
+//TEMP_POST_T_ABSOLUT(hospice_CM:+,12 / 24 / 2011)
+
+| #1[posmark=+] |
+if ( TEMP[t_absolut](#1[cm],#2) )
+   ~.
+
+//The PEG was clean and in place and tube feeds were running and the family were going to take care of her as an inpatient in Calvary Hospice.
+//MOD_CMDEP_POST(inpatient_POSMARK:+,Hospice_CM:+)
+
+| #2[posmark=+] |
+if ( MOD(#1[posmark],#2[cm]) )
+   ~.
+
+//Hospice care at Calvary .
+//MOD_POST(Hospice care,Calvary)
+//PREPD(Calvary,at)
+
+| #1[posmark=+] |
+if ( MOD[post](#1[cm],#2[proper]) & PREPD(#2,#3[lemme:at]) )
+   ~.
+
+/////////// mark positive CMDEP containing posmark /////////////
+
+// Flow study c/w brain death.
+// CMDEP(study,brain_CM:+ death_CM:+)
+
+
+if ( ^CMDEP(#1,#2[posmark]) )
+   CMDEP[posit=+](#1,#2).
+
+
+/////////// negative marker outside the CMDEP ////////////
+
+//I'm not able to get a history as pt's intubated and likely brain dead and no family present.
+//NP{AP{likely ADJ{brain dead} and}
+
+| #1[negmark], #2[cm,negmark=+] |
+  ~.
+
+
+//not to be kept alive
+//IV{not to be kept}
+
+| iv{#1[negmark], ?, #2[lemme:be,negmark=+], #3[negmark=+]} |
+if ( CMDEP(#2,?) | CMDEP(?,#2) | CMDEP(?,?,#2) | CMDEP(#2,?,?) | CMDEP(?,#2,?) | CMDEP(?,?,#2,?) | CMDEP(#2,?,?,?) | CMDEP(?,#2,?,?) | CMDEP(?,?,?,#2) | CMDEP(#2,?,?,?,?) | CMDEP(?,#2,?,?,?) | CMDEP(?,?,#2,?,?) | CMDEP(?,?,?,#2,?) CMDEP(?,?,?,?,#2) | CMDEP(#3,?) | CMDEP(?,#3) | CMDEP(?,?,#3) | CMDEP(#3,?,?) | CMDEP(?,#3,?) | CMDEP(?,?,#3,?) | CMDEP(#3,?,?,?) | CMDEP(?,#3,?,?) | CMDEP(?,?,?,#3) | CMDEP(#3,?,?,?,?) | CMDEP(?,#3,?,?,?) | CMDEP(?,?,#3,?,?) | CMDEP(?,?,?,#3,?) CMDEP(?,?,?,?,#3) )
+   ~.
+
+//PREPD(near brain_CM:+ death_CM:+)
+
+| #1[negmark=+] |
+if ( $1(#1[cm],#2[negmark]) | $1(#2[negmark],#1[cm]) )
+   ~. 
+
+//Patient is NOT brain dead.
+//NUCL_NEGA_HOST_SUBJCOMPL(is,brain_CM:+ dead_CM:+)
+
+
+| #2[negmark=+] |
+if ( NUCL[nega](#1,#2) & CM(#2) )
+   ~.
+
+//I am concerned that she may very well be brain dead.
+//NUCL_VLINK_MODAL(may,be)
+//NUCL_HOST_SUBJCOMPL(be,brain_CM:+ dead_CM:+)
+
+| #3[negmark=+] |
+if ( NUCL(#1[negmark],#2) & NUCL(#2,#3) & CM(#3) )
+   ~.
+
+//showed images poor nprognosis for good recovery but does not meet brain death criteria.
+//MOD_NEGA_LINK_NEG(#1meet,#2not)
+
+| #1[negmark=+] |
+if ( MOD[nega](#1,#2) & ( CMDEP(#1,?) | CMDEP(?,#1) | CMDEP(?,?,#1) | CMDEP(#1,?,?) | CMDEP(?,#1,?) | CMDEP(?,?,#1,?) | CMDEP(#1,?,?,?) | CMDEP(?,#1,?,?) | CMDEP(?,?,?,#1) | CMDEP(#1,?,?,?,?) | CMDEP(?,#1,?,?,?) | CMDEP(?,?,#1,?,?) | CMDEP(?,?,?,#1,?) CMDEP(?,?,?,?,#1) ) )
+   ~.
+
+//If he is not a hospice patient
+//MOD_POST(is,not[negmark])
+
+| #1[negmark=+] |
+if ( MOD(#1,#2[negmark]) & ( CMDEP(#1,?) | CMDEP(?,#1) | CMDEP(?,?,#1) | CMDEP(#1,?,?) | CMDEP(?,#1,?) | CMDEP(?,?,#1,?) | CMDEP(#1,?,?,?) | CMDEP(?,#1,?,?) | CMDEP(?,?,?,#1) | CMDEP(#1,?,?,?,?) | CMDEP(?,#1,?,?,?) | CMDEP(?,?,#1,?,?) | CMDEP(?,?,?,#1,?) CMDEP(?,?,?,?,#1) )  )
+   ~.
+
+//They stated that she has indeed been in denial and not wishing to discuss end of life care with them or any physicians.
+//not GV{wishing}
+
+| #1[negmark], gv{#2[negmark=+]} |
+if ( CMDEP(#2,?) | CMDEP(?,#2) | CMDEP(?,?,#2) | CMDEP(#2,?,?) | CMDEP(?,#2,?) | CMDEP(?,?,#2,?) | CMDEP(#2,?,?,?) | CMDEP(?,#2,?,?) | CMDEP(?,?,?,#2) | CMDEP(#2,?,?,?,?) | CMDEP(?,#2,?,?,?) | CMDEP(?,?,#2,?,?) | CMDEP(?,?,?,#2,?) CMDEP(?,?,?,?,#2) )
+  ~.
+
+//HEY WANT HH NOT HOSPICE.
+//NOT NP{HOSPICE_CM:+}
+
+| #1[negmark], #2np{?*, #3[cm,negmark=+]} |
+  ~.
+
+//Family to discuss with the patient and decided likely for hospice .
+//MANNER_INTENT_LINK_POST(decided_GREEN:+_HL:+,likely_GREEN:+_HL:+)
+//CMDEP(decided,hospice)
+
+| #1[negmark=+] |
+if ( CMDEP(#1,#2) & $1(#1,#3[negmark]) )
+   ~.
+
+//OBJ_INTENT_POST(WANT_POSMOD:+_NEGMARK:+,HH)
+//OBJ_INTENT_POST(WANT_POSMOD:+_NEGMARK:+,HOSPICE_NEGMARK:+_CM:+)
+
+| #1[posmod=~] |
+if ( $1(#1[negmark,posmod],#2[cm:~]) & $1(#1[negmark,posmod],#3[negmark,cm]) )
+   ~.
+
+| #1[negmark,posmod=~,posact=~] |
+  ~.
+
+/////////// mark negative CMDEP containing negmark /////////////
+
+//She was felt to be very near brain_CM:+ death_CM:+ 
+//CMDEP_NEGATI_NEGMOD(felt,be,brain_CM:+ death_CM:+)
+
+if ( ^CMDEP(#1,#2,#3,#4[negmark]) )
+   CMDEP[negati=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1[negmark],#2,#3,#4) )
+   CMDEP[negati=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1,#2[negmark],#3,#4) )
+   CMDEP[negati=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1,#2,#3[negmark],#4) )
+   CMDEP[negati=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1,#2[negmark],#3) )
+   CMDEP[negati=+](#1,#2,#3).
+
+if ( ^CMDEP(#1[negmark],#2,#3) )
+   CMDEP[negati=+](#1,#2,#3).
+
+if ( ^CMDEP(#1,#2[negmark]) )
+   CMDEP[negati=+](#1,#2).
+
+if ( ^CMDEP(#1[negmark],#2) )
+   CMDEP[negati=+](#1,#2).
+
+// 2 negmarks are positive
+
+//I agree, and I do not feel that hospice would be innappropriate.
+//CMDEP_NEGATI(feel_NEGMARK:+,hospice_CM:+,be,innappropriate)
+
+
+if ( ^CMDEP[negati](#1[negmark],#2,#3,#4[negmark]) )
+   CMDEP[posit=+,negati=~](#1,#2,#3,#4).
+
+if ( ^CMDEP[negati](#1,#2[negmark],#3,#4[negmark]) )
+   CMDEP[posit=+,negati=~](#1,#2,#3,#4).
+
+if ( ^CMDEP[negati](#1,#2,#3[negmark],#4[negmark]) )
+   CMDEP[posit=+,negati=~](#1,#2,#3,#4).
+
+if ( ^CMDEP[negati](#1,#2[negmark],#3[negmark]) )
+   CMDEP[posit=+,negati=~](#1,#2,#3).
+
+if ( ^CMDEP[negati](#1[negmark],#2,#3[negmark]) )
+   CMDEP[posit=+,negati=~](#1,#2,#3).
+
+//////////////////////////////////////////////////////////
+///////// II/b. Polarity inside the CMDEP //////////////
+////////////////////////////////////////////////////////
+
+/////////// positive polarity inside the CMDEP ////////////
+
+if ( ^CMDEP(#1[posmod],#2) | ^CMDEP(#1,#2[posmod]) )
+   CMDEP[posmod=+,posit=+](#1,#2).
+   
+if ( ^CMDEP(#1[posmod],#2,#3) | ^CMDEP(#1,#2[posmod],#3) | ^CMDEP(#1,#2,#3[posmod]) )
+   CMDEP[posmod=+,posit=+](#1,#2,#3).
+   
+if ( ^CMDEP(#1[posmod],#2,#3,#4) | ^CMDEP(#1,#2[posmod],#3,#4) | ^CMDEP(#1,#2,#3[posmod],#4) | ^CMDEP(#1,#2,#3,#4[posmod]) )
+   CMDEP[posmod=+,posit=+](#1,#2,#3,#4).
+   
+if ( ^CMDEP(#1[posmod],#2,#3,#4,#5) | ^CMDEP(#1,#2[posmod],#3,#4,#5) | ^CMDEP(#1,#2,#3[posmod],#4,#5) | ^CMDEP(#1,#2,#3,#4[posmod],#5) | ^CMDEP(#1,#2,#3,#4,#5[posmod]) )
+   CMDEP[posmod=+,posit=+](#1,#2,#3,#4,#5).
+   
+
+if ( ^CMDEP(#1[posact],#2) | ^CMDEP(#1,#2[posact]) )
+   CMDEP[posact=+,posit=+](#1,#2).
+
+if ( ^CMDEP(#1[posact],#2,#3) | ^CMDEP(#1,#2[posact],#3) | ^CMDEP(#1,#2,#3[posact]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3).
+   
+if ( ^CMDEP(#1[posact],#2,#3,#4) | ^CMDEP(#1,#2[posact],#3,#4) | ^CMDEP(#1,#2,#3[posact],#4) | ^CMDEP(#1,#2,#3,#4[posact]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1[posact],#2,#3,#4,#5) | ^CMDEP(#1,#2[posact],#3,#4,#5) | ^CMDEP(#1,#2,#3[posact],#4,#5) | ^CMDEP(#1,#2,#3,#4[posact],#5) | ^CMDEP(#1,#2,#3,#4,#5[posact]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3,#4,#5).
+   
+
+if ( ^CMDEP(#1[posmark],#2) | ^CMDEP(#1,#2[posmark]) )
+   CMDEP[posact=+,posit=+](#1,#2).
+   
+if ( ^CMDEP(#1[posmark],#2,#3) | ^CMDEP(#1,#2[posmark],#3) | ^CMDEP(#1,#2,#3[posmark]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3).
+   
+if ( ^CMDEP(#1[posmark],#2,#3,#4) | ^CMDEP(#1,#2[posmark],#3,#4) | ^CMDEP(#1,#2,#3[posmark],#4) | ^CMDEP(#1,#2,#3,#4[posmark]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3,#4).
+
+if ( ^CMDEP(#1[posmark],#2,#3,#4,#5) | ^CMDEP(#1,#2[posmark],#3,#4,#5) | ^CMDEP(#1,#2,#3[posmark],#4,#5) | ^CMDEP(#1,#2,#3,#4[posmark],#5) | ^CMDEP(#1,#2,#3,#4,#5[posmark]) )
+   CMDEP[posact=+,posit=+](#1,#2,#3,#4,#5).
+
+/////////// negative polarity inside the CMDEP ////////////
+
+//She appears to be brain dead 
+//CMDEP(appears,be,brain_CM:+ dead_CM:+)
+
+if ( ^CMDEP(#1[negmod],#2) )
+      CMDEP[negmod=+,negati=+](#1,#2)
+
+if ( ^CMDEP(#1[negmod],#2,#3) )
+      CMDEP[negmod=+,negati=+](#1,#2,#3)
+
+if ( ^CMDEP(#1[negmod],#2,#3,#4) )
+      CMDEP[negmod=+,negati=+](#1,#2,#3,#4)
+
+////////////////////////////////////////////////////////////////////////////
+///////// II/c. Change polarity: contrast outside the CMDEP ///////////////
+//////////////////////////////////////////////////////////////////////////
+
+//although the attending are in agreement amongst themselves presently for comfort care
+//CONNECTOR_EVNT_SUBORD(are,although)
+//CMDEP_POSMOD(attending,are,agreement,comfort care)
+
+if ( ^CMDEP[posmod](#1,#2,#3,#4) & $1(#2,#5[contr]) )
+   CMDEP[contr=+](#1,#2,#3,#4)
+
+//once they make the decision for comfort care only 
+// MOD_PRE(make,once)
+//CMDEP_POSACT_POSMOD(make,decision,comfort_CM:+ care_CM:+ only_CM:+)
+
+if ( ^CMDEP[posit](#1,#2,#3) & $1(#1,#4[contr]) )
+   CMDEP[contr=+](#1,#2,#3)
+
+if ( ^CMDEP[posit](#1,#2) & $1(#1,#4[contr]) )
+   CMDEP[contr=+](#1,#2)
+
+//Patient's family aware of patient's prognosis and still deciding on end of life care .
+//still GV{deciding} 
+//CMDEP_POSIT_POSMOD(deciding,end_CM:+ of_CM:+ life_CM:+ care_CM:+)
+
+| #1[contr], GV{#2[posmod]} |
+if ( ^CMDEP[posit](#2,#3) )
+   CMDEP[contr=+](#2,#3)
+
+//The daughter expresses to me that she is wondering if it is time to go to comfort care with this patient.
+//SC{BG{if} NP{it} FV{is}} NP{time} IV{to go}
+//CMDEP(go,comfort_CM:+ care_CM:+),
+//CONNECTOR_SUBORD(is,if)
+
+| iv{?*,#3} |
+if ( CONNECTOR(#1,#2[contr]) & ^CMDEP[posit](#3,#4) & #1 < #3 )
+   CMDEP[contr=+](#3,#4).
+
+////////////////////////////////////////////////////////////////////////
+///////// II/d. Decide polarity: 2 modalities the CMDEP ///////////////
+//////////////////////////////////////////////////////////////////////
+
+//The family of the deceased donor withdrew consent for organ harvesting .
+//CMDEP_NEGATI_POSIT_POSMOD_NEGMOD(withdrew,consent,organ_CM:+ harvesting_CM:+)
+
+if ( ^CMDEP[negati,posit](#1,#2,#3) )
+   CMDEP[posit=~,posmod=~,posact=~](#1,#2,#3).
+
+///////////////////////////////////////////////////////////
+///////// II/e. No polarity has been found ///////////////
+/////////////////////////////////////////////////////////
+
+//SHE IS COMFORT MEASURES ONLY.
+//ATTRIB(#1SHE,#2COMFORT_CM:+ MEASURES_CM:+ ONLY_CM:+)
+//CMDEP(#3IS,#2COMFORT_CM:+ MEASURES_CM:+ ONLY_CM:+)
+//SUBJ_PRE(#3IS,#1SHE)
+
+if ( ATTRIB(#1,#2[cm]) & ^CMDEP[negati:~,posit:~](#3,#2) & SUBJ(#3,#1) )
+   CMDEP[posit=+](#3,#2).
+
+if ( ^CMDEP[posit:~](#1,#2) & ~CMDEP[posit](#3,#4,#5) & ~CMDEP[posit](#3,#4,#5,#6) & ~CMDEP[posit](#3,#4,#5,#6,#7) )
+   CMDEP[negati=+](#1,#2)
+
+if ( ^CMDEP[posit:~](#1,#2,#8) & ~CMDEP[posit](#3,#4,#5) & ~CMDEP[posit](#3,#4,#5,#6) & ~CMDEP[posit](#3,#4,#5,#6,#7) )
+   CMDEP[negati=+](#1,#2,#8)
+
+if ( ^CMDEP[posit:~](#1,#2,#8,#9) & ~CMDEP[posit](#3,#4,#5) & ~CMDEP[posit](#3,#4,#5,#6) & ~CMDEP[posit](#3,#4,#5,#6,#7) )
+   CMDEP[negati=+](#1,#2,#8,#9)
+
+////////////////////////////////////////////////////////
+///////// III. No CMDEP has been found ///////////////
+//////////////////////////////////////////////////////
+
+///////////// relevant noreldep ////////////////////
+
+//Home hospice referral.
+//MOD_NORELDEP_PRE(referral,hospice_CM:+)
+ 
+if ( ^CMSENT[nocmdep](#1) & $1[noreldep](#2[posmod],#3) & CM(#3) )
+   CMDEP[posit=+](#3,#2), CMSENT[nocmdep=~,posit=+](#1).
+
+
+//////////// negmark ////////////////
+
+//Pt did well and was DC home.I'm not able to get a history as pt's intubated and likely brain dead and no family present.
+//NP{AP{likely ADJ_CM:+{brain_CM:+ dead_CM:+}
+
+| #1[negmark], #7[cm] |
+if ( CMSENT[nocmdep](#5) & CM(#7) )
+   CMDEP[weak=+,negati=+](#1,#7).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+
+//Neurosx was contacted stat who examined the pt and noted that pt is likely brain dead.
+//AP{likely} AP{ADJ_CM:+{brain_CM:+ dead_CM:+}} 
+
+| AP{#1[negmark]}, ?{#7[cm]{?+}} |
+if ( CMSENT[nocmdep](#5) & CM(#7) )
+   CMDEP[weak=+,negati=+](#1,#7).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+
+//////////// posmark ////////////////
+
+//Hospice care at Calvary .
+//CMSENT_NOCMDEP(Hospice care at Calvary .)
+
+| #2[cm,posmark] |
+if ( ^CMSENT[nocmdep](#1) )
+   CMSENT[nocmdep,posit=+,posact=+](#1).
+
+/
+//////////// CM is a passive SUBJ ////////////////
+
+//Family said their goodbyes and patient was taken from ICU to the OR where comfort measures were given and patient was extubated.
+//OBJ-N_CMDEP(comfort_CM:+ measures_CM:+,given)
+
+if ( CMSENT[nocmdep](#5) & CM(#7) & OBJ-N(#7,#8) )
+   CMDEP[weak=+,posit=+,posmod=+](#7,#8).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+\
+
+/
+//////////// CM is an active SUBJ ////////////////
+
+if ( CMSENT[nocmdep](#1) & SUBJ(#2,#3[cm]) & $1(#2,#4) & #2 < #4 & #3 < #4 )
+   CMDEP(#3,#2,#4).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#3,#2,#4) )
+   CMSENT[nocmdep=~](#1).
+\
+/ 
+
+///////////////// other //////////////////
+
+//Mr. Hartshaw is a 71-year-old gentleman whom I have been asked to see to discuss goals of care and palliative care/hospice with his family members."
+
+| #1[verb,noun:~,last] |
+if ( ~VERB(#1) )
+  VERB(#1).
+
+if ( CMSENT[nocmdep](#1) & CM(#2) & VERB(#3) & #3 < #2 )
+   CMDEP[weak=+](#3,#2).
+
+if ( ^CMSENT[nocmdep](#1) & CMDEP(#2,#3) )
+   CMSENT[nocmdep=~](#1).
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( CMDEP[weak](#1,#2) & ^CMDEP[weak](#3,#2) & #1 > #3 )
+   ~.
+
+if ( ^VERB(#1) )
+   ~. 
+\
+//////////////// the verb of a weak CMDEP is part of the MODALITIES ///////////
+
+
+
+//Foremost, we need to make him a DNR, comfort measures only.
+//CMDEP_WEAK_POSIT_POSACT(make,comfort_CM:+ measures_CM:+ only_CM:+)
+//MODALITIES_MAIN(need,make)
+
+if ( ^CMDEP[weak](#1,#2) & MODALITIES(#3[posmod],#1) )
+   CMDEP[posmod=+,posit=+](#3,#1,#2).
+
+if ( ^CMDEP[weak](#1,#2) & MODALITIES(#3[posact],#1) )
+   CMDEP[posact=+,posit=+](#3,#1,#2).
+
+if ( ^CMDEP[weak](#1,#2) & MODALITIES(#3[negmod],#1) )
+   CMDEP[negmod=+,negati=+](#3,#1,#2).
+
+// weak where the verb is not part of  MODALITIES
+
+if (  ^CMDEP[weak](#6[posmod],#7) )
+   CMDEP[weak,posmod=+,posit=+](#6,#7).
+
+if (  ^CMDEP[weak](#6[posact],#7) )
+   CMDEP[weak,posact=+,posit=+](#6,#7).
+
+if (  ^CMDEP[weak](#6,#7[posmark]) )
+   CMDEP[weak,posact=+,posit=+](#6,#7).
+
+if (  ^CMDEP[weak](#6[negmod],#7) )
+   CMDEP[weak,negmod=+,negati=+](#6,#7).
+
+////contr
+
+//We will see if we can get him home with hospice within the next couple of days.
+//CMDEP_POSIT_POSACT(get,hospice_CM:+)
+//CONNECTOR_SUBORD(get,if)
+
+if ( ^CMDEP[posit,posact](#1,#2) & $1(#1,#3[contr]) )
+   CMDEP[contr=+](#1,#2).
+
+
+///no contr if the preceding clause is positive
+//We will see if we can get him home with hospice within the next couple of days.
+//NUCL_VLINK_MODAL(#4will_POSMOD:+,#3see)
+//CORE-ANNEX_IF(#3see,#1get_POSACT:+)
+//CMDEP_CONTR_POSIT_POSACT(#1get_POSACT:+,#2hospice_CM:+)
+
+if ( ^CMDEP[contr](#1,#2) & CORE-ANNEX[if](#3,#1) & NUCL(#4[posmod],#3) )
+   CMDEP[contr=~](#1,#2).
+
+if ( ^CMDEP[contr](#1,#2,#3,#4,#5) )
+   CMDEP[contr=~,posit=~,posact=~,posmod=~,negati=+](#1,#2,#3,#4,#5).
+
+if ( ^CMDEP[contr](#1,#2,#3,#4) )
+   CMDEP[contr=~,posit=~,posact=~,posmod=~,negati=+](#1,#2,#3,#4).
+
+if ( ^CMDEP[contr](#1,#2,#3) )
+   CMDEP[contr=~,posit=~,posact=~,posmod=~,negati=+](#1,#2,#3).
+
+if ( ^CMDEP[contr](#1,#2) )
+   CMDEP[contr=~,posit=~,posact=~,posmod=~,negati=+](#1,#2).
+
+/// CMDEP with 1 argument
+
+| TOP#1{NP{noun{?[lemme:brain], ?[lemme:death]}}} |
+if ( ^CMSENT[nocmdep](#1) )
+   CMSENT[posit=+](#1).
+
+| TOP#1{NP{noun{?[lemme:comfort], ?[lemme:measure], ?[lemme:only]}}} |
+if ( ^CMSENT[nocmdep](#1) )
+   CMSENT[posit=+](#1).
+
+| noun{?[lemme:comfort], ?[lemme:care], ?[lemme:only]} |
+if ( ^CMSENT[nocmdep](#1) )
+   CMSENT[posit=+](#1).
+
+
+/////////////////////// FINAL ////////////////////
+
+if ( ^CMSENT(#1) & CMDEP[posit](#2,#3,#4,#5,#6) )
+   CMSENT[posit=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[posit](#2,#3,#4,#5) )
+   CMSENT[posit=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[posit](#2,#3,#4) )
+   CMSENT[posit=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[posit](#2,#3) )
+   CMSENT[posit=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[negati](#2,#3,#4,#5,#6) )
+   CMSENT[negati=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[negati](#2,#3,#4,#5) )
+   CMSENT[negati=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[negati](#2,#3,#4) )
+   CMSENT[negati=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[negati](#2,#3) )
+   CMSENT[negati=+](#1).
+
+if ( ^CMSENT[negati,posit](#1) )
+   CMSENT[negati=~](#1).
+
+if ( ^CMSENT(#1) & CMDEP[weak](#2,#3,#4,#5,#6) )
+   CMSENT[weak=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[weak](#2,#3,#4,#5) )
+   CMSENT[weak=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[weak](#2,#3,#4) )
+   CMSENT[weak=+](#1).
+
+if ( ^CMSENT(#1) & CMDEP[weak](#2,#3) )
+   CMSENT[weak=+](#1).
+
+/////////////////////////
+
+if ( ^CMSENT[negati:~,posit:~](#1) )
+   CMSENT[negati=+](#1).
+
+if ( ^CMSENT[negati,posit](#1) )
+   CMSENT[posit=+](#1).
+
+//////////////////////
+
+//She was more interested in Home Hospice so that is being arranged.
+//CMDEP_WEAK(interested,Hospice_CM:+)
+//CMSENT_WEAK_NEGATI(She was more interested in Home Hospice_CM:+ so that is being arranged . arrangement organisation PAST PRESENT)
+//arranged
+
+| #1[posact] |
+if ( ^CMSENT[weak,negati](#2) & CMDEP[weak,negati:~,posit:~](#3,#4) & CM(#4) & #4 < #1 & ~$1[modal](?,#1) & $2(#1,#5[pron]) )
+   CMSENT[weak,posit=+,negati=~](#2).
+
+//////////// color keywords
+
+| #1[hl=+] |
+if ( CMDEP(#1,#2,#3,#4,#5) )
+   ~.
+| #2[hl=+] |
+if ( CMDEP(#1,#2,#3,#4,#5) )
+   ~.
+
+| #3[hl=+] |
+if ( CMDEP(#1,#2,#3,#4,#5) )
+   ~.
+
+| #4[hl=+] |
+if ( CMDEP(#1,#2,#3,#4,#5) )
+   ~.
+
+| #5[hl=+] |
+if ( CMDEP(#1,#2,#3,#4,#5) )
+   ~.
+
+////////////
+
+| #1[hl=+] |
+if ( CMDEP(#1,#2,#3,#4) )
+   ~.
+| #2[hl=+] |
+if ( CMDEP(#1,#2,#3,#4) )
+   ~.
+
+| #3[hl=+] |
+if ( CMDEP(#1,#2,#3,#4) )
+   ~.
+
+| #4[hl=+] |
+if ( CMDEP(#1,#2,#3,#4) )
+   ~.
+
+///////////
+
+| #1[hl=+] |
+if ( CMDEP(#1,#2,#3) )
+   ~.
+| #2[hl=+] |
+if ( CMDEP(#1,#2,#3) )
+   ~.
+
+| #3[hl=+] |
+if ( CMDEP(#1,#2,#3) )
+   ~.
+
+///////////
+
+| #1[hl=+] |
+if ( CMDEP(#1,#2) )
+   ~.
+| #2[hl=+] |
+if ( CMDEP(#1,#2) )
+   ~.
+
+//////////
+
+| #2[hl=+] |
+if ( CMSENT[nocmdep](#1) & CM(#2) )
+   ~.
+
+//////////
+
+
+| #2[hl=+] |
+if ( $1(#1[hl],#2[negmark]) )
+   ~.
+
+| #1[hl=+] |
+if ( $1(#1[negmark],#2[hl]) )
+   ~.
+
+| #2[hl=+] |
+if ( $1(#1[hl],#2[posmark]) )
+   ~.
+
+| #1[hl=+] |
+if ( $1(#1[posmark],#2[hl]) )
+   ~.
+
+| #2[hl=+] |
+if ( $1(#1[hl],#2[contr]) )
+   ~.
+
+| #1[hl=+] |
+if ( $1(#1[contr],#2[hl]) )
+   ~.
+
+/////////////
+
+| #1[cm,hl=+] |
+   ~.
+
+/////////////
+
+
+| #1[hl,green=+] |
+if ( CMSENT[posit](#2) )
+   ~.
+  
+| #1[hl,red=+] |
+if ( CMSENT[negati](#2) )
+   ~.
+
+//////////////
+
+| TOP#1{ ?+ } |
+if ( ~CMSENT(#1) )
+   SENT(#1).
+
+  
+
+
+
+
+

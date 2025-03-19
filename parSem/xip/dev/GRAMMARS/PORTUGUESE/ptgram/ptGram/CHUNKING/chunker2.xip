@@ -1,0 +1,506 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunker2.xip                                                !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Based on a previous version developed by Caroline Hagege at Xerox        !
+//!   Research Centre Europe - Grenoble Laboratory.                            !
+//!                                                                            !
+//!  The Chunks are buit in the following order:    NP                         !
+//!                                                 ADVP                       !
+//!                                                 VASP                       !
+//!                                                 VMOD                       !
+//!                                                 VTEMP                      !
+//!                                                                            !
+//!                            file: chunker2       VASP (2nd stage)           !
+//!                                                 VPP                        !
+//!                                                 VCOP                       !
+//!                                                 VCPART                     !
+//!                                                 VGER                       !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                 AP                         !
+//!                                                 NP (2nd stage)             !
+//!                                                                            !
+//!                            file: chunker3       PP                         !
+//!                                                 VCPART (2nd stage)         !
+//!                                                 AP (2nd stage)             !
+//!                                                 AP (2nd stage)             !
+//!                                                                            !
+//!                            file: chunckVB       VASP (3nd stage)           !
+//!                                                 VMOD (3nd stage)           !
+//!                                                 VTEMP (3nd stage)          !
+//!                                                 VASP (4nd stage)           !
+//!                                                 VPP (2nd stage)            !
+//!                                                 VCOP (3nd stage)           !
+//!                                                 VCPART (3nd stage)         !
+//!                                                 VGER (3nd stage)           !
+//!                                                 VINF (3nd stage)           !
+//!                                                 PP                         !
+//!                                                 SC                         !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+| ?[verb,inf=+]      {?[verb,inf]}      | ~
+| ?[verb,gerund=+]   {?[verb,gerund]}   | ~
+Sequence:
+
+//========================================================
+// VASP = verbo que auxilia verbos introduzindo traços aspectuais
+//        [Second stage]
+//========================================================
+// Example: ESTOU A mandar fazer
+// Example: ESTOU mandando fazer
+// Example: tem VINDO A dormir
+// Example: tem VINDO A começar a estudar
+//
+1> VASP[incoat=+]     = ?[aInfInc],   advp*;pron*, ?[surface:a]     |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[deInfInc],  advp*;pron*, ?[surface:de]    |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[emInfInc],  advp*;pron*, ?[surface:em]    |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[porInfInc], advp*;pron*, ?[surface:por]   |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[paraInfInc], advp*;pron*, ?[surface:para] |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[noGerInc]                                 |pron*, (np;pp;advp)*,   ?[verb,gerund]|.
+1> VASP[terminat=+]   = ?[aInfTer],   advp*;pron*, ?[surface:a]     |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[deInfTer],  advp*;pron*, ?[surface:de]    |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[porInfTer], advp*;pron*, ?[surface:por]   |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[noGerTer]                                 |pron*, (np;pp;advp)*,   ?[verb,gerund]|.
+1> VASP[durativo=+]   = ?[aInfDur],   advp*;pron*, ?[surface:a]     |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[durativo=+]   = ?[noGerDur]                                 |pron*, (np;pp;advp)*,   ?[verb,gerund]|.
+1> VASP[frequentat=+] = ?[deInfFre],  advp*;pron*, ?[surface:de]    |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[frequentat=+] = ?[noInfFre]                                 |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[durativo=+]   = ?[noInfDur]                                 |pron*, (np;pp;advp)*,   ?[verb,inf];vmod|.
+1> VASP[iterat=+]     = ?[aInfIte],   advp*;pron*, ?[surface:a]     |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[imperfect=+]  = ?[paraInfImp],advp*;pron*, ?[lemma:para]    |pron*, advp*,           ?[verb,inf];vmod|.
+1> VASP[imperfect=+,passive=+] = ?[porInfImpP], advp*;pron*, ?[surface:por] |pron*, advp*, ?[verb,inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: ESTOU A,     efectivamente, mandar fazer
+// Example: ESTOU,       efectivamente, mandando fazer
+// Example: tem VINDO A, efectivamente, dormir
+// Example: tem VINDO A, efectivamente, começar a estudar
+//
+1> VASP[incoat=+]     = ?[aInfInc],   advp*;pron*, ?[surface:a]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[deInfInc],  advp*;pron*, ?[surface:de]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[emInfInc],  advp*;pron*, ?[surface:em]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[porInfInc], advp*;pron*, ?[surface:por] |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[paraInfInc],advp*;pron*, ?[lemma:para]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[incoat=+]     = ?[noGerInc]                               |pron*, (np;pp;advp)*, ?[comma], (pron;advp)+, ?[comma], ?[verb,gerund]|.
+1> VASP[terminat=+]   = ?[aInfTer],   advp*;pron*, ?[surface:a]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[deInfTer],  advp*;pron*, ?[surface:de]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[porInfTer], advp*;pron*, ?[surface:por] |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[terminat=+]   = ?[noGerTer]                               |pron*, (np;pp;advp)*, ?[comma], (pron;advp)+, ?[comma], ?[verb,gerund]|.
+1> VASP[durativo=+]   = ?[aInfDur],   advp*;pron*, ?[surface:a]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[durativo=+]   = ?[noGerDur]                               |pron*, (np;pp;advp)*, ?[comma], (pron;advp)+, ?[comma], ?[verb,gerund]|.
+1> VASP[frequentat=+] = ?[deInfFre],  advp*;pron*, ?[surface:de]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[frequentat=+] = ?[noInfFre]                               |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[durativo=+]   = ?[noInfDur]                               |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[iterat=+]     = ?[aInfIte],   advp*;pron*, ?[surface:a]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[imperfect=+]  = ?[paraInfImp],advp*;pron*, ?[lemma:para]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+1> VASP[imperfect=+,passive=+] = ?[porInfImpP], advp*;pron*, ?[surface:por] |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: ESTOU, ACTUALMENTE, A mandar fazer
+// Example: ESTOU, EFECTIVAMENTE,  mandando fazer
+// Example: tem VINDO, EFECTIVAMENTE, A dormir
+// Example: tem VINDO, EFECTIVAMENTE, A começar a estudar
+//
+2> VASP[incoat=+]    = ?[aInfInc],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[incoat=+]    = ?[deInfInc],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[incoat=+]    = ?[emInfInc],   ?[comma], (advp;pron)+, ?[comma], ?[surface:em]   |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[incoat=+]    = ?[porInfInc],  ?[comma], (advp;pron)+, ?[comma], ?[surface:por]  |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[incoat=+]    = ?[paraInfInc], ?[comma], (advp;pron)+, ?[comma], ?[surface:para] |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[terminat=+]  = ?[aInfTer],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[terminat=+]  = ?[deInfTer],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[terminat=+]  = ?[porInfTer],  ?[comma], (advp;pron)+, ?[comma], ?[surface:por]  |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[durativo=+]  = ?[aInfDur],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[frequentat=+]= ?[deInfFre],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[iterat=+]    = ?[aInfIte],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[imperfect=+] = ?[paraInfImp], ?[comma], (advp;pron)+, ?[comma], ?[lemma:para]   |pron*, advp*, ?[verb,inf];vmod|.
+2> VASP[imperfect=+,passive=+] = ?[porInfImpP], ?[comma], (advp;pron)+, ?[comma], ?[surface:por] |pron*, advp*, ?[verb,inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: ESTOU A,     efectivamente, mandar fazer
+// Example: ESTOU,       efectivamente, mandando fazer
+// Example: tem VINDO A, efectivamente, dormir
+// Example: tem VINDO A, efectivamente, começar a estudar
+//
+3> VASP[incoat=+]     = ?[aInfInc],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[incoat=+]     = ?[deInfInc],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[incoat=+]     = ?[emInfInc],   ?[comma], (advp;pron)+, ?[comma], ?[surface:em]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[incoat=+]     = ?[porInfInc],  ?[comma], (advp;pron)+, ?[comma], ?[surface:por]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[incoat=+]     = ?[paraInfInc], ?[comma], (advp;pron)+, ?[comma], ?[surface:para] |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[terminat=+]   = ?[aInfTer],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[terminat=+]   = ?[deInfTer],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[terminat=+]   = ?[porInfTer],  ?[comma], (advp;pron)+, ?[comma], ?[surface:por]  |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[durativo=+]   = ?[aInfDur],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[frequentat=+] = ?[deInfFre],   ?[comma], (advp;pron)+, ?[comma], ?[surface:de]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[iterat=+]     = ?[aInfIte],    ?[comma], (advp;pron)+, ?[comma], ?[surface:a]    |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[imperfect=+]  = ?[paraInfImp], ?[comma], (advp;pron)+, ?[comma], ?[lemma:para]   |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+3> VASP[imperfect=+,passive=+]
+                       = ?[porInfImpP],?[comma], (advp;pron)+, ?[comma], ?[surface:por] |?[comma], (pron;advp)+, ?[comma], ?[verb,inf];vmod|.
+
+
+//========================================================
+// VPP = verbo na forma particípio passado masculino singular, precedido de
+//       uma forma verbar dos verbos ter ou haver, ou seja um VTEMP
+//       É sempre o último elemento da cadeia verbal!
+//========================================================
+// Example: tem COMIDO
+// Example: tinham DESAPARECIDO
+// Example: terei CONVERSADO
+// Example: tivesse PERDIDO
+// Example: devia ter LIDO
+// Example: havia LIDO
+//
+9> VPP[cop=+,durativo=+]   = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,durativo]     |?[verb:~,pastpart:~]|.
+9> VPP[cop=+,permansivo=+] = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,permansivo]   |?[verb:~,pastpart:~]|.
+9> VPP[cop=+,incoat=+]     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,incoat]       |?[verb:~,pastpart:~]|.
+9> VPP[cop=+,irreal=+]     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,irreal]       |?[verb:~,pastpart:~]|.
+9> VPP[cop=+,real=+]       = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,real]         |?[verb:~,pastpart:~]|.
+9> VPP                     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop]              |?[verb:~,pastpart:~]|.
+
+// Example: Tendo estes COMPRADO.
+//
+10> VPP[cop=+,durativo=+]   = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,durativo,end].   
+10> VPP[cop=+,permansivo=+] = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,permansivo,end]. 
+10> VPP[cop=+,incoat=+]     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,incoat,end].     
+10> VPP[cop=+,irreal=+]     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,irreal,end].     
+10> VPP[cop=+,real=+]       = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,real,end].       
+10> VPP                     = |VTEMP,(pron),advp*| pastpart[masc,sg,cop,end].            
+
+//NJM+JB, 2010/12/30
+// Example: havia, efectivamente, LIDO
+//
+11> VPP[cop=+,durativo=+]   = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,durativo]   |?[verb:~,pastpart:~]|.
+11> VPP[cop=+,permansivo=+] = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,permansivo] |?[verb:~,pastpart:~]|.
+11> VPP[cop=+,incoat=+]     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,incoat]     |?[verb:~,pastpart:~]|.
+11> VPP[cop=+,irreal=+]     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,irreal]     |?[verb:~,pastpart:~]|.
+11> VPP[cop=+,real=+]       = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,real]       |?[verb:~,pastpart:~]|.
+11> VPP                     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg]                |?[verb:~,pastpart:~]|.
+
+12> VPP[cop=+,durativo=+]   = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,durativo,end].
+12> VPP[cop=+,permansivo=+] = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,permansivo,end].
+12> VPP[cop=+,incoat=+]     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,incoat,end].
+12> VPP[cop=+,irreal=+]     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,irreal,end].
+12> VPP[cop=+,real=+]       = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,cop,real,end].
+12> VPP                     = |VTEMP,?[comma], (pron;advp)+, ?[comma]| pastpart[masc,sg,end].
+
+//========================================================
+// VCOP = verbo que auxilia adjectivos (particípios passados também, por
+//        não se fazer a distinção entre adjectivo e particípio passado)
+//========================================================
+// Example: ESTAVAM impressionados
+// Example: ele ESTÁ bonito
+// Example: A maria É uma mulher
+//
+20> VCOP[durativo=+]   = verb[cop,durativo];  pastpart[cop,durativo]    |(pron;advp)*, pastpart;adj;prep[preploc]|.
+20> VCOP[permansivo=+] = verb[cop,permansivo];pastpart[cop,permansivo]  |(pron;advp)*, pastpart;adj;prep[preploc]|.
+20> VCOP[incoat=+]     = verb[cop,incoat];    pastpart[cop,incoat]      |(pron;advp)*, pastpart;adj;prep[preploc]|.
+20> VCOP[irreal=+]     = verb[cop,irreal];    pastpart[cop,irreal]      |(pron;advp)*, pastpart;adj;prep[preploc]|.
+20> VCOP[real=+]       = verb[cop,real];      pastpart[cop,real]        |(pron;advp)*, pastpart;adj;prep[preploc]|.
+
+//NJM+JB, 2010/12/30
+// Example: ESTAVAM, efectivamente, impressionados
+//
+21> VCOP[durativo=+]   = verb[cop,durativo];  pastpart[cop,durativo]    |?[comma], (pron;advp)+, ?[comma], pastpart;adj;prep[preploc]|.
+21> VCOP[permansivo=+] = verb[cop,permansivo];pastpart[cop,permansivo]  |?[comma], (pron;advp)+, ?[comma], pastpart;adj;prep[preploc]|.
+21> VCOP[incoat=+]     = verb[cop,incoat];    pastpart[cop,incoat]      |?[comma], (pron;advp)+, ?[comma], pastpart;adj;prep[preploc]|.
+21> VCOP[irreal=+]     = verb[cop,irreal];    pastpart[cop,irreal]      |?[comma], (pron;advp)+, ?[comma], pastpart;adj;prep[preploc]|.
+21> VCOP[real=+]       = verb[cop,real];      pastpart[cop,real]        |?[comma], (pron;advp)+, ?[comma], pastpart;adj;prep[preploc]|.
+
+
+//========================================================
+// VCPART = verbo particípio passado (no fim da cadeia verbal)
+//          que não é um VPP
+//========================================================
+// Example: estamos IMPRESSIONADOS
+// Example: ter estado ALTERADA
+//
+// Retirei o VASP, por parecer que nunca pode ocorrer, se estiver errado,
+// reintroduzir no contexto direito
+//
+25> VCPART = |VCOP;VMOD;verb;VPP[cop], pron*, advp*| pastpart;verb[pastpart] |?[verb:~,pastpart:~]|.
+25> VCPART = |VCOP;VMOD;verb;VPP[cop], pron*, advp*| pastpart[end];verb[pastpart,end].
+
+//NJM+JB, 2010/12/30
+// Example: estamos, efectivamente, IMPRESSIONADOS
+//
+26> VCPART = |VCOP;VMOD;verb;VPP[cop], ?[comma], (pron;advp)+, ?[comma]| pastpart;verb[pastpart] |?[verb:~,pastpart:~]|.
+
+
+
+//========================================================
+// VGER = verbo na forma gerundiva
+//========================================================
+// Example: ia AUMENTANDO
+// Example: INTERROMPENDO a marcha
+// Example: SEGUINDO o caminho real
+// Example: ouvia SORRINDO
+// Example: estavam todos DORMINDO
+// Example: vão DORMINDO
+// Example: veio ARRASTANDO
+// Example: tem vindo DORMINDO
+//
+27> VGER = verb[gerund].
+
+
+//========================================================
+// VINF = verbo na forma infinitiva
+//========================================================
+// Example: vou mandar FAZER
+// Example: estou a mandar FAZER
+// Example: vai LAVAR
+// Example: temos de RESOLVER
+// Example: tinha de CHEGAR
+// Example: podem FALAR
+// Example: tentaram DESTRUIR
+//
+30> VINF = verb[inf].
+
+
+//========================================================
+// VF = verbo finito (as outras formas verbais)
+//========================================================
+// Example: eles COMEM as batatas
+//
+31> VF = verb.
+
+
+Reshuffling:
+// in order to correct cases when VASP and VMOD
+//   is built with NPs, PPs and ADVPs
+//
+32> VASP{VERB#1, NP{#2[first,last]}, ?-#3} = VASP{#1,#2,#3}.
+32> VASP{VERB#1, ADVP{ADV#2[first,last]}, #3} = VASP{#1,#2,#3}.
+32> VASP{NP{#1[first,last]}, VERB#2, ?-#3} = VASP{#1,#2,#3}.
+32> VASP{VERB#1, NP{#2[first,last]}, ?-#3} = VASP{#1,#2,#3}.
+
+33> VASP{VERB#1, #2, ADVP{#3[first,last]}, ?-#4} = VASP{#1,#2,#3,#4}.
+33> VASP{#1, VERB#2, ADVP{#3[first,last]}, ?-#4} = VASP{#1,#2,#3,#4}.
+
+33> VASP{VERB#1, #2, PP{PREP#3[first,last]}} = VASP{#1,#2,#3}.
+
+35> VMOD{VERB#1, ADVP{ADV#2[first,last]}, ?-#3} = VMOD{#1,#2,#3}.
+35> VMOD{VERB#1, #2, PP{PREP#3[first,last]}}    = VMOD{#1,#2,#3}.
+
+37> VMOD{VERB#1, #2, ADVP{#3[first,last]}, ?-#4} = VMOD{#1,#2,#3,#4}.
+
+37> VTEMP{VERB#1, #2, ADVP{#3[first,last]}, ?-#4} = VTEMP{#1,#2,#3,#4}.
+Sequence:
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// AP - ADJECTIVAL CHUNK (first stage)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/03/16
+//NJM+JB, 2013/06/03 - removed erroneous "{" and "}"
+//
+// Example: não era nada BELO
+//
+39> AP = |ADVP[lemma:não];ADVP[lemma:nem], ?[verb,lemma:ser], ADVP[lemma:nada]| adj.
+
+
+// Is constructed when the adjective is modified by one or more adverbs
+//
+// Example: ainda mais bela
+//
+//NJM+JB, 2013/02/07  added the restriction [start:~]
+// Example: Completamente desiludido com o local, DeMille segue mais para Oeste
+//
+40> AP = ADVP[start:~], adj;pastpart.
+40> AP = |?[comma]| adj;pastpart.
+
+41> AP = |~noun| adj, ?[lemma:e], adj |noun|.
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// NP - NOMINAL CHUNK  (second stage)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//========================================================
+// NP with nominal heads
+//========================================================
+
+// Example: este seu mero livro
+//
+//NJM+JB, 2010/03/16
+//
+45> NP @= (?[todo]), art;?[dem], ?[poss], ?[lemma:tal];?[lemma:mero];?[lemma:certo];?[lemma:qualquer];?[lemma:simples];?[lemma:único];?[indef1];?[indef5], (num), (AP;adj;pastpart;?[indef1]),  noun.
+45> NP @= (?[todo]), art;?[dem], ?[poss], ?[lemma:tal];?[lemma:mero];?[lemma:certo];?[lemma:qualquer];?[lemma:simples];?[lemma:único];?[indef1];?[indef5], (AP;adj;pastpart;?[indef1]),   num+, noun.
+45> NP @= (?[todo]), art;?[dem], ?[poss], ?[lemma:tal];?[lemma:mero];?[lemma:certo];?[lemma:qualquer];?[lemma:simples];?[lemma:único];?[indef1];?[indef5], (AP;adj;pastpart;?[indef1])*, (num), noun.
+
+
+//NJM+JB, 2013/05/21
+// Example: deram um a[o outro]NP amuletos
+// Example: deram uns a[os outros]NP etiquetas
+//
+47> NP @= |NP[lemma:um], prep| art[lemma:o], #2[lemma:outro] |#3[noun]|,
+          where(#3[number] & #3[gender] & (#2[number]~:#3[number] | #2[gender]~:#3[gender]) ) .
+47> NP @= |#1[lemma:um], prep| art[lemma:o], #2[lemma:outro] |#3[noun]|,
+          where(#3[number] & #3[gender] & (#2[number]~:#3[number] | #2[gender]~:#3[gender]) & #1[number]::#2[number] & #1[gender]::#2[gender] ) .
+
+
+// Example: (Os) muitos/vários/tais rapazes
+// Example: (Os) muitos/vários/tais cinco rapazes
+// Example: (Os) muitos/vários/tais cinco belos rapazes
+47> NP @= (art;?[todo]), (?[poss];?[dem]), ?[indef1];?[indef5];?[dem], (?[poss];?[lemma:tal]), (AP;adj), (num), (AP;adj), noun.
+
+// Example: (Um) certo rapaz
+47> NP @= (art), ?[indef,proxindef:~,lemma:~tudo];?[dem], (?[poss];?[lemma:tal];?[lemma:certo];?[lemma:mero];?[indef1]), (AP;adj), (num), (AP;adj), noun.
+
+
+// Example: (todos/ambos) os (meus) (muito belos) (dois) amigos
+// Example: meus muito belos dois gatos
+// Example: todos meus muito belos dois gatos
+// Example: todos meus dois muito belos gatos
+// Example: todos os meus muito belos dois gatos
+//
+//CH, 2007/06/06 Rules below were modified
+//
+48> NP @= (?[todo]), art;?[poss];?[dem],   (?[poss];?[lemma:tal];?[lemma:mero]), (num[t-data-string:~]), (AP;adj;pastpart;?[indef1]),  noun.
+48> NP @= (?[todo]), (art;?[poss];?[dem]), (?[poss];?[lemma:tal];?[lemma:mero]), (AP;adj;pastpart;?[indef1]),   num+[t-data-string:~], (AP;adj;pastpart), noun.
+48> NP @= (?[todo]), (art;?[poss];?[dem]), (?[poss];?[lemma:tal];?[lemma:mero]), AP+;adj+;pastpart+;?[indef1];?[indef2];?[q3], (num[t-data-string:~]), (AP;adj;pastpart), noun.
+
+// Example: alguns rapazes
+// Example: uns rapazes
+// Example: nenhum rapaz
+// Example: muitos rapazes
+// Example: cinco rapazes
+48> NP @= ?[indef2];?[q3];num[t-data-string:~], (AP;adj;pastpart), noun.
+
+
+//========================================================
+// NP which head is an adjective/past participle
+//========================================================
+
+// We also have to take int account NPs and PPs without nominal heads and formed, instead, with adjective 
+// as their head, eg. "O ótimo é inimigo do bom".
+// In the case of two adjectives, we assume that the first is the head of the NP, and the second is a 
+// modifier AP on the first one.
+// If the first adjective is modified by an adverb, then the second adjective is the head of the NP:
+// "os mais belos vedantes".
+
+// Example: [As mais belas amigas] vieram
+//          [where amigas is taken as an adjective and the NP spans between "A" and "belas"]
+50> NP @= (?[todo]), ?[art];pron[poss];?[dem], (pron[poss];?[lemma:tal]), num*[t-data-string:~], AP, adj;pastpart.
+
+// Example: [A feia]NP
+// Example: [O vedante]NP interbancário 
+50> NP @= (?[todo]), ?[art];pron[poss];?[dem], (pron[poss];?[lemma:tal]), num*[t-data-string:~], AP;adj;pastpart.
+
+
+//NJM 2007/06/08
+//========================================================
+// NP which head is a number
+//========================================================
+// Example: os três/os meus quatro/
+52> NP = (art), (AP;adj), (?[poss];?[dem]), (AP;adj), num.
+
+
+//========================================================
+// NP which head is an INDEF1
+//========================================================
+//NJM+JB, 2011/12/20 - added restriction of not being a coordenative conjuction (eg, Tanto a laranja como o limão ....)
+// Example: os tais/poucos/outros/varios/proprios
+//
+54> NP = (art;?[dem]), ?[indef1,coord:~].
+
+
+//========================================================
+// NP which head is a Possessive
+//========================================================
+// Example: o meu/este nosso
+56> NP = (art;?[dem]), ?[poss].
+
+
+//========================================================
+// NP which head is a Relative (with relative pronoun)
+//========================================================
+// Example: o qual
+58> NP[rel] = (art;?[dem]), ?[rel].
+
+//========================================================
+// NP which head is an indefinite invariable pronoun
+//========================================================
+// Example: tudo isto;isso;aquilo
+60> NP = ?[lemma:tudo], ?[lemma:isso];?[lemma:isto];?[lemma:aquilo].
+
+
+//========================================================
+// NP with single pronouns
+//========================================================
+
+// with personal pronoun
+//
+// Example: (todo) ela
+62> NP = (?[todo]), pron[pers,nom].
+
+// with indefinite alone
+//
+// Example: todos, nenhum, ambos, etc.
+62> NP = ?[indef,qu:~].
+
+// with single noun alone
+//
+// Example: raparigas
+// Example: 21h30
+// Example: me
+// Example: onde
+64> NP[rel] = pron[rel,qu:~].
+64> NP = noun;num;pron[qu:~].
+
+
+//NJM+JB, 2007/06/05
+// Nas relativas sem antecedente, aceita-se que o artigo ocupe isoladamente
+// a cabeça do grupo nominal. A referência deve ser procurada no discurso
+// anterior eventualmente usando o género e número do artigo.
+// (isto é também uma consequência de ter eliminado a POS de pronome demonstrativo
+//  para as formas: o, a, os, as. Esta decisão está de acordo com Cunha & Cintra 86)
+//
+// Example: [o]NP que aqui te dou
+//
+66> NP = art |?[lemma:que]|.
+
+Reshuffling:
+// NP {art, AP;PP}
+// Example: o mais inteligente
+68> NP{art#1, AP[last]{?-#2}} = NP{#1,#2}.
+
+// Reshuffling in order to recuperate NPs that have been previously constructed
+// with art that have the feature prep too (contractions)
+// in order to correct cases when prep+art is considered as art
+//
+// Example: do rapaz
+68> NP[quant:~]{art#1[prep], ?-#2} = PP{#1,#2}.
+
+// Fakes NP constructed with contraction prep art
+69> NP[quant:~]{#1[prep], #3{?-#2} } = PP{#1,#2}.
+
+// muitos dos chuvosos
+70> NP[quant:~]{#1[prep], ?-#2} = PP{#1,#2}.
+
+// Muito boas bananas
+71> NP{AP#1{?-#2}, noun#3} = NP{#2,#3}.
+
+// psicologicamente nefasta barreira
+72> NP{ADVP{?-#2}, ?-#3} = NP{#2,#3}.
+
+// profusamente anunciada entrevista
+72> NP{#1, ADVP{?-#2}, ?-#3} = NP{#1,#2,#3}.
+
+// Example: Nuno
+73> noun{noun#1[first,last]} = #1.

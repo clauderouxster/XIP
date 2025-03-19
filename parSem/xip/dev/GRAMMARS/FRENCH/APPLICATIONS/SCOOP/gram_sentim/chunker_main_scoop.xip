@@ -1,0 +1,339 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2012 Xerox Corporation.  All Rights Reserved.
+//!
+//! Part 1 of old file chunker.xip that deals with construction of 
+//! non-SC chunks. This split was necessary to avoid conflicts with the
+//! construction of other chunk types.
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/// COPIE de chunker.xip dans TEMPESTER2 auquel on a rajouté des ADVP.
+// Verifier avec les autres si ca gene pas
+// Si ca gene pas, le remettre a la place de chunker dans TEMPESTER2
+
+
+/ the rules in this section define delimiters for input stream: english key word is SPLIT\
+// Comented out because in EASY sentences are already defined with <E> and </E>
+
+/DécoupeSéquence:\
+/|?*,SENT#| .\
+
+
+
+Séquence:
+
+
+/=============== ADVP ========================================\
+// groupe adverbial
+
+// coordination of adverbs
+// before the first verb of the sentence
+5> ADVP[advment=+] = | ?[start,verb:~], ?*[verb:~] |  adv[advment], coord, adv[advment] .
+
+// after the last verb of the sentence
+5> ADVP[advment=+] =   adv[advment], coord, adv[advment] | ?*[verb:~] | .
+
+// AB 2011.03.10 ajout de contrainte contextuelle pour ne pas splitter les ADVP en groupes de 2 adverbes
+// e.g. Il n'a [jamais vraiment très rapidement]ADVP mangé.
+// au lieu de Il n'a [[jamais vraiment]ADVDP [très rapidement]ADVP]ADVP mangé.
+// Evite de terminer le ADVP sur "vraiment", par exemple.
+8> ADVP[advment=+] = ?+[adv], ?[advment] | ?[adv:~] |.
+
+//8> ADVP[advment=+] = ?+[adv], ?[advment] .
+
+8> ADVP @= ?+[adv], (?[advment]), adv. 
+
+
+/=============== AP ========================================\
+
+
+
+10> AP = (?*[adv]),adj[verb:~],punct[form:fcm],(?*[adv]),adj[verb:~],coord,(?*[adv]),adj[verb:~].
+10> AP = (?*[adv]),adj[verb:~,masc],coord,(?*[adv]),adj[verb:~,masc].
+10> AP = (?*[adv]),adj[verb:~,fem],coord,(?*[adv]),adj[verb:~,fem].
+
+10> AP = ?[adv],coord,?[adv],adj[verb:~].
+10> AP = (?+[adv]),adj[verb:~].
+
+
+DiRègles:
+
+/=============== NP ========================================\
+
+/* avec un nom (det ou pas det) *\
+
+20> NP -> (det+[prep:~]),(coord+[first:~,last:~]),num*,
+        (punct+[first:~,form:fquotes]),
+        (AP+[first:~]),
+        noun[last:+,proper:~].
+
+
+20> NP -> (det+[prep:~]),(coord+[first:~,last:~]),num, num+, 
+        (punct+[first:~,form:fcm]),(punct+[first:~,form:fquotes]),
+        (AP+[first:~]),
+        noun[last:+,proper:~].
+
+20> NP -> (det+[prep:~]),(coord+[first:~,last:~]),num+,
+        (punct+[first:~,form:fcm]),(punct+[first:~,form:fquotes]),
+        ?[adv],(AP+[first:~]),
+        noun[last:+,proper:~].
+
+/* only adj + noun, with no det, should not follow a nouna
+   or should not be time:+  *\
+
+20> NP -> |?[noun:~]| AP[first:+],
+        noun[last:+,proper:~].
+//COMMENT CB: addition of AP* for "charmant petit restaurant"
+20> NP -> || AP[first:+], AP*,
+        noun[last:+,proper:~].
+
+20> NP -> AP[first:+],
+        noun[last:+,proper:~,time:~].
+
+/* with a det and an adj *\
+
+20> NP -> det+[prep:~],(coord+[first:~,last:~]),(num+),
+        (punct+[first:~,form:fcm]),(punct+[first:~,form:~]),
+        AP[last:+].
+20> NP -> det+[prep:~],(coord+[first:~,last:~]),(num+),
+        (punct+[first:~,form:fcm]),(punct+[first:~,form:~]),
+        adj[last:+].
+
+/* pronouns *\
+20> NP[pron:+,nom:+,clit:!] -> pron[nom:+,prep:~,rel:~,!clit:!].
+20> NP[pron:+,nom:+] -> pron[def:+,prep:~,rel:~].
+20> NP[pron:+,nom:+,dem:+] -> pron[dem:+,prep:~,rel:~].
+20> NP[pron:+,nom:+,poss:+] -> pron[poss:+,prep:~,rel:~].
+20> NP[pron:+,nom:+,quant:+] -> pron[quant:+,prep:~,rel:~].
+
+20> NP -> (det+[prep:~]),(coord+[first:~,last:~]),num+[last:+].
+20> NP -> det[prep:~].
+
+
+20> NP -> (det+[prep:~]),(noun+[last:~,tit:+]),(noun+[last:~,maj:+,person:+]),
+        (noun+[last:~,proper:+,person:+]),noun[last:+,proper:+,person:+].
+
+20> NP -> (det+[prep:~]),(noun+[last:~,maj:+,person:~,time:~,tempexpr:~]),
+        (noun+[last:~,proper:+,person:~]),noun[last:+,proper:+,person:~].
+
+
+20> NP -> (det+[prep:~]),(noun+[last:~,tit:+]),(noun+[last:~,maj:+,time:~,tempexpr:~]),
+        (noun+[last:~,proper:+]),noun[last:+,maj:+].
+
+
+
+20> NP -> det+[prep:~],(AP+),(noun+[last:~,proper:+,person:+]),
+        (noun+[last:~,maj:+,person:+]),
+        noun[last:+,proper:+,person:+].
+
+20> NP -> det+[prep:~],(AP+),(noun+[last:~,proper:+,person:~]),
+        (noun+[last:~,maj:+,person:~]),
+        noun[last:+,proper:+,person:~].
+
+20> NP -> det+[prep:~],(AP+),(noun+[last:~,proper:+]),
+        (noun+[last:~,maj:+]),
+        noun[last:+,maj:+]. 
+
+
+//ADD CB: test avec une coordination de pronoms en debut de pharse
+
+
+20> NP -> pron[start], coord, pron[last]. 
+
+
+/=============== PP ========================================\
+
+// d'ici demain
+28> PP -> | ?[verb:~] | prep[pron:~],adv[last:+,!closed:!,!noun:!,!pron:!,!time:!,tempexpr].
+
+// AB 2011.11.08 "d'ici la semaine prochaine" is clearly adverbial modifier only if not directly preceded by a verb
+// e.g. Jean partira, mais pas très loin, PP[d'ici la semaine prochaine].
+//      NOT Jean partira d'ici la semaine prochaine.
+29> PP -> | ?[verb:~] | prep+[pron:~],adv+[first:~,lemme:ici],(advp+[first:~]),(coord+[first:~]),
+        NP[last:+,!closed:!,!noun:!,!pron:!,!time:!].
+
+// AB 2011.11.08 construct "d'ici" separately (this rule may be redundant - check)
+29> PP -> prep[pron:~],adv[first:~,lemme:ici].
+
+30> PP -> NP[prep:+,!closed:!,!noun:!,!pron:!].
+
+30> PP -> prep+[pron:~],(adv+[first:~]),(advp+[first:~]),(coord+[first:~]),
+        NP[last:+,!closed:!,!noun:!,!pron:!,!time:!].
+
+30> PP -> prep+[pron:~], (coord+[first:~]), 
+        (punct+[first:~]),NP[last:+,!closed:!,!noun:!,!pron:!,!time:!].
+
+30> PP[noun=+] -> prep+[pron:~],AP[last:+].
+
+30> PP[pron=+] -> prep+[pron:~],(adv+[first:~]),(advp+[first:~]),(coord+[first:~]),
+        (punct+[first:~]),pron[last:+,!closed:!].
+
+// 30> PP[det=+] -> prep[form:fde,first],num,prep[form:fa],num,()
+
+/--------------- VERB rules ----------------\ 
+
+/-- Finite Verb clusters --\
+
+
+40> FV[verb:+] ->
+        (neg[first:+]),(adv[psneg:+,first:~]),
+        (pron+[nom:~,dem:~,poss:~,rel:~]),
+        (punct+[first:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[inf:~,partpre:~,partpas:~,last:+].
+
+
+40> FV[verb:+] -> (neg[last:~]),(adv[psneg:+,first:~,last:~]),
+        (pron+[nom:~,dem:~,poss:~,rel:~,last:~]),
+        (np+[clit:+,first:~,last:~]),
+        (punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[aux:+,inf:~,partpre:~,partpas:~],(verb+[aux:+,partpas:+]).
+
+
+40> FV[verb:+] -> (neg[last:~]),(adv[psneg:+,first:~,last:~]),
+        (pron+[nom:~,dem:~,poss:~,rel:~,last:~]),
+        (np+[clit:+,first:~,last:~]),
+        (np[first:~,pron:+,quant:+]),
+        (punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[aux:+,inf:~,partpre:~,partpas:~], (verb+[aux:+,partpas:+]),
+        verb[partpas:+,last:+].
+
+
+/-- Infinite Verb clusters --\
+
+30> IV[verb:+,inf:+] ->
+        (prep[first:+]),(neg[last:~]),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~,hyph:~]),(punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[inf:+,last:+].
+
+40> IV[verb:+,inf:+] ->
+        (prep[first:+]),(neg[last:~]),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~,hyph:~]),(punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+	(np[first:~]),
+        verb[inf:+,last:+].
+
+30> IV[verb:+,inf:+] ->
+        (prep[first:+,last:~]),(neg[last:~]),(adv[psneg:+,first:~,last:~]),
+        (pron+[nom:~,poss:~,rel:~,hyph:~,last:~]),
+        (punct+[first:~,last:~]),(np[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[aux:+,inf:+],(verb+[aux:+,partpas:+]).
+
+30> IV[verb:+,inf:+] ->
+        (prep[first:+]),(neg[last:~]),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~,hyph:~]),(punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        (np[first:~]),
+        verb[aux:+,inf:+],(verb+[aux:+,partpas:+]),
+        verb[partpas:+,last:+].
+
+/-- Pres. Participle Verb clusters --\
+
+30> GV[verb:+,partpre:+] ->
+        (prep[first:+,form:fen]),(neg),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~]), (punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[partpre:+,last:+].
+
+30> GV[verb:+,partpre:+] ->
+        (prep[first:+,form:fen]),(neg),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~]),
+        (punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[aux:+,partpre:+],(verb+[aux:+,partpas:+]).
+
+30> GV[verb:+,partpre:+] ->
+        (prep[first:+,form:fen]),(neg),(adv[psneg:+,first:~]),
+        (pron+[nom:~,poss:~,rel:~]),
+        (punct+[first:~,last:~]),
+	(adv+[first:~,last:~]),
+	(advp+[first:~,last:~]),
+        verb[aux:+,partpre:+],(verb+[aux:+,partpas:+]),
+        verb[partpas:+,last:+].
+
+
+/------------ SC rules --------\
+
+
+/== Sentence boundaries 1 ===\
+
+
+50> BG -> conjque[first:+]   |np[pron:+,nom:+,dem:~,ton:~]| .
+50> BG -> conjque[first:+]   |?*[adv],fv| .
+//pour le negation: ne crois pas, et eviter le probleme du "ne" forclusif
+// il n'aime que la mer: regle imposant la presence du"pas"
+50> BG -> |?[verb:+,neg], adv[lemme:"pas"],  ?*[verb:~,compar:~]| (coord), conjque[last:+].
+
+50> BG -> |?[verb:+,neg:~], ?*[verb:~,compar:~]| (coord), conjque[last:+].
+50> BG -> |?[start:+,neg:~,compar:~],?*[verb:~,compar:~]| conjque.
+
+50> BG -> conj[compar:~, first:+]  |np[pron:+,nom:+,dem:~,ton:~]|. 
+50> BG -> conj |?*[adv],fv| .
+50> BG -> conj[form:fcomme] |NP*,FV| .
+
+50> BG -> coord  |np[pron:+,nom:+,dem:~,ton:~],?[conjque:~]|. 
+50> BG -> coord  |punct*[form:fcm];?*[adv],fv|. 
+
+50> BG -> |?[form:~fcm]|  punct[form:fhyph]   |np[pron:+,nom:+,dem:~,ton:~]|. 
+50> BG[!form=fopar] -> punct[form:fopar]   |np[pron:+,nom:+,dem:~,ton:~]|. 
+50> BG -> punct[form:f2pts]   |(punct),?*[adv],np[pron:+,nom:+,ton:~]|. 
+50> BG -> punct[form:f2pts]   |punct|. 
+
+
+
+50> BG -> pron[rel:+]. 
+50> BG -> pp[rel:+]. 
+50> BG -> adv[rel:+]. 
+50> BG -> adv[int:+] |?[adv:~,inf:~]|.
+
+50> BG -> conj[sub:+,coord:~].
+
+60> BG[!form=fopar] ->  punct[form:fopar] |*[form:~fcpar,scbegin:~],fv|.
+60> BG -> punct[form:f2pts]   |?*[scbegin:~],fv|.
+
+
+/== Sentence boundaries 2 ===\
+
+/* insertions with no finite verbs *\
+
+60> INS -> punct[form:fhyph,first:+],(bg+),
+        (np+), (pp+), (adv+), (advp+),
+	(verb+[partpas:+]),(coord+), (ap+),
+        (iv+), (gv+),
+        (prep+),(punct+[form:~fhyph]),
+         punct[form:fhyph,last:+].
+
+60> INS -> punct[form:fopar,first:+],(bg+),
+        (np+), (pp+), (adv+), (advp+), (verb+[partpas:+]),(coord+), (ap+),
+        (iv+),(gv+),
+        (prep+),(punct+[form:~fcpar]),
+         punct[form:fcpar,last:+].
+
+
+
+/-----------------END ID-rules---------------\
+
+PLRègles:
+
+[punct:+,form:fcm] < [coord:+] 
+
+20> [det:+] < [num:+]
+20> [det:+] < [adj:+]
+20> [det:+] < [noun:+]
+20> [adj:+] < [noun:+,proper:+]
+20> [coord:+] < [noun:+,proper:+]
+
+

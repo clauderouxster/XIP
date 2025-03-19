@@ -1,0 +1,177 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      basic rules for additional lexicon entries
+# 
+# LANGUAGE:     (FRENCH)
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      17-Jul-2007 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -e "read lex LEX.lexc"  -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+# apostrophe
+define APO [
+  "\u0027"	# [']	APOSTROPHE
+| "\u2018"	# [‘]	LEFT SINGLE QUOTATION MARK
+| "\u2019"	# [’]	RIGHT SINGLE QUOTATION MARK
+];
+
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+ ];
+multi char sigma net
+define TAG
+
+define MARKPL	[ "(s)" | "[s]" | "[x]" ];
+define MARKFEM	[ "[e]" | "[2e]" | "[ce]" | "[le]" | "[se]" ];
+
+define SPEC	[ MARKPL | MARKFEM ] ;
+
+define BD	[ %- | %  | .#. ];
+
+read regex [
+	0 <- SPEC
+
+# optional hyphens
+.o.	%- <- [ "[-]" | "(-)" ]
+
+# optional dots
+.o.	%. <- "(.)"
+
+# ------------------------------------------------------------------------------
+.o.	LEX 
+# ------------------------------------------------------------------------------
+# 
+# hyphen or space
+.o.	"[-]" -> [ %  | %- ]
+# hyphen or nothing
+.o.	"(-)" -> [ 0 | %- ]
+
+# optional dots
+.o.	"(.)" -> [ 0 | %. ]
+
+# plural markers 
+.o.	"[x]" -> "[s]"	|| a l (MARKFEM) _ $%+Fem 	# normal -> normaux, normales
+
+# GENDER
+# masculine forms
+.o.	MARKFEM -> 0	|| _ $%+Masc
+
+# feminine forms
+
+# irregular forms
+.o.	{doux} "[e]" -> {douce}	|| BD _ $%+Fem
+.o.	{roux} "[e]" -> {rousse}	|| BD _ $%+Fem
+.o.	{grec} "[e]" -> {grecque}|| BD _ $%+Fem
+.o.	{turc} "[e]" -> {turcque}|| BD _ $%+Fem
+.o.	{vieux} "[e]" -> {vieille} || BD _ $%+Fem
+
+# semi-regular forms
+.o.	{if} "[e]" -> {ive}	|| _ $%+Fem	# actif -> active
+.o.	{oux} "[e]" -> {ouse}	|| _ $%+Fem	# jaloux -> jalouse
+.o.	{eux} "[e]" -> {euse}	|| _ $%+Fem	# heureux -> heureuse
+.o.	{er} "[e]" -> {ère}	|| _ $%+Fem	# dernier -> dernière
+.o.	{ek} "[e]" -> {èke}	|| _ $%+Fem	# ouzbek -> ouzbèke
+.o.	{eur} "[e]" -> {euse}	|| _ $%+Fem	# fumeur -> fumeuse
+
+.o.	{eur} "[ce]" -> {rice}	||_ $%+Fem	# moteur -> motrice
+
+.o.	[i|e] {au} "[le]" -> {elle} ||_ $%+Fem	# beau -> belle
+
+.o.	"[2e]" -> n e		|| n _ $%+Fem	# indien -> indienne
+.o.	"[2e]" -> l e		|| l _ $%+Fem	# corporel -> corporelle
+.o.	"[2e]" -> t e		|| t _ $%+Fem	# violet -> violette
+
+.o.	"[se]" -> s e		|| _ $%+Fem	# andalou -> andalouse
+.o.	"[e]" -> e		|| _ $%+Fem
+
+
+
+# ----------------------------------------------------------------------
+# NUMBER
+# singular
+.o.	MARKPL -> 0	|| _ $%+Sg
+
+# plural
+# optional -s
+.o. 	"(s)" -> [ "[s]" | 0 ]	|| _ $%+Pl
+
+# plural -s
+.o.	"[s]" -> 0	|| [x|s] _ $%+Pl 	# doux -> doux
+
+.o.	{man} "[s]" (->) {men}	|| [{gentle}|{camera}] _ $%+Pl # gentleman -> gentlemen/gentlemans
+.o. 	"[s]" -> s		|| _ $%+Pl	# maison -> maisons
+
+# plural -x
+.o.	{ail} "[x]" -> {aux}	|| _ $%+Pl	# travail -> travaux
+.o.	{al} "[x]" -> {aux}	|| _ $%+Pl	# cheval -> chevaux
+.o. 	"[x]" -> x		|| _ $%+Pl	# feu -> feux
+
+
+# elided forms 
+.o.	[a|e|i] -> APO || _ TAG* %+Apo		# le/la -> l' ; si -> s'
+
+# remove tags and markers
+.o.	[SPEC|TAG] -> 0
+
+# (inital) accented capitals -> normalizer !
+# .o.	Á (->) A, É (->) E, Í (->) I, Ó (->) O, Ú (->) U  
+
+	
+
+# for place names
+.o. 	{Saint} (->) S t || _ (e) [ %- | %  ]
+
+];
+
+
+
+# ----------------------------------------------------------------------------------------
+# special treatment for names/adjectives 
+
+set quit-on-fail off
+define NADJ	%+Noun:0 (0:"[UPP]" | 0:"[LOW]") | %+Adj:0 0:"[LOW]";
+substitute defined NADJ for  "[NADJ]" ;
+set quit-on-fail on
+
+define LEX
+
+define BD	[ %- | %  | %'| .#. ];
+
+read regex [
+	LEX 
+
+# initial capitalization
+.o.	[ a -> A , b -> B , c -> C , d -> D , e -> E , f -> F , g -> G , h -> H 
+	, i -> I , j -> J , k -> K , l -> L , m -> M , n -> N , o -> O , p -> P 
+	, q -> Q , r -> R , s -> S , t -> T , u -> U , v -> V , w -> W , x -> X 
+	, y -> Y , z -> Z
+	, à -> À , á -> Á , â -> Â , ã -> Ã , ä -> Ä , å -> Å , æ -> Æ , ç -> Ç 
+	, è -> È , é -> É , ê -> Ê , ë -> Ë , ì -> Ì , í -> Í , î -> Î , ï -> Ï 
+	, ð -> Ð , ñ -> Ñ , ò -> Ò , ó -> Ó , ô -> Ô , õ -> Õ , ö -> Ö , ø -> Ø 
+	, ù -> Ù , ú -> Ú , û -> Û , ü -> Ü , ý -> Ý , þ -> Þ , œ -> Œ
+	|| BD _ $[ "[UPP]" ] ]
+.o.	"[UPP]" -> 0
+
+
+# initial de capitalization
+.o.	[ A -> a , B -> b , C -> c , D -> d , E -> e , F -> f , G -> g , H -> h 
+	, I -> i , J -> j , K -> k , L -> l , M -> m , N -> n , O -> o , P -> p 
+	, Q -> q , R -> r , S -> s , T -> t , U -> u , V -> v , W -> w , X -> x 
+	, Y -> y , Z -> z
+	, À -> à , Á -> á , Â -> â , Ã -> ã , Ä -> ä , Å -> å , Æ -> æ , Ç -> ç 
+	, È -> è , É -> é , Ê -> ê , Ë -> ë , Ì -> ì , Í -> í , Î -> î , Ï -> ï 
+	, Ð -> ð , Ñ -> ñ , Ò -> ò , Ó -> ó , Ô -> ô , Õ -> õ , Ö -> ö , Ø -> ø 
+	, Ù -> ù , Ú -> ú , Û -> û , Ü -> ü , Ý -> ý , Þ -> þ , Œ -> œ
+	|| BD _ $[ "[LOW]" ] ]
+.o.	"[LOW]" -> 0
+];
+

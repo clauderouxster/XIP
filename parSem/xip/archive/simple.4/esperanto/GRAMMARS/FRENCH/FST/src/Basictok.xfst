@@ -1,0 +1,238 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# ENCODING:	UTF-8
+# CONTENT:      final assembling of lexicon FST
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+# UPADTED:	05-Apr-2006 (AS: changed to utf8)
+# ============================================================================
+# USAGE:        xfst -utf8 -l def-chars.utf8.xfst 
+#			-s ../aux/lex-Prefix.fst
+#			-s ../aux/FrBasic.fst
+# 			-l [ThisFile]
+# ============================================================================
+
+
+# preloaded FSTs:
+# lexicon
+define Basic
+
+# prefixes
+define Prefix
+
+# ------------------------------------------------------------------------------
+# SGML and puncs
+# define arbitrary SGML tags
+
+define sgml [
+%< (%/)  [Let | %_ | %: | %? | %!] ~$[%>] %> %+SGML:0 %+PUNCT:0 
+];
+
+#  define web addresses
+define web1 [[h t t p %: | w w Let %.] ~$[% ] ] - [?* [%, | %. | %; | %: | %? | %!]] ;
+
+define web	web1  %+InvGen:0 %+InvPL:0 %+Noun:0 %+NOUN%_INV:0 ;
+
+read regex sgml | web;
+
+define SGML
+
+# ------------------------------------------------------------------------------
+# acronyms with dots (except as the last character)
+
+read regex 
+ Let (Num Char*) %. [[[Char | %. | %- | %/ ]* Char ] & $[Let]] (%.) 
+ %+InvGen:0 %+InvPL:0 %+Acron:0 %+NOUN%_INV:0 ;
+
+define Acron
+
+# ------------------------------------------------------------------------------
+# initials
+read regex
+[
+ Up %. [(% ) Up %.]* | 
+ Up (%.) %- Up %. |
+ Up %- Up (%.)
+]
+%+INITIAL:0  %+MISC:0
+;
+define Initials
+
+
+
+
+# ---------------------------------------------------------------------------------------------
+
+# define end of lines (e.g Carriage returns + tabs)
+# define EOL  [C:"\n" [R:"\n" | R:"\t" ]  %+SENT:0];
+
+
+#### Special treatment for abbreviations (whether final dot is part of token depends on right context):  etc.
+# extract words ending with final dot #
+
+define WithPunc0 [Basic .o. [?* %.]].2; 
+
+# selects abbreviations that always  keep final dot (they don't appear at the end of sentence)
+read regex
+[v s | c f | e %. (% ) g | i %. (% ) e | q q | p a r %  e x |
+ a v | b o u l  |
+M | M r | M M | M r s | 
+[M | m] g r |
+[c| C] [ o l | o l l] |
+[d| D] r | 
+[p|P] r (o f) | 
+[l|L] i e u t | 
+[g|G] é n |
+ l i c | 
+a l |
+é d |
+c |    
+c h |   
+r è g l | 
+t é l |
+f a x |
+t e l |
+[ T | t ]  e l %/ f a x |
+[ T | t ]  é l %/ f a x 
+j a n |  
+j a n v | 
+f é v |  
+f e v | 
+a v r | 
+j u i l | 
+o c t |  
+n o v |  
+d é c |  
+d e c |  
+h o n 
+] %. ; 
+define WithPunc1 ;
+
+# select abbreviations that may lose final dot if at end of sentence (e.g. followed by Capital letter)
+# they need a special look ahead: for instance  etc.
+define WithPunc2 Basic .o. [WithPunc0  - WithPunc1] ;
+
+# special case for abbreviations that must be followed by numerical expressions: art. 112
+define WithPunc3 WithPunc2 .o. [[p | p p | a r t | f i g | p a r | v o l | s e p t] %.] ;
+define WithPunc2 WithPunc2 .o. [?* - WithPunc3.2] ;
+
+# special case for abbreviations that may optionally follow numerical expressions: 220 p.
+define WithPunc4 WithPunc3 .o. [[p | s e p t] %.] ;
+
+# reintegrate special abbreviations (with special look ahead) into basic dictionary
+# and specify lookahead constraints
+regex
+[
+ [Basic .o. [?* -[WithPunc2.2 |  WithPunc3.2]]] |
+ WithPunc2 RC [SP [Low | Num] | SP* [PUNC - %.]] |
+ WithPunc3 RC [SP Num |SP* [PUNC - %.]] |
+ WithPunc4 LC SP Num RC  [SP [Low | Num] | SP* [PUNC - %.]]
+]
+
+;
+define Basic ;
+
+###### special treatment for one letter words (due to conflict with initials and acronyms)
+
+##define OneBasic Basic .o. [Up | Low] ;
+
+##define Basic [Basic .o. ~[Up | Low]] | OneBasic RC [SP  | [PUNC - %.]];
+
+
+
+# ----------------------------------------------------------------------------------------
+# prefixes with hyphen (accept capital form)
+define Prefix1 Prefix .o. $%- ;
+define Prefix1 Prefix1 | [Prefix1 .o. [low2up ?*]];
+
+
+# ---------------------------------------------------------------------------------------
+# punctuations
+define Puncs [ PUNCTLEX | MULTIPUNCT ];
+
+
+#special for hyphen; makes a distinction between - hyphen and - full punctuation
+# le tiret est inclus dans les Puncs si c'est un separateur de type punctuation standard: 
+# il faut qu'il soit suivi d'un separateur de type blanc ou ponctuation
+# e.g. la ville - dont nous avons parlé - est ....
+# le tiret est traite a part si c'est un hyphen (violence-repression).
+# dans ce cas il est place plus bas dans le stack, de maniere a ne pas interferer avec la definition de noms
+# generiques qui incluraient des traits d'union, t.q. Berlin-Nord
+
+define tiret Puncs .o. %- ;
+read regex
+ [Puncs .o. [?* - %-]] | [tiret  RC [SEP|SP]] ;
+define Puncs ;
+clear stack
+
+define traitdunion [[[%+HYPH %+PUNCT <- %+PUNCT] .o. tiret] RC [? - [SEP|SP] ]] ;
+
+#special right context for Acron: acronyms may end with . iff followed by lower case, num, etc.
+define Acron1 Acron  .o. [?* %.] ;
+define Acron2 Acron .o. ~[?* %.] ;
+regex
+[ Acron2 |
+  Acron1  RC [SP [Low | Num] | SP* [PUNC - %.]]
+];
+define Acron ; 
+define Acron Acron .o. [Up ?*];
+
+# -------------------------------------------------------------------------------------------------------
+define Init1 Initials .o. [?* %.] ;
+define Init2 Initials .o. ~[?* %.] ;
+read regex 
+[
+  Init1 RC SP (d e SP | d %' | d u SP ) Up  
+|
+ Init2
+] ;
+define Initials ;
+clear stack
+
+ 
+
+# -------------------------------------------------------------------------------------------------------
+
+  
+
+##### lexicons are distributed across different fsts for efficiency reasons
+
+# only prefixes followed by hyphens are included at this stage: to avoid splitting conferene as co ference
+
+read regex   [
+Basic  |  Prefix1 | Puncs | SGML | traitdunion | Acron | Initials #| EOL 
+]  ;
+
+
+
+### some additional corrections (AS)
+### in order to obtain equivalent FST as in 
+### $CVS_ROOT/parSem/xip/dev/GRAMMARS/FRENCH/BASIC/Basictok.fst
+
+define LEX
+
+define MAP [
+	{large} %+deSN %+avecSN %+InvGen %+PL %+Adj %+ADJ%_PL:%+ADJ2%_PL
+|	{large} %+deSN %+avecSN %+InvGen %+SG %+Adj %+ADJ%_SG:%+ADJ2%_SG
+];
+
+read regex [
+	[ MAP .o. LEX ]
+|	[ ~[MAP.2] .o. LEX ]
+];
+define LEX 
+
+define ADDLEX [
+  à %  s a v o i r %+Coord:0 %+COORD:0
+| d %' a u t r e s    %+InvGen:0 %+PL:0 %+Quant:0 %+Det:0 %+DET%_PL:0
+| d %' a u t r e s    %+InvGen:0 %+PL:0 %+Indef:0 %+Pro:0 %+PRON:0
+| d %' a u t r e s:%( %+InvGen:0 %+PL:0 %+Quant:0 %+Det:0 %+DET%_PL:0 0:s 0:%)
+];
+
+
+read regex LEX | ADDLEX ;

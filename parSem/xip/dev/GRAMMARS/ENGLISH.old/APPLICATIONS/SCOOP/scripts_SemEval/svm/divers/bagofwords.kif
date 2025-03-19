@@ -1,0 +1,241 @@
+string path = '/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+parser p(path);
+ivector words;
+vector sentences;
+string currentCategory;
+string FoundCategory="";
+smap FoodTerms,PriceTerms,ServiceTerms,AmbienceTerms;
+
+sitreemap allthewords;
+
+function storewords(node n) {
+     string s=n.lemma().lower();
+     if (allthewords.test(s)==false)
+          allthewords[s]=allthewords.size()+1;
+
+     words.push(allthewords[s]);
+}
+
+function selectsentence(xml n, self data){
+     if(n.name()=='sentence')
+          sentences.push(n);
+}
+
+function storedepwords(string s){
+     s = s.lower();
+     if(allthewords.test(s)==false)
+          allthewords[s]=allthewords.size()+1;
+     words.push(allthewords[s]);
+     println(allthewords[s]+ "---" + s);
+
+}
+
+function findCorrespondingCategory(string s){
+     //println("Finding category for term " + s);
+     if(FoodTerms.test(s))
+          FoundCategory = "FOOD";
+     else if(PriceTerms.test(s))
+          FoundCategory="PRICE";
+     else if(AmbienceTerms.test(s))
+          FoundCategory="AMBIENCE";
+     else if(ServiceTerms.test(s))
+          FoundCategory="SERVICE";
+     //println("Found category " + FoundCategory);
+}
+
+function getdeps(dependency d){
+     if (d.name()=="FOOD" ){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.lemma();
+          FoodTerms[s1]=1;
+     }
+     else if (d.name()=="PRICE" ){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.lemma();
+          PriceTerms[s1]=1;
+     }
+     else if (d.name()=="AMBIENCE" ){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.lemma();
+          AmbienceTerms[s1]=1;
+     }
+     else if (d.name()=="SERVICE" ){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.lemma();
+          ServiceTerms[s1]=1;
+     }
+     else if  (d.name()=="OPINION-ON-ASPECT-CATEGORY"){
+          vector v1 = d.features();
+          vector v2 = d.parameters();
+          node n1 = v2[0];
+          string s1 = n1.surface();
+          string pol = v1[0];
+          if(currentCategory==s1 && pol!=null && pol!=""){
+               storedepwords(pol + "_" + s1);
+               storedepwords(pol);
+               println(currentCategory + " " + s1);
+          }
+     }
+     else if (d.name()=="SENTIMENT"){
+          vector v2 = d.parameters();
+          node param;
+          //	boolean foundC=false;
+          for(param in v2){
+               findCorrespondingCategory(param.lemma());
+               if(FoundCategory.lower()==currentCategory.lower()
+                    //&& foundC==false
+               ){
+                    vector v1 = d.features();
+                    string feature;
+                    //                  		boolean stored = false;
+                    //                		foundC=true;
+                    for(feature in v1){
+                         //                   		if(stored==true)
+                         //                      			break;
+                         //                         		else
+                         if(feature.lower()=="positive" || feature.lower()=="negative"
+                         //&& stored==false
+                         ){
+                              storedepwords(feature+"_"+FoundCategory);
+                              println("Storing " + feature + " " +FoundCategory + " from dep " + param.lemma());
+                              //                            			stored=true;
+                         }
+                    }
+               }
+          }
+     }
+}
+
+string rule=@"
+
+script:
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+
+if(FOOD$2(#1)){
+     getdeps($2);
+}
+
+if(SERVICE$3(#1)){
+     getdeps($3);
+}
+
+if(AMBIENCE$4(#1)){
+     getdeps($4);
+}
+
+if(PRICE$5(#1)){
+     getdeps($5);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$6(#1)){
+     getdeps($6);
+}
+
+if(SENTIMENT$7(#1)){
+     getdeps($7);
+}
+
+if(SENTIMENT$7(#1,#2)){
+     getdeps($7);
+}
+
+"@;
+
+p.addendum(rule,true);
+map polaritybycategories;
+
+xmldoc inputxml with selectsentence;
+inputxml.load('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/Corpus/Restaurants_Train_v2.xml');
+
+xml n,nsub;
+string c,sent;
+ssmap props;
+
+sitreemap polarites={"positive":0,"negative":1,"neutral":2,"conflict":3};
+
+for(n in sentences){
+     nsub=n.child();
+     while (nsub!=null) {
+          c=nsub.name().trim();
+          if (c=="aspectCategories") {
+               nsub=nsub.child();
+               while (nsub!=null) {
+                    if (nsub.name()=="aspectCategory") {
+                         props=nsub.properties();
+                         words.clear();
+                         currentCategory = props["category"];
+                         println(sent);
+                         p.parse(sent);
+                         //string polcat = props["polarity"] + "_" + currentCategory;
+                         //storedepwords(polcat);
+                         c=props["category"];
+                         if (polaritybycategories.test(c)){
+                              polaritybycategories[c].push([polarites[props["polarity"]],words]);
+                              println(polarites[props["polarity"]] + " " + words);
+                         }
+                         else{
+                              polaritybycategories[c]=[[polarites[props["polarity"]],words]];
+                              println(polarites[props["polarity"]] + " " + words);
+                         }
+                    }
+                    nsub=nsub.next();
+               }
+               break;
+          }
+          else {
+               c=nsub.content().trim();
+               if (c!="")
+                    sent=c;
+          }
+          nsub=nsub.next();
+     }
+     printerr(".");
+}
+
+
+function savethemodel(string filename,string cat) {
+     file modelcat(filename,"w");
+
+     vector v,keys;
+     int i;
+     string ligne;
+     ivector iv;
+     iitreemap uniques;
+
+     for (v in polaritybycategories[cat]) {
+          ligne=v[0]+" ";
+          iv=v[1];
+          iv.sortint(false);
+          for (i in iv){
+               uniques[i]++;
+          }
+          keys = uniques.keys();
+          for (i in keys){
+               ligne+=i+":"+uniques[i]+" ";
+          }
+          modelcat.writeln(ligne);
+          uniques.clear();
+     }
+     modelcat.close();
+}
+
+
+savethemodel("modelPrice.dat","price");
+savethemodel("modelFood.dat","food");
+savethemodel("modelAmbience.dat","ambience");
+savethemodel("modelService.dat","service");
+savethemodel("modelAnnecdote.dat","anecdotes/miscellaneous");
+
+file dico("dictionariesPolarity.kif","w");
+
+dico.writeln("sitreemap polarites="+polarites+";");
+dico.writeln("sitreemap allthewords="+allthewords+";");
+
+dico.close();

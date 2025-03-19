@@ -1,0 +1,269 @@
+
+<project default="test" basedir="." >
+    <property name="env" environment="env"  value="env"/>
+    <import file="${basedir}/../../../../TESTCOMMON/testDefine.xml" />
+    <property name="input"	value="input.txt" />
+    <property name="outputRef"	value="outputRef.txt" />
+    
+    <target name="del" depends="setDel, runXip" description="launch test with the delivery "/>
+
+    <target name="dels" depends="setDelS, runXip" description="launch test with the delivery (gram partially crypted) "/>
+    
+    <target name="test" depends="runXip" description="launch test "/>
+    
+    <target name="valgrind" depends="setValgrind, runXip" description="launch test with memory leak detection "/>
+    
+    <target name="gprof" depends="setGprof, runXip" description="launch test with profiling done with gprof "/>
+    
+    <target name="testNotFailingOnError" depends="setNotFailing,runXip" description="launch test "/>
+    
+    <target name="testDelNotFailingOnError" depends="setDel,setNotFailing,runXip" description="launch test with the delivery"/>
+    
+    <target name="setDel"  >
+        <property name="delivery" value="true" />
+    </target>
+
+    <target name="setDelS"  >
+        <property name="deliverySrc" value="true" />
+    </target>
+    
+    <target name="setNotFailing" depends="" >
+        <!-- ant not failing when error -->
+        <property name="notFailing"	value="true" />
+    </target>
+    
+    <target name="localInit" depends="init" >
+        <if>
+            <istrue value="${windows}" />
+            <then>
+    		<property name="errorFile"	value="error.txt" />
+            </then>
+            <else>
+    		<property name="errorFile"	value="/dev/null" />
+            </else>
+	</if>
+        <property name="output"		value="output.${platformArch}" />
+        <property name="testInError"	value="testInError.${platformArch}" />
+        <property name="optInput" 	value="-text" />
+        <property name="opt1" 		value="" />
+    </target>
+
+    <target name="genRun" depends="localInit, genRunInterne" />
+    
+    <target name="genRunInterne"  >
+        <if>
+            <istrue value="${windows}" />
+            <then>
+                <echo file="${basedir}/run.bat" >
+                    set grm=${grm.file}
+                    ${xip.exe} -grm %grm% ${opt1} -tr -f ${optInput} ${input} >${output}
+                    
+                    set xipOld=/opt/ParSem/bin/xip-10.00-89/bin/windows/xip.exe
+                    REM xipOld=/opt/ParSem/bin/windows/xip.exe
+                    %xipOld% -grm %grm% ${opt1} -tr -f ${optInput} ${input} >output.old
+                </echo>
+            </then>
+            <else>
+                <echo file="${basedir}/run" >
+                    #!/bin/sh
+                    set -x
+                    grm=${grm.file}
+                    ${xip.exe} -grm $grm ${opt1} -tr -f ${optInput} ${input} >${output}
+                    #diff -wb ${output} ${outputRef}
+                    
+                    xipOld=/opt/ParSem/bin/xip-10.00-89/bin/linux/xip
+                    #xipOld=/opt/ParSem/bin/linux/xip
+                    $xipOld -grm $grm ${opt1} -tr -f ${optInput} ${input} >output.old
+                    diff -wb ${output} output.old
+                </echo>
+                <chmod perm="+x" file="${basedir}/run" />
+            </else>
+        </if>
+    </target>
+    
+    <target name="runXip" depends="clean, localInit"  >
+        <echo message="launch test in: ${basedir}" />
+        <if>
+            <istrue value="${python}" />
+            <then>
+                <!-- python setting -->
+                <if>
+                    <istrue value="${windows}" />
+                    <then>
+                        <property name="python.home" value="" />
+                        <property name="python.path" value="" />
+                    </then>
+                    <else>
+                        <if>
+                            <istrue value="${solaris}" />
+                            <then>
+                                <fail  message=" NO XIPS version (python not available )" />
+                            </then>
+                            <else>
+                                <if>
+                                    <istrue value="${mac}" />
+                                    <then>
+                                        <property name="python.home" value="" />
+                                        <property name="python.path" value="" />
+                                    </then>
+                                    <else>
+                                	<!--
+	        			<property name="python.home" value="/opt/ParSem/tools/python/2.5/linux" 
+                                        <property name="python.home" value="/opt/STools/python/2.5" />
+                                        <property name="python.path" value="" />
+                                        -->
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+                <!--
+                <echo message="PYTHONHOME: ${python.home}" />
+                <echo message="PYTHONPATH: ${python.path}" />
+                -->
+            </then>
+        </if>
+        <if>
+            <istrue value="${valgrind.status}" />
+            <then>
+                <!-- using valgrind tool -->
+                <if>
+                    <contains string="${basedir}" substring="z-ciaFactBook" />
+                    <then>
+                        <echo message="too large input file" />
+                    </then>
+                    <else>
+                        <echo message="valgrind options: ${valgrind.option}" />
+                        <echo message="xip:  ${valgrind.param1}" />
+                        <exec  executable="${xip.exe}" failonerror="false" resultproperty="execErrorCode"
+                                    output="valgrind.out"  error="valgrind.txt" >
+                            <!--
+                            <env key="PYTHONHOME" path="${python.home}" />
+                            <env key="PYTHONPATH" path="${python.path}" />
+                            -->
+                            <arg line="${valgrind.option} ${valgrind.param1} -grm ${grm.file} ${opt1}
+                                        -tr -f ${optInput} ${input}" />
+                        </exec>
+                        <delete file="valgrind.out" />
+                    </else>
+                </if>
+            </then>
+            <else>
+                <delete file="gmon.out" />
+                <!-- ++++++++++++++++++++  launch xip ++++++++++++++++++++++ -->
+                <!-- now parse the input file -->
+                <exec executable="${xip.exe}" failonerror="false" resultproperty="execErrorCode"
+                            output="${output}" error="${errorFile}" >
+                    <!--
+                    <env key="PYTHONHOME" path="${python.home}" />
+                    <env key="PYTHONPATH" path="${python.path}" />
+                    -->
+                    <arg line="-grm ${grm.file} ${opt1} -tr -f ${optInput} ${input}" />
+                </exec>
+                <if>
+                    <istrue value="${gprof}"/>
+                    <then>
+                        <!-- using gprof -->
+                        <echo message="using gprof with: ${xip.exe}" />
+                        <delete file="gprof.txt" />
+                        <delete file="gprof.err" />
+                        <exec  executable="gprof" failonerror="false" resultproperty="execErrorCode"
+                                output="gprof.txt" error="gprof.err" >
+                            <arg line="${xip.exe} " />
+                        </exec>
+                        <delete file="gprof.err" />
+                        <delete file="gmon.out" />
+                    </then>
+                    <else>
+                        <!-- not using gprof -->
+                        <if>
+                            <equals arg1="${execErrorCode}" arg2="0" />
+                            <then>
+                                <!-- xip return code == 0 -->
+                                <if>
+                                    <istrue value="${windows}"/>
+                                    <then>
+                                        <!-- windows platform -->
+                                        <!-- remove rc (to be able to compare windows result with unix reference file  -->
+                                        <fixcrlf srcdir="${basedir}" includes="${output}" eol="unix" />
+                                    </then>
+                                </if>
+                                <!-- ReplaceRegExp can be used here to replace regular exp -->
+                                <!-- compare the result to the reference file -->
+                                <if>
+                                    <filesmatch file1="${output}" file2="${outputRef}" />
+                                    <then>
+                                        <!-- test OK -->
+                                        <echo message="test ok" />
+                                    </then>
+                                    <else>
+                                        <!-- test error -->
+                                        <echo message="TEST ERROR: the test output file ${output} does not matche the reference file: ${outputRef}" />
+                                        <touch file="${testInError}" />
+                                        <ant antfile="build.xml" dir="${basedir}" target="genRunInterne" inheritAll="true" />
+                                        <fail unless="notFailing" message=" " />
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                <!-- xip return code != 0 -->
+                                <echo message="EXECUTION ERROR       xip return code: ${execErrorCode}" />
+                                <touch file="${testInError}" />
+                                <ant antfile="build.xml" dir="${basedir}" target="genRunInterne" inheritAll="true" />
+                                <fail unless="notFailing" message=" " />
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </else>
+        </if>
+    </target>
+    
+    <target name="check" depends="platformSetting"  >
+        <!-- test status of previous execution -->
+        <condition property="error">
+            <available file="testInError.${platformArch}" />
+        </condition>
+        <fail if="error" message="Test in error: ${basedir}" />
+    </target>
+    
+    <target name="update" depends="platformSetting, setNotFailing, runXip"
+            description="run the test and copy output.linux to outputRef.txt in every test directory " >
+        <copy file="${output}" tofile="outputRef.txt" />
+        <!--
+	<replaceregexp match="\([0-9]+:[0-9]+\)" replace="" flags="g" >
+    		<fileset dir="${basedir}" includes="outputRef.txt"/>
+	</replaceregexp>
+        -->
+    </target>
+    
+    <target name="clean" depends="localInit, platformSetting" >
+        <delete file="${output}"/>
+        <if>
+            <istrue value="${windows}" />
+            <then>
+        	<delete file="${errorFile}"/>
+            </then>
+	</if>
+        <delete file="testInError.${platformArch}"/>
+        <delete file="errors.err"/>
+        <delete file="run"/>
+        <delete file="run.bat"/>
+        <delete>
+            <fileset dir="." includes="core.*"/>
+        </delete>
+    </target>
+    
+    <target name="cleanAll" depends="clean" description="clean ">
+        <delete>
+            <fileset dir="." includes="output.*"/>
+            <fileset dir="." includes="testInError.*"/>
+            <fileset dir="." includes="valgrind.txt,valgrind.out" />
+        </delete>
+        <delete file="gmon.out"/>
+        <delete file="gprof.txt"/>
+        <delete file="gprof.err"/>
+    </target>
+</project>
+

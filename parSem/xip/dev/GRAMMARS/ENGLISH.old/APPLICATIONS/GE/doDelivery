@@ -1,0 +1,76 @@
+#!/bin/sh
+#set -x
+
+XIP_HOME=`pwd`/../../../..
+ROOT_XIP=$XIP_HOME/GRAMMARS
+export ROOT_XIP
+###########################################################
+# check the key and return its value on error 
+CLEF_GEN=/home/grondeau/projets/parSem/xip/dev/gramRef/clef 
+GRAM=english_ge.xip
+echo "grammar file: $GRAM"
+echo "-------------------------------------------"
+grep '^License:' $GRAM
+grep '^Modules:' $GRAM
+grep '^Expiration:' $GRAM
+echo "-------------------------------------------"
+$CLEF_GEN $GRAM 2>key
+nkey=`cat key |awk '{print $2}'`
+ckey=`cat $GRAM| awk '/^Code:/{print $2}'`
+rm -f key
+if [ $ckey != $nkey ]; then
+        echo "You have to update the Code field in the file: $GRAM"
+        echo "by Code:$nkey"
+        exit -1
+fi
+###########################################################
+DIR=xip-ge
+rm -rf $DIR
+mkdir -p $DIR/grammar
+cp README $DIR
+# copy xip binaries
+VERS=`/opt/ParSem/bin/linux/lastVersNb`
+cp -r /opt/ParSem/bin/$VERS/bin $DIR
+# remove some unused files
+rm $DIR/bin/linux/xips  $DIR/bin/linux/xipparse $DIR/bin/solaris/xipparse
+rm -f $DIR/bin/windows/xips.exe $DIR/bin/windows/xipparse.bat $DIR/bin/windows/xipwin.exe $DIR/bin/windows/xipwinparse.bat
+rm -f $DIR/bin/windows/python24.dll
+rm -rf $DIR/bin/mac
+# copy grm file 
+cp gram_ge.grm.crypte $DIR/grammar/gram_ge.grm
+# copy other grammar files not crypted
+cp $ROOT_XIP/ENGLISH/NTMFILES/ntmscript_norm $DIR/grammar
+cp $ROOT_XIP/ENGLISH/NTMFILES/HMMFILES/hmm-1-std $DIR/grammar
+# copy fst files
+mkdir -p $DIR/grammar/SOURCEFST/FORENTITIES
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/FORENTITIES/SpecialStrings.fst $DIR/grammar/SOURCEFST/FORENTITIES
+mkdir -p $DIR/grammar/SOURCEFST/FORSEM
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/FORSEM/nvlex+context+add+sem+alter.fst $DIR/grammar/SOURCEFST/FORSEM
+mkdir -p $DIR/grammar/SOURCEFST/BASICS
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/BASICS/alternative.fst $DIR/grammar/SOURCEFST/BASICS
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/BASICS/nv-open-1.fst $DIR/grammar/SOURCEFST/BASICS
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/BASICS/norm.fst $DIR/grammar/SOURCEFST/BASICS
+cp $ROOT_XIP/ENGLISH/NTMFILES/SOURCEFST/BASICS/norm-html.fst $DIR/grammar/SOURCEFST/BASICS
+# copy parameter files
+cp flags_ge.xip xml_ge.xip $DIR/grammar
+# copy scripts
+cp txtparse.del $DIR/txtparse
+cp txtparse.bat.del $DIR/txtparse.bat
+cp xmlparse.del $DIR/xmlparse
+cp xmlparse.bat.del $DIR/xmlparse.bat
+cp color.pl $DIR
+# copy SAMPLE
+cp -r SAMPLES $DIR
+# crypte the grammar
+xip -crypte $DIR/grammar -grm gram_ge.grm
+cd $DIR/grammar
+# rename crypted files
+ls -1 *.crypte | gawk 'BEGIN{FS="."}{print "mv " $0, $1"."$2;}' | sh
+
+#build the zip file
+cd ../..
+rm -f $DIR.zip
+zip -r $DIR.zip $DIR
+echo
+echo ++++++++++++++++++++++ $DIR.zip done +++++++++++++++
+

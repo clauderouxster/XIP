@@ -1,0 +1,126 @@
+<project name="JXip" default="jar" basedir=".">
+
+<property name="env" environment="env" 	value="env"/>
+<property name="fs"           		value="${file.separator}" />
+<property name="ps"          		value="${path.separator}" />
+
+<property name="parSem.dir" 		location="${basedir}${fs}..${fs}.." />
+<property name="common.dir"		location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<property name="xip.dev.dir"		location="${basedir}${fs}.." />
+<import file="${common.dir}${fs}buildInclude.xml" />
+
+<!-- debug,log -->
+<property name="java_debug"    		value="off" />
+<property name="java_optimize" 		value="on" />
+<property name="java_deprecation"  	value="on" />
+<property name="cc.debug"               value="${cc.debug.common}" />
+<property name="log.level"		value="verbose" />
+<!-- dir -->
+<property name="dist.dir"          	location="${basedir}${fs}dist" />
+<property name="src.dir"        	location="${basedir}${fs}DocumentAnalysis${fs}src" />
+<property name="lib.dir"        	location="${basedir}${fs}lib" />
+<property name="build.dir"         	location="${basedir}${fs}build" />
+<property name="build.doc.dir"         	location="${basedir}${fs}build${fs}doc" />
+<property name="build.classes.dir"      location="${basedir}${fs}build${fs}classes" />
+<property name="jar.file"      		value="${dist.dir}${fs}documentAnalysis.jar" />
+<property name="jarMin.file"  		value="${dist.dir}${fs}documentAnalysisMin.jar" />
+<!-- <property name="jxip.jar"      		location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}java${fs}dist${fs}jxipPy.jar" /> -->
+<property name="jxip.jar"      		location="/opt/ParSem/bin/linux/jxipPy.jar" />
+
+<target name="info" depends="">
+	<echo message="ant compile" />
+	<echo message="ant doc" />
+	<echo message="ant test" />
+	<echo message="ant install" />
+</target>
+
+<target name="test" depends="">
+	<java jar="${jar.file}" fork="true" failonerror="true" maxmemory="256m" >
+		<arg value="a-finir"/>
+		<arg value="a-finir"/>
+	</java>
+</target>
+
+<target name="install" depends="">
+	<copy todir="/opt/ParSem/bin/linux" file="${jar.file}" />
+</target>
+
+<target name="jar" depends="setCommonProperties, compile" description="generate jar file" >
+	<delete file="${jar.file}" />
+	<!-- create jar file -->
+	<jar jarfile="${jar.file}" update="no">
+		<fileset dir="${build.classes.dir}">
+		</fileset>
+		<zipfileset src="${jxip.jar}"  />
+		<zipfileset src="${lib.dir}/mysql-connector-java-5.0.4-bin.jar"  />
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-class" value="documentanalysis.Main"/>
+			<attribute name="Class-path" value="."/>
+		</manifest>
+	</jar>
+</target>
+
+<target name="jarMin" depends="setCommonProperties, compile" description="generate jar file" >
+	<delete file="${jarMin.file}" />
+	<!-- create jar file -->
+	<jar jarfile="${jarMin.file}" update="no">
+		<fileset dir="${build.classes.dir}">
+		</fileset>
+		<zipfileset src="${lib.dir}/mysql-connector-java-5.0.4-bin.jar"  />
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-class" value="documentanalysis.Main"/>
+			<attribute name="Class-path" value="."/>
+		</manifest>
+	</jar>
+</target>
+
+<target name="compile" depends="setCommonProperties" description="compile java source file">
+	<javac srcdir="${src.dir}"
+		destdir="${build.classes.dir}" 
+		debug="${java_debug}" 
+		deprecation="${java_deprecation}"
+		optimize="${java_optimize}"
+		classpath="${jxip.jar}" >
+		<include name="**/*.java"/>
+		<compilerarg value="-Xlint"/>
+	</javac>
+</target>
+
+<target name="doc" depends="setCommonProperties" description="generate java doc" >
+	<delete dir="${build.doc.dir}"/>
+	<mkdir dir="${build.doc.dir}"/>
+	<javadoc packagenames=""
+		destdir="${build.doc.dir}"
+		author="false"
+		version=""
+		use="false"
+		windowtitle="CocumentAnalysis"
+		>
+		<fileset dir="${src.dir}" defaultexcludes="yes">
+    		</fileset>
+		<doctitle><![CDATA[<h1>java API</h1>]]></doctitle>
+		<bottom><![CDATA[<i>Copyright &#169; 2007 Xerox All Rights Reserved.</i>]]></bottom>
+	</javadoc>
+</target>
+
+<target name="setCommonProperties" depends="platformSetting, getXipVersionAnBuild" unless="commonPropertiesSet"> 
+	<property name="commonPropertiesSet"    value="true" />
+	<mkdir dir="${dist.dir}" />
+	<mkdir dir="${build.dir}" />
+	<mkdir dir="${build.classes.dir}" />
+</target>
+
+<target name="localClean" depends="setCommonProperties" >
+	<delete dir="${build.dir}" />
+	<delete dir="${dist.dir}" />
+</target>
+
+<target name="localCleanAll" depends="setCommonProperties" >
+	<delete dir="${build.dir}"/>
+	<delete file="${jar.file}"/>
+	<delete file="${jarMin.file}"/>
+</target>
+
+</project>

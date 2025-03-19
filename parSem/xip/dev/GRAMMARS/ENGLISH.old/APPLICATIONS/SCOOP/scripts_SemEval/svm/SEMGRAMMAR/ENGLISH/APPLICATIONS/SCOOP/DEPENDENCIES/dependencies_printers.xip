@@ -1,0 +1,511 @@
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2001 - 2010 Xerox Corporation.  All Rights Reserved.
+//! Author: C. Brun.
+//!
+//!  Date: Jan. 2010
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//product marking 
+
+//Script:
+
+//|NP{NOUN#1,PART,?[lemme:"full"],noun[lemme:"review"]}|
+//        {
+//        _opinionholder=#1[surface];
+//        _holder=1;
+ //       }
+
+//if (PRODUCT(#1)){
+//	_firstprodindoc=_firstprodindoc+1 ;
+//        if (_firstprodindoc:1){
+//         _topiccurrent=#1[surface] ;
+ //        }
+        
+//}
+
+DependencyRules:
+
+#@rulespace=general.domain.printer
+
+|?#1[term-kana]|
+       KANA(#1)
+
+|NP{NOUN#1,PART,?[lemme:"full"],noun[lemme:"review"]}|
+    if (_holder=1)
+    OPINION-HOLDER(#1)
+
+// |#1{?*,#2,?*}|
+//if (PRODUCT(#1) & (_firstprodindoc:1) & ORGANISATION(#2) )
+//	TOPICREVIEW(#1),COMPANYREVIEW(#2)
+//
+///|#1{?*,#2[lemme:"xerox"],?*}|
+//if (PRODUCT(#1) & (_firstprodindoc:1) )
+//	TOPICREVIEW(#1),COMPANYREVIEW(#2)\
+//
+//
+//|#1{#2,?*}|
+//if (PRODUCT(#1) & (_firstprodindoc:1) & ORGANISATION(#2) )
+//	TOPICREVIEW(#1),COMPANYREVIEW(#2)
+//
+//|#1{#2[lemme:"brother"],?}|
+//if (PRODUCT(#1) & (_firstprodindoc:1) )
+//	TOPICREVIEW(#1),COMPANYREVIEW(#2)
+//
+//|#1{#2[lemme:"Brother"],?}|
+//if (PRODUCT(#1) & (_firstprodindoc:1) )
+//	TOPICREVIEW(#1),COMPANYREVIEW(#2)
+
+// coorection of subjects
+
+
+|NP{NOUN#1[lemme:"con"]},punct,NP{?*,NOUN#2[last]}|
+	if (^SUBJ-N(#3,#1))
+	SUBJ-N(#3,#2)
+
+// some contexts invert polarity
+//cheap construction
+if (^SENTIMENT(#1[lemme:"construction"],#2[lemme:"cheap"]))
+	SENTIMENT[positive=~,negative=+](#1,#2).
+
+// stay away from a product ==> negative
+
+|SC{?*,FV{VERB#1[lemme:"stay"]}}, ADV#2[lemme:"away"]|
+	if ( MOD(#1[lemme:"stay"],#2) ) 
+	SENTIMENT[negative=+](#1,#2)
+
+// some fixed recurrent expressions
+// valid for different kinds of products
+
+//use power eletrcuty, toner
+|#2[negative=+]|
+if ( OBJ-N(#1[consume],#2[badtoconsume]) & ~SUBJ-N(#1,#3[p1]))
+	SENTIMENT[negative=+](#1,#2)
+
+if ( OBJ-N(#1[lemme:"last"],#2[lemme:"long"]) & SUBJ-N(#1,#3[badtoconsume]) )
+	SENTIMENT[positive=+](#1,#3)
+
+if ( GLOBALMOD(#1[consume],#2[badtoconsume]) & ~SUBJ-N(#1,#3[p1]))
+	SENTIMENT[negative=+](#1,#2)
+
+// excessive toner usage
+|#3[negative=+]|
+if (MOD(#1[consume],#2[highquantity]) & MOD(#1,#3[badtoconsume]) ) 
+		SENTIMENT[negative=+](#1,#3)
+
+
+// structure problems
+|SC{?*,FV{verb#1[consume]}},NP{?*,NOUN#2[badtoconsume]} |
+	if (~SENTIMENT(#1,#2))
+		SENTIMENT[negative=+](#1,#2)
+
+
+// save space 
+
+if ( OBJ-N(#1[lemme:"save"],#2[lemme:"space"]))
+	SENTIMENT[positive=+](#1,#2)
+
+// "easy to set up"
+
+|#1[positive=+]|
+if (GLOBALMOD(#1[lemme:"easy"],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+//if (GLOBALMOD(#2[easyto],#1[lemme:"easy",positive=+]) & ~SENTIMENT(#1,#2))
+//	SENTIMENT[positive=+](#1,#2).
+
+|#1[positive=+]|
+if (GLOBALMOD(#2[easyto],#1[lemme:"simple"]))
+	SENTIMENT[positive=+](#1,#2).
+
+|#1[positive=+]|
+if (GLOBALMOD(#1[lemme:"simple"],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"convenient",positive=+],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+|#1[positive=+]|
+if (GLOBALMOD(#1[lemme:"simple"],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"intuitive"],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"difficult"],#2[easyto]))
+	SENTIMENT[negative=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"hard"],#2[easyto]))
+	SENTIMENT[negative=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"tough"],#2[easyto]))
+	SENTIMENT[negative=+](#1,#2).
+
+if (GLOBALMOD(#1[lemme:"tricky"],#2[easyto]))
+	SENTIMENT[negative=+](#1,#2).
+
+if (GLOBALMOD(#2[easyto],#1[lemme:"tricky"]))
+	SENTIMENT[negative=+](#1,#2).
+
+|AP{?*,ADJ#1[lemme:"easy"]},PP{?*,NP{NOUN#2[easyto]}}|
+	if (~SENTIMENT(#1,#2))
+	SENTIMENT[positive=+](#1,#2).
+
+// ease of installation 
+if (GLOBALMOD(#1[lemme:"ease"],#2[easyto]))
+	SENTIMENT[positive=+](#1,#2).
+
+// the setup is easy 
+//if(ATTRIB(#1[easyto],#2[lemme:"easy"]) | ATTRIB(#1[easyto],#2[lemme:"simple"]) | ATTRIB(#1[easyto],#2[lemme:"convenient"]))
+//		SENTIMENT[positive=+](#1,#2).
+
+
+if(ATTRIB(#1[easyto],#2[lemme:"difficult"]) | ATTRIB(#1[easyto],#2[lemme:"hard"]) | ATTRIB(#1[easyto],#2[lemme:"difficult"]) | ATTRIB(#1[easyto],#2[lemme:"tough"]) )
+		SENTIMENT[negative=+](#1,#2).
+
+// This is not the printer for you: NO
+//|det[indef:~],noun#2|
+//if ( ATTRIB(#1[lemme:"this",pron],#2[printer-related]) & ~SENTIMENT(#2,?)  ) 
+//	SENTIMENT[positive=+](#1,#2)
+
+if (OBJ-N(#1[lemme:"avoid"],#2[printer-related]) |OBJ-N(#1[lemme:"avoid"],#2[pron,p3]) |
+    OBJ-N(#1[lemme:"avoid"],#2[manufacturer]) |  OBJ-N(#1[lemme:"avoid"],#2[product]) )
+		SENTIMENT[negative=+](#1,#2)
+
+|SC{FV{VERB#1[lemme:"avoid"]}},SC{BG{conj[lemme:"if"]}}|
+      SENTIMENT[negative=+](#1)
+
+// it easily sets up
+if ( MANNER(#1[lemme:"set"],#2[lemme:"easily"]) & SUBJ-N(#1,#3) )
+	SENTIMENT[positive=+](#1,#3)
+
+if (MANNER(#1[lemme:"install"],#2[lemme:"easily"]) & OBJ-N(#1,#3))
+	SENTIMENT[positive=+](#1,#3)
+
+// it rapidly warms up
+if (MANNER(#1[lemme:"warm"],#2[lemme:"rapidly"]) & SUBJ-N(#1,#3))
+	SENTIMENT[positive=+](#1,#3)
+
+// work reliably
+if (MANNER(#1[lemme:"work"],#2[lemme:"reliably"]) & SUBJ-N(#1,#3))
+   	SENTIMENT[positive=+](#1,#3)
+
+
+// copier printer is smaller
+
+|#2[positive=+]|
+if (GLOBALMOD(#1[lemme:"copier"],#2[lemme:"small"]) |
+    GLOBALMOD(#1[lemme:"printer"],#2[lemme:"small"]) |
+    GLOBALMOD(#1[lemme:"machine"],#2[lemme:"small"]) )
+		SENTIMENT[positive=+](#1,#2).
+
+|#2[positive=+]|
+if (GLOBALMOD(#1[lemme:"price"],#2[lemme:"low"]) )
+	SENTIMENT[positive=+](#1,#2).
+
+// a dream machine 
+
+if (GLOBALMOD(#1[main-concept],#2[lemme:"dream"]))
+		SENTIMENT[positive=+](#1,#2).
+
+
+// make noise 
+
+if (OBJ-N(#1[lemme:"make"],#2[lemme:"noise"]))
+      SENTIMENT[negative=+](#1,#2).
+
+// reduce packaging
+
+if (OBJ-N(#1[lemme:"reduce"],#2[lemme:"package"]))
+      SENTIMENT[positive=+](#1,#2).
+
+
+//environnementally aware
+
+
+if (GLOBALMOD(#1[lemme:"aware"],#2[lemme:"environmentally"]))
+	SENTIMENT[positive=+](#1,#2).
+
+// high speed
+
+if (GLOBALMOD(#1[lemme:"speed"],#2[lemme:"high"]))
+	SENTIMENT[positive=+](#1,#2).
+
+//GLOBALMOD(colors,rich)
+//GLOBALMOD(print,quick)
+
+if ( GLOBALMOD(#1[lemme:"color"],#2[lemme:"rich"]) | 
+     GLOBALMOD(#1[lemme:"print"],#2[lemme:"quick"] ) )
+			SENTIMENT[positive=+](#1,#2).
+
+//the printer does not work
+|#1[negative=+]|
+if ( ( SUBJ-N(#1[lemme:"work"],#2[printer-related]) | SUBJ-N(#1[lemme:"work"],#2[printer-assoc]) ) & NEGAT(#1))
+	SENTIMENT[negative=+,modified=+](#1,#2).
+
+
+
+// stay away
+
+|SC{?*,FV{VERB#1[lemme:"stay"]}},ADV[lemme:"away"]|
+	if(~SENTIMENT(#1,?))
+	SENTIMENT[negative=+](#1)
+
+// take it back
+
+if (MOD[post](#1[lemme:"take"],#3[lemme:"back"])  & OBJ-N(#1,#2[p1:~]))
+	       SENTIMENT[negative=+](#1,#2)
+
+// forget this printer
+
+if (OBJ-N(#1[lemme:"forget"],#2[printer-related]) )
+   SENTIMENT[negative=+](#1,#2)
+
+ if (OBJ-N(#1[lemme:damage],#2[printer-assoc]))
+    SENTIMENT[negative=+](#1,#2)
+
+
+// small cartridges
+
+// high low prices
+
+ if (GLOBALMOD(#1[lemme:"cartridge"],#2[lowquantity]) & ~MOD[post](#1,#2) )
+	SENTIMENT[negative=+](#1,#2)
+
+if (GLOBALMOD(#1[lemme:"cartridge"],#2[highquantity]) & ~MOD[post](#1,#2) )
+	SENTIMENT[positive=+](#1,#2)
+
+// low price toner
+
+//low capacity
+
+if (GLOBALMOD(#1[lemme:"capacity"],#2[lemme:"low"]))
+		SENTIMENT[negative=+](#1,#2)
+
+// better choices 
+
+if ( ^SENTIMENT[positive](#1[lemme:"choice"],#2[lemme:"good",compar]) )
+	SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+// buy/don't buy
+
+
+if (OBJ-N(#1[buy,prog:~,past:~,partpas:~],#2[printer-related]) | 
+    OBJ-N(#1[buy,prog:~,past:~,partpas:~],#2[pron,p3] ) & ~SUBJ-N(#1,?) & ~EMBED(#1,?))
+	SENTIMENT[positive=+](#1,#2)
+
+if (OBJ-N(#1[lemme:"get",prog:~,past:~],#2[printer-related]) | 
+    OBJ-N(#1[lemme:"get",prog:~,past:~],#2[pron,p3] ) & ~SUBJ-N(#1,?) & ~EMBED(#1,?))
+	SENTIMENT[positive=+](#1,#2)
+
+
+if (OBJ-N(#1[buy,prog:~,past:~],#2) & ORGANISATION(#2)  & ~SUBJ-N(#1,?) & ~EMBED(#1,?))
+	SENTIMENT[positive=+](#1,#2)
+
+if (OBJ-N(#1[buy,prog:~,past:~],#2[lemme="brother",maj])  & ~SUBJ-N(#1,?) & ~EMBED(#1,?))
+	SENTIMENT[positive=+](#1,#2)
+
+//if ( OBJ-N(#1[lemme:"buy",prog:~],#2) & PRODUCT(#2)
+  
+// lose memory
+
+if (OBJ-N(#1,#3[lemme:"memory"])  & 
+    ( SUBJ-N(#1[lemme:"lose"],#2[pron,p3]) | SUBJ-N(#1[lemme:"lose"],#2[printer-related]) | ~SUBJ-N(#1,?))) 
+	SENTIMENT[negative=+](#1,#3)
+
+//stop working 
+
+if (EMBED(#2[positive], #1[lemme:"stop"]))
+		SENTIMENT[negative=+](#1,#2)
+if (EMBED(#2[negative], #1[lemme:"stop"]))
+		SENTIMENT[positive=+](#1,#2)
+
+// small footprint
+
+if (GLOBALMOD(#1[lemme:"footprint"],#2[lemme:"small"]))
+	SENTIMENT[positive=+](#2,#1)
+
+// Stay away from
+
+if ( NUCL[particle](#1[lemme:"stay"],#2[lemme:"away"]) & MOD[post](#1,#3) & PREPD(#3,#4[lemme:"from"]))
+   SENTIMENT[negative=+](#1,#3)
+
+// run perfectly 
+
+if (SUBJ-N(#1,#2) & MANNER(#1[lemme:"run"],#3[lemme:"perfectly"]))
+	SENTIMENT[positive=+](#1,#2)
+
+// quality decline
+
+if (SUBJ-N(#1[lemme:"decline"],#2[printer-assoc]))
+	SENTIMENT[negative=+](#1,#2)
+
+// ----------------------------------
+// Special amazon structure
+// 
+// ----------------------------------
+
+|NP{DIG#1[lemme:"1.0"]},PP{prep#4[lemme:"out_of"],?*}|
+        if (  PREPD(#2[lemme:"star"],#4))
+        SENTIMENT[negative=+](#1)
+
+|NP{DIG#1[lemme:"2.0"]},PP{prep#4[lemme:"out_of"],?*}|
+        if (  PREPD(#2[lemme:"star"],#4[lemme:"out_of"]))
+        SENTIMENT[negative=+](#1)
+
+|NP{DIG#1[lemme:"4.0"]},PP{prep#4[lemme:"out_of"],?*}|
+        if (  PREPD(#2[lemme:"star"],#4[lemme:"out_of"]))
+        SENTIMENT[positive=+](#1)
+
+|NP{DIG#1[lemme:"5.0"]},PP{prep#4[lemme:"out_of"],?*}|
+        if (  PREPD(#2[lemme:"star"],#4[lemme:"out_of"]))
+        SENTIMENT[positive=+](#1)
+
+// ----------------------------------
+// Special Epinions structure
+// 
+// ----------------------------------
+
+|NP#3[negative=+]{DIG#1[lemme:"1"],NOUN#2[lemme:"star"]}|
+        SENTIMENT[negative=+](#3)
+
+|NP#3[negative=+]{DIG#1[lemme:"2"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[negative=+](#3)
+
+
+|NP#3[positive=+]{DIG#1[lemme:"4"],NOUN#2[lemme:"star"]}|
+ SENTIMENT[positive=+](#3)
+
+|NP#3[positive=+]{DIG#1[lemme:"5"],NOUN#2[lemme:"star"]}|
+        if (  ~PREPD(#2,#4[lemme:"out_of"]))
+ SENTIMENT[positive=+](#3)
+
+
+//Cons and Pros
+
+//*** specific cases
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"none"]}, punct|
+	SENTIMENT[positive=+](#1,#2)
+
+|NP{NOUN#1[lemme:"pro"]},punct[form:fcolon],NP{PRON#2[lemme:"none"]}|
+	SENTIMENT[negative=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"nothing"]},punct|
+	SENTIMENT[positive=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{PRON#2[lemme:"everything"],punct}|
+	SENTIMENT[negative=+](#1,#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],ADV[lemme:"too"],QUANT#2[lemme:"many"]|
+		SENTIMENT[negative=+,positive=~](#2)
+
+// NP sequences :
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{#2},punct,NP{#3},punct,NP{#4}|
+	SENTIMENT[negative=+,positive=~,modified=+](#2), 
+	SENTIMENT[negative=+,positive=~,modified=+](#3),
+	SENTIMENT[negative=+,positive=~,modified=+](#4)
+
+|NP{NOUN#1[lemme:"pro"]},punct[form:fcolon],NP{?*,?#2[pron:~,positive:~,negative:~,last]}|
+	SENTIMENT[negative=~,positive=+,modified=+](#2)
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP,PUNCT[comma],NP{?*,?#2[pron:~,positive:~,negative:~,last]}|
+	   SENTIMENT[negative=+,positive=~,modified=+](#2)
+
+
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],NP{?*,?#2[positive:~,negative:~,last,lemme:~"have",pron:~]}|
+	SENTIMENT[negative=+,positive=~,modified=+](#2)
+
+|NP{NOUN#1[lemme:"pro"]},punct[form:fcolon],NP,PUNCT[comma],NP{?*,?#2[positive:~,negative:~,last,lemme:~"have",pron:~]}|
+	SENTIMENT[negative=~,positive=+,modified=+](#2)
+
+
+
+// APs
+|NP{NOUN#1[lemme:"con"]},punct[form:fcolon],AP{?#2}|
+	SENTIMENT[negative=+,positive=~,modified=+](#2)
+
+
+|NP{NOUN#1[lemme:"pro"]},punct[form:fcolon],AP{?#2}|
+	SENTIMENT[negative=~,positive=+,modified=+](#2)
+
+
+if ( ^SENTIMENT[negative,modified:~](#1) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[positive=+,modified=+,negative=~](#1)
+
+if ( ^SENTIMENT[positive,modified:~](#1) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[negative=+,modified=+,positive=~](#1)
+
+
+// ----------------------------------
+// domains
+// like in french grammar
+// ----------------------------------
+
+//related to printing
+| noun#1[lemme:"print"]; verb#1[lemme:"print"]; noun#1[lemme:"fax"]; verb#1[lemme:"fax"];
+ noun#1[lemme:scanner]; noun#1[surface:Scan]; verb#1[lemme:scan];
+ noun#1[lemme:digitize]; verb#1[lemme:digitize];
+ noun#1[lemme:photocopy]; noun#1[lemme:copy]; verb#1[lemme:photocopy]; verb#1[lemme:copy];verb[lemme:"xerox"] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=PRINTS]).
+
+
+//hardware 
+
+// hardware
+| noun#1[lemme:printer]; noun#1[lemme:cartridge];
+ noun#1[lemme:scanner]; noun#1[lemme:numériseur]; noun#1[lemme:photocopier]; noun#1[lemme:copier];
+ noun#1[lemme:screen]; noun#1[lemme:computer] ;noun#1[lemme:routeur] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=HARDWARE]).
+
+
+// software
+| noun#1[lemme:driver]; noun#1[lemme:pilot];
+ noun#1[lemme:software] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=SOFTWARE]).
+
+// speed
+| noun#1[lemme:speed]; adj#1[lemme:fast]; adj#1[lemme:speed]; adv#1[lemme:quick];
+ adj#1[lemme:slow]; noun#1[lemme:slowness]; adv#1[lemme:quickly];adv#1[lemme:slowly] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=SPEED]).
+
+
+// quality
+| noun#1[lemme:quality]; adj#1[lemme:qualitative] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=QUALITY]).
+
+// fonction
+| noun#1[lemme:functionality]; noun#1[lemme:function]; noun#1[lemme:performance]; noun#1[lemme:wifi]; noun#1[lemme:Wifi]; noun#1[lemme:"wireless"];  adv[lemme:"wirelessly"]|
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=FUNCTION]).
+
+// graphisme
+| noun#1[lemme:graphism]; noun#1[lemme:resolution]; noun#1[lemme:color]; noun#1[lemme:intensity]; noun#1[lemme:"colour"] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=GRAPHISM]).
+
+// image
+| noun#1[lemme:photo]; noun#1[lemme:photography]; noun#1[lemme:image]; noun#1[lemme:graphic] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=IMAGE]).
+
+// système d'exploitation
+| noun#1[surface:Windows]; noun#1[surface:windows]; noun#1[surface:Linux]; noun#1[surface:linux];
+ noun#1[surface:Mac]; noun#1[surface:mac] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=SYSTEM]).
+
+// jet d'encre
+| noun#1[lemme:jet];noun[lemme:inkjet] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=INKJET]).
+
+// laser
+| noun#1[lemme:laser]; noun#1[surface:lazer]; noun#1[lemme:LaserJet] |
+DOMAIN[printer-domain=+](#1, #1, ##EMPTY[lemme=LASER]).
+
+#@rulespace=general
+
+|NP#1|
+     NOMINAL(#1)

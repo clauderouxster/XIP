@@ -1,0 +1,75 @@
+# ============================================================================
+# TYPE:		(x)fst
+# CONTENT:	German morphology : morphophonological rules for proper names
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:     	10-Jan-2007
+# ============================================================================
+# USAGE:	xfst -s LEX.fst -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+define FLAGUPP	"@U.frm.upp@" ;
+define FLAGLOW	"@U.frm.low@" ;
+
+define UPP	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|U|Z|Ä|Ö|Ü];
+define LOW	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|u|z|ä|ö|ü|ß];
+
+
+# --------------------------------------------------------------
+# echo >>> genitive singular of proper names
+# Goethe+GenS -> Goethes
+# Lenz+GenS -> Lenz', ?Lenzens
+# Strauss+GenS -> Strauss', Straussens
+
+# echo >>> plural s of last names
+# Müller^PPl -> Müllers
+# Lenz^PPl  -> Lenzens
+
+define SNAME	[ s | ß | x | z ] ;
+
+read regex [
+	LEX
+.o.	%+GenS (->) %' || SNAME _
+.o.	[ %+GenS | %^PPl ] -> {ens} || SNAME _
+.o.	[ %+GenS | %^PPl ] -> s
+
+];
+
+
+# derivations of last names
+define LEX
+
+read regex [
+     	%} i <- %^I
+.o.	LEX 
+.o.	%^I (->) %'	# schiller'sch
+.o.	%^I (->) i || \[a|ä|e|i|o|ö|u|ü|y]  _ {sch}	# schillersch
+.o.	%^I -> 0
+];
+
+
+# --------------------------------------------------------
+# insert initial lower case for derivations
+
+# --------------------------------------------------------------
+# echo >>> upper/lower case (for derivations)
+define LEX
+
+
+read regex [
+	[ [FLAGUPP|FLAGLOW] LEX ]
+
+.o.	a->A, ä->Ä, b->B, c->C, d->D, e->E, f->F, g->G, h->H, 
+	i->I, j->J, k->K, l->L, m->M, n->N, o->O, ö->Ö, p->P,
+	q->Q, r->R, s->S, t->T, u->U, ü->Ü, v->V, w->W, x->X, 
+	y->Y, z->Z || FLAGUPP _
+
+.o.	A->a, Ä->ä, B->b, C->c, D->d, E->e, F->f, G->g, H->h, 
+	I->i, J->j, K->k, L->l, M->m, N->n, O->o, Ö->ö, P->p,
+	Q->q, R->r, S->s, T->t, U->u, Ü->ü, V->v, W->w, X->x, 
+	Y->y, Z->z || FLAGLOW  _
+] ;
+

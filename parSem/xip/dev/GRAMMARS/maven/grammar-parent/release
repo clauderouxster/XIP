@@ -1,0 +1,51 @@
+#!/bin/bash
+# run this script from a directory containing a grammar pom.
+
+# Unfortunately the maven release plugin v2.1 can't handle the fact that
+# our pom file is not at the root of the SCM module. This script does most
+# of what the release plugin would do, but it's not as careful. Have to keep
+# an eye on it.
+
+# This is ugly, error-prone, and doesn't work on windows. I need to come
+# back and find a better solution. Probably write my own grammar packaging
+# maven plugin.
+
+set -e
+
+mvn release:prepare
+
+# The release plugin only tags this directory. Assuming this directory is
+# language/APPLICATIONS/something, we go up two directories to the root of
+# the language and re-tag there.
+tag=$(grep ^scm.tag= release.properties | sed -e 's/^scm.tag=//')
+pushd ../..
+cvs tag "$tag"
+
+# Update to the tagged version. Even though we just tagged, this is not a no-op:
+# thanks to the release plugin, pom.xml has one version beyond the tag, and our
+# re-tag didn't change that (because we didn't force it with -F).
+cvs -q up -r $tag
+pushd
+
+# build the jar
+mvn clean package
+for candidate in target/*.jar; do
+    if [ "$jar" ]; then
+        echo "More than one jar!?"
+	exit 1
+    fi
+    jar=$candidate
+done
+
+# deploy the jar to the repository manager
+mvn deploy:deploy-file \
+    -Durl=http://lautaret.grenoble.xrce.xerox.com:8081/nexus/content/repositories/releases/ \
+    -Dfile=$jar \
+    -DpomFile=pom.xml
+
+# go back to the HEAD revision
+pushd
+cvs -q up -A
+popd
+
+mvn release:clean

@@ -1,0 +1,141 @@
+# ============================================================================
+# CONTENT:      special units (initials, URLS, phone numbers, ...)
+#
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      30-Jul-2007 (derived from older files)
+# ============================================================================
+# USAGE:        xfst -l [ThisFile]
+# ============================================================================
+   
+define UPP2LOW	[A:a|B:b|C:c|D:d|E:e|F:f|G:g|H:h|I:i|J:j|K:k|L:l|M:m|N:n|O:o
+		|P:p|Q:q|R:r|S:s|T:t|U:u|V:v|W:w|X:x|Y:y|Z:z
+		|À:à|Á:á|Â:â|Ã:ã|Ä:ä|Å:å|Æ:æ|Ç:ç|È:è|É:é|Ê:ê|Ë:ë|Ì:ì|Í:í|Î:î
+		|Ï:ï|Ð:ð|Ñ:ñ|Ò:ò|Ó:ó|Ô:ô|Õ:õ|Ö:ö|Ø:ø|Ù:ù|Ú:ú|Û:û|Ü:ü|Ý:ý|Þ:þ
+		|Œ:œ
+		];
+
+define UPP	UPP2LOW.u;
+define LOW	UPP2LOW.l;
+define LETTER	UPP | LOW ;
+define DIG	[%0|1|2|3|4|5|6|7|8|9];
+define SP	" " ;
+
+define CHAR	DIG | UPP | LOW ;
+
+# Initials 
+
+define INIT	UPP %. [(% ) UPP %. ]* ;
+
+# --------------------------------------------------------------------------------------
+# Domain name:  "xerox.fr", "cnn.news" (future??) , "toto.titi.tutu.tata.org" (but not more!)
+
+define domainName [ [ CHAR | %_ | %- ]+ %. ]^{1,4} LETTER^{2,4} ;
+
+# email address
+# Generally email adresses only include alphanumerics, periods, the @ symbol, the underscore, and the hyphen.
+#
+# e.g.:
+# anyletters@toto.com
+
+define email [ CHAR | %_ | %- | %. ]+ %@ domainName ;
+
+define email2  [ %{ [ [ CHAR | %_ | %- | %. | %, | % ] ]+ %} ] %@ domainName ; 
+
+# URL
+#  
+# e.g.s
+# http://user:passwd@www.xrce.xerox.com/dscgi/ds.py/View/Collection-1236
+
+# Any (?) character but blank, < " '
+define AnyChar [ 
+    CHAR 
+    | %& | %~ | %# | %{ | %( | %[ | %- | %| | %_ | %\ | %*
+    | %^ | %@ | %) | %] | %= | %° | %+ | %² | %$ | %£ | %¤ 
+    | %µ | %% | %! | %§ | %: | %/ | %; | %. | %, | %? | %}
+ ] ;
+
+define URL [ [ {http} | {ftp} | {news} | {nntp} | {telnet} 
+    | {wais} | {file} | {mailto} | {gopher} | {prospero} ]
+    [ {://} | {:/} ]
+    ( AnyChar+ %: AnyChar+ %@ )
+    domainName ( %/ [ AnyChar ]+ ) ];
+
+define URL2 [
+	w w LOW %.  domainName
+];	
+
+
+# Telephone/Fax number 
+# e.g. "Tel : 1/800-ANALOGD"
+# Tel: (212) 599-5656
+# Fax: (212) 889-6689
+# Tel: 202.331.2121
+# Fax: 202.331.2496
+# Tel: +972.9.740.9133
+# Fax: 972.3.634.2927
+# Tel (06) 869 0501
+# Tel: 81 3-5371-1921
+# tel: 415-593-7430
+# tel: +44 (0)20 8232-1600 x276
+# tel: + 44 (0) 207 7375 7572
+# Tel.:5449083,5448108 (Corp.Off.) Fax.:5448108
+# Tel = +33-6-09.14.83.53
+# CB ADDED : Phone Freephone etc should be possible 
+# Must:
+# - start with "Tel" or something equivalent
+# - contain at least one digit
+# - end with a digit or a capital letter
+ 
+##### Additions Needed ?
+### freephone helpline 08 626811 ????
+### phone/freephone number ?
+### Toll-free : 0-888-397-3742 
+### free phone  
+
+define Telephone [ [ {Tel} | {Tél} | {TEL} | {TÉL}  | {tel} | {tél} 
+         | {Telephone} | {TELEPHONE} | {Téléphone} | {telephone} | {Fax} | {FAX} 
+         | {ISDN} | {fax} | {Facsimile} | {facsimile} | {PHONE} | {Phone} | {phone} 
+         | {FreePhone} | {FREEPHONE} | {Freephone} | {freephone} 
+         | {toll-free}| {Toll-free} | {TOLL-FREE} | {Toll-Free} 
+     ]
+    ( %. )
+    ( SP ) ( %: | %= ) SP* 
+    [ DIG | UPP | %( | %) | %+ | %.| %/ | %- | %  ]+
+      DIG
+    [ DIG | UPP | %( | %) | %+ | %.| %/ | %- | %  ]+
+    [ DIG | UPP ] ]  ; 
+
+## AS@16-Oct-2007
+define JC	J (%.) ([%-|% ]) C ;
+
+## AS@19-Oct-2007
+# simple sgml without white space (to avoid problems with simple angles in non-SGML documents)
+define SGML	[ %< (%/) [CHAR|DIG]+ %> ];
+
+# sentence final SGML markers:
+define SGML1	[ %< (%/) [p|P| [h|H] DIG] %> ];
+define SGML2	SGML - SGML1 ;
+
+####  Final transducer
+
+regex 	[ email 	"+Symbol":0 "+Email":0   
+	| email2  	"+Symbol":0 "+Email":0 
+        | URL   	"+Symbol":0 "+URL":0
+        | URL2   	"+Symbol":0 "+URL":0
+        | Telephone   	"+Symbol":0 "+Tel":0
+
+	| INIT		"+Symbol":0 "+Initial":0
+	| JC		"+Symbol":0 "+Initial":0
+
+	| SGML1		"+Sgml":0 "+Final":0
+	| SGML2		"+Sgml":0 
+];
+
+
+
+
+
+  

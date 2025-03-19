@@ -1,0 +1,508 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyLifetime.xip                                      !
+//!   Date       : 2010/May                                                    !
+//!   Author     : Daniel Santos                                               !
+//!   Revised by : Vera Cabarrão (2011/January)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating the extraction of lifetime relations            !
+//!                                                                            !
+//!   Dependencies handled in this file:  LIFETIME                             !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+// NASCER / MORRER / FALECER / ...                                            //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João nasceu em Janeiro de 1990.
+// Example: O João nasceu no dia 3 de Janeiro de 1990.
+// Example: Nasceu em Janeiro de 1980.
+if( (SUBJ[ELIPS](#2[lemma:nascer],#1) || SUBJ(#2[lemma:nascer],#1[human])) &
+     MOD(#2,#3[time]) & HEAD(#3,#4)
+  )
+      LIFETIME[born=+](#1,#4)
+
+
+//VERA,  2011/03/02
+//O João faz anos no dia 20 de Janeiro.
+//O João faz anos em Janeiro.
+//O João tinha feito anos no dia 20 de Janeiro.
+//O João vai fazer anos no dia 20 de Janeiro.
+//Faz anos no dia 20 de Janeiro.
+//Faz anos a 20 de Janeiro.
+//Tinha feito anos no dia 20 de Janeiro.
+//Vai fazer anos no dia 20 de Janeiro.
+if( (SUBJ[ELIPS](#2[lemma:fazer],#1) || SUBJ(#2[lemma:fazer],#1[human])) &
+     MOD[TEMPORAL](#2,#3[lemma:ano]) &
+     MOD(#2,#4[time]) & HEAD(#4,#5) &
+      ~LIFETIME[born](#1,#5) & ~MOD[NEG](#2,?)
+  )
+        LIFETIME[born=+](#1,#5)
+
+//VERA,  2011/04/26
+//O João faz 25 anos no dia 20 de Janeiro.
+//O João faz 25 anos no dia 20.
+//Faz 25 anos no dia 20 de Janeiro.
+//Faz 25 anos em Janeiro.
+if( (SUBJ[ELIPS](#2[lemma:fazer],#1) || SUBJ(#2[lemma:fazer],#1[human])) &
+     NE[quant,num](#3[lemma:"?+ ano"]) &
+     MOD(#2,#4[time]) & HEAD(#4,#5) &
+     ~LIFETIME[born](#1,#4) & ~MOD[NEG](#2,?)
+  )
+        LIFETIME[born=+](#1,#5)
+
+
+//VERA,  2011/03/02
+//O aniversário do João é no dia 20 de Janeiro.
+//O aniversário do João é no dia 20.
+//O aniversário do João tinha sido no dia 20 de Janeiro.
+  if( SUBJ(#2[lemma:ser],#1[lemma:aniversário]) &
+      MOD[POST](#1,#3[human]) &
+      MOD(#2,#4[time]) & HEAD(#4,#5) &
+      ~LIFETIME[born](#1,?) & ~MOD[NEG](#2,?)
+    )
+        LIFETIME[born=+](#3,#5)
+
+
+//VERA,  2011/01/11 (joined 2 rules)
+// Example: O João morreu em Janeiro de 1990.
+// Example: Morreu no dia 3 de Janeiro de 1990.
+// Example: O João faleceu em Janeiro de 1990.
+// Example: Faleceu no dia 3 de Janeiro de 1990.
+ if( (SUBJ[PRE](#3[lemma:morrer],#2[human]) || SUBJ[PRE](#3[lemma:falecer],#2[human]) ||
+      SUBJ[ELIPS](#3[lemma:morrer],#2)      || SUBJ[ELIPS](#3[lemma:falecer],#2) ||
+      SUBJ[PRE,ANAPH0](#3[lemma:morrer],#2[human]) || SUBJ[PRE,ANAPH0](#3[lemma:falecer],#2[human])) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+     ~MOD[NEG](#3,#5) )
+    LIFETIME[death=+](#2,#5)
+
+
+//VERA,  2011/03/24
+// Example: O João que nasceu em Janeiro de 1990.
+// Example: O João que nasceu no dia 3 de Janeiro de 1990.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:nascer],#1) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+      ~MOD[NEG](#3,#4)
+    )
+    LIFETIME[born=+](#2,#5)
+
+
+//VERA,  2011/03/24 (joined 2 rules)
+// Example: O João que morreu em Janeiro de 1990.
+// Example: O João que morreu no dia 3 de Janeiro de 1990.
+// Example: O João que faleceu em Janeiro de 1990.
+// Example: O João que faleceu no dia 3 de Janeiro de 1990.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:morrer],#1) || SUBJ[PRE](#3[lemma:falecer],#1) ) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+      ~MOD[NEG](#3,#4)
+    )
+    LIFETIME[death=+](#2,#5)
+
+//VERA,  2011/04/04
+// Example: O João que foi morto em Janeiro de 1990.
+// Example: O João que foi assassinado no dia 3 de Janeiro de 1990.
+  if( ANTECEDENT[RELAT](#1[human],#2[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:matar],#2) || SUBJ[PRE](#3[lemma:assassinar],#2) ) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+      ~MOD[NEG](#2,?)
+    )
+    LIFETIME[death=+](#1,#5)
+
+
+//VERA,  2011/03/28 - não sai o MOD[TEMPORAL] (está comentado para não esquecer)
+//O João que faz anos no dia 20 de Janeiro.
+//O João que faz anos em Janeiro.
+//O João que faz 25 anos no dia 20 de Janeiro.
+//O João que faz 25 anos no dia 20.
+if (  ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:fazer],#1) &
+      //MOD[TEMPORAL](#3,#4[lemma:ano]) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+      ~LIFETIME[born](#2,#5) & ~MOD[NEG](#2,?)
+    )
+        LIFETIME[born=+](#2,#5)
+
+
+// Example: Pedro Paixão, escritor português, nascido em Campo de Ourique (Lisboa), no dia 7 de Fevereiro de 1956.
+| NP#1{?*,noun#2[human,SEM-Hprofession:~]},?*,AP{PASTPART#3[lemma:nascer]} |
+  if ( HEAD(#2,#1) & NE[tempo,t-date](#4)
+     )
+    LIFETIME[born=+](#2,#4)
+
+////////////////////////////////////////////////////////////////////////////////
+// DATA-NASCIMENTO /  DATA-FALECIMENTO                                        //
+////////////////////////////////////////////////////////////////////////////////
+
+//VERA,  2011/01/11 (simplified)
+// Example: D. Dinis ",(["9 de Outubro de 1261 - 7 de Janeiro de 1325",)]"
+| NP#1{?*,noun#2[human]},
+  PUNCT,(NP),(PUNCT),
+  NP#3[t-date,time],
+  PUNCT,(NP),(PUNCT),
+  NP#5[t-date,time],
+  PUNCT
+|
+  if(HEAD(#2,#1) & ~LIFETIME[born](#2,?) & ~LIFETIME[death](#2,?) )
+    LIFETIME[born=+](#2,#3),
+    LIFETIME[death=+](#2,#5)
+
+//VERA,  2011/01/11
+// Example: D. Dinis (9 de Outubro de 1261)
+| NP#1{?*,noun#2[human]},
+  PUNCT, (NP), (PUNCT),
+  NP#3[t-date,time,quant:~],
+  PUNCT
+|
+  if(HEAD(#2,#1) & ~LIFETIME[born](#2,?))
+    LIFETIME[born=+](#2,#3)
+
+// Example: A data de nascimento do João é 3 de Janeiro de 1977
+  if ( SUBJ(#1[lemma:ser],#2[lemma:"data de nascimento"]) &
+        MOD[POST](#2,#3[human]) &
+        PREDSUBJ(#1,#4[time]) & HEAD(#4,#5)
+     )
+    LIFETIME[born=+](#3,#5)
+
+// Example: A data de óbito/falecimento/morte do João é 3 de Janeiro de 1977
+  if ( (SUBJ(#1[lemma:ser],#2[lemma:"data de falecimento"]) ||SUBJ(#1[lemma:ser],#2[lemma:"data de morte"]) || SUBJ(#1[lemma:ser],#2[lemma:"data de óbito"])) &
+        MOD[POST](#2,#3[human]) &
+        PREDSUBJ(#1,#4[time]) & HEAD(#4,#5)
+     )
+    LIFETIME[death=+](#3,#5)
+
+////////////////////////////////////////////////////////////////////////////////
+// SUICIDAR / TERMINAR COM A VIDA / ...                                       //
+////////////////////////////////////////////////////////////////////////////////
+
+//VERA,  2011/01/12 (joined 2 rules)
+// Example: O João suicidou-se em Março de 1997.
+// Example: Suicidou-se em Março de 1997.
+  if( (SUBJ[ELIPS](#2[lemma:suicidar],#1) || SUBJ(#2[lemma:suicidar],#1[human])) &
+      MOD(#2,#3[time]) & HEAD(#3,#4) &
+      ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    LIFETIME[death=+](#1,#4)
+
+//VERA,  2011/01/12 (joined 2 rules)
+// Example: O João cometeu suicídio em Março de 1997.
+// Example: Cometeu suicídio em Março de 1997.
+  if( (SUBJ[ELIPS](#2[lemma:cometer],#1) || SUBJ(#2[lemma:cometer],#1[human]) ) &
+      CDIR(#2,#3[lemma:suicídio]) &
+      MOD(#2,#4[time]) & HEAD(#4,#5) &
+      ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    LIFETIME[death=+](#1,#5)
+
+//NJM+Vera, 2011/01/11 (simplified: few node restrictions)
+// Example: O João terminou/acabou com a própria vida em Março de 1997.
+// Example: Terminou/Acabou com a própria vida em Março de 1997.
+  if( (SUBJ[PRE](#2[lemma:terminar],#1[human]) || SUBJ[PRE](#2[lemma:acabar],#1[human]) ||
+       SUBJ[ELIPS](#2[lemma:terminar],#1)      || SUBJ[ELIPS](#2[lemma:acabar],#1)) &
+       PREPD(#3[lemma:vida],?[lemma:com]) &
+       MOD[POST](#2,#3) &
+       MOD(#2,#4[time]) & HEAD(#4,#5) &
+       ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    LIFETIME[death=+](#1,#5)
+
+//VERA,  2011/01/14
+// Example: O João pôs fim à própria vida em Março de 1997.
+// Example: Pôs fim à própria vida em Janeiro de 1999.
+ if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+     CDIR(#2,#3[lemma:fim]) &
+     DETD(#4[lemma:vida],?[lemma:próprio]) & MOD(#2,#4) &
+     MOD(#2,#5[time]) & HEAD(#5,#6) &
+     ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+   )
+    LIFETIME[death=+](#1,#6)
+
+//VERA,  2011/01/14
+// Example: O João pôs fim à sua vida em Março de 1997.
+// Example: Pôs fim à sua vida em Janeiro de 1999.
+ if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+     CDIR(#2,#3[lemma:fim]) &
+     POSS[PRE](#4[lemma:vida],?[lemma:eu]) & MOD(#2,#4) &
+     MOD(#2,#5[time]) & HEAD(#5,#6) &
+     ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+   )
+    LIFETIME[death=+](#1,#6)
+
+//VERA,  2011/03/09
+// Example: O João pôs fim à vida em Março de 1997.
+// Example: Pôs fim à vida em Março de 1997.
+//
+// MOD(#2,#4[lemma:vida]) --> esta dependêwncia não está a sair
+//
+if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+      CDIR(#2,#3[lemma:fim]) &
+      //MOD(#2,#4[lemma:vida]) &
+      MOD(#3,#5[time]) & HEAD(#5,#6) &
+      ~( PREPD(#6[human],?[lemma:de]) & MOD(#4,#6) ) &
+      ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+    )
+     LIFETIME[death=+](#1,#5)
+
+//VERA,  2011/01/14
+// Example: O João tirou a própria vida em Março de 1997.
+// Example: Tirou a própria vida em Março de 1997.
+if( (SUBJ[ELIPS](#2[lemma:tirar],#1) || SUBJ(#2[lemma:tirar],#1[human])) &
+     DETD(#3[lemma:vida],?[lemma:próprio]) & CDIR(#2,#3) &
+     MOD(#2,#4[time]) & HEAD(#4,#5) &
+     ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+  )
+     LIFETIME[death=+](#1,#5)
+
+//VERA,  2011/01/14
+// Example: O João tirou a sua vida em Março de 1997.
+// Example: Tirou a sua vida em Março de 1997.
+if( (SUBJ[ELIPS](#2[lemma:tirar],#1) || SUBJ(#2[lemma:tirar],#1[human])) &
+    POSS[PRE](#3[lemma:vida],?[lemma:eu]) & CDIR(#2,#3) &
+    MOD(#2,#4[time]) & HEAD(#4,#5) &
+    ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+  )
+     LIFETIME[death=+](#1,#5)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Hum1 MATAR Hum2                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
+//VERA,  2011/01/12 (joined 2 rules)
+// Example: O João foi morto/assassinado em Março de 1997.
+// Example: Foi morto/assassinado em Março de 1997.
+  if( (VDOMAIN(#2[lemma:ser],#3[lemma:assassinar]) || VDOMAIN(#2[lemma:ser],#3[lemma:matar])) &
+      (SUBJ[ELIPS](#3,#1) || SUBJ[PRE](#3,#1[human])) &
+      MOD(#3,#4[time]) & HEAD(#4,#5) &
+      ~LIFETIME[born](#1,?) & ~MOD[NEG](#2,?)
+    )
+      LIFETIME[death=+](#1,#5)
+
+//VERA,  2011/01/13
+// Example: O Pedro matou/assassinou o João em Março de 1990.
+ if( (SUBJ[PRE](#2[lemma:matar],#1) || SUBJ[PRE](#2[lemma:assassinar],#1) ) &
+      CDIR[POST](#2,#3[human]) &
+      MOD(#2,#4[time]) & HEAD(#4,#5) &
+      & ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+   )
+      LIFETIME[death=+](#3,#5)
+
+//VERA,  2011/01/11
+// Example: O Pedro tirou a vida ao João em Março de 1990.
+  if( SUBJ(#2[lemma:tirar],#1) &
+      CDIR(#2,#3[lemma:vida]) & PREPD(#4,?[lemma:a]) &
+      MOD(#2,#4[human]) &
+      MOD(#2,#5[time]) & HEAD(#5,#6) &
+      ~LIFETIME[death](#4,?) & ~MOD[NEG](#3,?))
+    LIFETIME[death=+](#4,#6)
+
+
+//VERA,  2011/01/11
+// Example: O Pedro pôs fim à vida do João em Março de 1990.
+  if( SUBJ(#2[lemma:pôr],#1) &
+      CDIR(#2,#3[lemma:fim]) &
+      PREPD(#4,?[lemma:a]) & MOD(#2,#4[lemma:vida]) &
+      MOD(#4,#5[human]) &
+      MOD(#2,#6[time]) & HEAD(#6,#7) &
+      ~LIFETIME[death](#5,#7) & ~MOD[NEG](#5,?)
+    )
+      LIFETIME[death=+](#5,#7)
+
+
+//it seems this rule is not needed...
+//NJM+Vera, 2011/01/11
+// Example: O Pedro foi quem matou/assassinou o João em Março de 1990.
+//| VF{verb#3[lemma:ser]}|    it seems it is not needed...
+//  if( HEAD(#2,#1) & HEAD(#6,#5) &
+//      ( VDOMAIN(?,#4[lemma:matar]) || VDOMAIN(?,#4[lemma:assassinar])) &
+//      SUBJ[PRE](#4,#2) & CDIR[POST](#4,#6[human]) & MOD(#4,#7[t-date,time]) &
+//      ~MOD[NEG](#4,?) & ~LIFETIME[death](#6,?)
+//     )
+//    LIFETIME[death=+](#6,#7)
+
+//VERA,  2011/01/13
+// Example: O João foi ferido/baleado/esfaqueado/atropelado mortalmente em Janeiro de 1998.
+// Example: Foi ferido/baleado/esfaqueado/atropelado mortalmente em Janeiro de 1998.
+  if( VDOMAIN(?,#4) & MOD(#4,?[lemma:mortalmente]) &
+      (SUBJ[ELIPS](#4,#2) || SUBJ[PRE](#4,#2[human])) &
+      MOD(#4,#5[time]) & HEAD(#5,#6) &
+      ~MOD[NEG](#4,?) & ~LIFETIME[death](#2,?)
+    )
+    LIFETIME[death=+](#2,#6)
+
+//VERA,  2011/01/11
+// Example: O João sofreu um ferimento/acidente mortal no dia 25 de Agosto.
+// Example: Sofreu um ferimento/acidente mortal no dia 25 de Agosto.
+  if( (SUBJ[ELIPS](#2[lemma:sofrer],#1) ||SUBJ(#2[lemma:sofrer],#1[human]) ) &
+       CDIR(#2,?[lemma:"?+ mortal"]) &
+       MOD(#2,#3[time]) & HEAD(#3,#4) &
+      ~LIFETIME[death](#2,?) & ~MOD[NEG](#3,?)
+    )
+   LIFETIME[death=+](#1,#4)
+
+//VERA,  2011/01/13
+// Example: O João foi vítima de um ferimento/acidente mortal no dia 25 de Agosto.
+// Example: O João foi vítima de homicídio no dia 25 de Agosto.
+// Example: Foi vítima de um ferimento/acidente mortal no dia 25 de Agosto.
+// Example: Foi vítima de homicídio no dia 25 de Agosto.
+ if( (SUBJ[ELIPS](#2[lemma:ser],#1) || SUBJ(#2[lemma:ser],#1[human]) ) &
+     PREDSUBJ(#2,#3[lemma:vítima]) &
+     (MOD(#3,#4[lemma:"?+ mortal"]) || MOD(#3,#4[lemma:homicídio]) ) &
+     MOD(#3,#5[time]) & HEAD(#5,#6) &
+     ~LIFETIME[death](#2,?) & ~MOD[NEG](#3,?)
+   )
+   LIFETIME[death=+](#1,#6)
+
+//VERA,  2011/01/13
+// Example: O João foi a única vítima mortal do acidente no dia 25 de Agosto.
+// Example: O João foi uma das vítimas mortais do acidente no dia 25 de Agosto.
+// Example: Foi a única vítima mortal do acidente no dia 25 de Agosto.
+ if( (SUBJ[ELIPS](#2[lemma:ser],#1) || SUBJ(#2[lemma:ser],#1[human]) ) &
+     PREDSUBJ(#2,#3[lemma:"vítima mortal"]) &
+     PREPD(#4,?[lemma:de]) &
+     MOD(#4,#5[time]) & HEAD(#5,#6) &
+     ~LIFETIME[death](#2,?) & ~MOD[NEG](#3,?)
+   )
+   LIFETIME[death=+](#1,#6)
+
+//Vera, 2011/01/13 (it seems it is not needed...)
+// Example: O João nasceu em Janeiro de 1900 e morreu/faleceu em Dezembro de 1999.
+//  if( HEAD(#2[human],#1) & LIFETIME[born=+](#2,#3) & (SUBJ[PRE,ANAPH0](#4[lemma:morrer],#2) || (SUBJ[PRE,ANAPH0](#4[lemma:falecer],#2))) & MOD[POST](#4,#5[t-date,time]) & ~LIFETIME[death](#2,#5))
+//    LIFETIME[death=+](#2,#5)
+
+
+//SUBJ_PRE(morto,João)
+//AGENT_POST(morto,Maria)
+//PATIENT_PRE(morto,João)
+
+////////////////////////////////////////////////////////////////////////////////
+// FIXED(...)                                                                 //
+////////////////////////////////////////////////////////////////////////////////
+
+// FIXED(bater,bota)                 //bater a bota
+// FIXED(bater,caçoleta)             //bater a caçoleta
+// FIXED(esticar,pernil)             //esticar o pernil
+// FIXED(ir,outro mundo)             //ir para o outro mundo
+// FIXED(ir,outro mundo)             //partir para o outro mundo
+// FIXED(ir,outro mundo)             //passar para o outro mundo
+// FIXED(ir,anjinhos)                //ir para os anjinhos
+// FIXED(descer,sepultura)           //descer à sepultura
+// FIXED(descer,túmulo)              //descer ao túmulo
+// FIXED(adormecer,Senhor)           //adormecer no Senhor
+// FIXED(ir,céu)                     //ir para o céu
+// FIXED(ir,cucuias)                 //ir para as cucuias
+// FIXED(ir,quinta das tabuletas)    //ir para a quinta das tabuletas
+// FIXED(ir,jardim das tabuletas)    //ir para o jardim das tabuletas
+// FIXED(ir,cidade dos pés juntos)   //ir para a cidade dos pés juntos
+//
+// Example: O João bateu a bota no dia 25 de Agosto.
+// Example: O João bateu a caçoleta no dia 25 de Agosto.
+// Example: O João esticou o pernil no dia 25 de Agosto.
+// Example: O João foi para o outro mundo no dia 25 de Agosto.
+// Example: O João passou para o outro mundo no dia 25 de Agosto.
+// Example: O João partiu para o outro mundo no dia 25 de Agosto.
+// Example: O João foi para os anjinhos no dia 25 de Agosto.
+// Example: O João desceu à sepultura no dia 25 de Agosto.
+// Example: O João adormeceu no senhor no dia 25 de Agosto.
+// Example: O João foi para o céu no dia 25 de Agosto.
+// Example: O João foi para as cucuias no dia 25 de Agosto.
+// Example: O João foi para a quinta das tabuletas no dia 25 de Agosto.
+// Example: O João foi para o jardim das tabuletas no dia 25 de Agosto.
+// Example: O João foi para a cidade dos pés juntos no dia 25 de Agosto.
+//
+if ( ( SUBJ[ELIPS](#3,#2) || SUBJ(#3,#2[human]) ) &
+     FIXED[normalized](morrer,?,?) &
+     MOD(#3,#4[time]) & HEAD(#4,#5) &
+     ~LIFETIME[death](#2,?) & ~MOD[NEG](#3,?)
+   )
+  LIFETIME[death=+](#2,#5)
+
+
+// FIXED(ir,desta,melhor)            //ir desta para melhor
+// FIXED(dar,último,suspiro)         //dar o último suspiro
+// FIXED(soltar,último,suspiro)      //soltar o último suspiro
+// FIXED(dizer,adeus,mundo)          //dizer adeus ao mundo
+// FIXED(entregar,alma,criador)      //entregar a alma ao criador
+// FIXED(ir,lado de lá)              //ir para o lado de lá
+// FIXED(adormecer,paz,Senhor)       //adormecer na paz do Senhor
+// FIXED(descansar,paz,Senhor)       //descansar na paz do Senhor
+// FIXED(dormir,sono,eterno)         //dormir,sono,eterno
+// FIXED(dormir,sono,último)         //dormir,sono,último
+// FIXED(dormir,sono,derradeiro)     //dormir,sono,derradeiro
+// FIXED(estar,fazer,tijolo)         //estar,fazer,tijolo
+// FIXED(estar,palmos,terra)         //estar,palmos,terra
+// FIXED(estar,nós,não)              //não estar entre nós
+//
+// Example: O João foi desta para melhor no dia 25 de Agosto.
+// Example: O João deu o último suspiro no dia 25 de Agosto.
+// Example: O João deu o seu último suspiro no dia 25 de Agosto.
+// Example: O João soltou o último suspiro no dia 25 de Agosto.
+// Example: O João disse adeus ao mundo no dia 25 de Agosto.
+// Example: O João entregou a alma ao criador no dia 25 de Agosto.
+// Example: O João foi para a quinta das tabuletas no dia 25 de Agosto.
+// Example: O João foi para a cidade dos pés juntos no dia 25 de Agosto.
+// Example: O João adormeceu na paz do senhor no dia 25 de Agosto.
+// Example: O João descansa na paz do senhor desde o dia 25 de Agosto.
+// Example: O João dorme o derradeiro sono desde o dia 25 de Agosto.
+// Example: O João dorme o sono eterno desde o dia 25 de Agosto.
+// Example: O João dorme o último sono desde o dia 25 de Agosto.
+// Example: O João está a fazer tijolo desde o dia 25 de Agosto.
+// Example: O João está sob sete palmos de terra desde o dia 25 de Agosto.
+// Example: O João já não está entre nós desde o dia 25 de Agosto.
+if ( ( SUBJ[ELIPS](#2,#1) || SUBJ(#2,#1[human]) ) &
+     FIXED[normalized](morrer,?,?,?) &
+     MOD(#2,#3[time]) & HEAD(#3,#4) &
+     ~LIFETIME[death](#1,?) & ~MOD[NEG](#2,?)
+   )
+  LIFETIME[death=+](#1,#4)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// IDADE                                                                      //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O Pedro tem 25 anos.
+// Example: O Pedro tem 6 meses de idade.
+// Example: O Pedro tem de idade 25 primaveras.
+if ( ( SUBJ[ELIPS](#2[lemma:ter],#1) || SUBJ(#2[lemma:ter],#1[human]) ||
+       SUBJ[ELIPS](#2[lemma:fazer],#1) || SUBJ(#2[lemma:fazer],#1[human]) ) &
+     ( CDIR(#2,#3[t-meas]) || CDIR(#2,#3[lemma:primavera]) ) &
+     HEAD(#3,#4) &
+     ~LIFETIME[age](#1,?)
+   )
+  LIFETIME[age=+](#1,#4)
+
+
+// Example: O Pedro, 25 anos, professor universitário, disse isso.
+| NP#1{?*,noun#2[human]}, PUNCT, NP#3{?*,noun#4[t-meas,time]}, (PP), PUNCT |
+  if(HEAD(#4,#5) &
+    ~LIFETIME[age](#2,?))
+    LIFETIME[age=+](#2,#5)
+
+////////////////////////////////////////////////////////////////////////////////
+// AUSÊNCIA DE SUJEITO                                                        //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A sua data de nascimento é 3 de Janeiro de 1980.
+  if ( SUBJ(#2[lemma:ser],#1[lemma:"data de nascimento"]) & POSS(#1,?[lemma:eu]) &
+       PREDSUBJ(#2,#3[time]) & HEAD(#3,#4)
+     )
+    LIFETIME[born=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#4)
+
+
+// Example: A sua data de falecimento/óbito é 3 de Janeiro de 1980.
+  if ( SUBJ(#2[lemma:ser],#1[lemma:"data de falecimento"]) || SUBJ(#2[lemma:ser],#1[lemma:"data de morte"]) || SUBJ(#2[lemma:ser],#1[lemma:"data de óbito"])&
+       POSS(#1,?[lemma:eu]) &
+       PREDSUBJ(#2,#3[time]) & HEAD(#3,#4)
+     )
+    LIFETIME[death=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#4)
+

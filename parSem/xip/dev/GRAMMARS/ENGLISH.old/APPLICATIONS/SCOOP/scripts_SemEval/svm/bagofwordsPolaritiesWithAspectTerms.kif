@@ -1,0 +1,173 @@
+//Ce fichier contient une autre facon d'entrainer les modeles a partir de XIP en assignant uniquement 0.16 (voir plus bas) aux elements de dependances calcules par XIP
+//Voir storedepwords
+//ATTENTION IL CONTIENT DEJA L'ENTRAINEMENT
+use('kifliblinear');
+string path;
+//path='W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\scripts_SemEval\svm\ENGLISHBRUN\ENGLISH\APPLICATIONS\SCOOP\GRMFILES\scoop-restaurant.grm';
+
+//path='/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/ENGLISHBRUN/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+//path='/opt/ParSem_db/Corpora/SemEval14/GrammarSub/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+//path = '/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+//path=_paths[1]+_sep+'ENGLISHREF/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+
+path='/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/SEMGRAMMAR/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+
+parser p(path);
+ivector words;
+sitreemap allthewords;
+istreemap polarityneutralwords;
+istreemap autresdependances;
+
+string jaipolarite;
+
+function storewords(node n) {
+     string s=n.lemma().lower();
+     if (allthewords.test(s)==false)
+          allthewords[s]=allthewords.size()+1;
+     words.push(allthewords[s]);
+}
+
+
+function storedepwords(string s) {
+     s = s.lower();
+     if (allthewords.test(s)==false)
+          allthewords[s]=allthewords.size()+1;
+     words.push(allthewords[s]);
+     //On garde ici ces elements pour pouvoir leur assigner un poids different...
+     if (jaipolarite=="neutral")
+          polarityneutralwords[allthewords[s]]=s;
+     else
+          autresdependances[allthewords[s]]=s;
+}
+
+svector polaritynames=["POSITIVE","NEGATIVE","NEUTRAL","CONFLICT"];
+svector lescats=["FOOD","SERVICE","AMBIENCE","PRICE"];
+
+function getdeps(dependency d,string cg) {
+     svector vfeats= d.features();
+     string pol;
+     vfeats &=polaritynames;
+     if (vfeats.size()==1)
+          pol=vfeats[0];
+     else
+          return;
+
+     switch(d.name()) {
+          "OPINION-ON-ASPECT-CATEGORY": {
+               string s1 = d.parameters()[0].surface();
+               if(cg==s1) {
+                    storedepwords(pol + "_" + s1);
+                    storedepwords(pol);
+               }
+          }
+     }
+}
+
+string rule=@"
+
+script:
+
+|#1[punct:~,url:~,terminal,conj:~]|{
+storewords(#1);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$6(#1)){
+getdeps($6,kif_exchange_data);
+}
+
+
+"@;
+
+p.addendum(rule,true);
+map polaritybycategories;
+xml last;
+
+string c,sent;
+ssmap props;
+
+sitreemap polarites={"positive":0,"negative":1,"neutral":2,"conflict":3};
+
+function selectsentence(xml n, self data) {
+     if(n.name()=='text')
+          last=n;
+     elif (n.name()=="aspectCategory") {
+          props=n.properties();
+          words.clear();
+          c = props["category"];
+          sent=last.content();
+          jaipolarite=props["polarity"];
+          p.parse(sent,c);
+          if (polaritybycategories.test(c))
+               polaritybycategories[c].push([polarites[props["polarity"]],words]);
+          else
+               polaritybycategories[c]=[[polarites[props["polarity"]],words]];
+          printerr(".");
+     }
+}
+
+
+
+xmldoc inputxml with selectsentence;
+if (_sep=='/')
+     inputxml.load(_paths[1]+'/../Corpus/Restaurants_Train_v2.xml');
+else
+     inputxml.load(_paths[1]+'\..\Corpus/Restaurants_Train_v2.xml');
+
+
+function savethemodel(string filename,string cat) {
+     file modelcat(filename,"w");
+
+     vector v,keys;
+     int i;
+     string ligne;
+     ivector iv;
+     iftreemap uniques;
+
+     for (v in polaritybycategories[cat]) {
+          ligne=v[0]+" ";
+          iv=v[1];
+          iv.sortint(false);
+          for (i in iv) {
+               if (polarityneutralwords.test(i)) {
+                    uniques[i]+=0.16;
+               }
+               elif (autresdependances.test(i)) {
+                    uniques[i]+=0.16;
+               }
+               else
+                    uniques[i]++;
+          }
+          keys = uniques.keys();
+          for (i in keys)
+               ligne+=i+":"+uniques[i]+" ";
+          modelcat.writeln(ligne);
+          uniques.clear();
+     }
+     modelcat.close();
+}
+
+
+savethemodel("modelPrice.dat","price");
+savethemodel("modelFood.dat","food");
+savethemodel("modelAmbience.dat","ambience");
+savethemodel("modelService.dat","service");
+savethemodel("modelAnnecdote.dat","anecdotes/miscellaneous");
+
+file dico("dictionariesPolarity.kif","w");
+
+dico.writeln("sitreemap polarites="+polarites+";");
+dico.writeln("sitreemap allthewords="+allthewords+";");
+
+dico.close();
+//
+liblinear trainer;
+
+smap options={"c":0.1,"s":"L2R_L2LOSS_SVC_DUAL","B":-1,"e":0.1};
+//smap options={"c":1,"s":"L2R_L2","B":-1,"e":0.01};
+//
+//
+trainer.load(_paths[1]+_sep+"modelFood.dat",options,"model_test_food");
+trainer.train(_paths[1]+_sep+"modelPrice.dat",options,"model_test_price");
+trainer.train(_paths[1]+_sep+"modelAmbience.dat",options,"model_test_ambience");
+trainer.train(_paths[1]+_sep+"modelService.dat",options,"model_test_service");
+trainer.train(_paths[1]+_sep+"modelAnnecdote.dat",options,"model_test_annecdote");

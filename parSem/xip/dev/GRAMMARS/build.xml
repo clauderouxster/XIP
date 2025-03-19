@@ -1,0 +1,1125 @@
+
+<project default="test" basedir="." >
+    <property name="env" environment="env"  value="env"/>
+    <property name="common.dir" location="${basedir}/../../../common" />
+    <!-- xip.dev.dir is mandatory to allow xip.version to get the right value -->
+    <property name="xip.dev.dir"	location="${basedir}/.." />
+    <import file="${common.dir}/buildInclude.xml" />
+    <property name="verbose" value="false"/>
+
+
+    <target name="info" depends=""  >
+        <echo message=" ---- grammar crypting ---- "/>
+        <echo message="gram:      crypte only some grammars: english-entity and french-entity"/>
+        <echo message="gram-all:  crypte all the grammar"/>
+        <echo message="gram-src:  all the grammars, not crypted without tests,..."/>
+        <echo message="eng-gen: english basic"/>
+        <echo message="eng-entity: english basic + entity"/>
+        <echo message="eng-entityOnly: english entity"     />
+        <echo message="eng-norm: english entity + normalization"/>
+        <echo message="eng-tempExpr"/>
+        <echo message="eng-temporalExp"/>
+        <echo message="eng-polrisk"/>
+        <echo message="jcoref"/>
+        <echo message="merge-coref-temp"/>
+        <echo message="french-basic"/>
+        <echo message="french-entity"/>
+        <echo message="french-entityOnly"/>
+        <echo message="french-infomagic"/>
+        <echo message="french-entityOnly-infomagic"/>
+        <echo message="french-morphOnly-infomagic"/>
+        <echo message="french-tempEster"/>
+        <echo message="french-aladin"/>
+        <echo message="spanish-basic"/>
+        <echo message="spanish-entity"/>
+        <echo message="portuguese-basic"/>
+        <echo message="italian-basic"/>
+        <echo message="italian-entity"/>
+        <echo message="german-entity"/>
+        <echo message="dutch-basic"/>
+        <echo message="" />
+        <echo message=" ---- test ---- "/>
+        <echo message="test:     test dev"/>
+        <echo message="del:      test delivery"/>
+        <echo message="valgrind: test with valgrind"/>
+        <echo message="prof:     test with gprof"/>
+    </target>
+
+    <target name="cr-english-entity" depends="crypteregles,englishEntity, crypting "
+            description="Cryptage partiel, uniquement des fichiers de regles, de la grammaire" />
+    <target name="cd-english-entity" depends="crypteduplique, englishEntity, crypting "
+            description="Cryptage complet de la grammaire" />
+    <target name="is-english-entity" depends="isolegrammaire, englishEntity, crypting "
+            description="Extraction des fichiers utiles pour une grammaire" />
+
+    <target name="cr-english-entityNorm" depends="crypteregles,englishEntityNorm, crypting "
+            description="Cryptage partiel, uniquement des fichiers de regles, de la grammaire" />
+    <target name="cd-english-entityNorm" depends="crypteduplique, englishEntityNorm, crypting "
+            description="Cryptage complet de la grammaire" />
+    <target name="is-english-entityNorm" depends="isolegrammaire, englishEntityNorm, crypting "
+            description="Extraction des fichiers utiles pour une grammaire" />
+
+    <target name="cr-french-entity" depends="crypteregles, frenchEntity, crypting "
+            description="Cryptage partiel, uniquement des fichiers de regles, de la grammaire" />
+    <target name="cd-french-entity" depends="crypteduplique, frenchEntity, crypting "
+            description="Cryptage complet de la grammaire" />
+    <target name="is-french-entity" depends="isolegrammaire, frenchEntity, crypting "
+            description="Extraction des fichiers utiles pour une grammaire" />
+
+    <target name="cr-italian-entity" depends="crypteregles, italianEntity, crypting "
+            description="Cryptage partiel, uniquement des fichiers de regles, de la grammaire" />
+    <target name="cd-italian-entity" depends="crypteduplique, italianEntity, crypting "
+            description="Cryptage complet de la grammaire" />
+    <target name="is-italian-entity" depends="isolegrammaire, italianEntity, crypting "
+            description="Extraction des fichiers utiles pour une grammaire" />
+
+    <target name="cr-german-entity" depends="crypteregles, germanEntity, crypting "
+            description="Cryptage partiel, uniquement des fichiers de regles, de la grammaire" />
+    <target name="cd-german-entity" depends="crypteduplique, germanEntity, crypting "
+            description="Cryptage complet de la grammaire" />
+    <target name="is-german-entity" depends="isolegrammaire, germanEntity, crypting "
+            description="Extraction des fichiers utiles pour une grammaire" />
+
+    <target name="englishEntity" >
+        <property name="deliveryGramDirName" value="ENGLISH"/>
+        <property name="grmFileName" location="${basedir}/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm"/>
+        <property name="path" value="../.."/>
+    </target>
+
+    <!-- attention pb avec new-pred.xip et cryptage -->
+    <target name="englishEntityNorm" >
+        <property name="deliveryGramDirName" value="ENGLISH"/>
+        <property name="grmFileName" location="${basedir}/ENGLISH/GRMFILES/GRAM_NORM/gram_norm_entit.grm"/>
+        <property name="path" value="../.."/>
+    </target>
+
+    <target name="frenchEntity" >
+        <property name="deliveryGramDirName" value="FRENCH"/>
+        <property name="grmFileName" location="${basedir}/FRENCH/BASIC/french_entity.grm"/>
+        <property name="path" value=".."/>
+    </target>
+
+    <target name="italianEntity" >
+        <property name="deliveryGramDirName" value="ITALIAN"/>
+        <property name="grmFileName" location="${basedir}/ITALIAN/CELI_090313/italian.grm"/>
+        <property name="path" value=".."/>
+    </target>
+
+    <target name="germanEntity" >
+        <property name="deliveryGramDirName" value="GERMAN"/>
+        <property name="grmFileName" location="${basedir}/GERMAN/BASIC/german.grm"/>
+        <property name="path" value=".."/>
+    </target>
+
+    <target name="crypteregles" >
+        <!-- Cryptage partiel, uniquement des fichiers de regles, de la grammaire -->
+        <property name="crypteMode" value="crypteregles"/>
+    </target>
+
+    <target name="crypteduplique" >
+        <!-- Cryptage complet de la grammaire -->
+        <property name="crypteMode" value="crypteduplique"/>
+    </target>
+
+    <target name="isolegrammaire" >
+        <!-- Extraction des fichiers utiles pour une grammaire -->
+        <property name="crypteMode" value="isolegrammaire"/>
+    </target>
+
+    <target name="crypting" depends="setCommonProperties">
+        <property name="rootDeliveryGramDir" location="${delivery.dir}/grammar"/>
+        <mkdir dir="${rootDeliveryGramDir}" />
+        <property name="deliveryGramDir" location="${rootDeliveryGramDir}/${deliveryGramDirName}"/>
+        <delete dir="${deliveryGramDir}" quiet="true"/>
+        <dirname property="grmDir" file="${grmFileName}"/>
+        <basename property="grmName" file="${grmFileName}"/>
+        <delete dir="${grmDir}/tmp"  />
+        <exec executable="${bin.dir}/xip" failonerror="true" dir="${grmDir}" outputproperty="out" >
+            <arg line= " -${crypteMode} tmp -grm ${grmName}" />
+        </exec>
+        <move todir="${deliveryGramDir}" verbose="false" failonerror="true">
+            <fileset dir="${grmDir}/tmp/${grmDir}/${path}" includes="*/**"/>
+        </move>
+        <delete dir="${grmDir}/tmp"  />
+    </target>
+
+    <target name="gram-src" depends="setCommonProperties">
+        <property name="gramSrc" location="${delivery.dir}/grammars-src" />
+        <delete dir="${gramSrc}" />
+        <copy  todir="${gramSrc}/ENGLISH" >
+            <fileset dir="${basedir}/../GRAMMARS/ENGLISH" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/TRANS/**"/>
+                <exclude name="**/TESTCORPORA/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/ENGLISH/APPLICATIONS/JCOREF" >
+            <fileset dir="${basedir}/../GRAMMARS/ENGLISH/APPLICATIONS/JCOREF" />
+        </copy>
+        <copy  todir="${gramSrc}/FRENCH" >
+            <fileset dir="${basedir}/../GRAMMARS/FRENCH" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/TRANS/**"/>
+                <exclude name="**/TRIPLETS-COMPATIBLE/**"/>
+                <exclude name="**/EASY-COMPATIBLE/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+                <exclude name="**/PASSAGE/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/DUTCH" >
+            <fileset dir="${basedir}/../GRAMMARS/DUTCH" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/CORPUS/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/GERMAN" >
+            <fileset dir="${basedir}/../GRAMMARS/GERMAN" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/CORPUS/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/ITALIAN" >
+            <fileset dir="${basedir}/../GRAMMARS/ITALIAN" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/CORPUS/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/PORTUGUESE" >
+            <fileset dir="${basedir}/../GRAMMARS/PORTUGUESE" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/CORPUS/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+        <copy  todir="${gramSrc}/SPANISH" >
+            <fileset dir="${basedir}/../GRAMMARS/SPANISH" >
+                <exclude name="**/TEST/**"/>
+                <exclude name="**/DOC/**"/>
+                <exclude name="**/CORPUS/**"/>
+                <exclude name="**/APPLICATIONS/**"/>
+            </fileset>
+        </copy>
+    </target>
+
+
+    <target name="transFormat" depends="setCommonProperties" description="convert *.fst in xiptrans format (*.ar)" >
+        <for param="file" >
+            <path>
+                <fileset dir="${basedir}/ENGLISH/NTMFILES/SOURCEFST" casesensitive="yes">
+                    <include name="**/*.fst"/>
+                    <exclude name=""/>
+                </fileset>
+            </path>
+            <sequential>
+                <echo message="" />
+                <echo message="file = @{file}" />
+                <propertyregex property="dirname"  regexp="(.*)/([^\.]*)\.fst" replace="\1" input="@{file}" override="yes" />
+                <propertyregex property="basename" regexp="(.*)/([^\.]*)\.fst" replace="\2" input="@{file}" override="yes" />
+                <echo message="basename = ${basename}" />
+                <echo message="dirname = ${dirname}" />
+                <exec executable="${basedir}/../fst/bin/${platform}/xip" dir="${dirname}" failonerror="true" >
+                    <arg value="-convert"/>
+                    <arg value="${basename}.fst"/>
+                    <arg value="${basename}.ar"/>
+                </exec>
+            </sequential>
+        </for>
+    </target>
+
+
+    <target name="gram" depends="cleanDelDir" description="crypte some grammars" >
+        <echo message="crypted in: ${delivery.dir}/grammar/..." />
+        <antcall target="eng-norm"          inheritAll="false" />
+        <antcall target="french-entity"     inheritAll="false" />
+    </target>
+
+
+    <target name="gram-codex" depends="cleanDelDir" description="crypte some grammars" >
+        <echo message="crypted in: ${delivery.dir}/grammar/..." />
+        <antcall target="eng-entity"        inheritAll="false" />
+        <antcall target="french-entity"     inheritAll="false" />
+        <antcall target="spanish-entity"    inheritAll="false" />
+        <antcall target="italian-basic"     inheritAll="false" />
+        <antcall target="portuguese-basic"  inheritAll="false" />
+    </target>
+
+
+    <target name="gram-all" depends="cleanDelDir" description="crypte all grammars" >
+        <echo message="crypted in: ${delivery.dir}/grammar/..." />
+        <antcall target="eng-gen"           inheritAll="false" />
+        <antcall target="eng-entity"        inheritAll="false" />
+        <antcall target="eng-entityOnly"    inheritAll="false" />
+        <antcall target="eng-norm"          inheritAll="false" />
+        <antcall target="eng-tempExpr"      inheritAll="false" />
+        <antcall target="eng-temporalExp"   inheritAll="false" />
+        <antcall target="eng-polrisk"       inheritAll="false" />
+        <antcall target="jcoref"            inheritAll="false" />
+        <antcall target="merge-coref-temp"  inheritAll="false" />
+        <antcall target="french-basic"      inheritAll="false" />
+        <antcall target="french-entity"     inheritAll="false" />
+        <antcall target="french-entityOnly" inheritAll="false" />
+        <antcall target="french-entityOnly-infomagic"   inheritAll="false" />
+        <antcall target="french-morphOnly-infomagic"    inheritAll="false" />
+        <antcall target="spanish-basic"     inheritAll="false" />
+        <antcall target="spanish-entity"    inheritAll="false" />
+        <antcall target="portuguese-basic"  inheritAll="false" />
+        <antcall target="italian-basic"     inheritAll="false" />
+        <antcall target="italian-entity"     inheritAll="false" />
+        <antcall target="german-entity"      inheritAll="false" />
+        <antcall target="dutch-basic"       inheritAll="false" />
+    </target>
+
+
+    <target name="gramWeb" depends="cleanDelDir" description="crypte grammars for xip on the web" >
+        <echo message="crypted in: ${delivery.dir}/grammar/..." />
+        <!-- inheritAll must false to allow new values to the properties -->
+        <antcall target="eng-entity"        inheritAll="false" />
+        <antcall target="french-entity"     inheritAll="false" />
+        <antcall target="spanish-basic"     inheritAll="false" />
+        <antcall target="portuguese-basic"  inheritAll="false" />
+        <antcall target="italian-basic"     inheritAll="false" />
+        <antcall target="german-entity"      inheritAll="false" />
+        <!--
+        <antcall target="dutch-basic"      inheritAll="false" />
+        -->
+    </target>
+
+
+    <target name="eng-gen" depends="eng-init, commonEng1, engDoc, crypte"
+            description="english-basic crypting" />
+    <target name="eng-init" depends="setCommonProperties"  >
+        <echo message="english basic crypting" />
+        <property name="gram.name"      value="english-gen"/>
+        <property name="grm.fileName"   value="gram_gen.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/GRMFILES/GRAM_GEN" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_gen.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/gen" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="eng-entity" depends="eng-entity-init, commonEng1, engDoc, crypte"
+            description="english-entity crypting" />
+    <target name="eng-entity-init" depends="setCommonProperties"  >
+        <echo message="english entity crypting" />
+        <property name="gram.name"      value="english-entity"/>
+        <property name="grm.fileName"   value="gram_gen_entit.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/GRMFILES/GRAM_GEN" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_gen_entit.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/entity" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="eng-entityOnly" depends="eng-entityOnly-init, commonEng1, engDoc, crypte"
+            description="english-entityOnly crypting" />
+    <target name="eng-entityOnly-init" depends="setCommonProperties"  >
+        <echo message="english entityOnly crypting" />
+        <property name="gram.name"      value="english-entityOnly"/>
+        <property name="grm.fileName"   value="entities_only.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/GRMFILES/ENTITIES_ONLY" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_entit.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/entityOnly" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="eng-norm" depends="eng-norm-init, commonEng3, engDoc, crypte"
+            description="english-norm crypting" />
+    <target name="eng-norm-init" depends="setCommonProperties"  >
+        <echo message="english norm crypting" />
+        <property name="gram.name"      value="english-norm"/>
+        <property name="grm.fileName"   value="gram_norm_entit.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/GRMFILES/GRAM_NORM" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_norm_entit.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/norm" />
+        <property name="ntm.fileName"   value="ntmscript_norm"/>
+    </target>
+    <target name="eng-tempExpr" depends="eng-tempExpr-init, commonEng3, engDoc, crypte"
+            description="english-tempExpr crypting" />
+    <target name="eng-tempExpr-init" depends="setCommonProperties"  >
+        <echo message="english tempExpr crypting" />
+        <property name="gram.name"      value="english-tempExpr"/>
+        <property name="grm.fileName"   value="gram_temp.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/GRMFILES/GRAM_TEMP" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_temp.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/tempExpr" />
+        <property name="ntm.fileName"   value="ntmscript_norm"/>
+    </target>
+    <target name="eng-temporalExp" depends="eng-temporalExp-init, commonEng4, engDoc, crypte"
+            description="english-temporalExp crypting" />
+    <target name="eng-temporalExp-init" depends="setCommonProperties"  >
+        <echo message="english temporalExp crypting" />
+        <property name="gram.name"      value="english-temporalExp"/>
+        <property name="grm.fileName"   value="gram_temporalExp.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/APPLICATIONS/SPECTEMP/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_temporalExp.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/temporalExp" />
+        <property name="ntm.fileName"   value="ntmscript_num"/>
+    </target>
+    <target name="eng-polrisk" depends="eng-polrisk-init, commonEng5, crypte"
+            description="english polrisk crypting" />
+    <target name="eng-polrisk-init" depends="setCommonProperties"  >
+        <echo message="english polrisk crypting" />
+        <property name="gram.name"      value="english-polrisk"/>
+        <property name="grm.fileName"   value="english_pr.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/APPLICATIONS/POLRISK/data" />
+        <property name="lang.xip"       location="${src.grm.dir}/english_pr.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/polrisk" />
+        <property name="ntm.fileName"   value="ntm_risk.txt"/>
+    </target>
+    <target name="jcoref" depends="jcoref-init, commonEng2, crypte" description="jcoref crypting" />
+    <target name="jcoref-init" depends="setCommonProperties"  >
+        <echo message="english jcoref crypting" />
+        <property name="gram.name"      value="jcoref"/>
+        <property name="grm.fileName"   value="coref.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/APPLICATIONS/JCOREF/GRM" />
+        <property name="lang.xip"       location="${src.grm.dir}/coref.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/coref" />
+        <property name="ntm.fileName"   value="ntmscript_norm"/>
+    </target>
+    <target name="merge-coref-temp" depends="merge-coref-temp-init, commonEng2, copyEng7, crypte"
+            description="merge-coref-temp crypting" />
+    <target name="merge-coref-temp-init" depends="setCommonProperties"  >
+        <echo message="english merge-coref-temp crypting" />
+        <property name="gram.name"      value="merge-coref-temp"/>
+        <property name="grm.fileName"   value="merge_coref_temp.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ENGLISH/APPLICATIONS/JCOREF/GRM" />
+        <property name="lang.xip"       location="${src.grm.dir}/merge_coref_temp.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/english/coref" />
+        <property name="ntm.fileName"   value="ntmscript_norm"/>
+    </target>
+
+
+    <target name="commonEng1" depends="copyEng1, copyEng2, copyEng5, replaceGrm, replaceNtm"  />
+    <target name="commonEng2" depends="copyEng1, copyEng2, copyEng5, copyEng3, replaceGrm, replaceNtm"  />
+    <target name="commonEng3" depends="copyEng1, copyEng4, copyEng5, copyEng3, copyEng7, replaceGrm, replaceNtm"  />
+    <target name="commonEng4" depends="copyEng1, copyEng4, copyEng5, copyEng3, copyEng7, copyEng8, replaceGrm, replaceNtm" />
+    <target name="commonEng5" depends="copyEng11, copyEng4, copyEng5, copyEng33, copyEng6, replaceGrm, replaceNtm" />
+    <target name="copyEng1"  depends="copyEng00, copyEng01" />
+    <target name="copyEng11" depends="copyEng00, copyEng02" />
+
+
+    <target name="copyEng00"  >
+        <property name="src.ntm.dir" location="${basedir}/ENGLISH/NTMFILES" />
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.3.dir" location="${src.ntm.dir}/HMMFILES" />
+        <property name="copy.3.inc" value="hmm-1-std" />
+    </target>
+    <target name="copyEng01"  >
+        <property name="copy.2.dir" location="${src.ntm.dir}" />
+        <property name="copy.2.inc" value="${ntm.fileName}" />
+    </target>
+    <target name="copyEng02"  > <!-- the ntm file is in the same dir than the grm file -->
+        <property name="copy.2.dir" location="${src.grm.dir}" />
+        <property name="copy.2.inc" value="${ntm.fileName}" />
+    </target>
+    <target name="copyEng2" >
+        <property name="copy.4.dir" location="${src.ntm.dir}/SOURCEFST/FORENTITIES" />
+        <property name="copy.4.inc" value="SpecialStrings.fst, nvlex+context+add.fst" />
+    </target>
+    <target name="copyEng3"  >
+        <property name="copy.5.dir" location="${src.grm.dir}" />
+        <property name="copy.5.inc" value="new_pred.index, new_pred.xip" />
+    </target>
+    <target name="copyEng33"  >
+        <property name="copy.51.dir" location="${basedir}/ENGLISH/DEPENDENCIES" />
+        <property name="copy.51.inc" value="new_pred.index" />
+        <property name="copy.52.dir" location="${basedir}/ENGLISH/DEPENDENCIES" />
+        <property name="copy.52.inc" value="new_pred.xip" />
+    </target>
+    <target name="copyEng4" >
+        <property name="copy.6.dir" location="${src.ntm.dir}/SOURCEFST/FORENTITIES" />
+        <property name="copy.6.inc" value="SpecialStrings.fst" />
+    </target>
+    <target name="copyEng5"  >
+        <property name="copy.7.dir" location="${src.ntm.dir}/SOURCEFST/BASICS" />
+        <property name="copy.7.inc" value="alternative.fst, nv-open-1.fst, norm.fst, norm-html.fst" />
+    </target>
+    <target name="copyEng6"  >
+        <property name="copy.8.dir" location="${src.ntm.dir}/../FST/data" />
+        <property name="copy.8.inc" value="lex4risk.fst" />
+    </target>
+    <target name="copyEng7"  >
+        <property name="copy.9.dir" location="${src.ntm.dir}/SOURCEFST/FORSEM" />
+        <property name="copy.9.inc" value="nvlex+context+add+sem+alter.fst" />
+    </target>
+    <target name="copyEng8"  >
+        <property name="copy.10.dir" location="${src.ntm.dir}/SOURCEFST" />
+        <property name="copy.10.inc" value="lexicon_num.fst" />
+    </target>
+    <target name="engDoc"  >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/english" />
+        <property name="doc.1.dir"      location="${basedir}/ENGLISH/DOC" />
+        <property name="doc.1.inc"      value="XIPEnglishGrammar.pdf" />
+    </target>
+
+    <!--   +++++++++++++  french ++++++++++++++++ -->
+    <target name="french-basic" depends="french-basic-init, commonFrench1, frenchDoc, crypte"
+            description="french basic crypting" />
+    <target name="french-basic-init" depends="setCommonProperties"  >
+        <echo message="french basic crypting" />
+        <property name="gram.name"      value="french-basic"/>
+        <property name="grm.fileName"   value="french.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/BASIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/french.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/basic" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="french-entity" depends="french-entity-init, commonFrench1, frenchDoc, crypte"
+            description="french basic crypting" />
+    <target name="french-entity-init" depends="setCommonProperties"  >
+        <echo message="french entity crypting" />
+        <property name="gram.name"      value="french-entity"/>
+        <property name="grm.fileName"   value="french_entity.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/BASIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/french_entity.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/entity" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="french-entityOnly" depends="french-entityOnly-init, commonFrench1, frenchDoc, crypte"
+            description="french basic crypting" />
+    <target name="french-entityOnly-init" depends="setCommonProperties"  >
+        <echo message="french entityOnly crypting" />
+        <property name="gram.name"      value="french-entityOnly"/>
+        <property name="grm.fileName"   value="french_entityOnly.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/BASIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/french_entityOnly.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/entityOnly" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="french-entityOnly-infomagic" depends="french-entityOnly-infomagic-init, commonFrench1, frenchDoc, crypte"
+            description="french entityOnly-infomagic crypting" />
+    <target name="french-entityOnly-infomagic-init" depends="setCommonProperties"  >
+        <echo message="french entityOnly-infomagic crypting" />
+        <property name="gram.name"      value="french-entityOnly-infomagic"/>
+        <property name="grm.fileName"   value="french_entityOnly-infomagic.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/APPLICATIONS/INFOMAGIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/french_entityOnly-infomagic.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/entityOnly-infomagic" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    <target name="french-infomagic" depends="french-infomagic-init, commonFrench1, frenchDoc, crypte"
+            description="french-infomagic crypting" />
+    <target name="french-infomagic-init" depends="setCommonProperties"  >
+        <echo message="french-infomagic crypting" />
+        <property name="gram.name"      value="french-infomagic"/>
+        <property name="grm.fileName"   value="gram_infomagic.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/APPLICATIONS/INFOMAGIC/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/infomagic.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/infomagic" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+
+    <target name="french-tempEster" depends="french-tempEster-init, commonFrench1, frenchDoc, crypte"
+            description="french-tempEster crypting" />
+    <target name="french-tempEster-init" depends="setCommonProperties"  >
+        <echo message="french-tempEster crypting" />
+        <property name="gram.name"      value="french-tempEster"/>
+        <property name="grm.fileName"   value="gram_tempEster.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/APPLICATIONS/TEMPESTER2/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/french_tempEster.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/tempEster" />
+        <property name="src.ntm.dir"    location="${src.grm.dir}" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+
+    <target name="french-morphOnly-infomagic" depends="french-morphOnly-infomagic-init, commonFrench1, frenchDoc, crypte"
+            description="french morphOnly-infomagic crypting" />
+    <target name="french-morphOnly-infomagic-init" depends="setCommonProperties"  >
+        <echo message="french morphOnly-infomagic crypting" />
+        <property name="gram.name"      value="french-morphOnly-infomagic"/>
+        <property name="grm.fileName"   value="french_morphOnly-infomagic.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/APPLICATIONS/INFOMAGIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/french_morphOnly-infomagic.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/french/morphOnly-infomagic" />
+        <property name="ntm.fileName"   value="ntmscript"/>
+    </target>
+    
+    <target name="french-aladin" depends="french-aladin-init, commonFrench1, frenchDoc, crypte"
+            description="french-aladin crypting" />
+    <target name="french-aladin-init" depends="setCommonProperties"  >
+        <echo message="french-aladin crypting" />
+        <property name="gram.name"      value="french-aladin"/>
+        <property name="grm.fileName"   value="aladin.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/FRENCH/APPLICATIONS/ALADIN/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/aladin.xip" />
+        <property name="del.gram.dir"   location="../../../aladin/anonymiser/grammar/french" />
+        <property name="src.ntm.dir"    location="${src.grm.dir}" />
+        <property name="ntm.fileName"   value="ntmscript_aladin"/>
+    </target>
+
+    <target name="commonFrench1" depends="copyFrench1, replaceGrm, replaceNtm"  />
+    <target name="copyFrench1" >
+        <property name="src.ntm.dir"    location="${basedir}/FRENCH/BASIC" />
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${src.ntm.dir}" />
+        <property name="copy.2.inc" value="${ntm.fileName}" />
+        <property name="copy.3.dir" location="${basedir}/FRENCH/FST/data" />
+        <property name="copy.3.inc" value="*.fst" />
+    </target>
+    <target name="frenchDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/french" />
+        <property name="doc.1.dir"      location="${basedir}/FRENCH/DOC" />
+        <property name="doc.1.inc"      value="XIPFrenchGrammar.pdf" />
+    </target>
+
+    <!--   +++++++++++++  spanish ++++++++++++++++ -->
+    <target name="spanish-basic" depends="spanish-basic-init, commonSpanish1, spanishDoc, crypte"
+            description="spanish basic crypting" />
+    <target name="spanish-basic-init" depends="setCommonProperties"  >
+        <echo message="spanish basic crypting" />
+        <property name="gram.name"      value="spanish-basic"/>
+        <property name="grm.fileName"   value="spanish.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/SPANISH/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/spanish.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/spanish/basic" />
+    </target>
+    <target name="spanish-entity" depends="spanish-entity-init, commonSpanish2, spanishDoc, crypte"
+            description="spanish entity crypting" />
+    <target name="spanish-entity-init" depends="setCommonProperties"  >
+        <echo message="spanish entity crypting" />
+        <property name="gram.name"      value="spanish-entity"/>
+        <property name="grm.fileName"   value="spanish_ntm.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/SPANISH/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/spanish_entit.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/spanish/entity" />
+    </target>
+    <target name="commonSpanish1" depends="copySpanish1, copySpanishFST,  replaceGrm"  />
+    <target name="commonSpanish2" depends="copySpanish1, copySpanishFST2, replaceGrm"  />
+    <target name="copySpanish1"  >
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+    </target>
+    <target name="copySpanishFST"  >
+        <property name="copy.2.dir" location="${basedir}/SPANISH/FST/data" />
+    </target>
+    <target name="copySpanishFST2"  >
+        <property name="copy.2.dir" location="${basedir}/SPANISH/FST2/data" />
+    </target>
+    <target name="spanishDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/spanish" />
+    </target>
+
+    <!--   +++++++++++++  portuguese ++++++++++++++++ -->
+    <target name="portuguese-basic" depends="portuguese-basic-init, commonPortuguese1, portugueseDoc, crypte"
+            description="portuguese basic crypting" />
+    <target name="portuguese-basic-init" depends="setCommonProperties"  >
+        <echo message="portuguese basic crypting" />
+        <property name="gram.name"      value="portuguese-basic"/>
+        <property name="grm.fileName"   value="portuguese.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/PORTUGUESE/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/portuguese_xerox.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/portuguese/basic" />
+    </target>
+    <target name="commonPortuguese1" depends="copyPortuguese1, replaceGrm"  />
+    <target name="copyPortuguese1"  >
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${basedir}/PORTUGUESE/FST/data" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+    </target>
+    <target name="portugueseDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/portuguese" />
+    </target>
+
+    <!--   +++++++++++++  italian ++++++++++++++++ -->
+    <target name="italian-basic" depends="italian-basic-init, commonItalian1, italianDoc, crypte"
+            description="italian basic crypting" />
+    <target name="italian-basic-init" depends="setCommonProperties"  >
+        <echo message="italian basic crypting" />
+        <property name="gram.name"      value="italian-basic"/>
+        <!-- <property name="grm.fileName"   value="italian_ntm.grm"/>  pb cryptage avec data/ntm.txt -->
+        <property name="grm.fileName"   value="italian.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ITALIAN/GRMFILES" />
+        <property name="lang.xip"       location="${src.grm.dir}/italian.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/italian/basic" />
+    </target>
+    <target name="italian-entity" depends="italian-entity-init, commonItalian2, italianDoc, crypte"
+            description="italian entity crypting" />
+    <target name="italian-entity-init" depends="setCommonProperties"  >
+        <echo message="italian entity crypting" />
+        <property name="gram.name"      value="italian-entity"/>
+        <property name="grm.fileName"   value="italian.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/ITALIAN/CELI_090313" />
+        <property name="lang.xip"       location="${src.grm.dir}/italian.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/italian/entity" />
+        <property name="ntm.fileName"   value="ntm.txt"/>
+    </target>
+    <target name="commonItalian1" depends="copyItalian1, replaceGrm"  />
+    <target name="commonItalian2" depends="copyItalian2, replaceGrm, replaceGrm1, replaceNtm1"  />
+    <target name="copyItalian1"  >
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${basedir}/ITALIAN/FST/data" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+    </target>
+    <target name="copyItalian2"  >
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${basedir}/ITALIAN/CELI_090313/FST/data" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+    </target>
+    <target name="italianDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/italian" />
+        <property name="doc.1.dir"      location="${basedir}/ITALIAN/DOC" />
+        <property name="doc.1.inc"      value="dependenciesDescription.pdf" />
+        <property name="doc.2.dir"      location="${basedir}/ITALIAN/DOC" />
+        <property name="doc.2.inc"      value="NEDescription.pdf" />
+    </target>
+
+    <!--   +++++++++++++  german ++++++++++++++++ -->
+    <target name="german-entity" depends="german-entity-init, commonGerman1, germanDoc, crypte"
+            description="german basic crypting" />
+    <target name="german-entity-init" depends="setCommonProperties"  >
+        <echo message="german basic crypting" />
+        <property name="gram.name"      value="german-entity"/>
+        <property name="grm.fileName"   value="german.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/GERMAN/BASIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/german.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/german/entity" />
+    </target>
+    <target name="commonGerman1" depends="copyGerman1, replaceGrm"  />
+    <target name="copyGerman1"  >
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${basedir}/GERMAN/FST1/data" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+    </target>
+    <target name="germanDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/german" />
+        <property name="doc.1.dir"      location="${basedir}/GERMAN/DOC" />
+        <property name="doc.1.inc"      value="German_NE.pdf" />
+        <property name="doc.2.dir"      location="${basedir}/GERMAN/DOC" />
+        <property name="doc.2.inc"      value="German_dependencies.pdf" />
+    </target>
+
+    <!--   +++++++++++++  dutch ++++++++++++++++ -->
+    <target name="dutch-basic" depends="dutch-basic-init, commonDutch1, dutchDoc, crypte"
+            description="dutch basic crypting" />
+    <target name="dutch-basic-init" depends="setCommonProperties"  >
+        <echo message="dutch basic crypting" />
+        <property name="gram.name"      value="dutch-basic"/>
+        <property name="grm.fileName"   value="dutch_hmm.grm"/>
+        <property name="src.grm.dir"    location="${basedir}/DUTCH/BASIC" />
+        <property name="lang.xip"       location="${src.grm.dir}/dutch_hmm.xip" />
+        <property name="del.gram.dir"   location="${delivery.dir}/grammar/dutch/basic" />
+        <property name="ntm.fileName"   value="ntmscript_hmm_utf8"/>
+    </target>
+
+
+    <target name="commonDutch1" depends="copyDutch1, replaceGrm, replaceNtm, replaceDutch1"  />
+
+
+    <target name="copyDutch1"  >
+        <property name="src.ntm.dir"    location="${basedir}/DUTCH/FST/src" />
+        <!-- files to copy -->
+        <property name="copy.1.dir" location="${src.grm.dir}" />
+        <property name="copy.1.inc" value="${grm.fileName}" />
+        <property name="copy.2.dir" location="${basedir}/DUTCH/FST/data" />
+        <property name="copy.2.inc" value="*.fst, *.txt" />
+        <property name="copy.3.dir" location="${src.ntm.dir}" />
+        <property name="copy.3.inc" value="${ntm.fileName}" />
+    </target>
+
+
+    <target name="replaceDutch1"  >
+        <property name="grm.4.pat"  value="\$FST/data/hmm4xip.txt" />
+        <property name="grm.4.by"   value="$GRM_PATHNAME/hmm4xip.txt" />
+        <property name="grm.5.pat"  value="\$FST/src/ntmscript_hmm_utf8" />
+        <property name="grm.5.by"   value="$GRM_PATHNAME/ntmscript_hmm_utf8" />
+        <property name="ntm.2.pat"  value="\$FST/.*/(.*\.fst)" />
+        <property name="ntm.2.by"   value="$GRM_PATHNAME/\1" />
+    </target>
+
+    <target name="dutchDoc" >
+        <property name="del.doc.dir"    location="${delivery.dir}/doc/grammar/dutch" />
+    </target>
+
+    <!-- ++++++++++++++++++++++++++ common ++++++++++++++++++++ -->
+    <target name="replaceGrm">
+        <!-- replace pattern in grm file -->
+        <property name="grm.1.pat"  value="grammar:" />
+        <property name="grm.1.by"   value="gram:" />
+        <property name="grm.2.pat"  value="(.*)=.*" />
+        <property name="grm.2.by"   value="\1=$GRM_PATHNAME" />
+        <property name="grm.3.pat"  value="\$GRM_PATHNAME/.*/(hmm.*)" />
+        <property name="grm.3.by"   value="$GRM_PATHNAME/\1" />
+    </target>
+
+    <target name="replaceGrm1">
+        <property name="grm.11.pat"  value="\$FST/.*/(.*\.txt)" />
+        <property name="grm.11.by"   value="$GRM_PATHNAME/\1" />
+    </target>
+
+    <target name="replaceNtm">
+        <!-- replace pattern in ntm file -->
+        <property name="ntm.1.pat"  value="\$NTM_ROOT/.*/(.*\.fst)" />
+        <property name="ntm.1.by"   value="$NTM_ROOT/\1" />
+    </target>
+
+    <target name="replaceNtm1">
+        <!-- replace pattern in ntm file -->
+        <property name="ntm.1.pat"  value="\$FST/.*/(.*\.fst)" />
+        <property name="ntm.1.by"   value="$GRM_PATHNAME/\1" />
+    </target>
+
+    <target name="crypte" depends="checkKey" description="crypte a grammar">
+        <property name="log.fileName" location="${log.dir}/${gram.name}" />
+        <property name="gramRef.dir" location="${basedir}/../gramRef" />
+        <mkdir dir="${log.dir}"/>
+        <delete file="${log.fileName}" />
+        <record name="${log.fileName}" loglevel="${log.level}" action="start"/>
+        <delete dir="${del.gram.dir}"/>
+        <mkdir dir="${del.gram.dir}"/>
+        <!-- copy file.grm, ntmscript, hmm, *.fst -->
+        <property name="list1" value=""/>
+        <propertyselector property="list1" override="true" match="copy\.([0-9]+)\.dir" select="\1" />
+        <foreach list="${list1}" target="doCopyFile" param="elemId" inheritall="true" />
+        <!-- copy documentation -->
+        <property name="list2" value=""/>
+        <propertyselector property="list2" override="true" match="doc\.([0-9]+)\.dir" select="\1" />
+        <foreach list="${list2}" target="doCopyDoc" param="elemId" inheritall="true" />
+        <!-- remove file hierarchy defined in file.grm -->
+        <property name="list3" value=""/>
+        <propertyselector property="list3" override="true" match="grm\.([0-9]+)\.pat" select="\1" />
+        <foreach list="${list3}" target="doReplaceGrm" param="elemId" inheritall="true" />
+        <!-- remove file hierarchy defined in ntmscript -->
+        <property name="list4" value=""/>
+        <propertyselector property="list4" override="true" match="ntm\.([0-9]+)\.pat" select="\1" />
+        <foreach list="${list4}" target="doReplaceNtm" param="elemId" inheritall="true" />
+        <!-- grammar crypting -->
+        <available file="${bin.dir}/xip" property="xip.exe.present"/>
+        <if>
+            <isfalse value="${xip.exe.present}" />
+            <then>
+                <property name="xipExe" value="/opt/ParSem/bin/linux/xip" />
+            </then>
+            <else>
+                <property name="xipExe" value="${bin.dir}/xip" />
+            </else>
+        </if>
+        <exec executable="${xipExe}" failonerror="true" outputproperty="out" >
+            <arg line= " -crypte ${del.gram.dir} -grm ${src.grm.dir}${file.separator}${grm.fileName}" />
+        </exec>
+        <!-- rename *.xip.crypte to *.xip  -->
+        <move todir="${del.gram.dir}">
+            <fileset dir="${del.gram.dir}">
+                <include name="**/*.crypte"/>
+            </fileset>
+            <regexpmapper from="^(.*)\.xip\.crypte$" to="\1.xip"/>
+        </move>
+        <!-- rename *.py.crypte to *.py  -->
+        <move todir="${del.gram.dir}">
+            <fileset dir="${del.gram.dir}">
+                <include name="**/*.crypte"/>
+            </fileset>
+            <regexpmapper from="^(.*)\.py\.crypte$" to="\1.py"/>
+        </move>
+        <!-- rename *.index.crypte to *.index  -->
+        <move todir="${del.gram.dir}">
+            <fileset dir="${del.gram.dir}">
+                <include name="**/*.crypte"/>
+            </fileset>
+            <regexpmapper from="^(.*)\.index\.crypte$" to="\1.index"/>
+        </move>
+        <record name="${log.fileName}"  action="stop"/>
+    </target>
+
+
+    <target name="doCopyFile" >
+        <propertycopy name="dir" from="copy.${elemId}.dir" />
+        <propertycopy name="inc" from="copy.${elemId}.inc" />
+        <if>
+            <istrue value="${verbose}" />
+            <then>
+                <echo message="doCopyFile to:${del.gram.dir}  dir:${dir}  inc:${inc}" />
+            </then>
+        </if>
+        <copy  todir="${del.gram.dir}" verbose="${verbose}">
+            <fileset dir="${dir}" includes="${inc}" />
+        </copy>
+    </target>
+
+
+    <target name="doCopyDoc" >
+        <mkdir dir="${del.doc.dir}" />
+        <propertycopy name="dir" from="doc.${elemId}.dir" />
+        <propertycopy name="inc" from="doc.${elemId}.inc" />
+        <if>
+            <istrue value="${verbose}" />
+            <then>
+                <echo message="doCopyDoc to:${del.doc.dir}  dir:${dir}  inc:${inc}" />
+            </then>
+        </if>
+        <copy  todir="${del.doc.dir}" verbose="${verbose}" >
+            <fileset dir="${dir}" includes="${inc}" />
+        </copy>
+    </target>
+
+
+    <target name="doReplaceGrm" >
+        <propertycopy name="pattern"    from="grm.${elemId}.pat" />
+        <propertycopy name="replaceBy"  from="grm.${elemId}.by" />
+        <if>
+            <istrue value="${verbose}" />
+            <then>
+                <echo message="doReplaceGrm in: ${del.gram.dir}/${grm.fileName}   match=${pattern}   replace=${replaceBy}" />
+            </then>
+        </if>
+        <replaceregexp file="${del.gram.dir}/${grm.fileName}" byline="true" encoding="ASCII"
+                       match="${pattern}" replace="${replaceBy}"/>
+    </target>
+
+
+    <target name="doReplaceNtm" >
+        <propertycopy name="pattern"    from="ntm.${elemId}.pat" />
+        <propertycopy name="replaceBy"  from="ntm.${elemId}.by" />
+        <if>
+            <istrue value="${verbose}" />
+            <then>
+                <echo message="doReplaceNtm in: ${del.gram.dir}/${ntm.fileName}   match=${pattern}   replace=${replaceBy} "/>
+            </then>
+        </if>
+        <replaceregexp file="${del.gram.dir}/${ntm.fileName}" byline="true" encoding="ASCII"
+                       match="${pattern}" replace="${replaceBy}"/>
+    </target>
+
+
+    <target name="setCommonProperties" depends="getXipVersionAnBuild, platformSetting"
+            description="initialization" unless="commonPropertiesSet">
+        <property name="commonPropertiesSet" value="true" />
+        <property name="delivery.dir" location="${basedir}/../../delivery/xip-${xip.version}-${xip.build}" />
+        <property name="log.dir" location="${basedir}/log" />
+        <property name="bin.dir" location="${basedir}/../xipFst/bin/${platform}" />
+        <property name="log.level" value="verbose" />
+    </target>
+
+
+    <target name="cleanDelDir" depends="setCommonProperties" description="delete the delivery dir: ${delivery.dir}" >
+        <delete dir="${delivery.dir}/grammar" />
+    </target>
+
+
+    <target name="checkKey" depends="buildKey" >
+        <echo message="using: ${lang.xip}" />
+        <exec executable="${keyGenerator}"  failonerror="true" outputproperty="out1" >
+            <arg line="${lang.xip}" />
+        </exec>
+        <!-- <echo message="out1=${out1}" /> -->
+        <propertyregex property="key1" input="${out1}" regexp="Code= (.*)" select="\1" />
+        <!-- <echo message="key1=${key1}" /> -->
+        <loadresource property="out2">
+            <file file="${lang.xip}"/>
+            <filterchain>
+                <linecontainsregexp>
+                    <regexp pattern="[Cc]ode[ ]*:[ ]*" />
+                </linecontainsregexp>
+            </filterchain>
+        </loadresource>
+        <!-- <echo message="out2=${out2}" /a --> 
+        <propertyregex property="key2" input="${out2}"  regexp="[cC]ode[ ]*:[ ]*(.*)" select="\1" />
+        <!-- <echo message="key2=${key2}" /> -->
+        <if>
+            <equals arg1="${key1}" arg2="${key2}" />
+            <then>
+            </then>
+            <else>
+                <echo message="Current value: ${key2}" />
+                <echo message="new value: ${key1}" />
+                <fail message="The key must be updated: ${lang.xip}" />
+            </else>
+        </if>
+    </target>
+
+
+    <target name="buildKey" >
+        <if>
+            <equals arg1="${platform}" arg2="windows" />
+            <then>
+                <property name="keyGenerator" location="${basedir}/../gramRef/clef.exe" />
+                <exec executable="cmd.exe" dir="${basedir}/../gramRef" failonerror="true"  >
+                    <arg line= "compile.bat" />
+                </exec>
+            </then>
+            <else>
+                <property name="keyGenerator" location="${basedir}/../gramRef/clef" />
+                <exec executable="g++" dir="${basedir}/../gramRef" failonerror="true"  >
+                    <arg line= "-I ${basedir}/../include -DLINUX -o ${keyGenerator} ${basedir}/../src/clef.cxx" />
+                </exec>
+            </else>
+        </if>
+    </target>
+
+    <!-- ++++++++++++++++++++  test +++++++++++++++++++++++++++ -->
+    <target name="test"     depends="displayDate, setDev, testCom, displayDate" description="test dev" />
+    <target name="del"      depends="displayDate, setDel, testCom, displayDate" description="test delivery" />
+    <target name="valgrind" depends="setValgrind,testCom"   description="test with valgrind" />
+    <target name="gprof"    depends="setGprof,testCom"      description="test with gprof" />
+
+
+    <target name="displayDate" depends="getXipVersionAnBuild"  >
+        <echo message="XIP.VERSION = ${xip.version}   XIP.BUILD = ${xip.build}    start: ${curDate.nowFull}" />
+    </target>
+
+
+    <target name="setDel"  >
+        <property name="target" value="testDelNotFailingOnError" />
+    </target>
+
+
+    <target name="setDev"  >
+        <property name="target" value="testNotFailingOnError" />
+    </target>
+
+
+    <target name="setValgrind"  >
+        <property name="target" value="valgrind" />
+    </target>
+
+
+    <target name="setGprof"  >
+        <property name="target" value="gprof" />
+    </target>
+
+
+    <target name="testCom"  description="launch ant test in the subdirectories">
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/FRENCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/SPANISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ITALIAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/GERMAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/PORTUGUESE/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/DUTCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="${target}" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ENGLISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/FRENCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/SPANISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/ITALIAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/GERMAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/PORTUGUESE/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/DUTCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="check" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/ENGLISH/TEST" includes="*/build.xml"/>
+        </subant>
+    </target>
+
+
+    <target name="update"  description="update the outputRef.txt files">
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/FRENCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/SPANISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/ITALIAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/GERMAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/PORTUGUESE/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/DUTCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="update" inheritAll="false" failonerror="true" >
+            <fileset dir="${basedir}/ENGLISH/TEST" includes="*/build.xml"/>
+        </subant>
+    </target>
+
+
+    <target name="cleanAll"  description="launch ant cleanAll in the subdirectories">
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ENGLISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/FRENCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/SPANISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ITALIAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/GERMAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/PORTUGUESE/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="cleanAll" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/DUTCH/TEST" includes="*/build.xml"/>
+        </subant>
+    </target>
+
+
+    <target name="clean"  description="launch ant clean in the subdirectories">
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ENGLISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/FRENCH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/SPANISH/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/ITALIAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/GERMAN/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/PORTUGUESE/TEST" includes="*/build.xml"/>
+        </subant>
+        <subant target="clean" inheritAll="false" failonerror="false" >
+            <fileset dir="${basedir}/DUTCH/TEST" includes="*/build.xml"/>
+        </subant>
+    </target>
+
+
+    <target name="help"  description="launch ant clean in the subdirectories">
+        <echo message="you can specify the path of xip in a file parSem/xip/dev/GRAMMARS/TESTCOMMON/user.properties:" />
+        <echo message="	xip.exe=/home/roux/parseur/current/bases/nhxXipL9.54" />
+    </target>
+</project>

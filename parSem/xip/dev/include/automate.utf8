@@ -1,0 +1,301 @@
+/*
+ * Xerox Research Centre Europe - Grenoble Laboratory
+ *
+ * Copyright (C) 2003 - 2007 Xerox Corporation, XRCE-Grenoble, All Rights Reserved.
+ * This file can only be used with the XIP library, 
+ * it should not and cannot be used otherwise.
+ */
+/* --- CONTENTS ---
+   Project    : XIP
+   Version    : 4.10
+   filename   : automate.h
+   Date       : 12/08/2003
+   Purpose    : Automaton implementation to handle lexicons
+   Programmer : Claude ROUX
+   Reviewer   : 
+*/
+
+#ifndef automate_h
+#define automate_h
+
+class arc;
+class etat;
+class automate;
+
+
+
+#define AUTOMATONSTART 1
+#define AUTOMATONEND   2
+#define AUTOMATONNODE 4
+
+typedef enum {
+    ARCINITIAL,
+    ARCSIMPLE,
+    ARCCOMPLEXE,
+    ARCBOUCLE,
+    ARCCROCHET,
+    ARCVIRGULE,
+    ARCFINCROPAR,
+    ARCPARENTHESE,
+	ARCCODE,
+	ARCANY} typeautoparse;
+
+typedef enum {AUTOMATONARC,AUTOMATONARCARACTERE,AUTOMATONARCCHAINE} typearc;
+
+
+typedef enum {AUTOMATONIF,AUTOMATONANY,AUTOMATONDIGIT,AUTOMATONPUNCT,
+AUTOMATONELSE,AUTOMATONEPSILON,AUTOMATONLETTER,
+AUTOMATONLETTERUPPER,
+AUTOMATONLABEL,
+AUTOMATONVARIABLE,
+AUTOMATONSTAR='*',AUTOMATONPLUS='+'} arcautomate;
+
+typedef enum {
+AUTOMATONMARKEDFORDELETION,
+AUTOMATONDELETED,
+AUTOMATONNONE} arcmanip;
+
+char analyseCaractere(unsigned char c);
+arcautomate TestId(char* m);
+char chainecomplexe(unsigned char* chaine,int position, typeautoparse state);
+char typeautomate(unsigned char* chaine,int position);
+
+typedef enum {
+        AERR_NO_ERROR,
+        AERR_MISSING_PARENTHESIS,
+        AERR_MISSING_BRACKET,
+        AERR_WRONG_NEGATION_POSITION,
+        AERR_WRONG_USE_OF_COMMA,
+        AERR_WRONG_KLEENE,
+        AERR_MISMATCHED_PARENTHESIS,
+        AERR_MISMATCHED_BRACKET,
+        AERR_WRONG_VARIABLE_ORDER,
+		AERR_WRONG_CODE} autoerreur;
+
+
+class etatarc {
+public:
+    etat* e;
+    arc* ar;    
+
+    etatarc(etat* ee, arc* aar) {
+        e=ee;
+        ar=aar;        
+    }
+};
+
+class etat {
+public:
+    char status;
+    char marque;
+    int nombre;
+    void* valeur;
+    size_t id;
+    VECTA<arc*> arcs;        
+    
+
+    char start() {
+        if ( (status& AUTOMATONSTART)==AUTOMATONSTART)
+            return 1;
+        return 0;
+    }
+
+    char end() {
+        if ( (status & AUTOMATONEND)==AUTOMATONEND)
+            return 1;
+        return 0;
+    }
+
+    char node() {
+        if ( (status & AUTOMATONNODE)==AUTOMATONNODE)
+            return 1;
+        return 0;
+    }
+
+
+    etat(automate* a,char s=AUTOMATONSTART);
+    etat();
+
+    void marquedestruction(VECTA<arc*>& lesarcs);
+
+    void aupluspres();
+    etat* parse(automate*,
+        int* chaine,
+        int position, 
+        int& finchaine,
+        unsigned char fin,
+        void* value, etat* 
+        debut,arc*, 
+        etat*,
+        typeautoparse state,
+        char negation);    
+    
+    etat* parsebrute(automate* a,                 
+        int* chaine,
+        int position,                                   
+        void* value,                 
+        typeautoparse state);
+    etat* parsebrutelin(automate* a,int* chaine,void* value);
+    arc* trouvearc(unsigned char l,arcautomate,char,char);
+    arc* trouvearc(arc* a);
+    void ajoutearc(arc* a);
+	void insertionarc(arc* a,char aupluslong);
+    void recherchetous(int* mot,VECTA<void*>& res,int i,int max,automate* ref);    
+    etat* recherche(int* mot,automate*,int i,int max);
+    etat* recherchelin(int* mot,automate* ref,int i);
+    etat* recherchepartielle(int* mot,automate*,int i);
+    etat* recherchemax(int* mot,automate*,int i);
+	int rechercherecursive(int* mot,automate* ref,int i,etat**);
+    void print(int p,ostream* os);
+    void chaine(char*);
+    void ArcEpsilon(VECTA<etatarc*>& eas);
+    int CalculChemin(int max);
+    void fusion(VECTA<arc*>&);
+    void dedoublonne(VECTA<arc*>&,VECTA<int>&);
+	void marqueduplicat();
+    void recherchetouslin(automate*,int* mot,VECTA<void*>& res,int i);
+    char retirebrute(int* mot,automate* ref,int i);
+    
+};
+
+
+class automate {
+public:
+    size_t dernier;
+    VECTA<etat*> etats;
+    autoerreur erreur;
+    int lieuerreur;
+    int maxpos;
+	bool utf8;
+    
+	VECTA<int> pilearcs;    
+	VECTA<int> pileposition;    
+	VECTA<etat*> pileetats;
+	char* automate_buffer;
+	int tailledebuf;
+	char aupluslong;
+    
+    etat e;
+
+    automate();
+
+    automate(bool utf,unsigned char* m,void* ind);
+
+    ~automate();
+
+	void retirefordeleted(VECTA<arc*>& adetruire);
+    virtual void affecte(string chaines[10]) {}
+    virtual void extraitvariables(bool,unsigned char* ch,string chaines[10]) {}
+    virtual void extraitvariables(bool,unsigned char* ch,automate*) {}
+    virtual void mot(char*);
+    virtual void mot(string&);
+    void aupluspres();
+	virtual void vectorisation() {}
+    void chaine(char*);
+    int compare(automate* a);
+    void duplique(automate* a);    
+    etat* parse(bool,unsigned char* mot,void* valeur,char ordre=1);
+    etat* parsebrute(bool,unsigned char* mot,void* valeur);
+	etat* parsebrutelin(bool,unsigned char* mot,void* valeur);
+    virtual void recherchetouslabels(bool utf8,unsigned char* mot,VECTA<void*>& res);
+    etat* recherche(bool utf8,unsigned char* mot);
+    etat* recherche(bool utf8,string& mot);
+    virtual void recherchetouslabels(bool utf8,char* mot,VECTA<void*>& res);
+    etat* recherchepartielle(bool utf8,unsigned char*);
+    etat* recherchemax(bool utf8,unsigned char*);
+    etat* recherche(bool utf8,char* mot);
+    void demarque();
+    void print(ostream*);
+    char retireEpsilon(VECTA<arc*>&);
+    void initErreur(int,autoerreur);
+    void marquedestruction();    
+    virtual char Type() {return NON;}
+	virtual void initvar() {}
+    virtual void majvar(arc*,int) {}
+    virtual char construitvar(unsigned char lab,int) {return 1;}
+    virtual void testordre(char ordre) {}
+    void fusion(VECTA<arc*>&);
+    void nettoie();
+    int rechercheavecextraction(bool,unsigned char* m,string&);
+    int rechercheavecextractionparlafin(bool,unsigned char* m,string& res);
+    int rechercheavecextractiondansvecteur(bool,unsigned char* m,VECTA<string*>& vect);
+    char retirebrute(bool,unsigned char* mot);
+    int recherchejusqualafin(bool,unsigned char* m,string& res);
+};
+
+
+class automatevecteur : public automate {
+public:
+	VECTA<arc*> vectorise;
+	
+	void vectorisation();
+	void recherchetouslabels(bool utf8,unsigned char* mot,VECTA<void*>& res);
+	void recherchetouslabels(bool utf8,char* mot,VECTA<void*>& res);
+};
+
+
+class automatepile : public automate {
+public:
+
+    int variables[10];   
+    int maxvar;
+
+    automatepile() : automate() {raz();};
+    
+    automatepile(bool utf,unsigned char* m,void* ind) : automate(utf,m,ind) {raz();};
+
+    string chaines[10];
+    void affecte(string chaines[10]);
+    void extraitvariables(bool,unsigned char* ch,string chaines[10]);
+    void extraitvariables(bool,unsigned char* ch,automate*);
+    void mot(char*);
+    void mot(string&);
+    void initvar();
+    void majvar(arc*,int);
+    char construitvar(unsigned char lab,int);
+    void testordre(char ordre);
+    void raz();
+    char Type() {return AUTOMATEPILE;}
+};
+
+
+class arc {
+public:
+                
+    int label;
+    char negation;
+    char marque;
+
+    arcautomate action;
+	arcmanip manipulation;
+    etat* e;
+    
+
+    arc(arcautomate a,char n,int l=0);
+	arc(arc* c);
+   
+    void marquedestruction(VECTA<arc*>& lesarcs);
+
+    char compare(unsigned char c) {        
+        return (c==label);
+    }
+    char test(int c,bool);
+    void chaine(char*);
+
+    void aupluspres(int id);
+    void recherchetous(int* mot,VECTA<void*>& res,int i,int max,automate* ref);
+    etat* recherche(int* mot,automate*,int i,int max);    
+    void print(int p,int id,ostream*);
+    void ArcEpsilon(VECTA<etatarc*>& eas);
+    int CalculChemin(int max);
+    void fusion(VECTA<arc*>&);
+    void dedoublonne();
+    char retirebrute(int* mot,automate* ref,int i);
+	etat* recherchemax(int* mot,automate* ref,int i);
+	int rechercherecursive(int* mot,automate* ref,int i,etat**);
+};
+
+
+#endif
+
+

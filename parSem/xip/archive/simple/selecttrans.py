@@ -1,0 +1,5 @@
+# -*- coding: utf-8 -*-
+
+translationgraphes=[[u'0_consumerco 1_electronicco 2_showta 3_utar 4_signetad 5_tucosensecas 6_tabuletetas 7_lokeiagas 8_beiaf', u'Consumerco Electronicco Showta utar signetad tucosensecas tabuletetas lokeiagas beiaf', u'ALL'], [u'0_utar 1_signetad 2_lokeiagas 3_beiag', u'under~ar sign~tad place~iagas be~iag', u'english'], [u'0_treno 1_treno 2_reiag', u'treno boneno reiag', u'ALL'], ['', u'pezeta grametan supereiagne', None], [u'0_kontroleta 1_dears 2_situtad', u'kontroleta situtas', u'ALL'], [u'0_statuteta 1_dears 2_kontroletad', u'rekteleta kontroletas', u'ALL'], [u'0_regedeta 1_retes', u'registereta retes', u'ALL'], [u'0_situta 1_Interretetes', u'Interretece situta', u'ALL'], [u'0_situta 1_dears 2_Interreteted', u'Interretece situta', u'ALL'], [u'0_tactileca 1_breteta', u'touch~ca tablet~ta', u'english']]
+ontologies={'timege': ['angore'], 'akve': ['likveje'], 'vine': ['likveje'], 'biere': ['likveje']}
+ontologyheads={'re': True, 'likveje': True, 'angore': True}

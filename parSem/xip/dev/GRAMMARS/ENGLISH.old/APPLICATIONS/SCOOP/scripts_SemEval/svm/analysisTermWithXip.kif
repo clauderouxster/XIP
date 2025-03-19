@@ -1,0 +1,69 @@
+use("kifsys");
+
+//This is the actual path of the script file, from which we can derived our accesss to the grammars
+string localpath=kifsys.realpath(_paths[1]);
+string pathcorpus=localpath+'/../Corpus/';
+string path= localpath+'/../../GRMFILES/scoop-restaurant.grm';
+
+parser p(path);
+
+string rule=@"
+script:
+
+if (FOOD$1(#1)) {
+     affichedep($1);
+}
+
+if(SERVICE$1(#1)){
+     affichedep($1);
+}
+
+if(AMBIENCE$1(#1)){
+     affichedep($1);
+}
+
+if(PRICE$1(#1)){
+     affichedep($1);
+}
+
+"@;
+
+p.addendum(rule,true);
+string jetrouve;
+
+//Just to display dependencies if necessary
+function affichedep(dependency d) {
+     jetrouve=d.name();
+}
+
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//xml handling
+vector sentences,terms;
+
+function readXml(xml n, self s) {
+     switch (n.name()) {
+          "aspectTerm": sentences.push(n);
+     }
+}
+
+xmldoc inputXml with readXml;
+inputXml.load(pathcorpus+'restaurants-trial.xml');
+
+xml n;
+string c,sent,category;
+ssmap props;
+string newrules;
+string leterme;
+svector lestermes;
+
+//We traverse the XML nodes, for which we want a specific analysis
+for (n in sentences) {
+     jetrouve="EMPTY";
+     sent = n.properties()["term"];
+     // make prediction for each category, the "category" value appears as a kif_exchange_data object in XIP
+     p.parse(sent);
+     println("Analyse:",sent,jetrouve);
+}

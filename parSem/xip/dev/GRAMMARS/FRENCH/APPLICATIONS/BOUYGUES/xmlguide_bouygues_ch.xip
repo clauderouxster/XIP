@@ -1,0 +1,195 @@
+Variables:
+	string _text;
+	string _str_tempo1;
+	string _str_tempo2;
+	string _str2;
+	string _attrib1;
+	string _attrib2;
+	string _attrib3;
+	string type_entite;
+	string dep;
+	string value;
+	int xml_len;
+	int xml_pos;
+	int position;
+	int offset_left;
+	int offset_right;
+	int longueur;
+	int position2;
+	int offset2_left;
+	int offset2_right;
+	int longueur2;
+	int debut_chunk;
+	int fin_chunk;
+	dictionary _vdict;
+	xml current;
+	xml nextxml;
+	xml childxml;
+    string monchemin;
+
+Initial:
+	_attrib1 = "http://www.w3.org/2001/XMLSchema";
+	_attrib2 = "http://www.w3.org/2001/XMLSchema-instance";
+	_attrib3 = "http://xrce.xerox.com/";
+	@mydb(/Linguistic[@xmlns\:xsd=!_attrib1! & @xmlns\:xsi=!_attrib2! &@xmlns=!_attrib3!])->Create();
+
+
+Script: 
+
+@_current(paragraph)->set(current);
+if ($1[entite](#1)){
+	value="";
+	@_current(paragraph)->GetAttribute(xml_pos,"pos");
+	@_current(paragraph)->GetAttribute(xml_len,"len");
+	Offsetchar(#1,offset_left,offset_right);
+	longueur = offset_right-offset_left;
+	position = offset_left + xml_pos;
+	type_entite = "unknown";	
+	dep = $1;
+	_str2 = #1[surface];
+	iftest (dep : "MOBILE"){
+		type_entite = "nb_ligne";
+		_str2 = replace(_str2," ","");
+		_str2 = replace(_str2,".","");
+	}
+	iftest (dep : "NCLIENT"){
+		type_entite = "nb_client";
+	}
+	iftest (dep : "TYPELETTRE"){
+		type_entite = "objet";
+		value="resiliation";
+	}
+	iftest (dep : "TYPERESILIATION"){
+		value = $1[objet_lettre_complement];
+		type_entite = "objet_complement";
+	}
+	iftest (dep : "CIBLEPORTAGE"){
+		type_entite = "cible_portage";
+		value = $1[cible_portage];
+	}
+	iftest (dep : "DATERESILIATION"){
+		type_entite = "date_fin";
+	}
+	iftest (dep : "PERSONNE"){
+		type_entite = "nom_client";
+	}
+	iftest (dep : "CITY"){
+		type_entite = "ville_client";
+	}
+	iftest (dep : "ZIPCODE"){
+		type_entite = "code_postal";
+	}
+	iftest (dep : "STREET"){
+		type_entite = "rue";
+	}
+	iftest (dep : "COUNTRY"){
+		type_entite = "pays";
+	}
+	iftest (dep : "ADRESSEAUTRE"){
+		type_entite = "adresse_complement";
+	}
+	iftest (dep : "PHONE"){
+		type_entite = "autre_tel";
+		_str2 = replace(_str2," ","");
+		_str2 = replace(_str2,".","");
+	}
+	iftest (dep : "DATEREDACTION"){
+		type_entite = "autre_redaction_date";
+	}
+	iftest (dep : "DATE"){
+		type_entite = "date";
+	}
+	@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur!& @text=!_str2!])->Create();
+	iftest (~(value : "")){
+		@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur!& @text=!_str2!])->CreateAttribute("value",value);
+
+	}
+	xmlchild(current,nextxml);
+	while(xmldata(nextxml,_vdict):1) {
+		xmlchild(nextxml,childxml);
+		xmltext(childxml,_text);
+		_str_tempo1 = _vdict[1];
+		debut_chunk = _str_tempo1;
+		_str_tempo2 = _vdict[2];
+		fin_chunk = _str_tempo2;
+		if(debut_chunk+fin_chunk>position & debut_chunk<offset_right+xml_pos){
+			@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur! & @text=!_str2!]/Word[@pos=!_vdict[1]! & @len=!_vdict[2]!])->Create(!_text!);
+		}
+		xmlnext(nextxml,nextxml);
+	}
+}
+if ($1[entite](#1,#2)){
+//print("bonjour_debut\n");
+
+
+	@_current(paragraph)->GetAttribute(xml_pos,"pos");
+	@_current(paragraph)->GetAttribute(xml_len,"len");
+	Offsetchar(#1,offset_left,offset_right);
+	Offsetchar(#2,offset2_left,offset2_right);
+	longueur = offset_right-offset_left;
+	position = offset_left + xml_pos;
+	longueur2 = offset2_right-offset2_left;
+	position2 = offset2_left + xml_pos;
+	type_entite = "unknown";	
+	value="";
+	dep = $1;
+	_str2 = #1[surface]+" REL "+#2[surface];
+	iftest (dep : "TYPELETTRE"){
+		type_entite = "objet";
+		value="resiliation";
+	}
+	iftest (dep : "TYPERESILIATION"){
+		value = $1[objet_lettre_complement];
+		type_entite = "objet_complement";
+	}
+	iftest (dep : "CIBLEPORTAGE"){
+		type_entite = "cible_portage";
+		value = $1[cible_portage];
+	}
+	iftest (dep : "DATERESILIATION"){
+//print("bonjour");
+		type_entite = "date_fin";
+		iftest(#2[date:+]){
+//print("bonjour : "+#2[lemme]+"\n");
+			value = #2[lemme];
+		}
+	}
+	@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur!& @text=!_str2!])->Create();
+	iftest (~(value : "")){
+		@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur!& @text=!_str2!])->CreateAttribute("value",value);
+
+	}
+	xmlchild(current,nextxml);
+	while(xmldata(nextxml,_vdict):1) {
+		xmlchild(nextxml,childxml);
+		xmltext(childxml,_text);
+		_str_tempo1 = _vdict[1];
+		debut_chunk = _str_tempo1;
+		_str_tempo2 = _vdict[2];
+		fin_chunk = _str_tempo2;
+		if(debut_chunk+fin_chunk>position & debut_chunk<offset_right+xml_pos){
+			@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur! & @text=!_str2!]/Word[@pos=!_vdict[1]! & @len=!_vdict[2]!])->Create(!_text!);
+		}
+		if(debut_chunk+fin_chunk>position2 & debut_chunk<offset2_right+xml_pos){
+			@mydb(/Entities/Entity[@type=!type_entite! & @pos=!position! & @len=!longueur! & @text=!_str2!]/Word[@pos=!_vdict[1]! & @len=!_vdict[2]!])->Create(!_text!);
+		}
+		xmlnext(nextxml,nextxml);
+	}
+}
+
+Final:
+	print("sauvegarde\n");
+    if (monchemin:"") {
+                monchemin= @pathname +  "\.parse";
+                @mydb()->save(monchemin,"utf8");
+	}
+	else {
+		@mydb()->save(monchemin,"utf8");
+	}
+
+XMLGuide:
+	#default->skip(text).
+	paragraph->merge(dependency).
+
+
+

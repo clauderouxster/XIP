@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- 
+This ant script permits to manage the XIPUI project. 
+XIPUI project is a GUI for XIP Parser. XIPUI, is also a framework see the 
+project xipui_basic. With this framework 
+we can develop some specific profile, i.e. specific GUI using XIP parser. 
+-->
+
+<project name="xipui" default="all" basedir=".">
+
+    <property name="common.dir"     location="${basedir}/../../../common" />
+    <import file="${common.dir}/taskExt.xml" />
+    <import file="${common.dir}/taskSync.xml" />
+
+    <!-- this project permits to use all defined profiles -->
+    <property name="xipui.ideInt.dir"           value="${basedir}/xipui_all"/>
+    <!-- the basic framework of xipui no main class -->
+    <property name="xipui.basic.dir"         value="${basedir}/xipui_basic"/>
+    <!-- the project to develop grammar for xip -->
+    <property name="xipui.ide.dir"           value="${basedir}/xipui_ide"/>
+    <!-- the project to extract some information from a database, and store analysis of XIP 
+     this project use also the coreference module written by Salah Aït-Mokhtar 
+    -->
+    <property name="xipui.goldminer.dir"     value="${basedir}/xipui_goldminer"/>
+
+    <property name="compile.debug"        value="false"/>
+    <property name="compile.deprecation"  value="false"/>
+    <property name="compile.optimize"     value="true"/>
+
+
+    <property name="xipui.ideInt"        value="${xipui.basic.dir}/dist/xipui_ideInt.jar"/>
+    <property name="xipui.basic"         value="${xipui.basic.dir}/dist/xipui_basic.jar"/>
+    <property name="xipui.ide"           value="${xipui.ide.dir}/dist/xipui_ide.jar"/>
+    <property name="xipui.goldminer"     value="${xipui.goldminer.dir}/dist/xipui_goldminer.jar"/>
+
+    <property name="lib_ext.dir"         value="${basedir}/lib_ext"/>
+    <property name="prefuse"             value="${lib_ext.dir}/prefuse.jar"/>
+    <property name="dom4j"               value="${lib_ext.dir}/dom4j"/>
+    <property name="dbcp"                value="${lib_ext.dir}/dbcp"/>
+    <property name="mysql"               value="${lib_ext.dir}/mysql-connector-java-5.0.4-bin.jar"/>
+    <property name="log4j"               value="${lib_ext.dir}/log4j-all-1.3alpha-8.jar"/>
+
+    <!-- 
+       This target check if the file build.properties is available, and if the variable or set correctly
+       the build.properties file have to be in the same directory than build.xml
+    -->
+    <target name="init" >
+        <mkdir dir="${basedir}/dist" />
+        <if> 
+            <not>
+                <available file="${basedir}/ant/build.properties"/>
+            </not>
+            <then>
+		<!-- default setting -->
+                <property name="linux.xipui.dir"  value="${basedir}" />
+                <property name="jcoref"  value="${basedir}/../GRAMMARS/ENGLISH/APPLICATIONS/JCOREF/dist/jcoref.jar" />
+                <property name="jxip"  value="${basedir}/../java/dist/jxip.jar" />
+            </then>
+            <else>
+		<!--
+		creates a file name build.properties and places it in the same directory that build.xml
+		in this properties file, you need at least 3 properties : 
+		This property permit to know where is the linux sources if you have a 
+                copy of these sources on a windows partition.
+			linux.xipui.dir=h:/parSem/xip/dev/xipui 
+		The library JXIP : API JAVA for XIP
+			jxip    =/opt/ParSem/bin/linux/jxip.jar 
+		The JCOREF library to use coreference in Goldminer.
+			jcoref  = /opt/ParSem/bin/linux/jcoref.jar
+		If one of these properties is not declared or the given path are not valid, the build will fail. 
+		-->
+                <property file="${basedir}/ant/build.properties"/>
+            </else>
+        </if>
+        <fail message="bad property linux.xipui.dir ,correct it first !!! ">
+            <condition>
+                <not>
+                    <and>
+                        <isset property="linux.xipui.dir"/>
+                        <available file="${linux.xipui.dir}"/>
+                    </and>
+                </not>
+            </condition>
+        </fail>
+        <fail message="bad property jcoref, correct it first!!! ">
+            <condition>
+                <not>
+                    <and>
+                        <isset property="jcoref"/>
+                        <available file="${jcoref}"/>
+                    </and>
+                </not>
+            </condition>
+        </fail>
+        <fail message="bad property jxip, correct it first !!! ">
+            <condition>
+                <not>
+                    <and>
+                        <isset property="jxip"/>
+                        <available file="${jxip}"/>
+                    </and>
+                </not>
+            </condition>
+        </fail>
+	
+        <path id="compile.classpath.basic">
+            <pathelement location="${prefuse}"/>
+            <fileset dir="${dom4j}">
+                <include name="*.jar"/>
+            </fileset>
+            <pathelement location="${jxip}"/>
+            <pathelement location="${log4j}"/>
+        </path>
+	
+        <path id="compile.classpath.ide">
+            <path refid="compile.classpath.basic"/>        
+            <pathelement location="${xipui.basic}"/> 
+        </path>
+	
+        <path id="compile.classpath.goldminer">
+            <path refid="compile.classpath.basic"/>  
+            <pathelement location="${xipui.basic}"/> 
+            <pathelement location="${jcoref}"/>
+            <pathelement location="${mysql}"/>
+            <fileset dir="${dbcp}">
+                <include name="*.jar"/>
+            </fileset>
+        </path>
+	
+        <path id="compile.classpath.all">
+            <path refid="compile.classpath.goldminer"/>  
+            <pathelement location="${xipui.ide}"/>
+            <pathelement location="${xipui.goldminer}"/>
+        </path>
+    
+    </target>
+        
+    <!-- ============================= COMPILATION + BUILD JAR =========== -->
+    <!-- 
+      Compilation means, compile all the java class and copy all 
+      resource files (exept java sources) in the build.home 
+      directory of the respective project.
+    -->
+    <!-- =========================== CREATE XIPUI BASIC JAR ======== -->   
+    <target name="basic.compile" depends="init"  description="Compile Java sources ">
+        <mkdir  dir="${xipui.basic.dir}/dist"/>
+        <mkdir  dir="${xipui.basic.dir}/build"/>
+        <mkdir  dir="${xipui.basic.dir}/build/classes"/>
+        <javac srcdir="${xipui.basic.dir}/src"
+               destdir="${xipui.basic.dir}/build/classes"
+               debug="${compile.debug}"
+               deprecation="${compile.deprecation}"
+               includeAntRuntime="false"
+               optimize="${compile.optimize}">
+            <classpath refid="compile.classpath.basic"/>
+        </javac>
+        <!-- Copy application resources -->
+        <copy  todir="${xipui.basic.dir}/build/classes">
+            <fileset dir="${xipui.basic.dir}/src" excludes="**/*.java"/>
+        </copy>
+        <copy  todir="${xipui.basic.dir}/build/classes">
+            <fileset dir="${xipui.basic.dir}/doc" excludes="**/*.java"/>
+        </copy>
+    </target>
+        
+    <target name="jar.basic" depends="basic.compile"  description="create basic.jar ">
+        <jar jarfile="${xipui.basic}" update="no" basedir="${xipui.basic.dir}/build/classes" />
+    </target>
+    
+    <target name="basic" depends="jar.basic" description ="create an executable jar" >
+    </target>
+    
+    <!-- =========================== CREATE XIPUI IDE JAR  ================== -->   
+    <target name="ide.compile" depends="jar.basic"  description="Compile Java sources ">
+        <mkdir  dir="${xipui.ide.dir}/dist"/>
+        <mkdir  dir="${xipui.ide.dir}/build"/>
+        <mkdir  dir="${xipui.ide.dir}/build/classes"/>
+        <javac srcdir="${xipui.ide.dir}/src"
+               destdir="${xipui.ide.dir}/build/classes"
+               debug="${compile.debug}"
+               deprecation="${compile.deprecation}"
+               includeAntRuntime="false"
+               optimize="${compile.optimize}">
+            <classpath refid="compile.classpath.ide"/>
+        </javac>
+        <!-- Copy application resources -->
+        <copy  todir="${xipui.ide.dir}/build/classes">
+            <fileset dir="${xipui.ide.dir}/src" excludes="**/*.java"/>
+        </copy>
+    </target>
+    
+    <target name="jar.ide" depends="ide.compile"  description="create the xipui_ide.jar file">
+        <jar jarfile="${xipui.ide}" update="no" basedir="${xipui.ide.dir}/build/classes"/>
+    </target>
+    
+    <target name="ide" depends="jar.ide" description ="create an executable jar" >    
+        <jar jarfile="${basedir}/dist/ide.jar" update="no">
+            <zipfileset src="${xipui.ide}"  />
+            <zipfileset src="${xipui.basic}"  />
+            <zipfileset src="${jxip}"  />
+            <zipfileset src="${log4j}" />
+            <zipfileset src="${dom4j}/dom4j-1.6.1.jar"   />
+            <zipfileset src="${dom4j}/jaxen-1.1-beta-6.jar"   />
+            <zipfileset src="${prefuse}" />
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-class" value="com/xerox/xrce/xipui/ide/IDEMain"/>
+                <attribute name="Class-path" value="."/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <!-- =========================== CREATE XIPUI GOLDMINER JAR FILE ================ -->   
+    <target name="goldminer.compile" depends="jar.basic"  description="Compile Java sources ">
+        <mkdir  dir="${xipui.goldminer.dir}/dist"/>
+        <mkdir  dir="${xipui.goldminer.dir}/build"/>
+        <mkdir  dir="${xipui.goldminer.dir}/build/classes"/>
+        <javac srcdir="${xipui.goldminer.dir}/src"
+               destdir="${xipui.goldminer.dir}/build/classes"
+               debug="${compile.debug}"
+               deprecation="${compile.deprecation}"
+               includeAntRuntime="false"
+               optimize="${compile.optimize}">
+            <classpath refid="compile.classpath.goldminer"/>
+        </javac>
+        <!-- Copy application resources -->
+        <copy  todir="${xipui.goldminer.dir}/build/classes">
+            <fileset dir="${xipui.goldminer.dir}/src" excludes="**/*.java"/>
+        </copy>
+    </target>
+        
+    <target name="jar.goldminer" depends="goldminer.compile"  description="create the xipui_goldminer.jar file">
+        <jar jarfile="${xipui.goldminer}" update="no" basedir="${xipui.goldminer.dir}/build/classes"/>
+    </target>
+    
+    <target name="goldminer" depends="jar.goldminer"  description ="" >    
+        <jar jarfile="${basedir}/dist/goldminer.jar" update="no">
+            <zipfileset src="${xipui.ideInt}"  />
+            <zipfileset src="${xipui.goldminer}"  />
+            <zipfileset src="${xipui.basic}"  />
+            <zipfileset src="${jxip}"  />
+            <zipfileset src="${log4j}" />
+            <zipfileset src="${mysql}" />
+            <zipfileset src="${dom4j}/dom4j-1.6.1.jar"   />
+            <zipfileset src="${dom4j}/jaxen-1.1-beta-6.jar"   />
+            <zipfileset src="${dbcp}/commons-collections-3.1.jar" />
+            <zipfileset src="${dbcp}/commons-dbcp-1.2.1.jar" />
+            <zipfileset src="${dbcp}/commons-pool-1.2.jar" />
+            <zipfileset src="${prefuse}" />
+            <zipfileset src="${jcoref}" />
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-class" value="com/xerox/xrce/xipui/goldminer/GoldminerMain"/>
+                <attribute name="Class-path" value="."/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <!-- =========================== CREATE XIPUI ALL JAR FILES =========== -->   
+    <target name="ideInt.compile" depends="jar.goldminer, jar.ide "  
+            description="Compile Java sources ">
+        <mkdir  dir="${xipui.ideInt.dir}/dist"/>
+        <mkdir  dir="${xipui.ideInt.dir}/build"/>
+        <mkdir  dir="${xipui.ideInt.dir}/build/classes"/>
+        <javac srcdir="${xipui.ideInt.dir}/src"
+               destdir="${xipui.ideInt.dir}/build/classes"
+               debug="${compile.debug}"
+               deprecation="${compile.deprecation}"
+               includeAntRuntime="false"
+               optimize="${compile.optimize}">
+            <classpath refid="compile.classpath.all"/>
+        </javac>
+        <!-- Copy application resources -->
+        <copy  todir="${xipui.ideInt.dir}/build/classes">
+            <fileset dir="${xipui.ideInt.dir}/src" excludes="**/*.java"/>
+        </copy>
+    </target>
+        
+    <target name="jar.ideInt" depends="ideInt.compile" 
+            description=" create the ideInt.jar file">
+        <jar jarfile="${xipui.ideInt}" update="no" basedir="${xipui.ideInt.dir}/build/classes"/>
+    </target>
+    
+    <target name="ideInt" depends="jar.ideInt"  description ="create an executable jar" >    
+        <jar jarfile="${basedir}/dist/ideInt.jar" update="no">
+            <zipfileset src="${xipui.ideInt}"  />
+            <zipfileset src="${xipui.goldminer}"  />
+            <zipfileset src="${xipui.ide}"  />
+            <zipfileset src="${xipui.basic}"  />
+            <zipfileset src="${jxip}"  />
+            <zipfileset src="${log4j}" />
+            <zipfileset src="${mysql}" />
+            <zipfileset src="${dom4j}/dom4j-1.6.1.jar"   />
+            <zipfileset src="${dom4j}/jaxen-1.1-beta-6.jar"   />
+            <zipfileset src="${dbcp}/commons-collections-3.1.jar" />
+            <zipfileset src="${dbcp}/commons-dbcp-1.2.1.jar" />
+            <zipfileset src="${dbcp}/commons-pool-1.2.jar" />
+            <zipfileset src="${prefuse}" />
+            <zipfileset src="${jcoref}" />
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-class" value="com/xerox/xrce/xipui/DevMain"/>
+                <attribute name="Class-path" value="."/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <target name="all" depends="initLock" description ="create all executable jars" >
+	 <!--taskSync lockName="${lockJavaTaskSync.name}"-->
+         	<antcall target="clean" />
+         	<antcall target="ide" />
+        <!--/taskSync-->
+    </target>
+    
+    <!-- ================================= CLEAN ALL PROJECTS ======= -->
+    <target name="clean"  depends="clean.ideInt, clean.goldminer, clean.ide, clean.basic" 
+        description="Delete old build and dist directories">
+        <delete dir="${basedir}/dist" />
+    </target>
+    
+    <!-- ================================= CLEAN XIPUI IDE ======= -->
+    <target name="clean.ide" depends="" description="Delete old build and dist directories">
+        <delete dir="${xipui.ide.dir}/build"/>
+        <delete dir="${xipui.ide.dir}/dist"/>
+    </target>
+    
+    <!-- ================================= CLEAN XIPUI GOLDMINER  ======== -->
+    <target name="clean.goldminer" depends="" description="Delete old build and dist directories">
+        <delete dir="${xipui.goldminer.dir}/build"/>
+        <delete dir="${xipui.goldminer.dir}/dist"/>
+    </target>
+    
+    <!-- ================================= CLEAN XIPUI BASIC  ======= -->
+    <target name="clean.basic" depends="" description="Delete old build and dist directories">
+        <delete dir="${xipui.basic.dir}/build"/>
+        <delete dir="${xipui.basic.dir}/dist"/>
+    </target>
+    
+    <!-- ================================= CLEAN XIPUI ideInt =========== -->
+    <target name="clean.ideInt" depends="" description="Delete old build and dist directories">
+        <delete dir="${xipui.ideInt.dir}/build"/>
+        <delete dir="${xipui.ideInt.dir}/dist"/>
+    </target>
+    
+    <!-- =================== COPY files FROM windows TO linux  ============ -->
+    <!-- 
+         the copy.? targets should be used by a windows user, if he wants to copy  sources of XIPUI 
+         on a linux partition.
+    -->
+    <target name="copy" depends="copy.basic, copy.ide, copy.goldminer, copy.ideInt"
+        description="copy all the sources">
+    </target>
+
+    <target name="copy.basic" depends="init" description="copy the xipui_basic sources">
+        <!-- Copy application resources -->
+        <copy  todir="${linux.xipui.dir}/xipui_basic/src">
+            <fileset dir="${xipui.basic.dir}/src" />
+        </copy>
+        <copy  todir="${linux.xipui.dir}/xipui_basic/doc">
+            <fileset dir="${xipui.basic.dir}/doc" />
+        </copy>
+    </target>
+    
+    <target name="copy.ide" depends="copy.basic" description="copy the xipui_ide sources"> 
+        <copy  todir="${linux.xipui.dir}/xipui_ide/src">
+            <fileset dir="${xipui.ide.dir}/src" />
+        </copy>
+    </target>
+    
+    <target name="copy.goldminer" depends="copy.basic" description="copy the xipui_golminer sources"> 
+        <copy  todir="${linux.xipui.dir}/xipui_goldminer/src">
+            <fileset dir="${xipui.goldminer.dir}/src" />
+        </copy>
+    </target>
+    
+    <target name="copy.ideInt" depends="copy.basic,copy.ide,copy.goldminer" description="copy the ideInt sources"> 
+        <copy  todir="${linux.xipui.dir}/xipui_all/src">
+            <fileset dir="${xipui.ideInt.dir}/src" />
+        </copy>
+    </target>
+    
+    <!-- copy the build.xml -->    
+    <target name="copy.build" description="copy the buil.xml script to the linux partition"> 
+        <copy  todir="${linux.xipui.dir}/ant" file="${basedir}/ant/build.xml" />
+    </target>
+    
+    <!-- ================================= THE USAGE for this script ============ -->
+    <!-- 
+       it's the default target 
+    -->
+    <target name="usage" depends="init">
+        <echo message="--------------------------------------------"/>
+        <echo message=" Welcome to the XIPUI project ant script "/>
+        <echo message=" Base directory  for XIPUI : ${basedir}"/>
+        <echo message=" There are several XIPUI projects developpment :   all, basic, ide, goldminer"/>
+        
+        <echo message="  "/>
+        <echo message=" - basic      : the framework XIPUI, graphical common tools for XIP"/>
+        <echo message=" - ide        : the IDE profile based on basic to develop Grammar for XIP parser . "/>
+        <echo message=" - goldminer  : the Goldminer profile based on basic to develop extract information stored in a database with XIP. "/>
+        <echo message=" - ideInt     : use XIPUI with all defined profiles"/>
+        <echo message=" - all        : clean + build all"/>
+        <echo message="  "/>
+        <echo message="-----------------------------------------------"/>
+        <echo message="  "/>
+        <echo message=" jar.?             : Construct the jar file for the project ?"  />
+        <echo message=" clean.?           : delete dist and build directories for the project ?"/>
+        <echo message=" clean             : delete dist and build directories of all projects"/>
+        <echo message="  "/>
+        <echo message="-------------------------------------------------"/>
+        <echo message="  "/>
+        <echo message=" For windows user only :"/>
+        <echo message=" Your linux partion declared in build.properties file : ${linux.xipui.dir}"/>
+        <echo message="  "/>
+        <echo message=" copy.?            : Copy the sources files from the windows partition to the linux partition for the project ?  "/>
+        <echo message=" copy.build        : Copy the build file WARNING : the file build.properties is not copied "/>
+        <echo message="  "/>
+        <echo message="--------------------------------------------------"/>
+        <echo message="  "/>
+        <echo message=" You can create a build.properties file with 3 properties(otherwise default values) : "/>
+        <echo message=" xip.linux.dir, the directory of xipui on a linux partition eg : ${linux.xipui.dir}"/>
+        <echo message=" jxip the jar file of the API JXIP eg : ${jxip}"/>
+        <echo message=" jcoref the jar file of the API JCOREF  eg : ${jcoref}"/>
+    </target>
+    
+</project>

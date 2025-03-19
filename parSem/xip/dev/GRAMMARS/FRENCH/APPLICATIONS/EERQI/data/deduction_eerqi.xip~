@@ -1,0 +1,296 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+/############################## DEDUCTION   ################################################\
+
+Déduction:
+
+
+//mots composés :
+//////SC{NP{La recherche} FV{a}} FV{VERB_MENTAL:+{mis au jour}}
+//SUBJ(a,recherche)
+
+| sc{np{?*,#1[last]}, fv{#2[aux]}}, fv#3{verb{?}} |
+if ( SUBJ(#2,#1) )
+	SUBJ(#3,#1).
+
+
+///////////////
+
+//créer la dépendance SENT(ence)
+
+|GROUPE#1{ ?+ } |
+  SENT(#1).
+
+///////////////
+
+//potential key sentence dépendance
+
+
+if ( ^$1(#1[traits_ksw],#2[traits_ksw]))
+   $1[potksdep=+](#1,#2).
+
+if ( SUBJ(?,#1[humain]) & ^$1[potksdep](#2,#3))
+$1[potksdep=~](#2,#3).
+
+
+
+///////////////
+
+// marquer les dépendances
+
+if ( ^$1[potksdep](#1[contr],#2) | ^$1[potksdep](#1,#2[contr]) )
+   $1[contr=+](#1,#2).
+
+if ( ^$1[potksdep](#1[mental],#2) | ^$1[potksdep](#1,#2[mental]) )
+   $1[mental=+](#1,#2).
+
+if ( ^$1[potksdep](#1[scope],#2) | ^$1[potksdep](#1,#2[scope]) )
+   $1[scope=+](#1,#2).
+
+if ( ^$1[potksdep](#1[importance],#2) | ^$1[potksdep](#1,#2[importance]) )
+   $1[importance=+](#1,#2).
+
+if ( ^$1[potksdep](#1[publ],#2) | ^$1[potksdep](#1,#2[publ]) )
+   $1[publ=+](#1,#2).
+
+if ( ^$1[potksdep](#1[possibl],#2) | ^$1[potksdep](#1,#2[possibl]) )
+   $1[possibl=+](#1,#2).
+
+if ( ^$1[potksdep](#1[mentsco],#2) | ^$1[potksdep](#1,#2[mentsco]) )
+   $1[mentsco=+](#1,#2).
+
+if ( ^$1[potksdep](#1[mentscopubl],#2) | ^$1[potksdep](#1,#2[mentscopubl]) )
+   $1[mentscopubl=+](#1,#2).
+
+if ( ^$1[potksdep](#1[mentcontr],#2) | ^$1[potksdep](#1,#2[mentcontr]) )
+   $1[mentcontr=+](#1,#2).
+
+////if ( ^$1[potksdep](#1[deict],#2) | ^$1[potksdep](#1,#2[deict]) )
+////   $1[deict=+](#1,#2).
+
+//if ( ^$1[potksdep](#1[goal],#2) | ^$1[potksdep](#1,#2[goal]) )
+//   $1[goal=+](#1,#2).
+
+
+
+
+
+//////////////
+//CONTRIBUTION
+//////////////
+
+if ( (^$1(#1,#2[non_ksw]) | ^$1(#1[non_ksw],#2)) & $2[potksdep](#3,#4))
+    $1[contribution=~](#1,#2).
+
+// ****** CONTRIBUTION = publ+deic,possession ****** 
+// ****** CONTRIBUTION Agnes = mentscopubl+p1 ****** 
+
+// %%%%%% Stce:Ces investigations conceptuelles nous ont permis d' opérationnaliser notre étude .
+
+//Agnes: "possession" n'est pas un bon trait pour "notre". On voudrait capter le fait que ce deict est la 1ère personne
+
+ if ( ^$1(#1[mentscopubl,contr:~],#2[deict,p1]) & $2[potksdep](#3,#4) )
+ $1[contribution=+](#1,#2).
+
+
+
+// ****** CONTRIBUTION=mental+scope & scope+deict ****** 
+// ****** CONTRIBUTION Agnes= cette phrase est trop ambiguë
+
+// %%%%%% Stce: Ce travail apportera des éléments de compréhension à un aspect de la construction identitaire des enseignants .
+
+//Agnes: j'ai enlevé "apporter" du lexique car c'est un mot très ambigu. Il est mental ici car son sujet est mentscopubl. Dans le fichier ajout-trait.xip, j'ai rajouté le trait "mental" à tous les verbes qui ont un sujet mentscopubl
+
+
+if ( $1[potksdep](#1,#3) & ^$2(#2[publ],#4[deict]) & #1~:#2 & #3~:#4 )
+ $2[contribution=+](#2,#4).
+
+if ( ^$1[potksdep](#1,#3) & $2[contribution](#2[publ],#4[deict]) & #1~:#2 & #3~:#4 )
+  $1[contribution=+](#1,#3).
+
+
+
+// ****** CONTRIBUTION= occurence de la léxie "résumer" qui a le trait "publ" dans une PREPOBJ 
+//  %%%%%% Stce:Pour résumer , le travail du chercheur vise à connaître , comprendre et expliquer la réalité dans une perspective d' élaboration de savoirs .)
+
+| #1[unary,publ] |
+if (^PREPOBJ(#1,#2))
+  PREPOBJ[contribution=+](#1,#2)
+
+
+//////////////
+//PROBLEM///
+/////////////
+
+
+
+// ****** PROBLEM=contr+mentsco ou mentsco+contr suivi d'une dépendance "potksdep"
+// %%%%%% Stce:Leur intérêt, leur caractère de scientificité ne sont guère discutés .
+
+if ( (^$1(#1[contr],#2[mentcontr]) | ^$1(#1[mentcontr],#2[contr])) & $2[potksdep](#3,#4))
+    $1[prob=+](#1,#2).
+
+//
+
+if ( ^$1[potksdep](#1,#2) & $2[prob](#3[mentcontr],#4[contr]) & #1~:#3 & #2~:#4 )
+  $1[prob=+](#1,#2).
+
+if ( $1[potksdep](#1,#3) & ^$2[prob](#3[contr],#4[mentcontr]) & #1~:#3 & #2~:#4 )
+  $2[prob=+](#3,#4).
+
+//
+if ( (^$1(#1[contr,noun],#2[mental]) | ^$1(#1[mental],#2[contr,noun])) & $2[potksdep](#3,#4) )
+    $1[prob=+](#1,#2).
+
+if ( $1[potksdep](#1,#2) & (^$2[prob](#3[contr,noun],#4[mental]) | ^$2[prob](#3[mental],#4[contr,noun]))  & #1~:#3 & #2~:#4 )
+  $2[prob=+](#3,#4).
+//
+
+if (( SUBJ(#1,#2[humain]) & ^$1[contr](#3,#4) ) | (SUBJ(#1,#2[pron]) & ^$1[contr](#3,#4))  )
+    $1[prob=~](#3,#4).
+
+
+if(($1(#1[transparent],#2[scope]) | $1(#1[transparent],#2[contr])) & (^$2(#3[contr],#1[transparent]) |^$2(#1[transparent],#3[contr])) & #2~:#3)
+  $2[prob=+](#3,#1)
+
+// %%%%%% Stce:Mais les enseignants russes ont compris ce que les enseignants anglais et américains comprennent moins bien , à savoir que la qualité de l` écriture dépend de la qualité du travail oral structuré et concentré dans lequel il est ancré . Russie Angleterre États-Unis.
+
+| #1[unary,contr] |
+if (( ^$1[potksdep](#2[scope],#3[traits_ksw]) |^$1[potksdep](#2[traits_ksw],#3[scope])) & $2[potksdep](#4,#5) & SUBJ(?,#6[pays:~]) & #2~:#4 & #3~:#5)
+$1[prob=+](#3,#4)
+
+
+// %%%%%% Stce:À l' inverse , tout le espace de l' activité auto- évaluative et ré flexive des enseignants serait occupé par une évaluation qualitative en continu sur le déroulement de l' action ( manifestation d' intérêt des élèves , possibilité de conduites de l' action jusqu'à son terme , modification du rapport à l' école de l' élève ) que l'on peut résumer par les expressions.
+
+// ****** PROBLEM=occurence de la léxie "hypothèse" qui a le trait "contr" et créer la dépendance "prob" dans la phrase
+// %%%%%% Stce:Dans une deuxième phase , sous l' hypothèse que ces variations ne sont pas aléatoires et qu' existent des processus organisateurs sous jacents au choix et à l' agencement dynamique des modalités prises par la ( les ) composante(s) considérée(s) , des régularités sont recherchées .
+
+| #1[lemme:hypothèse] |
+if (^SENT(#2) )
+  SENT[prob=+](#2)
+
+
+///| #1[contr,noun] |
+///if (^SENT(#2) & SUBJ(#1) & $1[potksdep](#3,#4) & $2[potksdep](#5,#6))
+///  SENT[prob=+](#2)
+///
+| #1[argumentation,contr] |
+if (^SENT(#2)  & ($1(#3[mentsco],#4[condition]) | $1(#3[condition],#4[mentsco])) & $2[potksdep](#5,#6))
+  SENT[prob=+](#2)
+
+
+
+/////////////////
+//Possibility
+////////////////
+
+// ****** POSSIBILITY=possibl+mentsco & possibl+mentsco
+
+// %%%%%% Stce:La recherche peut alors être considérée comme une pratique qui véhicule ses propres a priori , même si le chercheur - praticien observe le travail des enseignants sans préjugés supposés , en se détachant de toute attitude normative ou militante .
+//
+if ( ^$1(#1[possibl],#2[scope]) & $2[potksdep](#3[mentsco],#4[mentsco]) )
+$1[possibility=+](#1,#2)
+
+if ($1[possibility](#1[possibl],#2[scope]) & ^$2[potksdep](#3[mentsco],#4[mentsco]) & #1~:#3 & #2~:#4)
+$2[possibility=+](#3,#4)
+// 
+
+if ( ^$1(#1[possibl],#2[mental,noun])  & $2[potksdep](#3,#4))
+$1[possibility=+](#1,#2)
+
+if ($1[possibility](#1[possibl],#2[mental,noun]) & ^$2[potksdep](#3,#4) & #1~:#3 & #2~:#4)
+$2[possibility=+](#3,#4)
+
+//
+
+if ( (^$1(#1[possibl],#2[scope]) | ^$1(#1[scope],#2[possibl])) & $2[possibl](#3,#4))
+$1[possibility=+](#1,#2)
+
+if (( $1[possibility](#1[possibl],#2[scope]) | $1(#1[scope],#2[possibl])) & ^$2[possibl](#3,#4) & #1~:#3 & #2~:#4)
+$2[possibility=+](#3,#4)
+
+
+/////////////////
+//Importance
+///////////////
+
+// ****** Importance: transparent+importance & transparent + mentsco
+// %%%%%% Stce:L' importance du regard porté par cette discipline universitaire réside dans une analyse plurielle ( d'où l' utilisation du pluriel du mot « science » ) qui dépasse la simple juxtaposition de plusieurs lectures disciplinaires et qui intègre la mise en relation des regards .)
+
+if  (^$1(#1[transparent],#2[importance]) & $2(#1[transparent],#3[mental]) )
+  $1[import=+](#1,#2)
+
+if  ($1[import](#1[transparent],#2[importance]) & ^$2(#1[transparent],#3[mental]) )
+  $2[import=+](#1,#3)
+
+//
+if ( (^$1(#1[importance],#2[scope]) | ^$1(#1[scope],#2[importance]))  & $2[potksdep](#3,#4))
+$1[import=+](#1,#2)
+
+if ( ($1[import](#1[importance],#2[scope]) | $1[import](#1[scope],#2[importance]))  & ^$2[potksdep](#3,#4))
+$2[import=+](#3,#4)
+//
+
+// %%%%%% Stce:Leur intérêt, leur caractère de scientificité ne sont guère discutés .
+if ( (^$1(#1[importance],#2[contr]) | ^$1(#1[contr],#2[importance]))  & $2[potksdep](#3,#4))
+$1[import=+,prob=+](#1,#2)
+
+if ( ($1[import,prob](#1[importance],#2[contr]) | $1[import,prob](#1[contr],#2[importance]))  & ^$2[potksdep](#3,#4))
+$2[import=+,prob=+](#3,#4)
+
+// %%%%%% Stce: Il est important de souligner
+if(^ADJMOD(#1[importance],#2[mental]) )
+ADJMOD[import=+](#1,#2)
+
+// %%%%%% Stce:Nous nous intéressons notamment
+if ( ^$1(#1[importance,verb],#2[deict,p1]) & $2[potksdep](#3,#4) )
+ $1[contribution=+,import=+](#1,#2).
+
+
+/////////////////////
+
+if ( ^$1[contribution](#1,#2) )
+   $1[ksdep=+,potksdep=~](#1,#2)
+
+if ( ^$1[prob](#1,#2) )
+   $1[ksdep=+,potksdep=~](#1,#2)
+
+if ( ^$1[possibility](#1,#2) )
+   $1[ksdep=+,potksdep=~](#1,#2)
+
+if ( ^$1[import](#1,#2) )
+   $1[ksdep=+,potksdep=~](#1,#2)
+
+/////////////////////
+
+
+
+if ( ^SENT(#1) & $1[ksdep](#2,#3) & ~SENT[ks](#1) )
+   SENT[ks=+](#1).
+
+
+if ( ^SENT[ks](#1) & $1[contribution](#2,#3) )
+   SENT[contribution=+](#1)
+
+if ( ^SENT[ks](#1) & $1[prob](#2,#3) )
+   SENT[prob=+](#1)
+
+if ( ^SENT[ks](#1) & $1[possibility](#2,#3) )
+   SENT[possibility=+](#1)
+
+if ( ^SENT[ks](#1) & $1[import](#2,#3) )
+   SENT[import=+](#1)
+
+if ( SENT[ks](#1) & ^$1[potksdep](#2,#3) )
+   $1[potksdep=~,ksdep=+](#2,#3).
+
+if ( ^SENT[prob](#1)) 
+ SENT[ks=+](#1)
+

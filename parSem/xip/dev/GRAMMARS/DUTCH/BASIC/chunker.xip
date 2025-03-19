@@ -1,0 +1,458 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	chunker.xip
+//! Encoding:	UTF-8
+//! Content:	definition of chunks
+//!
+//! Language:	DUTCH
+//!
+//! Author:	Anne Schiller, Joeri Honnef
+//!
+//! Date: 	07-Mar-2007	:: initial version
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+///===============================NP CHUNKS======================================
+
+// (ex: 'Een vrijdag gepubliceerd vraaggesprek.')
+5> NP = det, noun[weekday], adj, noun .
+
+// (ex: 'Het fietsen van de Tour de France is niet gemakkelijk.')
+// (ex: 'Het pannekoeken bakken ging compleet verkeerd.')
+// (cex: 'Nieman wilde meer naar |het meer gaan|.')
+// percolate the inf feature to recognize this sort of NP later on.
+10> NP = ?[lemma:het], noun*[pl], verb[inf, !inf:!, pred:~, noambiguity].
+
+// (ex: 'de suikerfabriek en -plantage')
+13> NP = det, noun[compound], conj, noun[chead].
+
+// (ex: 'het meeste')
+15> NP = ?[lemma:het], quant[decl, sup].
+
+// (ex: 'De 18-jarige Almeerse')
+17> NP = det, adj, adj[guessed, cap].
+
+// (ex: Divisie I)
+20> NP = noun[cap], noun[letter].
+// (ex: groep A)
+25> NP = noun, noun[letter, cap].
+
+27> NP = quant[start] ~|noun|.
+
+// (ex: 'het eerst')
+// (ex: 'het laatst')
+29> NP = det, adv.
+
+// A simple rule to find Named Intities ... good be a bit too specific.
+// (cex: 'ABN Amro')
+30> NP = noun[allcap, proper, !proper:!], noun[cap, proper] .
+
+// NFR
+35> NP = (det), noun[cap, proper, firstname, !firstname:!], noun[cap, proper, lastname, !lastname:!].
+// To global ... cex's?
+40> NP = |noun| noun[cap], noun[cap].
+
+41> NP = (det), noun[cap], noun[cap].
+
+// (ex: 'Het was gewoon 'one of those days'')
+// A rule to try to find english sayings in Dutch sentences.
+// Probably a bit to specific because other categories can occur
+// that are not guessed. 
+45> NP = punct[quote], noun+[guessed], conj, noun+[guessed], punct[quote]. 
+
+// (ex: '19 september 2005')
+50> NP = (num[dig]), noun[month], num[year].
+// (ex: 'september 2005')
+
+// (ex: 'de volgende 'douche'. ')
+53> NP = det, adj;noun[deriv_adj], punct[quote], noun, punct[quote].
+
+// (ex: 'de jaren zestig')
+55> NP = det[lemma:de], noun[lemma:jaar], num[dig, guessed] .
+// (ex: 'Muziek uit de jaren 60-70')
+// (ex: 'Muziek uit de jaren 60/70')
+60> NP = det[lemma:de], noun[lemma:jaar], num[card] .
+
+// (ex: 'een moeilijk te voorzien probleem.')
+62> NP = (det), adj;adv, ?[surface:te], verb;adj[decl, pastpart];?, noun.
+
+// (ex: 'Het was een groep van circa honderd mensen.')
+63> NP = adv[lemma:circa], num[card];num[dig], noun . 
+
+// NFR 
+// I think it is ok to join adv's if they are in front of numerals
+// but... there might be exceptions.
+// 'om en nabij'
+// (ex: 'Het was een groep van bijna/ongeveer honderd mensen.')
+// (ex: 'nog 9 kilometer')
+// (ex: 'liefst 8 meter')
+// (cex: 'er 9 kilometer')
+//64> NP = adv, num[card, indef:~];num[dig], noun . 
+
+65> NP = pron[start], noun.
+
+67> NP = det, adj[noambiguity, decl], noun.
+
+// The name O'Grady which has the Quote feature in between two words that are capitalized.
+70> NP = noun[letter], punct[quote], noun[proper, !proper:!, cap].
+
+// Rule for propernames with determiners in there.
+// (ex: 'Maurice de Hond')
+// Try to find an counter example to revise the rule and make it
+// more specific.
+// What about: (ex: 'Van Tegelen')
+// Added an extra feature constraint on the second capitalized noun,
+// see this example: (cex: president |Poetin van Rusland|)
+// A real nasty case is:
+// (ex: 'Een Ugandees van Aziatische komaf.')
+// Where Ugandees is not in de lexicon and Aziatische is either. They both get guessed so 
+// we are not able to constrain things by Country feature or other features.
+// de Ronde van Vlaanderen.
+75> NP = ~|det| noun[cap], det;prep[lemma:van] , noun[cap, country:~].
+
+80> NP = prep[lemma:Van], noun[cap].
+// 'de Deventer moordzaak'
+//85> NP = det<lemma:de>, noun[cap], noun[hmm_noun].
+85> NP = det<lemma:de>, noun[cap], noun.
+
+// (ex: 'De nettowinst steeg met |ruim 30 procent|.')
+87> NP = adj, num, noun.
+
+// NFR
+// A PP rule to catch a year expression. 
+// (ex: 'Het meisje kreeg in 1932 politiek asiel.')
+// Process possesive NP's
+90> NP = det[poss, noambiguity], noun[noambiguity] .
+
+// (ex: 'Hij kwam daardoor in |het nauw|.')
+93> NP = det[lemma:het], ?[surface:nauw].
+
+// NFR
+95> NP = det, adj*, punct[comma], adj*, noun.
+
+// NFR 
+// (ex: 'Het pannenkoeken bakken ging hartstikke goed.')
+100> NP =  det[lemma:het], noun[pl], verb[pl].
+
+// The following constructions should be one NP and not an NP within an NP. 
+// So they are handles before the general NP rule. If I add the cap feature to the
+// general rule I will get NP's for names which I do not want because I want to combine
+// surname and name into one NP instead creating NP's for each part.
+// (ex: 'Een Ugandees')
+// (ex: 'het Velodrome')
+105> NP = det[lemma:een];det[lemma:het], noun[cap].
+
+// (ex: De rellen onttaarde in fel anti-Aziatisch geweld.)
+107> NP = | prep | adv, adj, noun .
+
+// (ex: 'Nog twee Oegandezen zijn om het leven gekomen.')
+110> NP = num, noun[cap].
+
+// (ex: 'een heel laag dodental.')
+111> NP = det, adv, adj, noun .
+
+// (ex: 'Het afgelopen kwartaal')
+113> NP = det, adj, noun.
+
+114> NP = ?[surface:de], ?[surface:als], ?*, ?[decl, pastpart];adj, NP[firstname, lastname].
+114> NP = ?[surface:de], ?[surface:als], ?*, ?[decl, pastpart];adj, noun.
+
+// NP rule, works with Quotation around the noun too.
+// The where case rules out NP constructions where the det and 
+// the noun gender features do not match.
+// Problem here is that 
+// (ex: 'een Ugandees')
+//115> NP @= (det#1), (punct[quote]), quant*, ?*[num, year:~], (adj[pastpart:~])*, noun#2[!number:!, !weekday:!, !guessed:!, !cap:!], (punct[quote]).
+// removed the constraint of pastparts as adj.
+115> NP @= (det#1), (punct[quote]), quant*, ?*[num, year:~], adj*, noun#2[!number:!, !weekday:!, !guessed:!, !cap:!], (punct[quote]).
+
+
+// (ex: 'Dat is wel tegen de 7000 hectare bos.')
+// (ex: '70 meter koord.') keep it separated
+117> NP = (det), num, noun.
+
+
+// percolate the cap feature for later usage in the dependencies.
+120> NP @= (noun[cap, !cap:!, proper, !proper:!])+.
+
+// experiment rule for complex NP's starting with 'de' for the moment
+125> NP @= det[lemma:de], ?*, NP[proper].
+125> NP @= det[lemma:de], ?*, noun.
+
+// (ex: 'De drie deden er niks aan.')
+127> NP = ?[lemma:de], num[card, ord:~].
+
+
+IdRules:
+// NFR
+// Quite a strong rule to find complex NP's with a lot of adjectives
+// adverbs and even adjectives with finite verb forms.
+130> NP -> det+, adj*, adv*, conj, (verb[pastpart, decl])*, noun+.
+130> NP -> det+, adj*, adv*, punct[comma], (verb[pastpart, decl])*, noun+.
+
+ 
+
+Sequence:
+// In this example:
+// (ex: 'de Britse bank Barclays.')
+// We first want to find the longest match part: 'de Britse bank'
+// After this we introduce thi next rule because else we end up with:
+// 'bank Barclays' as one NP.
+135> NP = noun[decl:~], NP.
+140> NP = NP, adj[proper].
+
+// (ex: 'het aangrenzende Noord-Waziristan')
+// (cex: 'je Parijs-Roubaix' )
+145> NP = det[poss:~], adj*, NP[cap].
+150> NP = pron[gen:~,!rel:!, !pron:!, !refl:!, !interrog:!].
+
+// This rule covers NP's which exist only of an adj and a noun which where 
+// disregarded/left by rule #115 which does not allow for NP's which
+// contain disagreement on the gender features of the det and the noun.
+155> NP = adj, noun. 
+
+// An NP with a determiner/adv* in front becomes an NP again.
+// Too strong....
+// (cex: 'Mijn instinct zegt me dat |het vooral een vorm| van kopieergedrag is.')
+//45> NP = det, adv*, NP.
+
+160> NP = quant, noun.
+
+165> NP = num, quant, NP.
+
+170> PP = prep, NP[rel:~, pron:~].
+
+// (ex: 'Draai de cassette naar beneden tot de grendel loskomt.')
+173> PP = prep, adv.
+
+// (ex: 'in 2004')
+175> PP = prep, num.
+
+// (ex: 'Licht, onduidelijk of vervaagd beeld alleen |bij afdrukken| vanaf het werkstation.')
+180> PP = prep, verb[inf].
+
+// Add leading ptcl's to the verb, it might perhaps happen
+// there are even more ptcl's than two, if so this can be easily 
+// modified in the rule to account for.
+185> VC[inf_te=+] @= (ptcl), ptcl<lemma:te>, verb+[inf].
+
+// (ex: 'Er wordt van uit gegaan dat hij het niet heeft gedaan.')
+190> VC = ptcl, verb.
+
+///=============================== VERB CLUSTERS ======================================
+
+IdRules:
+
+// Verb Clusters
+// cex: 'kan worden afgedrukt'
+195> VC -> verb[pastpart], verb[modal,!fin:!], (verb[aux,!fin:!]).
+
+200> VC ->  verb[modal, !modal:!], verb[inf, !inf:!].
+// (ex: hebben overtreden)
+// where overtreden is the pastpart but gets recognized as an inf ...
+// (ex: 'moet erkennen') is an example of a modal plus the infinitive
+// that is why the aux verb is made optional by the kleene star.
+// (ex: 'Zij zouden zich |moeten hebben misdragen|.')
+//150> VC ->  verb[modal], verb[aux], verb[modal:~, inf, !inf:!].
+205> VC ->  verb[modal], verb*[aux],   verb[modal:~, causal:~, inf, !inf:!].
+//205> VC ->  verb[aux],   verb[modal], verb[modal:~, inf, !inf:!].
+
+205> VC ->  verb[aux], verb+[modal:~, inf, !inf:!].
+205> VC ->  verb[modal], verb+[modal:~, inf, !inf:!].
+
+// (ex: 'Zij zouden zich |misdragen moeten hebben|.')
+205> VC -> verb+[aux], verb[modal:~, aux:~, !pastpart:!], verb*[modal] .
+
+205> VC ->  verb[fin,!fin:!], verb[pastpart,!pastpart:! ].
+
+
+Sequence:
+
+207> VC = verb[aux, !aux:!], verb[pastpart, !pastpart:!].
+
+///=============================== MAIN- AND SUBCLAUSES ======================================
+
+// This rule should be able to find subclauses that start with a
+// conj, end with a punctuation and have an finite verb form somewhere 
+// in between. Problem is that often the plural form of verbs have the 
+// same form as the infinitive and the verb is recognized as such. Solution
+// is to include the inf feature.
+// A counter example is:
+// (ex: ' 'Herstellen van een fout beeld |dat door de media is ontstaan|', 
+//         zegt Laurens Woldberg, woordvoerder van Holland Casino.')
+210> SC @= ?[conj, coord:~], ?*[conj:~, comma:~, sc:~], vc[fin];vc[inf], ?*[sc:~, conj:~, verb:~, quote:~] | punct[comma] ; punct[quote] | .
+
+// (ex: 'Als u over een extern bestandssysteem of een aangesloten vaste schijf beschikt, controleer dan of deze is opgezet en toegankelijk is.')
+// Added the possibility of an pastpart since it does not have the fin feature.
+215> SC @= ?[conj, subord], ?*[subord:~, comma:~, sc:~], verb[fin]; vc[fin];verb[pastpart].
+
+// (ex: 'Hoewel het recente offensief de veiligheidssituatie rond de grootste stad 
+//       van Zuid-Waziristan, Wana, ten goede komt, twijfelen veiligheidsexperts |of 
+//       lokale aanhangers van de Taliban de ontstane situatie niet zullen aangrijpen| 
+//       om aanvallen uit te voeren op Amerikaanse en NAVO-troepen in Afghanistan.')
+// The imporatnt structure is: 
+// (ex: '|of lokale aanhangers van de Taliban de ontstane situatie niet zullen aangrijpen| ')
+220> SC = ?[conj],NP, ?*[conj:~, coord:~], VC[inf, modal] .
+
+225> SC = ?[conj, coord:~], ?*[comma:~], verb[inf] ; verb[fin], VC[inf_te, !inf_te:!] .
+
+// old ... 201> SC @= ?[conj, coord:~], ?*[sc:~, subord:~], (verb[inf] ; verb[fin]), VC[inf_te], ?*[pron:~, sc:~, subord:~, end:~] .
+230> SC @= ?[conj, coord:~], ?*[sc:~, subord:~, comma:~], verb[inf] ; verb[fin] |punct[comma], verb[inf] ; verb[fin]|.
+
+// (ex: 'Ook had het Pakistaanse leger ontkend dat het aan het 
+//       offensief van de stammen deelnam.')
+// Added the negation of the start feature at the first element 
+// to avoid forming subclauses of the form:
+// (ex: '|Dat meldde| persbureau Interfax vrijdag.')
+// But this rule is not working for:
+// (cex: 'Als  ik geen college heb, ga ik naar de universiteit |om te studeren|. ')
+// update: Do not try to add the PP's that come after these SC's because they do not always belong 
+// to the SC.
+// counterexample: 
+// (ex: 'Neem contact op met de fabrikant |als het font ook dan niet kan worden afgedrukt|.')
+235> SC @= ?[conj, subord, start:~], ?*[sc:~, vc:~, pron:~], verb[pastpart:~].
+
+240> SC = ?[conj, coord:~, start:~], ?*, verb[inf].
+
+245> SC = |SC;VC[inf_te]| (conj[infconj]), NP, ?*[sc:~, vc:~], VC[inf_te, !inf_te:!].
+
+// (ex: 'TNT deed het, Chipsol legde het vorige week nog éénmaal uit in het slepende conflict met luchthaven Schiphol, 
+//       postbedrijf Sandd richtte onlangs ‘een ander geluid uit de postmarkt’ tot de lezer, |als die tenminste de moeite nam| 
+//       zich door een volle pagina platte tekst te werken.') 
+250> SC = ?[conj, coord:~], NP[pron];NP, ?*[sc:~, pastpart:~, pron:~, comma:~], verb[fin].
+
+// vc's do not work here so I use just normal verbs.
+// (ex: 'Musharraf sprak de hoop uit dat ook de stamleden in het aangrenzende 
+//       Noord-Waziristan de wapens oppakken tegen de buitenlandse militanten, 
+//       |die voor het merendeel van Oezbeekse afkomst zijn|.')
+253> SC @= NP[rel], ?*[punct:~, coord:~, vc:~, subord:~], verb[fin] , ?*[end:~, comma:~, pastpart:~, pp:~, !inf_te:!] |punct ; NP[rel] | .
+
+// (ex: 'TNT deed het, Chipsol legde het vorige week nog éénmaal uit in het slepende conflict met luchthaven Schiphol, 
+//       postbedrijf Sandd richtte onlangs ‘een ander geluid uit de postmarkt’ tot de lezer, als die tenminste de moeite nam 
+//       |zich door een volle pagina platte tekst te werken|.') 
+// (cex: 'het niet')
+// Also added a comma to it at a later stage because it was binding parts of the sentence which were 
+// originally separated by the comma.
+// Just removed this rule for the moment. Can be checked later.
+//255> SC = NP[pron], ?+[sc:~, conj:~, pastpart:~, pron:~, comma:~, interrog:~], verb[fin];vc[inf_te, !inf_te:!].
+
+260> SC = ?[conj, coord:~], ?*[sc:~, conj:~, pastpart:~, pron:~], vc[inf_te, !inf_te:!].
+
+270> SC = ?[conj, coord:~], ?*[sc:~], VC[pastpart, fin], conj[coord], ?*[end:~] |punct[sent]| .
+
+275> SC = ?[conj, coord:~], ?*[sc:~],  VC[modal] , ?*[sc:~, punct:~, conj:~] |conj ; NP[rel]|.
+
+280> SC = ?[conj], ?*[sc:~],  VC[modal] , ?*[sc:~, punct:~, conj:~] |conj ; NP[rel]|.
+
+// (ex: ... dat zij zich op een ochtend misdragen hadden in de tuin van de buren.')
+// (ex: ... dat zij zich                misdragen hadden.')
+290> SC = ?[conj, subord, coord:~], NP[pron], NP[refl], ?*[sc:~],  VC.
+
+// (ex: 'In een brief staat dat de president van de bank moet erkennen dat zijn handelwijze de integriteit 
+//       en doelmatigheid van de Wereldbank heeft geschaad en dat hij het vertrouwen van het personeel in 
+//       zijn autoriteit heeft verwoest.')
+// The pastpart feature in the last part of the rule constrains the rule not to take a second pastpart construction.
+// The conj could not be reliably used because the disambiguation process is sometimes not completely sure about 
+// conjunctions which are subordinating or just coordinating.
+295> SC @= |conj[coord]| ?[conj, coord:~], NP, ?*[sc:~, conj:~],  VC[pastpart], PP*.
+
+300> SC = | conj | NP[rel]; conj[subord], ?*[sc:~, rel:~],  vc[pastpart]  | punct[end] ; conj |.
+
+// (ex: 'Sommige betogers stelden dat de politie zonder aanleiding begon te schieten 
+//       |en dat daarmee de betoging uit de hand is gelopen|.')
+//327> SC = | conj[lemma:en] | NP[pron], ?*[punct:~], VC |punct[sent]| .
+
+// (ex: 'In een brief staat dat de president van de bank moet erkennen dat zijn handelwijze de integriteit 
+//       en doelmatigheid van de Wereldbank heeft geschaad en dat hij het vertrouwen van het personeel in 
+//       zijn autoriteit heeft verwoest.')
+305> SC = conj[subord], NP, ?*[sc:~, comma:~], VC[pastpart].
+
+// NFR
+// it covers the end of the next sentence which is in fact a coordination.
+// cex: 'De Amerikaan zou zijn vriendin Shaha Riza een promotie en salarisverhoging hebben bezorgd 
+//      '|en daarbij de regels van het internationale instituut hebben overtreden|.'
+//310> SC = ?[conj, coord], adv, ?*[sc:~, conj:~], VC[inf] |punct[sent]|.
+315> SC = ?[conj, coord:~], ?*[sc:~], VC[inf].
+
+// (cex: '|Het is| voor het eerst dat ... ')
+330> SC @= conj[subord], NP[pron], ?*[punct:~, coord:~], verb[fin].
+
+// NFR (the second question mark is prob not working)
+// (ex: 'Het is voor het eerst dat Pakistan toegeeft stammen 
+//       militaire steun te bieden om buitenlandse strijders 
+//       aan te pakken, |die aan Al Qaida gelieerd zouden zijn.|')
+// The question mark in between is far too strong and is constrained by 
+// adding the sc feature so we do not allow any embedded SC's.
+330> SC = NP[rel], ?*[sc:~], VC[fin], ?*[sc:~] |punct ; NP[rel] | . 
+
+
+// (ex: 'Het leger zei toen dat de stammen alleen in actie waren gekomen
+//       tegen Oezbeekse militanten |omdat deze hadden geprobeerd een lokale 
+//       stamleider te doden.|')
+// Again, the question mark in between is far too strong and is constrained by 
+// adding the sc feature so we do not allow any embedded SC's.
+340> SC @= conj[subord], NP, ?*[sc:~, vc:~],  VC[inf_te, !inf_te:!], ?*[sent:~, sc:~]. 
+
+345> SC = conj[infconj], NP, ?*[sc:~, vc:~],  VC[inf_te, !inf_te:!].
+
+// (ex: 'Wolfowitz erkende eerder dat het een vergissing is geweest 
+//       de promotie te eisen van een vrouw bij de bank met wie hij 
+//       persoonlijk banden heeft gehad.')
+347> SC = |SC| NP, VC[inf_te, !inf_te:!].
+
+// NFR
+// added an constraint on the NP not to be a pronoun. Check the counter example:
+// (ex: 'Het fenomeen bestond natuurlijk al langer, |maar nu lijkt het een trend: 
+//       de paginagrote advertenties in dagbladen waarmee bedrijven, instellingen
+//       en individuen hun bezoedelde imago trachten te herstellen | of hun visie op 
+//       de zaak nog eens toelichten. ')
+350> SC @=  NP[start:~, pron:~], ?*[sc:~, vc:~],  VC[inf_te, !inf_te:!], ?*[sent:~, sc:~, fin:~] |adv[lemma:nu], adv[lemma:ook]|.
+
+// NFR
+// (ex: 'Het is voor het eerst dat Pakistan toegeeft stammen militaire steun te bieden om buitenlandse strijders 
+//       aan te pakken |die aan Al Qaida gelieerd zouden zijn.|')
+// cex: 'Neem contact op met de fabrikant als het font ook dan niet kan worden afgedrukt.')
+355> SC = NP[start:~, rel], ?*[sc:~, vc:~],  VC[fin];verb[pastpart] |punct[sent]|. 
+
+// (ex: 'Hij profiteerde van de warmte en van het tactische meesterwerk dat zijn ploeg had bedacht.')
+360> SC = NP[start:~, pron], NP, ?*[sc:~],  verb[fin];VC. 
+
+365> SC = NP[start:~, rel, pron], NP[pron], ?*[sc:~, vc:~],  VC[inf, modal]. 
+
+// Quite specific rule. If it does not apply the second rule in the layer will apply.
+// It will apply to the end of a subclause which has two pastparticiples with an coordinating
+// conjucntion in between.
+// (ex: 'Toegegeven: de journalistiek eet er een aardig belegde boterham van, maar wat
+//       beweegt de adverteerders tot het plaatsen van tekst |die doorgaans net zo 
+//       onaantrekkelijk is vormgegeven als geschreven|?')
+//
+370> SC @= NP[rel], ?*[sc:~, vc:~, rel:~],  VC[pastpart], ?[lemma:als], verb[pastpart].
+
+// (ex: 'Een vent zou dat nooit hebben gedaan.')
+375> SC @= ~|verb[modal]|NP[rel], ?*[comma:~, sc:~, vc:~],  VC[pastpart].
+		
+// (ex: 'Nog twee Oegandezen zijn om het leven gekomen, een vermoedelijke plunderaar 
+//       |die werd doodgeschoten door beveiligingsbeambten| en een voorbijganger 
+//       |die door verdwaalde kogels is geraakt.|')
+380> SC = NP[start:~, rel, pron], PP*,  VC[aux, pastpart]. 
+385> SC = NP[start:~, rel, pron], VC[aux, pastpart], PP*. 
+
+// Zo'n Maurice de Hond met de Deventer moordzaak, |die heeft in de media toch meer dan genoeg aandacht gekregen| voor zijn zaak? 
+387> SC = NP[rel], verb[fin], ?*[sc:~, comma:~], verb[pastpart].
+
+// Not an subordinated clause but useful to find SUBJ OBJ.
+400> SC = NP[rel, interrog], ?*[comma:~, subord:~], verb[fin].
+
+// NFR
+// Could be a bit too specific...
+// (ex: 'Het fenomeen bestond natuurlijk al langer, maar nu lijkt het een trend: 
+//       de paginagrote advertenties in dagbladen waarmee |bedrijven, instellingen 
+//       en individuen hun bezoedelde imago trachten te herstellen|
+//       of hun visie op de zaak nog eens toelichten. ')
+410> SC = | NP, ?*[sc:~], adv[interrog] | NP, ?*[sc:~], NP, verb, VC[inf_te, !inf_te:!].
+
+420> SC = | punct[comma] | NP[refl], ?*[comma:~, subord:~, sc:~], verb[fin] | punct[comma] | .

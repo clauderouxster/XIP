@@ -1,0 +1,614 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! Expressions temporelles aladin
+//! CH - septembre 2009
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Déduction:
+
+// marquage de temp_anchor:t0
+// a l'arrivee dans le service
+| PP{prep, NP{?*, #1[lemme:"arrivée",temp_anchor=t0]}}, (PP), PP{prep[lemme:dans], NP{?*,noun[lemme:"service%+"]}}  |
+~
+
+
+// Supprimer certaines lectures temporelles
+// e.g 34g/24h on ne veut pas une annotation temporelle pour 24h
+| punct[form:fslash], np{noun[tempexpr=~]}|
+~
+
+// J[0-9]+ quand modifie "allogreffe" n'a pas lecture temporelle
+// e.g. allogreffe (J97)
+| ?{?*,noun[lemme:"?+greffe"]}, ?*, NP{?*,noun[date_alad,date_alad=~]{?*,noun[date_alad=~]}} |
+~
+
+
+Variables:
+
+int add_j=0;
+string pref_date="";
+string sig="";
+string tempor="";
+string Entree="";
+string Sortie="";
+
+// initialiser la variable temps courante en fonction des infos temporelles
+// qui aparaissent dans le texte
+
+
+Script:
+
+
+// Date d'entree
+// Date d'entree : [T+0J]
+| NP{?*,noun[lemme:"date de entrée"]}, punct[form:f2pts], np{noun[date_alad]{punct,noun#2,punct}} |
+  {	
+//	print("TITI\n");
+	Entree = #2[surface];
+//	print("TITI\n");
+}
+
+
+// RECUPERATION DE LA DCT
+// intervalle Aladin permet de récupérer la DCT
+// rajouter un trait DCT sur la DCT calculée (dct =+)
+
+| noun[lemme:séjour]; noun[lemme:hospitalisation], noun[interval_alad]{?*,noun[date_alad,interval_first], ?*, noun[date_alad,interval_last]{punct,noun#2,punct}} |
+  {
+  _DCT = #2[surface];
+  print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+  }
+
+
+// Sortie le [T+3J]
+| verb[lemme:"sortir",partpas], (punct[form:f2pts]), np{?*,noun[date_alad]{punct,noun#2,punct}} | 
+   {
+       	  _DCT = #2[surface];
+	  Sortie = _DCT;
+
+    } 
+
+// Date de sortie : [T+15J]
+| NP{?*,noun[lemme:"date de sortie"]}, punct[form:f2pts], np{noun[date_alad]{punct,noun#2,punct}} |
+  {
+	_DCT = #2[surface];
+	Sortie = _DCT;
+}
+
+
+
+// date de sortie : etc.
+| NP{?*,noun[lemme:"sortie"]};PP{?*,NP{?*,noun[lemme:sortie]}}, (punct[form:f2pts]), np{?*,noun[date_alad]{punct,noun#2,punct}} | 
+   {
+       	  _DCT = #2[surface];
+	  Sortie = _DCT;
+
+    } 
+
+// CR sortie avec date dans la meme phrase.
+// e.g CR sortie [LIEU], le [T+66J]onsieur le Docteur [PERSONNE] Médecin Chef [LIEU] (fax : [TELFAX]) 
+//Monsieur et Cher Confrère, Suite à notre entretien téléphonique d'hier, voici ...
+| NP{?*,?[lemme:sortie]};PP{?*,NP{?*,?[lemme:sortie]}};AP{?*,?[lemme:"sorti%c"]}, (ins), (punct), np{?*,noun[date_alad]{punct,noun#2,punct}} |
+  {
+	if ( _DCT:"") {
+	   _DCT=#2[surface];
+	   }
+	if ( _DCT:"T+0J") {
+	   _DCT=#2[surface];
+	   Sortie = _DCT;
+           }
+   }
+
+
+// Regle defaut des date anonymisees.
+// restrictions if date is member of an interval.
+// we assume that temporal segments are not given by intervals. CHECK
+// restriction rajoutee si dans la meme phrase on a indication date entree et date sortie
+// dans ce cas, ne pas considerer la date sortie comme date courante
+// e.g Date d'entrée :[T+0J] Date de sortie : [T+15J]
+| noun#1[date_alad,anon,interval_first:~,interval_last:~]{punct, noun#2, punct} |
+    { 
+      _SEGTEMPS=#2[surface] ;
+      _compteSegtemps = _compteSegtemps+1;
+      //print("______"+Entree+"|"+Sortie +"|"+_SEGTEMPS+"\n");
+      // cas dans meme phrase entree et sortie ne pas prendre dct comme courante
+      if ( _SEGTEMPS:Sortie  & _compteSegtemps:2 & Entree ~:"" ) 
+      	 {
+      	 _SEGTEMPS=Entree;
+	 Entree="";
+      	 }
+      print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+      }
+
+
+// date aladin non anonymisee suivant le format J[0-9]+
+| noun#2[date_alad,anon:~] |
+   { 
+       add_j=removefirst(#2[lemme],1);
+       _SEGTEMPS="T+" + add_j + "J";
+       _compteSegtemps = _compteSegtemps+1;
+       print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+       print("TATATATA\n");
+     }
+
+
+
+// mauvais calcul de la DCT - valable pour la REA de Lyon uniquement:
+// on recupere la premiere date du Dossier patient qui pourra servir de DCT si on en n'a pas
+ if ( _compteSegtemps :1  ) {
+   	 _FIRSTDATE = _SEGTEMPS;
+ }
+
+
+
+
+
+
+// DATES REFERENTIELLES - TT
+
+// Dates correspondant aux evenements temp_anchor:t0
+// eg admission opération etc.
+| PP{prep[lemme:"lors de"];prep[lemme:"à"], NP{?*,noun[last,temp_anchor:t0]}} |
+{
+  _SEGTEMPS = "T+0J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// a son arrivee (dans le service;en reanimation...etc.)
+| PP{prep[lemme:"à"], NP{det[lemme:son],noun[lemme:arrivée]}}, PP{prep[lemme:dans];prep[lemme:en];prep[lemme:"à"]} |
+{
+  _SEGTEMPS = "T+0J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}  
+
+// dates complexes modifiées par un nom:temp_anchor:+
+// 2 jours après l'admission
+| NP{?*,noun[mwe,temp_anchor:t0]{noun{num#1,noun[val_duree:d]},prep[postdate,direc:+], ?*,noun[temp_anchor:t0]}} |
+{
+  add_j = #1[lemme];
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// 2 semaines apres l'admission
+| NP{?*,noun[mwe,temp_anchor:t0]{noun{num#1,noun[val_duree:w]},prep[postdate,direc:+], ?*,noun[temp_anchor:t0]}} |
+{
+  add_j = #1[lemme]*7;
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// 2 mois apres l'admission
+| NP{?*,noun[mwe,temp_anchor:t0]{noun{num#1,noun[val_duree:m]},prep[postdate,direc:+], ?*,noun[temp_anchor:t0]}} |
+{
+  add_j = #1[lemme]*30;
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// une dizaine de jours apres l'admission - approximation T0+10
+// EN COURS
+| NP{det[lemme:un],?*, noun[lemme:dizaine]}, PP{prep[lemme:de], NP{?*,noun[val_duree:d]}}, PP{prep[postdate,direc:+], NP{?*,noun[temp_anchor:t0]}} | 
+{
+  _SEGTEMPS = "T+10J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+
+
+// deux jours avant l'admission
+| NP{?*,noun[mwe,temp_anchor:t0]{noun{num#1,noun[val_duree:d]},prep[postdate,direc:-], ?*,noun[temp_anchor:t0]}} |
+{
+  add_j = #1[lemme];
+  _SEGTEMPS = "T-" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// ordinaux + TT
+// eg : le dixieme jour après l'admission
+| NP{?*,noun{noun{adj#1[ord],noun[val_duree:d]}, prep[postdate,direc:+],?*,noun[temp_anchor:t0]}} |
+{
+   add_j = #1[numJour];
+   _SEGTEMPS = "T+" + add_j + "J";
+   _compteSegtemps = _compteSegtemps+1;
+   print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// le dixieme jour avant l'admission
+| NP{?*,noun{noun{adj#1[ord],noun[val_duree:d]}, prep[postdate,direc:-],?*,noun[temp_anchor:t0]}} |
+{
+   add_j = #1[numJour];
+   _SEGTEMPS = "T-" + add_j + "J";
+   _compteSegtemps = _compteSegtemps+1;
+   print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+
+// eg : le dixieme jour post-opératoire
+| NP{?*,noun{adj#1[ord],noun[val_duree:d]}}, AP{adj[temp_anchor:t0,direc:+]} |
+{
+   add_j = #1[numJour];
+   _SEGTEMPS = "T+" + add_j + "J";
+   _compteSegtemps = _compteSegtemps+1;
+   print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// dixieme jour pre-operatoire
+| NP{?*,noun{adj#1[ord],noun[val_duree:d]}}, AP{adj[temp_anchor:t0,direc:-]} |
+{
+   add_j = #1[numJour];
+   _SEGTEMPS = "T-" + add_j + "J";
+   _compteSegtemps = _compteSegtemps+1;
+   print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// idem dans PP (changement de structure)
+// au dixieme jour post-opératoire 
+| PP{prep,NP{?*,noun{adj#1[ord],noun[val_duree:d]}}}, AP{adj[temp_anchor:t0,direc:+]} |
+{
+   add_j = #1[numJour];
+   _SEGTEMPS = "T+" + add_j + "J";
+   _compteSegtemps = _compteSegtemps+1;
+   print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+
+
+
+
+// J10 (pas anonymisé mais abrégé de cette manière dans les CR
+// eg "à,en, vers J10, le patient..." 
+// Attention : à J10 de son admission
+| PP{(prep[lemme:"en"];prep[lemme:vers]), NP{noun#1[first,last,lemme:"J(%d)%d"]}} |
+ {
+  add_j= removefirst(#1[lemme],1);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+// np pas insere dans un pp en debut de phrase
+| NP[first]{noun#1[first,last,lemme:"J(%d)%d"]} | 
+ {
+  add_j= removefirst(#1[lemme],1);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+// à J8 pas suivi de "de"
+| PP[last]{prep[lemme:"à"], NP{noun#1[first,last,lemme:"J(%d)%d"]}} |
+ {
+  add_j= removefirst(#1[lemme],1);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+| PP[last:~]{prep[lemme:"à"], NP{noun#1[first,last,lemme:"J(%d)%d"]}}, ?{?[lemme:~de]} |
+ {
+  add_j= removefirst(#1[lemme],1);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+// J 25 (avec espace)
+// np pas insere dans un pp en debut de phrase
+| NP[first]{noun#1[lemme:"j (%d)%d"]} | 
+ {
+  add_j= removefirst(#1[lemme],2);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+// suivi de 2 points
+| NP{noun#1[lemme:"j (%d)%d"]};PP{prep,NP{noun#1[lemme:"j (%d)%d"]}}, punct[form:f2pts] | 
+ {
+  add_j= removefirst(#1[lemme],2);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+// en vers J 25
+| PP{(prep[lemme:"en"];prep[lemme:vers]), NP{noun#1[first,last,lemme:"j (%d)%d"]}} |
+ {
+  add_j= removefirst(#1[lemme],2);
+  _SEGTEMPS = "T+"+ add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+
+
+//"Les deux jours post-extubation se déroulent sans problème particulier" Rajouter 2J a segment extubation
+
+| NP{det, num#1, noun[timeduree,val_duree:d]}, NP{noun{prefix,noun}} |
+ {
+   add_j = removefirst(_SEGTEMPS,2)+#1[lemme]; 
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+
+}
+
+// <n> année plus tard, apres, etc.
+| NP[relative,tempexpr,date]{noun{num#1,noun[val_duree:y],?[temp_ref:TT, direc:+]}} |
+{
+    add_j = removefirst(_SEGTEMPS,2) + #1[lemme]*365;
+    print("TITITITIT  "+ add_j);
+    _SEGTEMPS = "T+" + add_j + "J";
+    _compteSegtemps = _compteSegtemps+1;
+    print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+// <n> mois plus tard, apres, etc.
+| NP[relative,tempexpr,date]{noun{num#1,noun[val_duree:m],?[temp_ref:TT, direc:+]}} |
+{
+    add_j = removefirst(_SEGTEMPS,2) + #1[lemme]*30;
+    print("TITITITIT  "+ add_j);
+    _SEGTEMPS = "T+" + add_j + "J";
+    _compteSegtemps = _compteSegtemps+1;
+    print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+// <n> semaine(s) plus tard, apres etc.
+| NP[relative,tempexpr,date]{noun{num#1,noun[val_duree:w],?[temp_ref:TT, direc:+]}} |
+{
+    add_j = removefirst(_SEGTEMPS,2) + #1[lemme]*7;
+    print("TITITITIT  "+ add_j);
+    _SEGTEMPS = "T+" + add_j + "J";
+    _compteSegtemps = _compteSegtemps+1;
+    print("TOTOTOTO ="+_SEGTEMPS + "\n");
+}
+
+// quelques jours plus tard, apres etc.
+// on va faire une approximation a +3J
+| NP[relative,tempexpr,date]{det[lemme:quelque,pl:+],noun[val_duree:d],?[temp_ref:TT,direc:+]} |
+{
+  add_j = removefirst(_SEGTEMPS,2)+"3"; 
+  print("TITITITIT  "+ add_j);
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// Deux jours plus tard, apres etc.
+| NP[relative,tempexpr,date]{noun{num#1,noun[val_duree:d],?[temp_ref:TT,direc:+]}} |
+{
+  add_j = removefirst(_SEGTEMPS,2)+#1[lemme]; 
+  print("TITITITIT  "+ add_j);
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// Le lendemain
+// A rafiner, le lendemain de l'opération pas necessairement temps_courant + 1J
+// dependances pas encore calculees ici
+| NP[relative,tempexpr,date]{det, noun[temp_ref:TT,delta_t:+1j]} |
+{
+  add_j = removefirst(_SEGTEMPS,2) + 1;
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+
+
+// Idem avec heures, 48h plus tard
+|NP[tempexpr,heure]{noun{num#1,noun[heure],?[temp_ref:TT,direc:+]}} |
+{
+  add_j = #1[lemme];
+  if ( add_j : 24) {
+
+      add_j = removefirst(_SEGTEMPS,2) + 1 ;
+      _SEGTEMPS = "T+" + add_j + "J";
+      _compteSegtemps = _compteSegtemps+1;
+      print("TOTOTOTO ="+_SEGTEMPS +"\n");
+      }
+  if ( add_j : 48) {
+     add_j = removefirst(_SEGTEMPS,2) + 2 ;
+     _SEGTEMPS = "T+" + add_j + "J";
+     _compteSegtemps = _compteSegtemps+1;
+     print("TOTOTOTO ="+_SEGTEMPS +"\n");
+     }
+}
+
+
+// la veille
+// A rafiner. "La veille de l'opération pas necessairement Tcourant -1J
+// contrainte pour eviter PP en de a droite de "la veille"
+// dependances par encore calculees ici.
+// la veille (seul)
+| NP[relative,tempexpr,date]{det, noun#1[temp_ref:TT,delta_t:-1j]}, ?[form:~fde]| 
+{ 
+  add_j = removefirst(_SEGTEMPS,2) - 1;
+  _SEGTEMPS = "T+" + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+// la veille de temp_anchor:t0
+// eg la veille de son admission
+| NP[relative,tempexpr,date]{det, noun#1[temp_ref:TT,delta_t:-1j]}, ?[form:fde]{?*,np{?*,?[temp_anchor:t0]}} | 
+{ 
+  _SEGTEMPS = "T+-1J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+}
+
+
+// deux jours avant
+| NP[relative,tempexpr,date]{noun{num#1,noun[val_duree:d],?[temp_ref:TT,direc:-]}} |
+{
+  add_j = removefirst(_SEGTEMPS,2)-#1[lemme];
+  if ( add_j < 0 ) {
+     tempor="T";
+  } 
+  if ( add_j > 0 ) {
+     tempor = "T+";
+  }
+  _SEGTEMPS = tempor + add_j + "J";
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS +"\n");
+  print("TOTOTOTO ="+_DCT +"\n");
+}
+
+
+// Idem avec heures, 48h plus tard
+| NP[tempexpr,heure]{noun{num#1,noun[heure],?[temp_ref:TT,direc:-]}} |
+{
+  add_j = #1[lemme];
+  if ( add_j : 24) {
+
+      add_j = removefirst(_SEGTEMPS,2) - 1 ;
+      _SEGTEMPS = "T+" + add_j + "J";
+      _compteSegtemps = _compteSegtemps+1;
+      print("TOTOTOTO ="+_SEGTEMPS +"\n");
+      }
+  if ( add_j : 48) {
+     add_j = removefirst(_SEGTEMPS,2) - 2 ;
+     _SEGTEMPS = "T+" + add_j + "J";
+     _compteSegtemps = _compteSegtemps+1;
+     print("TOTOTOTO ="+_SEGTEMPS +"\n");
+     }
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+// DATES REFERENTIELLES ST
+// Note: ST correspond a la date relevee dans le CR (DCT relative anonymisee)
+// En fonction des corpus, differences
+//////////////////////////////////////////////////////////////////////////
+
+
+// Pour la REA Lyon ST indiquee au debut (premiere date rencontree)
+// Aujourd'hui, actuellement, à ce jour etc.
+| adv#1[relative:+,temp_ref:st, delta_t:0] |
+{
+  if ( _DCT:"") {
+     
+      pref_date =  left(_FIRSTDATE,2);
+      if ( pref_date:"T+") {
+      	 _DCT = _FIRSTDATE;
+      }
+      else {
+      	_DCT = _SEGTEMPS;    
+      }
+  }
+  _SEGTEMPS = _DCT;
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+}
+
+
+//| adv#1[relative:+,temp_ref:st, delta_t:0] |
+//{
+//  if ( _DCT:"") {
+//     _DCT = _FIRSTDATE;
+//  }
+//  _SEGTEMPS = _DCT;
+//  _compteSegtemps = _compteSegtemps+1;
+//  print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+//}
+
+
+// Rajouts d'expressions temporelles dans Aladin que l'on ne veut pas necessairement introduire dans la grammaire
+// generale car trop ambigu dans un contexte general.
+// eg: Mise en place d'une voie centrale tunnelisée sous clavière gauche "ce jour"
+// en ce jour, etc.
+| NP#1[relative=+,tempexpr=+,temp_ref=st,delta_t=0]{det[dem],noun[val_duree:d]} |
+{
+   if ( _DCT:"") {
+     
+      pref_date =  left(_FIRSTDATE,2);
+      if ( pref_date:"T+") {
+      	 _DCT = _FIRSTDATE;
+      }
+      else {
+      	_DCT = _SEGTEMPS;    
+      }
+   }
+
+  _SEGTEMPS = _DCT;
+  _compteSegtemps = _compteSegtemps+1;
+  print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+}
+
+// doppler trans cranien réalisé à 48h
+| noun#1[tempexpr]{num#2, noun[heure,last]} |
+{
+  add_j=#2[lemme];
+  if ( add_j:24 ) {
+   _SEGTEMPS = "T+1J";
+   _compteSegtemps = _compteSegtemps+1;
+  }
+  if ( add_j:48 ) {
+  _SEGTEMPS = "T+2J";
+  _compteSegtemps = _compteSegtemps+1;
+  }
+  print("TOTOTOTO ="+_SEGTEMPS + "et DCT est :"+ _DCT + "\n");
+}
+
+
+// Take into account breaks in tenses in the text.
+// e.g "A noter que la lithiase était visible dans la vésicule biliaire sur le scanner début [T-1M].
+// Monsieur [PERSONNE] est alors traité par antibiothérapie large FORTUM VANCO GENTAMICINE et laissé à jeûn."
+
+
+
+// Approximations utiles. Si on parle de suite opératoires alors le temps doit au moins etre a T+1J (sauf si il est déjà postérieur a T+0J)
+// Les suites post-opératoires ....
+// les suites opératoires
+// Dans ce cas, si le temps est a T+OJ ou T < 0J on le met a T+1J
+| noun[lemme:"suite opératoire"] |
+{
+  sig = _SEGTEMPS[1];
+  if ( _SEGTEMPS:"T+0J" || sig:"-" ) {
+    _SEGTEMPS = "T+1J";
+    _compteSegtemps = _compteSegtemps +1;
+    print ("TOTOTOT = "+_SEGTEMPS + "\n");
+    }
+}
+  
+| NP{?*,noun[lemme:suite]}, AP{adj[lemme:"post-opératoire"]} |
+{
+  sig = _SEGTEMPS[1];
+//  print("TATA "+ sig + "\n");
+  if ( _SEGTEMPS:"T+0J"  || sig:"-")  {
+    _SEGTEMPS = "T+1J";
+    _compteSegtemps = _compteSegtemps +1;
+    print ("TOTOTOT = "+_SEGTEMPS + "\n");
+    }
+}
+
+
+
+
+
+
+
+Déduction:
+
+
+if ( HEURE(#1) )
+   HEURE(#1,#1,#1)
+
+| NP#1[tempexpr=+]{?*,noun[date_alad,last,date=+,tempexpr=+]} |
+  DATE[absolue=+,anon=+](#1)
+
+
+
+
+

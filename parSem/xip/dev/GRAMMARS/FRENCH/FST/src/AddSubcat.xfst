@@ -1,0 +1,112 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      extract clitics from morphological analyser
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -s [LEX.fst] -s [SUBCAT.fst] -l [ThisFile]
+# ============================================================================
+
+define subcat
+
+define lex
+
+# clear remaining nets on the stack
+clear stack
+
+
+#
+# LETTERS AND CHARS
+
+define Char [
+A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R |
+S | T | U | V | Z | a | b | c | d | e | f | g | h | i | j | k | l | m |
+n | o | p | q | r | s | t | u | v | w | x | y | z | %" | %" | %' | %- | %. |
+%/ | à | â | ç | è | é | ê | ë | î | ï | ô | ö| ù | û | ü | %0 | 1 | 2 | 3 | 4
+| 5 | 6 | 7 | 8 | 9 | %@ | %  | %% | %_ | %, | %$ | %# | %& | %* 
+] ;
+
+
+define TVERB "+Verb" ;
+define TNOUN "+Noun" ;
+define TADJ "+Adj" ;
+define TSCONJ "+SConj";
+
+define POSTAGS [
+        TVERB | TNOUN | TADJ | TSCONJ
+];
+
+define TAG [\Char];
+
+# extracts from subcat lexicon  (separated by POS) #
+# format: upper side is lemma + subcat features; lower side is lemma
+define VERBsubcat [ subcat .o. $[TVERB] ] .o. [TVERB -> 0] ;
+define NOUNsubcat [ subcat .o. $[TNOUN] ] .o. [TNOUN -> 0];
+define ADJsubcat [ subcat .o. $[TADJ] ] .o. [TADJ -> 0];
+define SCONJsubcat [ subcat .o. $[TSCONJ] ] .o. [TSCONJ -> 0];
+
+# extracts some sublexicons (by POS) from basic morphological lexicon
+define VERBlex  [  $[TVERB]  .o. lex ] ;
+define NOUNlex  [  $[TNOUN]  .o. lex ] ;
+define ADJlex   [  $[TADJ]   .o. lex ] ;
+define SCONJlex [  $[TSCONJ] .o. lex ] ;
+
+# extracts from basic morphological lexicon those words that also belong to subcat lexicon (by POS)
+define VERBlex2 [  [VERBsubcat.2 TAG* TVERB TAG*] .o. VERBlex ] ;
+define NOUNlex2 [  [NOUNsubcat.2 TAG* TNOUN TAG*] .o. NOUNlex ] ;
+define ADJlex2 [  [ADJsubcat.2 TAG* TADJ TAG*] .o. ADJlex ] ;
+define SCONJlex2 [  [SCONJsubcat.2 TAG* SCONJ TAG*] .o. SCONJlex ] ;
+
+#define sublex [ VERBlex | NOUNlex | ADJlex ] ;
+
+# add subcat features to those words that belong to both morphol. and subcat lexicons (by POS)
+define Synlex [
+    [ [VERBsubcat [\Char]*]  .o.  VERBlex2 ]  |
+    [ [NOUNsubcat [\Char]*]  .o.  NOUNlex2 ]  |
+    [ [ADJsubcat [\Char]*]   .o.  ADJlex2  ]  |
+    [ [SCONJsubcat [\Char]*] .o.  SCONJlex2] 
+];
+
+# find words that are not described in subcat lexicons
+
+read regex [
+ [VERBlex   .o. [ ?* -  VERBlex2.2]  ]   |
+ [NOUNlex   .o. [ ?* -  NOUNlex2.2]  ]   |
+ [ADJlex    .o. [ ?* -  ADJlex2.2]   ]   |
+ [SCONJlex  .o. [ ?* -  SCONJlex2.2] ]   |
+ [~$[POSTAGS] .o. lex]
+];
+define NotSynlex ;
+
+
+read regex Synlex | NotSynlex ;
+
+
+#modify some entries
+define lex;
+# add  deSN feature to verb naître
+read regex [ %+deSN <-  [..] || .#. n a î t r e   _ TAG ] .o. lex ;
+
+define lex
+# replace deSN feature by deSN2: ditransitive construction: e.g. faire
+read regex [ %+deSN2 <-  %+deSN || .#. [f a i r e | r é c l a m e r] TAG*   _ ] .o. lex ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+

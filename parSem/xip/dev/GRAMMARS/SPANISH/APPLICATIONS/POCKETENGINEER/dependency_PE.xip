@@ -1,0 +1,403 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : dependency.xip
+//!
+//!   Content:	definition of dependency PEUNIT for Pocket Engineer Aplication
+//!
+//!   Language:	SPANISH
+//! ENCODING:	UTF-8	[€àâáäã]
+//!
+//!   Date       : 10-May-2006
+//! Update:	29-May-2008	:: changed to UTF-8
+//!
+//!   Author     : Elena López García
+//!  
+//!x
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+
+|#1, punct[comma], np#2, punct[comma], np#3, conj#4[coord], np#5| 
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& head(#50, #5))
+	COORD(#4, #10),
+	COORD(#4, #20),
+	COORD(#4, #30),
+	COORD(#4, #50).
+
+
+//Dependency rules for MOD
+//borrones o manchas en el fax
+|np#1, conj#2[coord:+], np#3, ?*, pp#4{prep[lemma:en], np}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& head(#40, #4)
+	& coord(#2, #10)
+	& coord(#2, #30)
+	& mod(#30, #40)
+	& ~mod(#10, #40))
+	MOD[pos=+](#10, #40).
+
+
+////////////////////////////////////////////////////////
+//
+// Adapt basic linguistic structures
+//
+////////////////////////////////////////////////////////
+
+//Split up SCs, which only get in the way
+
+Reshuffling:
+20>  SC{?-#1} = #1.
+
+
+
+
+//////////////////////////////////////////////////////////
+//
+// Construct initial PEU chunks
+//
+/////////////////////////////////////////////////////////
+
+//We give a special feature for the PPs starting by "de"
+DependencyRules:
+|pp#1[pp_de=+]{prep[lemma:de], ?+}|
+	~
+
+
+Reshuffling:
+//A top level AP, NP, PP or ?[verbal] is a PEU
+60> AP#1 = PEU{#1}, where (~mother(#1, #2)).
+60> NP#1 = PEU{#1}, where (~mother(#1, #2)).
+60> PP#1 = PEU{#1}, where (~mother(#1, #2)).
+60> #1[verbal] = PEU[verbal=+]{#1}, where (~mother(#1, #2)).
+60> REFLEX#1 = PEU{#1}, where (~mother(#1, #2)).
+60> AVP#1 = PEU{#1}, where (~mother(#1, #2)).
+
+
+DependencyRules:
+//Assign heads to the PEUs created above.
+70> |PEU#1{#2}|
+	if(head(#20, #2))
+	HEAD(#20, #1).
+	
+////////////////////////////////////////////////////////////
+//
+// Expand and merge PEU chunks
+//
+////////////////////////////////////////////////////////////
+
+
+DependencyRules:
+
+//Coordinated elements.
+100> |PEU#1, conj#2[coord], PEU#3|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& coord(#2, #10)
+	& coord(#2, #20))
+	COMBINE(#1, #3).
+
+100> |PEU#1, punct#2[comma], PEU#3, conj#4[coord], PEU#5|
+	if(head(#10, #1)
+	& coord(#4, #10))
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+	
+
+//An NP or PP followed by an AP
+100> |PEU#1{NP}, PEU#2{AP}|
+	COMBINE(#1, #2).
+
+100> |PEU#1{PP}, PEU#2{AP}|
+	COMBINE(#1, #2).
+
+//100> |PEU#1{NP}, PEU#2{PP}, PEU#3{AP}|
+	//COMBINE(#2, #3).
+
+//Envío de un trabajo de impresión diferido
+100> |PEU#1{PP}, PEU#2{PP}, PEU#3{AP}|
+	COMBINE(#2, #3).
+
+//una barra metálica delgada
+100> |PEU#1{NP}, PEU#2{AP}, PEU#3{AP}|
+	COMBINE(#2, #3).
+
+//de una barra metálica delgada
+100> |PEU#1{PP}, PEU#2{AP}, PEU#3{AP}|
+	COMBINE(#2, #3).
+
+//copias a dos caras
+100> |PEU#1{NP}, PEU#2{PP{prep[lemma:a], np{num, noun[lemma:cara]}}}|
+	COMBINE(#1, #2).
+
+100> |PEU#1{PP}, PEU#2{PP{prep[lemma:a], np{num, noun[lemma:cara]}}}|
+	COMBINE(#1, #2).
+
+//With an adverb between the noun and the adjective (or modifier)
+//copias completamente en blanco
+100> |PEU#1{NP}, PEU#2{AVP{adv[mente]}}, PEU#3{PP}|
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+100> |PEU#1{NP}, PEU#2{AVP}, PEU#3{AP}|
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+100> |PEU#1{PP}, PEU#2{AVP{adv[mente]}}, PEU#3{PP}|
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+100> |PEU#1{PP}, PEU#2{AVP}, PEU#3{AP}|
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+//A reflexive pronoun followed by the verb
+100> |PEU#1{REFLEX}, PEU#2[verbal]|
+	COMBINE(#1, #2).
+
+//A negative adverb followed by a verb
+100> |PEU#1{AVP{adv[lemma:no]}}, PEU#2[verbal]|
+	COMBINE(#1, #2).
+
+
+//an NP followed by a PP[pp_de] (but not a clitique pronoun)
+//el alimentador de documentos
+120> |PEU#1{NP[enclit:~]}, PEU#2{PP[pp_de]}|
+	COMBINE(#1, #2).
+
+//el alimentador automático de documentos
+120> |PEU{NP[enclit:~]}, PEU#1{AP}, PEU#2{PP[pp_de]}|
+	COMBINE(#1, #2).
+
+//modificación de cambio automático de documentos
+120> |PEU{PP[pp_de]}, PEU#1{AP}, PEU#2{PP[pp_de]}|
+	COMBINE(#1, #2).
+
+//An NP[pp_a] followed by a PP{a ...}
+120> |PEU#1{NP[pp_a]}, PEU#2{PP{prep[lemma:a], ?+}}|
+	COMBINE(#1, #2).
+
+//a PP followed by a PP[pp_de]
+//del alimentador de documentos
+120> |PEU#1{PP}, PEU#2{PP[pp_de]}|
+	COMBINE(#1, #2).
+
+//A PP[pp_a] followed by a PP{a ...}
+120> |PEU#1{PP[pp_a]}, PEU#2{PP{prep[lemma:a], ?+}}|
+	COMBINE(#1, #2).
+
+//A XX[pp_en] followed by a PP{en...}
+120> |PEU#1{VPART[pp_en]}, PEU#2{PP{prep[lemma:en], ?+}}|
+	COMBINE(#1, #2).
+
+//An NP followed by an NP
+//de las bandejas 1, 2 ó 3
+120> |PEU#1{NP}, PEU#2{NP}|
+	if(head(#20, #2)
+	& #20[lemma:~que])
+	COMBINE(#1, #2).
+
+//a PP followed by an NP
+//de las bandejas 1, 2 ó 3
+120> |PEU#1{PP}, PEU#2{NP}|
+	if(head(#20, #2)
+	& #20[lemma:~que])
+	COMBINE(#1, #2).
+
+//we want to avoid cases like "retirar las hojas del alimentador"
+125> |PEU#1{FV}, ?*, PEU#2{NP}, PEU#3{PP[pp_de]}|
+	if(head(#10, #1)
+	& #10[non_pp_de]
+	& ^combine(#2, #3))
+	~.
+
+//tanto el alimentador de documentos como el cristal de exposición
+//JUNTOS????
+120> |PEU#1{AVP{adv[lemma:tanto]}}, PEU#2, (PEU*), PEU#3{AVP{adv[lemma:como]}}, PEU#4|
+	COMBINE(#1, #2),
+	
+	COMBINE(#3, #4).
+
+//comparative construction
+//papel más pesado que...
+120> |PEU#1, conj#2[compar], PEU#3|
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+
+
+//A verb with its object
+120> |PEU#1[verbal], PEU#2{NP}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& obj(#10, #20))
+	COMBINE(#1, #2).
+
+//the object is a pronoun
+120> |PEU#1{NP}, PEU#2[verbal]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& obj(#20, #10))
+	COMBINE(#1, #2).
+
+120> |PEU#1[verbal], PEU#2{NP[enclit]}|
+	COMBINE(#1, #2).
+
+//the object is a verb
+120> |PEU#1[verbal], PEU#2{VINF}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& obj(#10, #20))
+	COMBINE(#1, #2).
+
+
+//there is an adverb between the verb and the object
+120> |PEU#1[verbal], PEU#2{AVP}, PEU#3{NP}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& obj(#10, #30))
+	COMBINE(#1, #2),
+	COMBINE(#2, #3).
+
+120> |PEU#1[verbal], PEU#2{PP}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& obj(#10, #20))
+	COMBINE(#1, #2).
+
+//the object is a verb
+//120> |PEU#1[verbal], PEU#2[verbal]|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[imp]
+//	& #20[inf])
+//	COMBINE(#1, #2).
+
+//A predicative verb followed by its complement. E.g. "antes de que quede limpio"
+120> |PEU#1[verbal], PEU#2{AP}|
+	if(head(#10, #1)
+	& #10[pred])
+	COMBINE(#1, #2).
+
+//A copulative verb with its attribute
+120> |PEU#1[verbal], PEU#2{AP}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop]
+	& attrib(#10, #20))
+	COMBINE(#1, #2).
+
+//special case: "está en blanco"
+120> |PEU#1[verbal], PEU#2{PP{prep[lemma:en], AP{adj[lemma:blanco]}}}|
+	COMBINE(#1, #2).
+
+//está a menos de 9,5 mm
+120> |PEU#1[verbal], PEU#2{PP}|
+	if(head(#10, #1)
+	& #10[lemma:estar])
+	COMBINE(#1, #2).
+
+
+//A verb[pp_en] with a prepositional complement starting by "en".
+120> |PEU#1{FV[pp_en]}, PEU#2{PP{prep[lemma:en], ?+}}|
+	COMBINE(#1, #2).
+
+//A negative pronoun followed by reflexive verb
+120> |PEU#1{AVP{adv[lemma:no]}}, PEU#2{REFLEX}, PEU[verbal]|
+	COMBINE(#1, #2).
+
+//A passive verb with its subject
+120> |PEU{REFLEX}, PEU#1[verbal], PEU#2{NP}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& subj(#10, #20))
+	COMBINE(#1, #2).
+
+120> |PEU{REFLEX}, PEU#1[verbal], PEU#2{AVP{adv[lemma:tanto]}}, PEU#3{NP}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& subj(#10, #30))
+	COMBINE(#1, #2).
+
+120> |PEU#1{NP}, PEU#2{REFLEX}, PEU#3[verbal] |
+	if(head(#10, #1)
+	& head(#30, #3)
+	& subj(#30, #10))
+	COMBINE(#1, #2).
+
+120> |PEU#1{NP#4}, ?*, PEU#2{REFLEX}, PEU#3[verbal]{FV#5} |
+	if(head(#10, #1)
+	& head(#30, #3)
+	& subj(#30, #10))
+	COMBINE(#1, #3),
+	COMBINE(#4, #5).
+
+
+Reshuffling:
+126> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}, PEU#7 {?-#8}, PEU#9 {?-#10} , PEU#11 {?-#12}, PEU#13 {?-#14}= #1{#2, #4, #6, #8, #10, #12, #14}, where(COMBINE(#1, #3) & COMBINE(#3, #5) & COMBINE(#5, #7) & COMBINE(#7, #9)& COMBINE(#9, #11)& COMBINE(#11, #13)).
+127> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}, PEU#7 {?-#8}, PEU#9 {?-#10} , PEU#11 {?-#12}= #1{#2, #4, #6, #8, #10, #12}, where(COMBINE(#1, #3) & COMBINE(#3, #5) & COMBINE(#5, #7) & COMBINE(#7, #9)& COMBINE(#9, #11)).
+128> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}, PEU#7 {?-#8}, PEU#9 {?-#10} = #1{#2, #4, #6, #8, #10}, where(COMBINE(#1, #3) & COMBINE(#3, #5) & COMBINE(#5, #7) & COMBINE(#7, #9)).
+//Exemple phrase: La imagen está a menos de 9,5 mm
+129> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6}, PEU#7 {?-#8} = #1{#2, #4, #6, #8}, where(COMBINE(#1, #3) & COMBINE(#3, #5) & COMBINE(#5, #7)).
+130> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5 {?-#6} = #1{#2, #4, #6}, where(COMBINE(#1, #3) & COMBINE(#3, #5)).
+140> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2, #4}, where(COMBINE(#1, #3)).
+
+//We put together in the same PEU a subject and the verb when it is the passive form (subj+se+verb)
+//e.g. los trabajos de la estación de trabajo se imprimen bien.
+//200> PEU#1{NP#2, PP*#3, ?-#4}, PEU#5{REFLEX#7, FV#8, ?-#9} = PEU{#2, #3, #4, #7, #8, #9}, where(COMBINE(#3, #8) & print("#8="+#8[lemma]+" #3="+#3[lemma]+" Cat="+#3+"\n")).	
+200> PEU#1{NP#2, PP*#3, ?-#4}, PEU#5{REFLEX#7, FV#8, ?-#9} = PEU{#2, #3, #4, #7, #8, #9}, where(COMBINE(#2, #8)).
+
+
+//Cram together any PEUs that are separated only by a slash
+300> PEU{?-#1}, punct#2[lemma:\/], PEU{?-#3} = PEU{#1, #2, #3}.
+
+//Put together in the same PEU two coordinated elements.
+//e.g. "ruido de chillido o zumbido"
+//or "chillido o zumbido"
+300> PEU#1{?-#2}, conj#3[coord], PEU#4{?-#5} = PEU[coord=+]{#2, #3, #5}, where(COMBINE(#1, #4)).
+
+//faxes, impresiones y copias
+301> PEU#1{?-#2}, punct#3[comma], PEU#4[coord]{?-#5} = PEU{#2, #3, #5}, where(COMBINE(#1,#3)).
+
+//Put together a comparative construction
+//e.g. papel más pesado que...
+//changer cette regle!!!
+300> PEU#1{?*#2, #3, ?-#4}, conj#5[compar], PEU#6{?-#7} = PEU{#2, #3, #4, #5, #7}, where(COMBINE(#3, #5) & COMBINE(#5, #6)).
+
+// Put in the same PEU an abbreviation in curly brackets that just followed a nominal PEU.
+// e.g. Alimentador de alta capacidad (HCF).
+300> PEU{NP#1,?-#2}, #3[paren], PEU{NP#4{noun#6[first,last,toutmaj]}}, #5[paren] =
+    PEU{#1,#2,#3,#4{#6},#5}.
+300> PEU{PP#1,?-#2}, #3[paren], PEU{NP#4{noun#6[first,last,toutmaj]}}, #5[paren] =
+    PEU{#1,#2,#3,#4{#6},#5}.
+
+// Put in the same PEU the noun "botón" and the name of the touch  in brackets
+//e.g. Seleccione el botón [Confirmar]
+300> PEU#1, #2[crochet], PEU#3, #4[crochet] = 
+    PEU{#1,#2,#3,#4}.
+
+//de 60 a 90 g/m² (16 a 24 lb)
+
+//90 g/m² (24 lb)
+
+Variables:
+string _norm;
+string _surf;
+
+
+DependencyRules:
+//Mark PEUNITs and compute their normalized forms
+|PEU#1|
+	if(normalize(#1, _norm) & _surf = #1[surface])
+	PEUNIT(#1, ##PENORM[lemma = _norm], ##PESURF[lemma=_surf]).

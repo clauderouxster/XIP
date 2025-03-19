@@ -1,0 +1,695 @@
+#! -------------------------------------------------------------------------
+#! TYPE:	xfst
+#! CONTENT:	German morphology : inflection of function words
+#!
+#! AUTHOR:	Anne Schiller, XRCE
+#! CREATED:	19-May-2006
+#!		- derived from flex-func.lexc
+#! -------------------------------------------------------------------------
+
+!===================================================================================
+! References:
+! DG == Duden (1984)
+!	"Die Grammatik", Dudenverlag
+! DR == Duden (1996)
+!	"Die deutsche Rechtschreibung", Dudenverlag
+! HB == Helbig/Buscha (1993)
+!	"Deutsche Grammatik", Langenscheidt
+! HG ==	Heinz Griesbach (1986): 
+!	"Neue Deutsche Grammatik", Langenscheidt
+!===================================================================================
+
+# some general definitions
+
+# boundary symbols
+define AND	"^&" ;		# boundary for contracted forms (an^&dem)
+define SEP	"^|" ;		# morpheme boundary (eben^|der)
+define BD	"^+" ;		# boundary for phonologiacl rules
+
+# spelling markers 
+define NEW	"^New" ;	# new spelling
+define OLD	"^Old" ;	# old spelling
+define ERR	"^Err" ;	# erroneous, but frequent spelling
+define SPELL	NEW | OLD | ERR ;
+
+# rules for final cleanup
+define MORPH		[ e -> 0 || e BD _ ] ;
+define CLEANSRF		[ BD | AND | SEP | SPELL ] -> 0 ;
+define CLEANLEX		[ BD -> 0 ].i;
+
+
+# some features
+define PRON	%+Pron:0 ;	# pronoun
+define DET	%+Det:0 ;	# determiner
+define PREDET	%+Predet:0 ;	# imnvariant predeterminer 	"manch [ein...]"
+define PADJ	%+PAdj:0 ;	# adjective-like pronoun 	"[der] andere"
+define ADV	%+Adv:0 ;	# adverb
+define NOUN	%+Noun:0 ;	# noun				"[das] Meine"
+define DEF	%+Def:0 ;	# definite			"der [Mann]"
+define INDEF	%+Indef:0 ;	# indefinite			"manche"
+define DEM	%+Dem:0 ;	# demonstrative 		"diese"
+define NEG	%+Neg:0 ;	# negative			"keine"
+define QUANT	%+Quant:0 ;	# quantifier			"alle"
+define REL	%+Rel:0 ;	# relative			"[derjenige], welcher"
+define PERS	%+Pers:0 ;	# personal			"er"
+define REFL	%+Refl:0 ;	# reflexive			"sich"
+define RECP	%+Recp:0 ;	# reciprocal			"einander"
+define POSS	%+Poss:0 ;	# possessive			"sein [Auto]"
+define WH	%+Wh:0 ;	# interrogative			"welche?"
+
+define P1	%+1P:0 ;	# 1st person
+define P2	%+2P:0 ;	# 2nd person
+define P3	%+3P:0 ;	# 3rd person
+
+define MSG	%+Masc:0 %+Sg:0 ;
+define FSG	%+Fem:0	 %+Sg:0 ;
+define NSG	%+Neut:0 %+Sg:0 ;
+define XSG	%+MFN:0  %+Sg:0 ;
+define XPL	%+MFN:0  %+Pl:0 ;
+
+define NOM	%+Nom:0 ;	# nominative
+define ACC	%+Acc:0 ;	# accusative
+define DAT	%+Dat:0 ;	# dative
+define GEN	%+Gen:0 ;	# genitive
+define NOMACC	NOM | ACC ;
+
+define INVAR	%+Invar:0 ;	# invariant			"vielerlei"
+define PRED	%+Pred:0 ;	# predicative
+
+define AGRWK	%+AgrWk:0 ;	# requires following adjective with weak inflection
+define AGRST	%+AgrSt:0 ;	# requires following adjective with weak inflection
+
+define ABBR	%+Abbr:0 ;	# abbreviation
+define POL	%+Polite:0 ;	# polite form			"Sie"
+define COLL	%+Coll:0 ;	# colloquial
+define ELID	%+Elid:0 ;	# elided form 			"[geht] 's"
+
+# ------------------------------------------------------------------------------
+# adjective-like inflection
+
+! ----------------------------------------------------------------------
+!                       Nom     Acc     Dat     Gen
+! ----------------------------------------------------------------------
+! St    Masc Sg.        +er     +en     +em     +en
+!       Fem Sg.         +e      +e      +er     +er
+!       Neut Sg.        +es     +es     +em     +en
+!
+! Wk    Masc. Sg        +e      +en     +en     +en
+!       Fem Sg.         +e      +e      +en     +en
+!       Neut Sg.        +e      +e      +en     +en
+
+! St    MFN Pl.         +e      +e      +en     +er
+! Wk    MFN Pl.         +en     +en     +en     +en
+
+
+define ADJSTR [
+	0:[ BD e   ]  [ FSG NOMACC | XPL NOMACC ] 
+|	0:[ BD e m ]  [ MSG DAT | NSG DAT ]
+|	0:[ BD e n ]  [ MSG [ACC|GEN] | NSG GEN | XPL DAT ]
+|	0:[ BD e r ]  [ MSG NOM | FSG [DAT|GEN] | XPL GEN ]
+|	0:[ BD e s ]  [ NSG NOMACC ]
+] %+St:0 ;
+
+
+define ADJWEAK [
+	0:[ BD e   ]  [ MSG NOM | FSG NOMACC | NSG NOMACC ]
+|	0:[ BD e n ]  [ MSG [ACC|DAT|GEN ] | FSG [DAT|GEN] | NSG [DAT|GEN] | XPL [NOM|ACC|DAT|GEN] ]
+] %+Wk:0 ;
+
+define ADJFLEX	[ADJSTR | ADJWEAK] ;
+
+# ------------------------------------------------------------------------------
+# pronoun/determiner inflection
+
+
+#! ----------------------------------------------------------------------
+#!                       Nom      Acc      Dat      Gen
+#! ----------------------------------------------------------------------
+#! [1]   Masc Sg.  	 +er [W]  +en [W]  +em [W]  +es [W]	e.g. mein-
+#!       Fem Sg.         +e  [W]  +e  [W]  +er [W]  +er [W]
+#!       Neut Sg.        +es [W]  +es [W]  +em [W]  +es [W]
+#!
+#!       MFN Pl.         +e  [W]  +e  [W]  +en [W]  +er [W]
+
+#! ----------------------------------------------------------------------
+#! [2]   Masc Sg.  	 +   [S]  +en [W]  +em [W]  +es [W]	e.g. mein-
+#!       Fem Sg.         +e  [W]  +e  [W]  +er [W]  +er [W]
+#!       Neut Sg.        +   [S]  +   [S]  +em [W]  +es [W]
+#!
+#!       MFN Pl.         +e  [W]  +e  [W]  +en [W]  +er [W]
+
+
+#! [S] following adjective must be "strong"	ein kleiner Mann *[ein kleine Mann]
+#| [W] following adjective must be "weak"	dem kleinen Mann *[dem kleinem Mann]
+
+define DETPRON0 [
+	0:[ BD e   ]   	[ FSG NOMACC | XPL NOMACC ]
+|	0:[ BD e m ]  	[ MSG DAT | NSG DAT ]
+|	0:[ BD e n ]  	[ MSG ACC | XPL DAT ]
+|	0:[ BD e r ]    [ FSG [DAT|GEN] | XPL GEN ]
+|	0:[ BD e s ]  	[ MSG GEN | NSG GEN ]
+] ;
+
+# determiner or pronoun inflection
+define PRONFLEX [
+  DETPRON0  				# manche [sind da]
+| 0:[ BD e r ] 	MSG NOM 		# mancher [ist da]
+| 0:[ BD e s ] 	NSG NOMACC 		# manches [ist da]
+] ;
+
+# determiner that requires adjective (or noun) with mixed declension
+define DETMIX	[ 
+  AGRWK DETPRON0 			# eine [kleine Frau]
+| AGRST MSG NOM 			# ein [kleiner Mann]
+| AGRST NSG NOMACC 			# ein [kleines Haus]
+];
+
+# determiner that requires adjective (or noun) with weak declension
+define DETSTR 		AGRWK  PRONFLEX ;		# der [kleine] Mann
+
+
+# additional form for neuter singular	("eins [ist da]")
+define PRONNEUT 	0:[ BD s ] NSG NOMACC ;
+
+# additioanl form for genitive singular ("welchen [Mannes]")
+define DETGENen 	0:[ BD e n ] [MSG | NSG ] GEN AGRWK ;
+
+
+################################################################################
+# WORD ENTRIES
+################################################################################
+
+# ------------------------------------------------------------------------------
+# DEFINITE ARTICLE (DETERMINER)
+# ------------------------------------------------------------------------------
+read regex	({eben} SEP) [
+  {der}		DET DEF AGRWK MSG NOM
+| {der}:{den}	DET DEF AGRWK MSG ACC
+| {der}:{dem}	DET DEF AGRWK MSG DAT
+| {der}:{des}	DET DEF AGRWK MSG GEN
+
+| {die}		DET DEF AGRWK FSG NOMACC
+| {die}:{der}	DET DEF AGRWK FSG [DAT|GEN]
+
+| {das}		DET DEF AGRWK NSG NOMACC
+| {das}:{dem}	DET DEF AGRWK NSG DAT
+| {das}:{des}	DET DEF AGRWK NSG GEN
+
+| {die}		DET DEF AGRWK XPL NOMACC
+| {die}:{den}	DET DEF AGRWK XPL DAT
+| {die}:{der}	DET DEF AGRWK XPL GEN
+
+];
+
+# NOTE: relative and demonstrative pronoun der/die/das is handled below
+
+
+# ------------------------------------------------------------------------------
+# INDEFINITE PRONOUNS/DETERMINERS
+# ------------------------------------------------------------------------------
+
+define MAND 	MSG [ [NOM|ACC|DAT]	# (mit/für) jemand
+		| 0:{en} ACC		# für jemanden
+		| 0:{em} DAT		# mit jemandem
+		| 0:{es} GEN		# jemandes Hut
+];
+
+
+read regex [ 
+  ({irgend} SEP) {ein} DET INDEF  [$%+Sg .o. DETMIX ] 	# ein [Mann], eine [Frau]
+| ({irgend} SEP) {ein} PRON INDEF [$%+Sg .o. PRONFLEX ]	# eines [ist klar]
+| ({irgend} SEP) {ein} PRON INDEF PRONNEUT		# eins [ist klar]
+
+| {ein} PADJ INDEF ADJWEAK				# [die] einen [Sachen]
+
+# special case:
+| {ein} %+Num:0 %+Card:0 %+Sg:0				# ein [oder zwei Tassen]
+
+| {welch} PRON INDEF PRONFLEX COLL			# er hat welche gegessen (colloquial)
+| {irgend} SEP {welch} PRON INDEF PRONFLEX		# er will irgendwelche 
+| {irgend} SEP {welch} DET INDEF DETSTR			# er hat irgendwelche Leute eingeladen
+
+| {andere} 	PRON INDEF PRONFLEX			# ~e
+| {andere} 	PADJ INDEF ADJFLEX			# ~er Wein, die ~en Leute, ein ~es Haus
+
+| {erstere} 	PRON INDEF PRONFLEX			# ~es ist klar
+| {erstere} 	PADJ INDEF ADJFLEX			# (die) ~e Frage
+
+| {letztere} 	PRON INDEF PRONFLEX			# ~er sagte ... 
+| {letztere} 	PADJ INDEF ADJFLEX			# der ~e Punkt
+
+| {weitere}	PRON INDEF PRONFLEX			# ~es folgt
+| {weitere}	PADJ INDEF ADJFLEX			# ~e Dinge, die ~en Dinge
+
+| {manch} PREDET INDEF					# ~ ein Ding; ~ schöne Sachen
+| {manch} PRON INDEF PRONFLEX				# ~er sagt...
+| {manch} PADJ INDEF ADJFLEX				# ~er Mann; ~es/~en Mannes
+
+| {man} PRON INDEF MSG NOM				# no other cases
+
+| {jemand} 		PRON INDEF MAND 
+| {irgend} SEP {jemand} PRON INDEF MAND NEW		# old spelling: irgend jemand
+| {sonst}  SEP {jemand} PRON INDEF MAND OLD		# new spelling: sonst jemand
+
+| {etwas} PRON INDEF NSG [NOM|ACC|DAT]
+| {irgend} SEP {etwas} PRON INDEF NSG [NOM|ACC|DAT] NEW	# old: irgend etwas
+| {sonst} SEP {etwas} PRON INDEF NSG [NOM|ACC|DAT] OLD	# new: sonst etwas
+| {so} SEP {etwas} PRON INDEF NSG [NOM|ACC|DAT] ERR	# correct: so etwas
+
+| {was} PRON INDEF NSG [NOM|ACC|DAT] COLL		# er will was (colloquial)
+| {irgend} SEP {was} PRON INDEF NSG [NOM|ACC|DAT] 
+| {sonst} SEP {was} PRON INDEF NSG [NOM|ACC|DAT] OLD	# new: sonst was
+| {so} SEP {was} PRON INDEF NSG [NOM|ACC|DAT] ERR	# correct: so was
+
+| {wer}			PRON INDEF MSG NOM COLL		# da ist wer
+| {wer}:{wen}		PRON INDEF MSG ACC COLL
+| {wer}:{wem}		PRON INDEF MSG DAT COLL
+| {wer}:{wessen}	PRON INDEF MSG GEN COLL
+
+| {irgend} SEP {wer}		PRON REL MSG NOM
+| {irgend} SEP {wer}:{wen}	PRON REL MSG ACC
+| {irgend} SEP {wer}:{wem}	PRON REL MSG DAT
+| {irgend} SEP {wer}:{wessen}	PRON REL MSG GEN
+
+| {sonst} SEP {wer}		PRON REL MSG NOM OLD	# new: sonst wer
+| {sonst} SEP {wer}:{wen}	PRON REL MSG ACC OLD
+| {sonst} SEP {wer}:{wem}	PRON REL MSG DAT OLD
+| {sonst} SEP {wer}:{wessen}	PRON REL MSG GEN OLD
+
+# invariant 
+| {allerlei} 	PADJ INDEF INVAR 
+| {anderlei}	PADJ INDEF INVAR
+| {beiderlei}	PADJ INDEF INVAR
+| {dererlei}	PADJ INDEF INVAR
+| {dergleichen}	PADJ INDEF INVAR
+| {derlei}	PADJ INDEF INVAR
+| {jederlei}	PADJ INDEF INVAR
+| {mancherlei}	PADJ INDEF INVAR
+| {mehrerlei}	PADJ INDEF INVAR
+| {solcherlei}	PADJ INDEF INVAR
+| {vielerlei}	PADJ INDEF INVAR
+
+];
+
+# ------------------------------------------------------------------------------
+# NEGATIVE PRONOUNS/DETERMINERS
+# ------------------------------------------------------------------------------
+
+read regex [
+  {kein} DET NEG DETMIX				# keine [Frage]
+| {kein} PRON NEG PRONFLEX			# keiner [ist da], [er will] keine
+| {kein} PRON NEG PRONNEUT			# [er will] keins
+
+| {nichts} PRON NEG NSG [NOMACC|DAT]		# [er kauft] nichts
+| {nix} PRON NEG NSG [NOMACC|DAT] COLL		# [er will] nix
+
+| {niemand} PRON NEG MAND			# (mit/für) niemand
+
+| {keinerlei}	PADJ NEG INVAR
+
+];
+
+
+# ------------------------------------------------------------------------------
+# DEMONSTRATIVE PRONOUNS/DETERMINERS
+# ------------------------------------------------------------------------------
+define PRONNOGEN	~$[%+Gen] .o. PRONFLEX ;
+
+read regex [
+
+  ({eben} SEP) {dies} 	DET  DEM DETSTR 	# diese Sache
+| ({eben} SEP) {dies} 	PRON DEM PRONNOGEN	# dieser ist hier
+| ({eben} SEP) {dies} 	PRON DEM NSG NOMACC 	# dies ist ...	
+| ({eben} SEP) {jene} 	DET  DEM DETSTR		# ~es Ding
+| ({eben} SEP) {jene} 	PRON DEM PRONNOGEN	# ~e ist hier
+
+| {derartig}	ADV DEM				# ~ schnell
+| {derartig}	PADJ DEM ADJFLEX		# eine ~e Frage
+
+| {selbe}	PADJ DEM ADJFLEX		# zur selben Zeit; *das selbe
+| {selbig}	PADJ DEM ADJFLEX		# 
+
+| ({eben} SEP) {solch} PREDET DEM		# solch ein Ding; solch schöne Sachen
+| ({eben} SEP) {solch} PADJ DEM ADJFLEX		# solcher Mann; eines solchen Mannes
+
+];
+
+
+# special cases: 
+define JSS	[ {jenige} | {selbe} | {selbige} ];
+
+read regex ({eben} SEP) [
+  {der}			PRON DEM MSG NOM
+| {der}:{den}	 	PRON DEM MSG ACC
+| {der}:{dem}	 	PRON DEM MSG DAT
+| {der}:{dessen} 	PRON DEM MSG GEN
+
+| {die}			PRON DEM FSG NOMACC
+| {die}:{der}		PRON DEM FSG DAT
+| {die}:{deren}		PRON DEM FSG GEN
+
+| {das}			PRON DEM NSG NOMACC
+| {das}:{dem}		PRON DEM NSG DAT
+| {das}:{dessen}	PRON DEM NSG GEN
+
+| {die}			PRON DEM XPL NOMACC
+| {die}:{denen}		PRON DEM XPL DAT
+| {die}:{deren}		PRON DEM XPL GEN
+| {die}:{derer}		PRON DEM XPL GEN
+
+| {der}		JSS 	[ PRON DEM | DET DEM AGRWK ] MSG NOM		# derselbe
+| {der}:{den}	JSS 0:n [ PRON DEM | DET DEM AGRWK ] MSG ACC		# denjenigen
+| {der}:{dem}	JSS 0:n	[ PRON DEM | DET DEM AGRWK ] MSG DAT		# demselbigen
+| {der}:{des}	JSS 0:n [ PRON DEM | DET DEM AGRWK ] MSG GEN		# desselben
+
+| {die}		JSS 	[ PRON DEM | DET DEM AGRWK ] FSG NOMACC
+| {die}:{der}	JSS 0:n	[ PRON DEM | DET DEM AGRWK ] FSG [DAT|GEN]
+
+| {das}		JSS 	[ PRON DEM | DET DEM AGRWK ] NSG NOMACC
+| {das}:{dem}	JSS 0:n	[ PRON DEM | DET DEM AGRWK ] NSG DAT
+| {das}:{des}	JSS 0:n	[ PRON DEM | DET DEM AGRWK ] NSG GEN
+
+| {die}		JSS n	[ PRON DEM | DET DEM AGRWK ] XPL NOMACC
+| {die}:{den}	JSS n	[ PRON DEM | DET DEM AGRWK ] XPL DAT
+| {die}:{der}	JSS n	[ PRON DEM | DET DEM AGRWK ] XPL GEN
+
+];
+
+# ------------------------------------------------------------------------------
+# RELATIVE PRONOUNS
+# ------------------------------------------------------------------------------
+
+read regex [
+  {der}			PRON REL MSG NOM
+| {der}:{den}	 	PRON REL MSG ACC
+| {der}:{dem}	 	PRON REL MSG DAT
+| {der}:{dessen} 	PRON REL MSG GEN
+
+| {die}			PRON REL FSG NOMACC
+| {die}:{der}		PRON REL FSG DAT
+| {die}:{deren}		PRON REL FSG GEN
+
+| {das}			PRON REL NSG NOMACC
+| {das}:{dem}		PRON REL NSG DAT
+| {das}:{dessen}	PRON REL NSG GEN
+
+| {die}			PRON REL XPL NOMACC
+| {die}:{denen}		PRON REL XPL DAT
+| {die}:{deren}		PRON REL XPL GEN
+| {die}:{derer}		PRON REL XPL GEN
+
+# NOTE [NDG: p.351]: "dem Relativpronomen welch- fehlen die Genitivformen"
+| {welch} PRON REL [ ~$[%+Gen] .o. PRONFLEX ]		# derjenige, welcher
+
+| {was} PRON REL NSG NOMACC				# [das,] was
+
+| {wer}			PRON REL MSG NOM
+| {wer}:{wen}		PRON REL MSG ACC
+| {wer}:{wem}		PRON REL MSG DAT
+| {wer}:{wes}		PRON REL MSG GEN		# obsolete
+| {wer}:{wessen}	PRON REL MSG GEN
+
+];
+
+
+# ------------------------------------------------------------------------------
+# INTERROGATIVE DETERMINERS/PRONOUNS
+# ------------------------------------------------------------------------------
+
+read regex [
+  {was} PRON WH NSG NOMACC		# was [ist das?]
+
+| {wer}			PRON WH MSG NOM
+| {wer}:{wen}		PRON WH MSG ACC
+| {wer}:{wem}		PRON WH MSG DAT
+| {wer}:{wes}		PRON WH MSG GEN		# obsolete
+| {wer}:{wessen}	PRON WH MSG GEN
+
+| {welch}  PREDET WH			# welch [ein Ding]; welch [schöne Sachen]
+| {welch}  PRON WH PRONFLEX		# welcher ist das? welche wiullst du?
+| {welch}  DET WH DETSTR		# welcher Mann ? welches Mannes ?
+| {welch}  DET WH DETGENen		# welchen Mannes ?
+
+# new spelling: "wie viel"
+| {wieviel} PRON WH [PLN .o. PRONFLEX] OLD	# ~ macht das?
+| {wieviel} PADJ WH INVAR OLD			# ~ Wasser?, ~ Mühe?
+| {wieviel} PADJ WH ADJSTR OLD			# ~e Leute?; ~es Gute?, ~e Zeit?
+| {wievielt} PADJ WH ADJWEAK			# das ~e Buch? zum ~en Mal?
+
+];
+
+
+# -----------------------------------------------------------------------------
+# QUANTIFIERS
+# -----------------------------------------------------------------------------
+
+define SOZU		[ ({eben}) {so} | {zu} ] SEP ;
+define ALLER		[ {aller} SEP ];
+
+define POS		%+Pos:0 ;
+define COMP		%+Comp:0 ;
+define SUP		[ %+Sup:0 ADJFLEX | 0:{en} %+Sup2:0 %+Pred:0 ] ;
+define PLN		$[%+Neut | %+Pl ] ;	# plural or neuter sg. ("alle") 
+
+read regex [
+  {all}  	PREDET QUANT				# ~ meine Freunde
+| {alle} 	DET QUANT DETSTR			# ~ Leute; trotz ~er Mühe
+| {alle} 	PRON QUANT [PLN .o. PRONFLEX]		# ~ sind da; er weiß ~es; vor ~em
+
+| {einige}  	DET QUANT DETSTR			# ~ Leute; trotz ~er Mühe
+| {einige} 	PRON QUANT [PLN .o. PRONFLEX]		# ~ sind da; er weiß ~es
+
+| {etliche} 	DET QUANT DETSTR			# ~ Leute; trotz ~er Mühe
+| {etliche} 	PRON QUANT [PLN .o. PRONFLEX]		# ~ sind da; er weiß ~es
+
+| {etwelch} 	DET QUANT DETSTR			# ~ Leute; trotz ~er Mühe
+| {etwelch} 	PRON QUANT [PLN .o. PRONFLEX]		# ~ sind da; er weiß ~es
+
+# special contracted forms:
+| {alldem} 	PRON QUANT NSG DAT			# trotz ~
+| {alledem} 	PRON QUANT NSG DAT			# bei ~
+
+
+# -------------------------------------------------------------------------------
+# viel/wenig; mehr/weniger; meist-/wenigst-
+
+| {viel} 	ADV QUANT POS			# ~ besser, eine ~ befahrene Straße
+| {viel} 	PADJ QUANT POS INVAR		# ~ Wasser, ~ Mühe
+| {viel} 	PADJ QUANT POS ADJFLEX		# ~e Leute; ~es Gute, die ~e Zeit
+| {viel}	PRON QUANT NSG NOMACC		# er sieht ~
+| {viel} 	PRON QUANT [PLN .o. PRONFLEX]	# ~e sind da; ~es ist passiert
+
+## 	NOTE: new spelling: "so viel", "zu viel', ...
+| SOZU {viel} 	ADV QUANT OLD			# ~ besser, eine ~ befahrene Straße
+| SOZU {viel} 	PADJ QUANT INVAR OLD		# ~ Wasser, ~ Mühe
+| SOZU {viel} 	PADJ QUANT ADJFLEX OLD		# ~e Leute; ~es Gute, die ~e Zeit
+| SOZU {viel}	PRON QUANT NSG NOMACC OLD	# er sieht ~
+| SOZU {viel} 	PRON QUANT [PLN .o. PRONFLEX] OLD	# ~e sind da; ~es ist passiert
+
+
+| {wenig}  	ADV QUANT POS			# ~ besser, eine ~ befahrene Straße
+| {wenig}	PADJ QUANT POS INVAR		# ~ Wasser, ~ Mühe
+| {wenig} 	PADJ QUANT POS ADJFLEX		# ~e Leute; ~es Gute, die ~e Zeit
+| {wenig}	PRON QUANT NSG NOMACC		# er sieht ~
+| {wenig} 	PRON QUANT [PLN .o. PRONFLEX]	# ~e sind da; ? ~es ist passiert
+
+## NOTE: new spelling "so wenig", "zu wenig", ..
+| SOZU {wenig}	ADV QUANT OLD			# ~ besser, eine ~ befahrene Straße
+| SOZU {wenig}	PADJ QUANT INVAR OLD		# ~ Wasser, ~ Mühe
+| SOZU {wenig}	PADJ QUANT ADJFLEX OLD		# ~e Leute; ~es Gute, die ~e Zeit
+| SOZU {wenig}	PRON QUANT NSG NOMACC OLD	# er sieht ~
+| SOZU {wenig} 	PRON QUANT [PLN .o. PRONFLEX] OLD	# ~e sind da; ~es ist passiert
+
+| {mehr} 	ADV QUANT COMP			# nicht ~ (only?)
+| {mehr} 	PADJ QUANT COMP INVAR		# ~ Licht! er will ~
+
+| {weniger}	ADV QUANT COMP			# er kommt ~ oft
+| {weniger} 	PADJ QUANT COMP INVAR		# ~ Licht! er will ~
+
+| (ALLER) {meist} 	PADJ QUANT SUP		# das ~e Wasser;  am ~en
+| (ALLER) {wenigst}	PADJ QUANT SUP		# das ~e Wasser; am ~en
+
+# --------------------------------------------------------------------------------
+| {beide} 	PADJ QUANT [$%+Pl .o. ADJFLEX]	# die ~en, beide Dinge
+| {beide} 	PRON QUANT [PLN .o. PRONFLEX]	# ~ sind da, ~es ist möglich
+
+| {jede}	PADJ QUANT [$%+Sg .o. ADJSTR]	# (ein) ~er Fehler
+| {jede}	PRON QUANT [$%+Sg .o. PRONFLEX]	# ~er Fehler
+
+| {jedwede}	PADJ QUANT ADJSTR		# ~e Dinge
+| {jedwede}	PRON QUANT PRONFLEX		# ~e sind da
+
+| {jedwelch}	PADJ QUANT ADJSTR		# ~es Ding
+| {jedwelch}	PRON QUANT PRONFLEX		# ~es 
+
+| {jeglich}	PADJ QUANT ADJSTR		# (ein) ~er
+| {jeglich}	PRON QUANT PRONFLEX		# ~er
+
+| {mehrere}	PADJ QUANT [$%+Pl .o. ADJFLEX ]	# ~ Leute
+| {mehrere}	PRON QUANT [PLN .o. ADJFLEX]	# ~ sind da, ~s auf einmal
+
+| {sämtlich}	PADJ QUANT ADJFLEX 		# ~es Wasser
+| {sämtlich}	PRON QUANT [ PLN .o. PRONFLEX ]	# ?er will ~e
+| {sämtlich} 	ADV QUANT			# sie sind ~ erschienen
+
+| {jedermann} 	PRON QUANT MSG [NOM|ACC|DAT]
+| {jedermann} (0:e) 0:s PRON QUANT MSG GEN
+
+# invariant:
+| {bisschen}		PADJ QUANT INVAR NEW	# mit einem ~ Glück; das ~ Geld
+| {bißchen}		PADJ QUANT INVAR OLD	# mit einem ~ Glück; das ~ Geld
+| {ein bisschen}	PADJ QUANT INVAR NEW	# mit ~ Glück			ADV ??
+| {ein bißchen}		PADJ QUANT INVAR OLD	# mit ~ Glück			ADV ??
+| {kein bisschen}	PADJ QUANT INVAR NEW	# er ist ~ schneller		ADV ??
+| {kein bißchen}	PADJ QUANT INVAR OLD	# er ist ~ schneller		ADV ??
+| {ein paar}		PADJ QUANT INVAR		# mit ~ Mark; ich sehe ~ 
+| {ein wenig}		PADJ QUANT INVAR		# mit ~ Geld; ich sehe ~ 	ADV ??
+| {paar}		PADJ QUANT INVAR		# mit ein ~ Mark; die ~ Mark 
+
+];
+
+
+! ------------------------------------------------------------------------------
+! NUMERAL-LIKE
+! ------------------------------------------------------------------------------
+define NUMFLEX 	XPL [ NOMACC | 0:{n} DAT | 0:{r} GEN ];
+
+define OPTCAP [ a (->) A, d (->) D, h (->) H, t (->) T, z (->) Z || .#. _ ];
+
+read regex [
+  ({aber} SEP) {dutzende} NOUN QUANT NUMFLEX
+| ({aber} SEP) {hunderte} NOUN QUANT NUMFLEX
+| ([{aber}|{zig}|{zehn}|{hundert}] SEP) {tausende} NOUN QUANT NUMFLEX
+] .o. OPTCAP ;
+
+
+
+! ------------------------------------------------------------------------------
+! PERSONAL, REFLEXIVE AND RECIPROCAL PRONOUNS
+! ------------------------------------------------------------------------------
+
+read regex [
+  {ich}			PRON PERS P1 XSG NOM
+| {ich}:{mich}		PRON PERS P1 XSG ACC
+| {ich}:{mir}		PRON PERS P1 XSG DAT
+| {ich}:{meiner}	PRON PERS P1 XSG GEN
+
+| {du}			PRON PERS P2 XSG NOM
+| {du}:{dich}		PRON PERS P2 XSG ACC
+| {du}:{dir}		PRON PERS P2 XSG DAT
+| {du}:{deiner}		PRON PERS P2 XSG GEN
+
+| {Du}			PRON PERS P2 XSG NOM POL
+| {Du}:{Dich}		PRON PERS P2 XSG ACC POL
+| {Du}:{Dir}		PRON PERS P2 XSG DAT POL
+| {Du}:{Deiner}		PRON PERS P2 XSG GEN POL
+
+| {er}			PRON PERS P3 MSG NOM
+| {er}:{ihn}		PRON PERS P3 MSG ACC
+| {er}:{ihm}		PRON PERS P3 MSG DAT
+| {er}:{seiner}		PRON PERS P3 MSG GEN
+
+| {sie}			PRON PERS P3 FSG NOMACC
+| {sie}:{ihr}		PRON PERS P3 FSG DAT
+| {sie}:{ihrer}		PRON PERS P3 FSG GEN
+
+| {es}			PRON PERS P3 NSG NOMACC
+| {es}:{'s}		PRON PERS P3 NSG NOMACC ELID
+| {es}:{ihm}		PRON PERS P3 NSG DAT
+| {es}:{seiner}		PRON PERS P3 NSG GEN
+
+| {wir}			PRON PERS P1 XPL NOM
+| {wir}:{uns}		PRON PERS P1 XPL [ACC|DAT]
+| {wir}:{unser}		PRON PERS P1 XPL GEN
+
+| {ihr}			PRON PERS P2 XPL NOM
+| {ihr}:{euch}		PRON PERS P2 XPL [ACC|DAT]
+| {ihr}:{euer}		PRON PERS P2 XPL GEN
+
+| {Ihr}			PRON PERS P2 XPL NOM POL
+| {Ihr}:{Euch}		PRON PERS P2 XPL [ACC|DAT] POL
+| {Ihr}:{Euer}		PRON PERS P2 XPL GEN POL
+
+| {sie}			PRON PERS P3 XPL NOMACC
+| {sie}:{ihnen}		PRON PERS P3 XPL DAT
+| {sie}:{ihrer}		PRON PERS P3 XPL GEN
+
+| {Sie}			PRON PERS P3 XPL NOMACC POL
+| {Sie}:{Ihnen}		PRON PERS P3 XPL DAT POL
+| {Sie}:{Ihrer}		PRON PERS P3 XPL GEN POL
+
+| {sich}		PRON REFL
+| {einander}		PRON RECP
+| {einander}:{ea.}	PRON RECP ABBR
+
+];
+
+#! ------------------------------------------------------------------------------
+#! Possessive pronouns
+#! ------------------------------------------------------------------------------
+
+define POSSNOUN 	[ ( BD i g ) NOUN POSS 	ADJWEAK (0:%^Upp) ];	# das mein(ig)e; das unsr(ig)e
+define POSSPRON		PRON POSS [ PRED | PRONFLEX | PRONNEUT] ; 	# [das ist] mein, meines, meins 
+define POSSDET		DET POSS DETMIX ;
+
+define POSSDRV  BD e	[ r SEP {seits} ADV
+			| t SEP {halber} ADV
+			| t SEP {wegen} ADV
+			| t SEP {willen} ADV
+			| s SEP {teils} ADV
+			| s SEP {gleichen} PRON INDEF INVAR
+			];
+	
+
+define POSSRULE [ 
+	e -> 0		|| e BD _
+.o.	r BD e (->) 0	|| _ r SEP s	# unserseits, euerseits [DR]
+.o.	e (->) 0	|| _ r BD e	# unsre-, eure-
+.o.	e -> 0		|| _ r BD i	# unsrig-, eurig-
+.o.	e (->) 0	|| e r BD _ t	# unsert-, euret-
+.o.	e -> 0		|| e BD _
+
+.o.  	  m -> M
+	, d -> D
+	, s -> S
+	, i -> I
+	, u -> U
+	, e -> E 	|| .#. _ $%^Upp
+.o.	%^Upp -> 0
+];
+
+read regex [
+  {mein}	[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+| {dein}	[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+| {sein}	[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+| {ihr}		[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+| {unser}	[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+| {euer}	[ POSSDET | POSSPRON | POSSNOUN | POSSDRV ]
+
+| {Dein}	[ POSSDET | POSSPRON | POSSDRV ] POL
+| {Euer}	[ POSSDET | POSSPRON | POSSDRV ] POL
+| {Ihr}		[ POSSDET | POSSPRON | POSSDRV ] POL
+] .o. POSSRULE ;
+
+
+
+
+
+
+
+
+
+# -----------------------------------------------------------------------------
+# combine all
+
+
+union net
+define LEX 
+
+# -----------------------------------------------------------------------------
+echo >>> final cleanup
+
+
+read regex  CLEANLEX .o. LEX .o. MORPH .o. CLEANSRF ;
+
+

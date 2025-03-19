@@ -1,0 +1,218 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>4. Template Queries</title><link rel="stylesheet" href="userman.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.58.1"><link rel="home" href="index.html" title="MySQL++ User Manual"><link rel="up" href="index.html" title="MySQL++ User Manual"><link rel="previous" href="tutorial.html" title="3. Tutorial"><link rel="next" href="ssqls.html" title="5. Specialized SQL Structures"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">4. Template Queries</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="tutorial.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ssqls.html">Next</a></td></tr></table><hr></div><div class="sect1" lang="en"><div class="titlepage"><div><h2 class="title" style="clear: both"><a name="tquery"></a>4. Template Queries</h2></div></div><p>Another powerful feature of MySQL++ is being able
+	to set up template queries. These are kind of like C's
+	<tt>printf()</tt> facility: you
+	give MySQL++ a string containing the fixed parts of the
+	query and placeholders for the variable parts, and you can
+	later substitute in values into those placeholders.</p><p>The following program demonstrates how to use this
+	feature. This is <tt>examples/resetdb.cpp</tt>,
+	the program you've run a few times now if you've worked
+	through all the examples:</p><pre class="programlisting">
+#include &quot;util.h&quot;
+
+#include &lt;mysql++.h&gt;
+
+#include &lt;iostream&gt;
+
+using namespace std;
+
+int
+main(int argc, char *argv[])
+{
+    // Connect to database server
+    mysqlpp::Connection con;
+    try {
+        cout &lt;&lt; &quot;Connecting to database server...&quot; &lt;&lt; endl;
+        connect_to_db(argc, argv, con, &quot;&quot;);
+    }
+    catch (exception&amp; er) {
+        cerr &lt;&lt; &quot;Connection failed: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return 1;
+    }
+    
+    // Create new sample database, or re-create it.  We suppress
+    // exceptions, because it's not an error if DB doesn't yet exist.
+    bool new_db = false;
+    {
+        mysqlpp::NoExceptions ne(con);
+        mysqlpp::Query query = con.query();
+        if (con.select_db(kpcSampleDatabase)) {
+            // Toss old table, if it exists.  If it doesn't, we don't
+            // really care, as it'll get created next.
+            cout &lt;&lt; &quot;Dropping existing stock table...&quot; &lt;&lt; endl;
+            query.execute(&quot;drop table stock&quot;);
+        }
+        else {
+            // Database doesn't exist yet, so create and select it.
+            if (con.create_db(kpcSampleDatabase) &amp;&amp;
+                    con.select_db(kpcSampleDatabase)) {
+                new_db = true;
+            }
+            else {
+                cerr &lt;&lt; &quot;Error creating DB: &quot; &lt;&lt; con.error() &lt;&lt; endl;
+                return 1;
+            }
+        }
+    }
+
+    // Create sample data table within sample database.
+    cout &lt;&lt; &quot;Creating new stock table...&quot; &lt;&lt; endl;
+    try {
+        // Send the query to create the table and execute it.
+        mysqlpp::Query query = con.query();
+        query &lt;&lt; &quot;create table stock (item char(20) not null, &quot;
+                &quot;num bigint, weight double, price double, sdate date)&quot;;
+        query.execute();
+
+        // Set up the template query to insert the data.  The parse()
+        // call tells the query object that this is a template and
+        // not a literal query string.
+        query &lt;&lt; &quot;insert into %5:table values (%0q, %1q, %2, %3, %4q)&quot;;
+        query.parse();
+
+        // Set the template query parameter &quot;table&quot; to &quot;stock&quot;.
+        query.def[&quot;table&quot;] = &quot;stock&quot;;
+
+        // Notice that we don't give a sixth parameter in these calls,
+        // so the default value of &quot;stock&quot; is used.  Also notice that
+        // the first row is a UTF-8 encoded Unicode string!  All you
+        // have to do to store Unicode data in recent versions of MySQL
+        // is use UTF-8 encoding.
+        cout &lt;&lt; &quot;Populating stock table...&quot; &lt;&lt; endl;
+        query.execute(&quot;Nürnberger Brats&quot;, 92, 1.5, 8.79, &quot;2005-03-10&quot;);
+        query.execute(&quot;Pickle Relish&quot;, 87, 1.5, 1.75, &quot;1998-09-04&quot;);
+        query.execute(&quot;Hot Mustard&quot;, 75, .95, .97, &quot;1998-05-25&quot;);
+        query.execute(&quot;Hotdog Buns&quot;, 65, 1.1, 1.1, &quot;1998-04-23&quot;);
+
+        cout &lt;&lt; (new_db ? &quot;Created&quot; : &quot;Reinitialized&quot;) &lt;&lt;
+                &quot; sample database successfully.&quot; &lt;&lt; endl;
+    }
+    catch (const mysqlpp::BadQuery&amp; er) {
+        // Handle any query errors
+        cerr &lt;&lt; &quot;Query error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return 1;
+    }
+    catch (const mysqlpp::BadConversion&amp; er) {
+        // Handle bad conversions
+        cerr &lt;&lt; &quot;Conversion error: &quot; &lt;&lt; er.what() &lt;&lt; endl &lt;&lt;
+                &quot;\tretrieved data size: &quot; &lt;&lt; er.retrieved &lt;&lt;
+                &quot;, actual size: &quot; &lt;&lt; er.actual_size &lt;&lt; endl;
+        return 1;
+    }
+    catch (const mysqlpp::Exception&amp; er) {
+        // Catch-all for any other MySQL++ exceptions
+        cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return 1;
+    }
+
+    return 0;
+}
+
+	</pre><p>The line just before the call to
+	<tt>query.parse()</tt> sets the
+	template, and the parse call puts it into effect. From
+	that point on, you can re-use this query by calling any
+	of several Query member functions that accept query
+	template parameters. In this example, we're using
+	<tt>Query::execute()</tt>.</p><p>Let's dig into this feature a little deeper.</p><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2807728"></a>4.1. Setting up template queries</h3></div></div><p>To set up a template query, you simply insert it into
+		the Query object, using numbered placeholders wherever you
+		want to be able to change the query. Then, you call the
+		parse() function to tell the Query object that the query
+		string is a template query, and it needs to parse it:</p><pre class="programlisting">
+query &lt;&lt; &quot;select (%2:field1, %3:field2) from stock where %1:wheref = %0q:what&quot;;
+query.parse();</pre><p>The format of the placeholder is:</p><pre class="programlisting">
+%###(modifier)(:name)(:)</pre><p>Where '###' is a number up to three
+		digits. It is the order of parameters given to a
+		<tt><a href="../../refman/html/classmysqlpp_1_1SQLQueryParms.html">SQLQueryParms</a></tt> object,
+		starting from 0.</p><p>'modifier' can be any one of the following:</p><div class="blockquote"><blockquote class="blockquote"><div class="informaltable"><table border="0"><colgroup><col><col></colgroup><tbody><tr><td><span class="bold"><b>%</b></span></td><td>Print an actual &quot;%&quot;</td></tr><tr><td><span class="bold"><b>&quot;&quot;</b></span></td><td>Don't quote or escape no matter what.</td></tr><tr><td><span class="bold"><b>q</b></span></td><td>This will quote and escape
+				the item using the MySQL C API
+				function <tt><a href="http://dev.mysql.com/doc/mysql/en/mysql-escape-string.html">mysql_escape_string()</a></tt> if it is a string or char *,
+				or another MySQL-specific type
+				that needs to be quoted.</td></tr><tr><td><span class="bold"><b>Q</b></span></td><td>Quote but don't escape
+				based on the same rules as for 'q'. This
+				can save a bit of processing time if you
+				know the strings will never need
+				quoting</td></tr><tr><td><span class="bold"><b>r</b></span></td><td>Always quote and escape
+				even if it is a number.</td></tr><tr><td><span class="bold"><b>R</b></span></td><td>Always quote but
+				don't escape even if it is
+				a number.</td></tr></tbody></table></div></blockquote></div><p>&quot;:name&quot; is for an optional name which aids
+		in filling SQLQueryParms. Name can contain any
+		alpha-numeric characters or the underscore. You can
+		have a trailing colon, which will be ignored. If
+		you need to represent an actual colon after the name,
+		follow the name with two colons. The first one will end
+		the name and the second one won't be processed.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874096"></a>4.2. Setting the parameters at execution time</h3></div></div><p>To specify the parameters when
+		you want to execute a query simply
+		use <tt>Query::store(const
+		SQLString &amp;parm0, [..., const SQLString
+		&amp;parm11])</tt>. This
+		type of multiple overload also exists for
+		<tt>Query::use()</tt> and
+		<tt>Query::execute()</tt>.
+		'parm0' corresponds to the first parameter,
+		etc. You may specify up to 12 parameters. For
+		example:</p><pre class="programlisting">
+Result res = query.store(&quot;Dinner Rolls&quot;, &quot;item&quot;, &quot;item&quot;, &quot;price&quot;)</pre><p>with the template query provided above
+		would produce:</p><pre class="programlisting">
+select (item, price) from stock where item = &quot;Dinner Rolls&quot;</pre><p>The reason we didn't put the template parameters in
+		numeric order...</p><pre class="programlisting">
+select (%0:field1, %1:field2) from stock where %2:wheref = %3q:what</pre><p>...will become apparent shortly.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874176"></a>4.3. Using defaults</h3></div></div><p>You can also set the parameters one at
+		a time by means of class Query's public data
+		member def. To change the values of the def,
+		simply use the subscript operator. You can
+		refer to the parameters either by number or by
+		name. The following two examples have the same effect:</p><pre class="programlisting">
+query.def[0] = &quot;Dinner Rolls&quot;; 
+query.def[1] = &quot;item&quot;; 
+query.def[2] = &quot;item&quot;; 
+query.def[3] = &quot;price&quot;;</pre><p>and</p><pre class="programlisting">
+query.def[&quot;what&quot;] = &quot;Dinner Rolls&quot;; 
+query.def[&quot;wheref&quot;] = &quot;item&quot;; 
+query.def[&quot;field1&quot;] = &quot;item&quot;; 
+query.def[&quot;field2&quot;] = &quot;price&quot;;</pre><p>Once all the parameters are set simply
+		execute as you would have executed the query
+		before you knew about template queries:</p><pre class="programlisting">
+Result res = query.store()</pre></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874230"></a>4.4. Combining the two</h3></div></div><p>You can also combine the use of
+		setting the parameters at execution time and
+		setting them via the def object by calling
+		<tt>Query::store()</tt>
+		(or <tt>use()</tt>
+		or <tt>execute()</tt>)
+		without passing the full number of parameters
+		that the template supports:</p><pre class="programlisting">
+query.def[&quot;field1&quot;] = &quot;item&quot;; 
+query.def[&quot;field2&quot;] = &quot;price&quot;; 
+Result res1 = query.store(&quot;Hamburger Buns&quot;, &quot;item&quot;); 
+Result res2 = query.store(1.25, &quot;price&quot;); </pre><p>Would store the query:</p><pre class="programlisting">
+select (item, price) from stock where item = &quot;Hamburger Buns&quot; </pre><p>for res1 and</p><pre class="programlisting">
+select (item, price) from stock where price = 1.25 </pre><p>for res2.</p><p>Now you see why we ordered the placeholders
+		in the template above as we did: we used positions
+		0 and 1 for the ones we want to change frequently,
+		and used 2 and 3 for the parameters that seldom
+		change.</p><p>One thing to watch out for, however,
+		is that <tt>Query::store(const
+		char* q)</tt> is also defined for
+		executing the query q. Therefore, when you call
+		<tt>Query::store()</tt>
+		(or <tt>use()</tt>,
+		or <tt>execute()</tt>)
+		with only one item and that item is a const
+		char*, you need to explicitly convert it into
+		a SQLString to get the right overload:</p><pre class="programlisting">
+Result res = query.store(SQLString(&quot;Hamburger Buns&quot;)); </pre></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874360"></a>4.5. Error Handling</h3></div></div><p>If for some reason you did not specify all
+		the parameters when executing the query and the
+		remaining parameters do not have their values
+		set via def, the query object will throw a
+		<tt><a href="../../refman/html/classmysqlpp_1_1BadParamCount.html">BadParamCount</a></tt>
+		object. If this happens, you
+		can get an explanation of what
+		happened by checking the value of
+		<tt>SQLQueryNEParms::string</tt>,
+		like so:</p><pre class="programlisting">
+query.def[&quot;field1&quot;] = &quot;item&quot;; 
+query.def[&quot;field2&quot;] = &quot;price&quot;; 
+Result res = query.store(1.25); </pre><p>This would throw
+		<tt>SQLQueryNEParms</tt>
+		because the wheref is not specified.</p><p>In theory, this exception should never be
+		thrown. If the exception is thrown it probably
+		a logic error in your program.</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="tutorial.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ssqls.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">3. Tutorial </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 5. Specialized SQL Structures</td></tr></table></div></body></html>

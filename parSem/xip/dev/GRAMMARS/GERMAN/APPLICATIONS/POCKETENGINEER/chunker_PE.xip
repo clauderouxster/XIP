@@ -1,0 +1,141 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	chunker_PE.xip
+//! Content:	Chunker of the German XIP grammar for the application Pocket Engineer
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Sigrid Maurel
+//!
+//! Created: 	17 May 2006		:: initial version
+//! Updated:	25 September 2006	:: version based on german grammar v2
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+// conjunctions
+// welche features mitgeben? subord oder infzu, oder beides?
+// "Oma erlaubt sich ein Urteil, ohne dass sie weiß worum es geht."
+// "Oma war krank, so dass sie ins Krankenhaus eingeliefert werden musste."
+1> conj[subord=+] = conj[coord:~];adv, conj[coord:~].
+
+// --------------------------------------------------------------------------------------
+// simple APs
+
+// truncs
+// "Fehlercodes sind entweder 4- oder 5-stellige Nummern."
+2>  ap[agr:!] = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, ?[adj]. 
+
+// :: die AP{sich ausweitenden} Krawalle
+// :: die AP{sich rasch ausweitenden} Krawalle
+3> ap1[agr:!] = pron[refl], (adv;adjp)*, adja[noun:~, !decl:!, !agr:! ].
+
+// :: AP{sehr schnell fahrendes} Auto
+3> ap1[agr:!] = (adv;adjp)*, adja[noun:~, !decl:!, !agr:! ].
+
+// :: die AP{Vereinigten} Staaten
+3> ap1[agr:!] = (adv;adjp)*, adja[proper:+, !decl:!, !agr:!, !cap:!, !nadj:! ] | ?[noun:+] |.
+
+ 
+// coordinated APs 
+
+4> ap[agr:!] @= ap1[!agr:!,!decl:!], 
+	( (punct[comma];conj[coord] ), 
+	ap1[!agr:!,!decl:!] )*.
+
+Reshuffling: 
+// flatten AP structure
+// evtl Adverb oder Adjektiv "fressen" folgende Adj!???
+// "Vollständig schwarze Kopien" nach Reshuffling nur noch "Vollständig Kopien"
+// "sehr schnell fahrendes Auto" -> "sehr Auto"
+//121> ap1{#1} = #1.
+10> ap1{?-#1} = #1.
+
+
+// --------------------------------------------------------------------------------------
+// simple NPs
+
+Sequence:
+
+// truncs
+//112> noun = ?[trunc], conj[coord], noun[!agr:!, !decl:! ].
+// "Kopier-/Fax- und Systemgeräte"
+//112> noun = ?[trunc], conj[coord];punct[comma];punct[lemma:\/], noun[!agr:!, !decl:!, !trunc:! ]. 
+20>  noun = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, (adv; ptcl), noun[!agr:!, !decl:! ]. 
+
+// date
+20> noun[date=+,p3=+] @= num[ord,dig], noun[month,!agr:!,!decl:!], (num[card,dig]).
+
+// personal pronoun 
+21> np[agr:!] = pron[pers,!agr:!,!person:!].
+
+// other pronoun
+21> np[p3=+, agr:!]	= pron#1[pers:~, !rel:!, !agr:! ].
+
+// noun with adjective
+21> np[p3=+, agr:!] = 	det#1[ !wh:+!, !agr:! ],
+	( num[ card, !agr:! ]; num[ ord, dig:+] ),
+	( ap[ !agr:! ] ), 
+	noun#2[ !agr:!, symbol:~ ].
+
+// "die folgenden zwei Formate"
+21> np[p3=+, agr:!] = det#1[ !wh:+!, !agr:! ],
+	( ap[ !agr:! ] ), 
+	( num[ card, !agr:! ]; num[ ord, dig:+] ), 
+	noun#2[ !agr:!, symbol:~ ].
+
+// 24.7. "nums" is a categorie of sevral numerals, for PE
+21> np[p3=+, agr:!] =  num[ card, !agr:! ]; nums[ !agr:! ],  
+	 ( ap[ !agr:! ]), 
+	noun[ !agr:! ]. 
+
+// 19.7. the "italic" feature is for the Pocket Engineer corpus
+21> np[p3=+, agr:!] =  ( ap[ !agr:! ]), 
+	noun[ !agr:!, !italic:! ]. 
+
+// genitive (possessive)
+//21> nmod = np[human,gen], noun[!agr:! ].
+
+// proper names 
+22> np[human=+,p3=+, agr:!] = noun[firstname], noun[lastname, !agr:! ].
+
+//*TODO*: handle ambiguous last or first names (e.g. "Mann", "Bauer", etc.)
+22> np[human=+,p3=+, agr:!] = noun[lastname,common:~,!agr:! ].
+22> np[human=+,p3=+, agr:!] = noun#2[firstname,common:~,!agr:! ].
+
+
+// nominalized adjectives
+// "der Grüne Hans-Christian Ströbele"
+// "Das Militär führte daraufhin Kommissionen ein, vor denen die Anschuldigungen verlesen werden und die Angeklagten Gelegenheit zur Aussage haben."
+23> np[p3=+, agr:!, nadj:!, cap:!] =  (det[ !wh:+!, !agr:! ]), ap[!agr:!, cap:+, nadj:+] . 
+
+// --------------------------------------------------------------------------------------
+// PPs
+
+30> pp = num, prep#1[lemma:bis], np#2.		//{num, noun}
+
+// for PE, the noun "Meldung" must not be integrated in a PP
+// "Bitte warten, Systemeinstellung findet statt <i> Meldung </i> ."
+31> pp = prep#1, np#2[italic:~] . 
+
+// "Diese könnte AB 2008 schrittweise eingeführt werden."
+31> pp = prep#1, num#2.
+
+// --------------------------------------------------------------------------------------
+// Verbs
+
+// truncated verbs
+// "Das Gerät über den Schalter an der rechten Seite des Geräts AUS- und wieder einschalten."
+35>  verb = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, (adv), verb[!inf:!, !finite:!]. 
+
+// --------------------------------------------------------------------------------------
+// Infinitives
+36> infzu = ptcl[infzu:+], verb[inf:+, zu:~].
+36> infzu = verb[inf:+,zu:+].
+
+// --------------------------------------------------------------------------------------
+// finite verbs
+36> vfin =  verb#2[finite:+, !modal:!, !subjc:!, !indic:!, !nursubjc:!].

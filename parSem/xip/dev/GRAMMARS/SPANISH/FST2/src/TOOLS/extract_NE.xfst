@@ -1,0 +1,189 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      extract lexicon entries for NE recognition
+# ENCODING:	UTF-8	[€àáäâ]
+#
+# LANGUAGE:     SPANISH
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      04-Aug-2008
+#
+# ============================================================================
+# USAGE:        xfst -utf8 -s morph.fst -l [ThisFile]
+# ============================================================================
+
+
+define LEX
+
+# preprocess lexicon
+# - extract proper names
+# - ignore prefix "ex-"
+read regex	~[e x %- ?* ] .o. $[%+Prop] .o. LEX ;
+
+set quit-on-fail off
+
+substitute symbol %+Acron for %+Sigla ;
+substitute symbol 0 for %+MF ;
+substitute symbol 0 for %+SP ;
+
+substitute symbol %+Country for %+Pay ;
+substitute symbol %+Place for %+Lugar ;
+substitute symbol %+State for %+Usastate ;
+
+substitute symbol %- for "\u2012" ;	# [‒]   FIGURE DASH
+substitute symbol %- for "\u2013" ;	# [–]   EN DASH
+substitute symbol %- for "\u2014" ;	# [—]   EM DASH
+substitute symbol %- for "\u2015" ;	# [―]   HORIZONTAL BAR
+substitute symbol %- for "\u00AD" ;	# [­]   SOFT HYPHEN
+substitute symbol %- for "\u2010" ;	# [‐]   HYPHEN
+substitute symbol %- for "\u2011" ;	# [‑]   NON-BREAKING HYPHEN
+
+substitute symbol %' for "\u2018" ;	# [‘]   LEFT SINGLE QUOTATION MARK
+substitute symbol %' for "\u2019" ;	# [’]   RIGHT SINGLE QUOTATION MARK
+substitute symbol %' for "\u201B" ;	# [‛]   SINGLE HIGH-REVERSED-9 QUOTATION MARK
+
+
+set quit-on-fail on
+define PROP ;
+
+# ----------------------------------------------------------------
+# mapping for continuation classes
+
+define TAB    "\t" ;
+
+define CONT0  "XSP;" ;
+
+define CONT   [ "FSG;" | "MSG;" | "FPL;" | "FSG;"
+       	      | "FSP;" | "MSP;" | "XSG;" | "XPL;" 
+	      ];
+
+define MAP [ 
+       CONT0 -> "FSG;"	|| $[%+Fem %+Sg] _
+.o.    CONT0 -> "MSG;"	|| $[%+Masc %+Sg] _
+.o.    CONT0 -> "FPL;"	|| $[%+Fem %+Pl] _
+.o.    CONT0 -> "MPL;"	|| $[%+Masc %+Pl] _
+.o.    CONT0 -> "FSP;"	|| $[%+Fem] _
+.o.    CONT0 -> "MSP;"	|| $[%+Masc] _
+.o.    CONT0 -> "XSG;"	|| $[%+Sg] _
+.o.    CONT0 -> "XPL;"	|| $[%+Pl] _
+.o.    [%+Fem|%+Masc|%+Sg|%+Pl] -> 0
+.o.    "^_" -> " " 
+];
+
+# ---------------------------------------------------
+# Continents
+
+define TMP 	$%+Continent .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.contintents
+pop
+
+# ---------------------------------------------------
+# Countries
+
+define TMP 	$%+Country .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.countries
+pop
+
+# ---------------------------------------------------
+# States (of the USA)
+
+define TMP 	$%+State .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.states
+pop
+
+# ---------------------------------------------------
+# Places
+
+define TMP	$%+Place .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.places
+pop
+
+# ---------------------------------------------------
+# Organisations
+
+define TMP 	$%+Org .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.org
+pop
+
+# ---------------------------------------------------
+# Business Soc.
+
+define TMP	$%+Soc .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.soc
+pop
+
+# ---------------------------------------------------
+# Zodiac signs
+
+define TMP	$%+Zodiac .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.zodiac
+pop
+
+# ---------------------------------------------------
+# word parts => not to be included in new lexicon !
+
+define TMP	$%+WordPart .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+
+# ---------------------------------------------------
+# unclassified abbreviations, acronyms
+
+define TMP 	$[%+Abrev] .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.abrev
+pop
+
+define TMP 	$[%+Acron] .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.acron
+pop
+
+
+# ---------------------------------------------------
+# remaining
+
+define TMP 	$[%+Fem] .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.fem
+pop
+
+define TMP 	$[%+Masc] .o. PROP ;
+define PROP	[PROP - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.masc
+pop
+
+read regex [MAP.i .o. [ PROP TAB CONT0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/tmp.rest
+pop
+

@@ -1,0 +1,77 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! C Hagege - juin 2009
+//! Liens entre ET et proces
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+Déduction:
+
+
+
+
+//// Predicat nominal
+
+
+
+/// DUREES POST-POSEES A NOUN
+// une durée (d'exactement | de) 16 ans
+| PP#3{prep, NP{(adv[lemme:"exactement"]), noun[mwe:+,tempexpr]} } |
+if ( NMOD[posit1](#1[tempexpr:~],#2) & PREPOBJ(#2,?[prep,lemme:de]) & HEADTEMP(#2,#3) )
+	TEMPLINK[exact_t=+](#1,#3)
+
+// une durée d'environ 16 ans (tous les autres adverbes integres dans NP temp sont d'approximation
+| PP#3{prep, NP{adv, noun[mwe:+,tempexpr]} } |
+if ( NMOD[posit1](#1[tempexpr:~],#2) & PREPOBJ(#2,?[prep,lemme:de]) & HEADTEMP(#2,#3) & ~TEMPLINK(#1,#3) )
+	TEMPLINK[approx_t=+](#1,#3)
+
+
+
+
+
+// LIEN ENTRE PREDICAT VERBAL et ET
+
+if ( VMOD(#1,#2[tempexpr]) & HEADTEMP(#2,#3) & ( DATE(#3) | DUREE(#3) ) & ~TEMPLINK(?,#3) )
+	TEMPLINK(#1,#3)
+
+// pour les agregats
+if ( VMOD(#1,#2) &  SET(#3) & mother(#2,#3) & ~TEMPLINK(?,#3) )
+	TEMPLINK(#1,#3)
+
+
+
+// raffinement pour les dates relatives
+// on reporte les attributs temp_ref et delta_t sur la dependance
+
+// Pour des adverbes
+if ( ^DATE[relative,temp_ref:~](#1[!temp_ref:!,!delta_t:!]) )
+	DATE(#1).
+
+// Pour des constituants NP (le noun[mwe] porte les traits)
+// e.g. il arrivera la semaine prochaine
+| NP#1{?, noun#2[last]} |
+if ( ^DATE[relative,temp_ref:~](#1) & #2[!temp_ref:!,!delta_t:!] )
+	DATE(#1)
+
+
+
+
+
+
+
+// GESTION DES EXPRESSIONS AMBIGUES AVEC PROCES ASSOCIES
+
+
+// Cas de dur_ou_freq (ex. 2 années de suite)
+// sortent par defaut comme duree
+
+// Si proces est ponctuel alors freq, sinon duree
+
+
+// Cas de dur_ou_date (ex. toute la journee)
+// sort par defaut comme duree avec trait dur_ou_date a desambiguiser avec proces

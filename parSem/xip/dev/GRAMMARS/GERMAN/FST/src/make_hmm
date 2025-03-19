@@ -1,0 +1,109 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		makefile 
+# CONTENT:	additional data files for HMM tagger (for evaluation)
+# AUTHOR:	Anne Schiller
+# DATE:		27-Jul-2005
+# -------------------------------------------------------------------------
+# USAGE: 	gmake
+# -------------------------------------------------------------------------
+# NOTE:
+# tokenizer, lexicon and guesser must be built using default Makefile !
+# -------------------------------------------------------------------------
+
+
+# tools for Linux
+FST = fst -utf8 -q -e "set quit-on-fail on"
+ECHO = echo -e
+
+
+# directories
+AUX = ../aux
+DATA = ../data
+
+# compiled HMM table
+HMMTXT =	/home/schiller/LINGDATA/ger2/hmm/data/hmm-std-1-def
+
+
+TARGET = 	$(DATA)/lookup_hmm.txt \
+		$(DATA)/lookup_hmm_abs.txt \
+		$(DATA)/mark4hmm-lex.fst \
+		$(DATA)/mark4hmm-guess.fst \
+		$(DATA)/mark4hmm-open.fst \
+		$(DATA)/map4hmm.fst \
+		$(DATA)/filter-pref.fst \
+		$(DATA)/filter-cpd.fst \
+		$(DATA)/open4hmm.fst \
+		$(DATA)/hmm4xip.txt
+
+
+# ==========================================================================
+# TARGETS
+default:	$(TARGET)
+
+clean:	
+		rm -f $(TARGET)
+
+
+
+
+# ==========================================================================
+# lookup scripts
+$(DATA)/lookup%.txt:		lookup%.txt
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@cp $< $@
+
+
+# lookup script with absolute path
+FSTDIR = $(PWD:/src=/data)
+$(DATA)/lookup%_abs.txt:	lookup%.txt
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	gawk '{sub(/\$$FST/,"$(FSTDIR)");print}' < $< > $@
+
+
+
+
+# source markers for HMM (markers are inserted *before* last symbol)
+$(DATA)/mark4hmm-%.fst: 
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)	-e "read regex %+%#$* <- [..] || _ ? .#. ;" \
+	     	-e "save stack $@" -stop
+
+
+# filter oout analyses with hyphenated (unanalyzed) prefix
+$(DATA)/filter-pref.fst:
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)	-e 'read regex ~$$[ %[%* ];' \
+	     	-e "save stack $@" -stop
+
+
+# filter out compounds
+$(DATA)/filter-cpd.fst:
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)	-e 'read regex ~$$[ %^%# | %^%- ]; ' \
+	     	-e "save stack $@" -stop
+
+
+# other FSTs
+
+$(DATA)/%.fst: 	%.xfst
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)	-l $< \
+		-e "optimize net" \
+	     	-e "save stack $@" -stop
+
+
+
+# ==========================================================================
+# HMM table
+# .. with additional prefix "hmm_" to HMM tags
+# (in order to avoid conflicts with lower case feature names)
+
+$(DATA)/hmm4xip.txt: 	$(HMMTXT) \
+			add_hmm.awk
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@gawk -f add_hmm.awk < $< > $@

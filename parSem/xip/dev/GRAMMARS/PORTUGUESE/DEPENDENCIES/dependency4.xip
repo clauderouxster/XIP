@@ -1,0 +1,346 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency4.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede, Paula Vaz                                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating mofifiers, and apposits                         !
+//!                                                                            !
+//!   Dependencies handled in this file:   MOD                                 !
+//!                                        POSS                                !
+//!                                        APPOSIT                             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency4.xip,v 1.5 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MOD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//========================================================
+// premodifiers within a NP chunk
+//========================================================
+
+// Example: a belissima banana -> MOD_PRE(banana, belissima)
+// Example: uma grande banana  -> MOD_PRE(banana, grande)
+// Example: duas belas banana  -> MOD_PRE(banana, belas)
+//
+| NP#3{?*, #2, #1[meas:~]} |
+ if ( HEAD(#1,#3) & ~DETD(#1,#2) & ~MOD(?,#2) & ~QUANTD(?,#2) )
+   MOD[pre=+](#1,#2)
+
+//========================================================
+// adv premodifiers of a NP, PP, AP or ADVP chunk
+//========================================================
+| adv#1,adv#2 |
+ if ( ~MOD(#2,#1) & ~QUANTD(#2,#1) )
+   MOD[pre=+](#2,#1)
+
+| adv#1,adj#2 |
+ if ( ~MOD(#2,#1) & ~QUANTD(#2,#1))
+   MOD[pre=+](#2,#1)
+
+//========================================================
+// premodifiers within a PP, NP or AP chunk
+//========================================================
+
+// Example: a belissima banana -> MOD_PRE(banana, belissima)
+// Example: uma grande banana  -> MOD_PRE(banana, grande)
+// Example: duas belas meninas -> MOD_PRE(banana, belas)
+// Example: ainda pessoa       -> MOD_PRE(pessoa, ainda)
+// Example: uma grande banana  -> MOD_PRE(banana, grande)
+// Example: duas belas meninas -> MOD_PRE(banana, belas)
+//
+| #3{?*,adv#2;adj#2;pastpart#2, noun#1[meas:~];adj#1;pastpart#1} |
+ if ( HEAD(#1,#3) & ~DETD(#1,#2) & ~MOD(#1,#2)  & ~QUANTD(#1,#2) )
+   MOD[pre=+](#1,#2)
+
+//Example: ... da bonita raça.
+//Example: ... da bonita antepassada raça.
+//Example: ... da nossa antepassada raça.
+//Example: ... da minha raça.
+//Example: ... de variadas raças.
+//
+| ?{?*, adj#1;pastpart#1;pron#1, adj*,pastpart*, noun#2[meas:~]} |
+ if ( ~QUANTD(#2,#1) & ~MOD(#2,#1) & ~DETD(#2,#1) & ~QUANTD(#2,#1) )
+    MOD[pre=+](#2,#1)
+
+
+
+
+//========================================================
+// ADVP post modify ADVPs and VPs
+//========================================================
+
+// Example: ... vendo muito bem... -> MOD_POST(bem, muito)
+//
+| advp#1, advp#2 |
+ if ( head(#3,#1) & head(#4,#2) & ~MOD(?,#4) & ~QUANTD(#3,#4))
+   mod[post=+](#3,#4)
+
+
+// Example: ... vendo bananas muito bem... -> MOD_POST(vendo, bem)
+//
+| #1[verb], ?[verb:~], ADVP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & ~MOD(?,#4) & ~QUANTD(#3,#4))
+   MOD[post=+](#3,#4)
+
+
+// Example: ...que a Manuela gostava muito de bichos de peluche
+//                  -> MOD_POST(gostava, muito)
+//
+| sc#3, ?*[verb], ?[verb:~], ADVP#2 |
+ if ( HEAD(#1,#3) & VDOMAIN(#1,#5) & HEAD(#4,#2) & ~MOD(?,#4) & ~QUANTD(#5,#4))
+   MOD[post=+](#5,#4)
+
+
+
+//========================================================
+// AP post modify NPs
+//========================================================
+
+// Example: um dos alunos mais compridos -> MOD_POST(alunos, compridos)
+//
+| NP#1{?*, #3[meas:~]};PP#1{?*, #3[meas:~]}, AP*, AP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & ~mod(?,#4) & ~QUANTD(?,#4) )
+   MOD[post=+](#3,#4)
+
+
+// Example: Manuela, quando estava sozinha, vingava-se... -> MOD_POST(Manuela, sozinha)
+//
+// Comentada em 2007/09/10 njm+Jorge
+// a relação de MOD entre Manuela e sozinha é apenas indirecta, já que o AP
+// (sozinha) é um atributo do sujeito da oração subordinada temporal (quando ...)
+// que não está expresso por ser correferente do sujeito da oração principal.
+//
+//| NP#1, PUNCT[comma], sc, AP#2 |
+// if ( HEAD(#3,#1) & HEAD(#4,#2) & ~mod(?,#4) & ~QUANTD(?,#4) )
+//   MOD[post=+](#3,#4)
+
+
+// Pre-modifier within a NP when this pre-modifier is in a embedded structure
+// we have to have a MOD(rapariga,bela) AND NOT a MOD(rapariga,ainda mais bela)
+// Example: A ainda mais bela rapariga.
+//
+| NP#2{?*, AP#1[last:~]} |
+if ( HEAD(#4,#2) & HEAD(#3,#1) & ^MOD(#4,#1) )
+	MOD(#4,#3)
+
+
+
+
+//========================================================
+// PP post modify VPs NPs APs and PPs
+//========================================================
+
+// Example: fabricante de ratos para computador -> MOD_POST(fabricante, ratos)
+//                                              -> MOD_POST(fabricante,computador)
+//
+//
+| NP#1{?*, ?[meas:~]}, AP*, PP*, AP*, PP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & ~mod(#3,#4) & ~PREDSUBJ(?,#4) & ~QUANTD(#4,?) )
+   MOD[post=+](#3,#4)
+
+
+// 2007/09/10 - NJM
+// Example: O número de licensas emitidas pela câmara para a construção aumentou muito
+//                                               -> MOD_POST(emitidas, câmara)
+//                                               -> MOD_POST(emitidas, construção)
+//
+| AP#1, AP*, PP*, PP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & ~MOD(#3,#4) )
+   MOD[post=+](#3,#4)
+
+
+// Example: fabricante (mundial) de ratos para computador -> MOD_POST(ratos, computador)
+//
+| PP#1, AP*, PP*, PP#2 |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & ~MOD(#3,#4) )
+   MOD[post=+](#3,#4)
+
+
+// Example: fabricar ratos de computador na China -> MOD_POST(fabricar, computador)
+//                                                -> MOD_POST(fabricar, China)
+//
+//2007/09/10
+//PP do not mofify coopelative auxiliary verbs
+//
+| #1[verb];#1[pastpart], ?*[verb:~,sc:~], pp#2 |
+ if ( head(#4,#1) & head(#3,#2) & VDOMAIN(?,#4) & ~mod(#4,#3) & ~PREDSUBJ(#4,#3) & ~compl(#4,#3) & ~QUANTD(#3,?) & ~PREDSUBJ(#4,?) )
+   MOD[post=+](#4, #3)
+
+
+// Example: Quem contracena com Denzel Washington em "The Training Day"?
+//                  -> MOD_POST(contracena, Denzel Washington)
+//                  -> MOD_POST(contracena, "The Training Day")
+//
+| sc#3, ?*[verb], ?*[verb:~,sc:~], PP#2 |
+ if ( HEAD(#1,#3) & VDOMAIN(#1,#5) & HEAD(#4,#2) & ~MOD(#5,#4) & ~QUANTD(#5,#4))
+   MOD[post=+](#5,#4)
+
+
+
+//========================================================
+// ADVP post modify VPs
+//========================================================
+
+// Mod dependency between a simple verbal finite form and an adverb that is just on its left.
+// e.g. anunciou oficialemente
+// maybe more constraints are necessary...
+//
+| VF{?*, #1[last]}, ADVP{#2[first,last]} |
+if ( ~MOD(#1,#2) )
+MOD[post=+](#1,#2)
+
+
+// Temporal expression corresponding to NPs are temporal modificiers
+//
+// Example: Ele chega Domingo
+//
+| #1[verb];#1[pastpart], ?*[verb:~], NP#2 |
+ if ( head(#4,#1) & head(#3[time],#2) & VDOMAIN(?,#4) & ~mod(#4,#3) & ~PREDSUBJ(#4,#3) & ~compl(#4,#3) & ~QUANTD(#3,?) )
+   MOD[post=+,temporal=+](#4, #3)
+
+
+
+//========================================================
+// Coordination
+//========================================================
+
+// Example:
+//
+ if ( mod[pre](#1,#2) & coord(#3,#2) & coord(#3,#4) & ~coord(#1,#4) & ~mod(#1,#4) )
+   mod[pre=+](#1,#4)
+
+// Example:
+//
+ if ( mod[post](#1,#2) & coord(#3,#2) & coord(#3,#4) & ~coord(#1,#4) & ~mod(#1,#4) )
+   mod[post=+](#1,#4)
+
+
+// Example:
+//
+ if ( mod[pre](#1,#2) & clink(#3,#2) & ~coord(#1,#3) & ~mod(#1,#3) )
+   mod[pre=+](#1,#3)
+
+// Example:
+//
+ if ( mod[post](#1,#2) & clink(#3,#2) & ~coord(#1,#3) & ~mod(#1,#3) )
+   mod[post=+](#1,#3)
+
+// Example:
+//
+ if ( mod[pre](#1,#2) & clink(#2,#3) & ~mod(#1,#3) )
+   mod[pre=+](#1,#3)
+
+// Example:
+//
+ if ( mod[post](#1,#2) & clink(#2,#3) & ~mod(#1,#3) )
+   mod[post=+](#1,#3)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// POSS DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: o seu movimento -> POSS(movimento, seu)
+// Example: meu amigo       -> POSS(movimento, meu)
+//
+ if ( ^MOD(#1,#2[poss]) & HEAD(#1,#3) )
+  POSS(#1,#2)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// APPOSITE DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A pata, cozinheira no palácio, fez um jantar requintado.
+//                      -> APPOSIT(pata, cozinheira)
+//
+| np#1, punct[comma],np#2,(pp),punct[comma] |
+ if ( head(#3,#1) & head(#4,#2) & ~coord(?,#3) )
+   APPOSIT(#3,#4)
+
+
+// NJM, Jun 26th (now the apposit relation is not anymore with the PP, but with the NP)
+//
+// Apposition when the governor is the head of a NP
+// constrained to proper noun apposition.
+//
+// Example: O rei de Marrocos, Faruc, ....
+//                      -> APPOSIT(rei, Faruc)
+//
+| NP#1, PP, punct[comma], NP{#2[noun,proper]}, punct[comma] |
+if ( HEAD(#3,#1) & ~APPOSIT(#3,#2) )
+	APPOSIT(#3,#2)
+
+
+// CH - May, 8th 2007
+// Appisition also is considered between a proper noun and its abbreviation
+// Example:  A Procuradoria Geral da República (PGR)
+//
+// ATENÇÃO: Idealmente deveria haver informação que o nome #1 é uma
+//          multi-word-expression, mas esta informação não está disponível neste momento.
+//
+| NP{?*,#1[proper, last]};PP{prep,?*,#1[proper,last]}, punct[paren, left], NP{noun#2[toutmaj,first,last]}, punct[paren,right] |
+	APPOSIT(#1,#2)
+
+
+// CH - May, 14th
+// Admitting more complex contexts (and absence of commas) when the proper noun is at the
+// beginning of the sentence as the preceeding rules have a more restricted context.
+//
+// Example: Geraldo Alckmin, candidato do Partido da Social Democracia Brasileira (PSDB)
+//          e antigo governador do estado de São Paulo, não foi além....
+//
+| NP[start]{?*,#1[proper, last]}, punct[comma], NP{?*,noun#2[last,proper:~]} |
+if ( ~CLINK(#1,#2) & ~APPOSIT(#1,#2) )
+	APPOSIT(#1,#2)
+
+
+// NJM - Jun, 26th
+// 2 consecutive nouns, if the first is:
+//                         an adj (political party, religian, gentilic) or
+//                         a noun (profession, family relation)
+//                      and the second is a Proper noun,
+// then there is an APPOSIT relation between them.
+//
+// Example: O português  José Magalhães escreveu um livro (the same as O socialista, José Magalhães, escreveu um livro)
+// Example: O socialista José Magalhães escreveu um livro (the same as O socialista, José Magalhães, escreveu um livro)
+// Example: O tio        José Magalhães escreveu um livro (the same as O socialista, José Magalhães, escreveu um livro)
+// Example: O deputado   José Magalhães escreveu um livro (the same as O socialista, José Magalhães, escreveu um livro)
+//
+| NP[start]{?*,#1[last, nationality]}, NP{?*,noun#2[last,proper:~]} |
+if ( ~CLINK(#1,#2) & ~APPOSIT(#1,#2) )
+	APPOSIT(#1,#2)
+
+| NP[start]{?*,#1[last, title]}, NP{?*,noun#2[last,proper:~]} |
+if ( ~CLINK(#1,#2) & ~APPOSIT(#1,#2) )
+	APPOSIT(#1,#2)
+
+| NP[start]{?*,#1[last, relative]}, NP{?*,noun#2[last,proper:~]} |
+if ( ~CLINK(#1,#2) & ~APPOSIT(#1,#2) )
+	APPOSIT(#1,#2)
+
+| NP[start]{?*,#1[last, affiliation]}, NP{?*,noun#2[last,proper:~]} |
+if ( ~CLINK(#1,#2) & ~APPOSIT(#1,#2) )
+	APPOSIT(#1,#2)

@@ -1,0 +1,109 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      basic rules for additional lexicon entries
+# 
+# LANGUAGE:     PORTUGUESE
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      07-Aug-2008
+#
+# ============================================================================
+# USAGE:        xfst -e "read lex LEX.lexc"  -l [ThisFile]
+# ============================================================================
+
+
+
+define LEX
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+ ];
+multi char sigma net
+define TAG
+
+define CHAR SIG & ? ;
+
+
+define MARKER 	"[*]" | "[-]"| "(-)" | "(.)" ;
+
+define LBD	[ "^]" ];	# lemma boundary
+
+define DEL	[ "^1" | "^2" ];	# deletion markers
+
+define SPEC	[ DEL | LBD | MARKER ] ;
+
+
+
+define VSimple	[a|e|i|o|u];
+define VAccent	[ã|õ| â|ê| á|é|í|ó|ú];
+define Vowel	VSimple | VAccent ;
+
+define Cons	[b|c|d|f|g|h|j|k|l|m|n|ñ|p|q|r|s|t|v|w|x|y|z];
+
+
+# ==============================================================================
+read regex [
+	0 <- SPEC
+
+# optional hyphens
+.o.	%- <- [ "[-]" | "(-)" ]
+
+# optional dots
+.o.	%. <- "(.)"
+
+# adjective OR noun
+.o.	[%+Adj|%+Noun] <- %+NAdj
+
+# ------------------------------------------------------------------------------
+.o.	LEX 
+
+# ------------------------------------------------------------------------------
+# 
+# hyphen or space
+.o.	"[-]" -> [ %  | %- ]
+
+# hyphen or nothing
+.o.	"(-)" -> [ 0 | %- ]
+
+# optional dots
+.o.	"(.)" -> [ 0 | %. ]
+
+
+# ----------------------------------------------------------------------
+# alternative spelling for abbreviation endings ª and º
+
+.o.	ª (->) {ª.} | {.ª} | {.a} | {a.}
+.o.	º (->) {º.} | {.º} | {.o} | {o.}
+
+
+# ----------------------------------------------------------------------
+# regular noun and adjective inflection
+
+# feminine
+.o.	o -> 0		|| ã _ TAG* LBD $%+Fem
+.o.	o -> a		|| _ TAG* LBD $%+Fem
+.o.	[..] -> a	|| [ o r | o l | ê s | z ] _ TAG* LBD $%+Fem
+.o.	e u -> [e|é] i a	|| _ TAG* LBD $%+Fem
+.o.	é u -> é i a	|| _ TAG* LBD $%+Fem
+
+# plural
+# italiano -> italianos; alamana -> alemanas; inglés -> ingleses
+.o.	a l -> a i s    || _ TAG* LBD $%+Pl
+.o.	u m -> u n s    || _ TAG* LBD $%+Pl
+.o.	[..] -> e s	|| [ o r | a r | ê s ] _  TAG* LBD $%+Pl
+.o.	[..] -> s	|| Vowel _ TAG* LBD $%+Pl
+
+
+# accent normalisation
+.o.	ê -> e		|| _ s [e | a ] $LBD
+
+# ----------------------------------------------------------------------
+# remove tags and markers
+.o.	[SPEC|TAG] -> 0
+
+];
+
+

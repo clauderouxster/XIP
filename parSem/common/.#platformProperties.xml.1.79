@@ -1,0 +1,336 @@
+
+<project>
+    <target name="platformSetting" depends="platformIdentification, setWin32Properties,
+    setSolarisProperties, setLinuxProperties, setMacProperties" description="platform setting" />
+         
+    <!--  +++++++++++++++++++++ Windows ++++++++++++++++++++++++++++++++ -->
+    <target name="setWin32Properties" depends="" if="windows" description="define properties for the platform : win32" >
+        <property name="platform" 		value="windows" />
+        <property name="hostname"               value="${env.COMPUTERNAME}"/>
+        <property name="obj.suffixe" 		value="obj" />
+        <property name="compilerC.name" 	value="msvc" />
+        <property name="system.libC.names"   	value="c, ws2_32, user32" />
+        <property name="compilerCplus.name" 	value="msvc" />
+        <property name="system.libCplus.names"  value="c, ws2_32, user32" />
+        <property name="compiler.arg"           value="" />
+        <property name="linker.static.arg"      value="" />
+        <property name="linker.shared.arg"      value="" />
+        <if>
+            <equals arg1="${os.arch}" arg2="amd64" />
+            <then>
+                <property name="arch64bits"     value="true" />
+                <property name="platform-arch" 	value="windows64" />
+            </then>
+            <else>
+                <property name="platform-arch" 	value="windows" />
+            </else>
+        </if>
+        <property name="python.version"         value="${python.version.common}" />
+        <property name="python.dir"             location="${parSem.dir}/python/${python.version}/${platform-arch}" />
+        <property name="python.include.dir"     location="${python.dir}/include" />
+        <property name="python.lib.dir"         location="${python.dir}/lib" />
+        <property name="python.lib.name"        value="python26" />
+        <property name="python.libs"            value="" />
+        <property name="python.linker.args"     value="" />
+    </target>
+    
+    <!-- -->
+    <target name="setC++"  description="set C++ env" >
+        <!-- ne marche pas -->
+        <!-- script to use visual studio 2003 7.xx :   -->
+        <property name="VS7"	location="C:\Program Files\Microsoft Visual Studio .NET 2003\Common7\Tools\vsvars32.bat" />
+        <!-- script to use visual studio 2005 8.xx:   -->
+        <property name="VS8"	location="C:\Program Files\Microsoft Visual Studio 8\Common7\Tools\vsvars32.bat" />
+        <!-- script to use visual studio 2005 8.xx:  sur chamonix machine 64 bits  -->
+        <property name="VS8-64" location="C:\Program Files (x86)\Microsoft Visual Studio 8\VC\bin\amd64\vcvarsamd64.bat" />
+        <!-- script to use visual studio 2010 :  machine claude -->
+	<property name="VS10"  location=" C:\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\Tools\vsvars32.bat" />
+        <exec executable="cmd.exe" outputproperty="out">
+            <arg value="/c"/>  <!-- the script is executed but the env is not changed -->
+            <arg value="${VS8}"/>
+        </exec>
+        <echo message="-- ${out} --" />
+        <exec executable="cmd.exe" outputproperty="outcl">
+            <arg value="/c"/>
+            <arg value="cl"/>
+        </exec>
+        <echo message="-- ${outcl} --" />
+    </target>
+    
+    <!--  +++++++++++++++++++++ solaris ++++++++++++++++++++++++++++++++ -->
+    <target name="setSolarisProperties" depends="" if="solaris" description="define properties for the platform : solaris" >
+        <property name="platform" 		value="solaris" />
+        <property name="hostname"               value="${env.HOST}"/>
+        <property name="platform-arch" 		value="solaris${os.version}-${os.arch}" />
+        <property name="obj.suffixe" 		value="o" />
+        <property name="compilerC.name" 	value="gcc" />
+        <property name="system.libC.names"	value="c, m"/>
+        <property name="compilerCplus.name" 	value="g++" />
+        <property name="system.libCplus.names"  value="m, pthread, z, w, socket, nsl"/>
+        <property name="compiler.arg"           value="-w" />
+        <property name="linker.static.arg"      value="-mt" />
+        <property name="linker.shared.arg"      value="-mt" />
+        <property name="python.version"         value="${python.version.common}" />
+    </target>
+    
+    <!--  +++++++++++++++++++++ linux ++++++++++++++++++++++++++++++++ -->
+    <target name="setLinuxProperties" depends="" if="linux" description="define properties for the platform : linux" >
+        <property name="platform" 		value="linux" />
+        <if>
+            <isset property="env.HOSTNAME"/>
+            <then>
+                <property name="hostname" value="${env.HOSTNAME}"/>
+            </then>
+            <else>
+                <property name="hostname" value="${env.HOST}"/>
+            </else>
+        </if>
+        <property name="obj.suffixe" 		value="o" />
+        <property name="compilerC.name" 	value="gcc" />
+        <property name="system.libC.names"  	value="c, m" />
+        <property name="compilerCplus.name" 	value="g++" />
+        <property name="system.libCplus.names"  value="m, pthread, z, dl" />
+        <property name="compiler.arg"           value="-w" />
+        <property name="linker.static.arg"      value="-mt" />
+        <property name="linker.shared.arg"      value="-mt" />
+        <if>
+            <or>
+                <equals arg1="${hostname}" arg2="choranche.grenoble.xrce.xerox.com" />
+                <equals arg1="${hostname}" arg2="lautaret.grenoble.xrce.xerox.com" />
+            </or>
+            <then>
+                <!-- hostname == choranche or lautaret -->
+                <if>
+                    <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
+                    <then>
+                        <property name="linux64"     value="true" />
+                        <property name="arch64bits"     value="true" />
+                        <property name="platform-arch" 	value="linux64" />
+                        <property name="platformArch" 	value="linux64" />
+                    </then>
+                    <else>
+                        <property name="platform-arch" 	value="linux" />
+                        <property name="platformArch" 	value="linux" />
+                    </else>
+                </if>
+            </then>
+            <else>
+                <!-- hostname != choranche or lautaret -->
+                <if>
+                    <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
+                    <then>
+                        <property name="arch64bits"     value="true" />
+<!--
+                        <property name="platform-arch" 	value="linux64-${hostname}" />
+-->
+                        <property name="platform-arch" 	value="linux64" />
+                        <property name="platformArch" 	value="linux64" />
+                    </then>
+                    <else>
+<!--
+    -                    <property name="platform-arch" 	value="linux-${hostname}" />
+-->
+                        <property name="platform-arch" 	value="linux" />
+                        <property name="platformArch" 	value="linux" />
+                    </else>
+                </if>
+            </else>
+        </if>
+        <property name="python.version"         value="${python.version.common}" />
+        <property name="python.dir"             location="${parSem.dir}/python/${python.version}/${platformArch}" />
+        <property name="python.include.dir"     location="${python.dir}/include" />
+        <property name="python.lib.dir"         location="${python.dir}/lib" />
+        <property name="python.lib.name"        value="python2.6" />
+        <property name="python.libs"            value="dl, util" />
+        <!-- 
+	"-export-dynamic" is madatory to be able to "import math" in a user python module. Otherwise
+	we get the error: math.so: undefined symbol: PyExc_OverflowError  http://docs.python.org/ext/link-reqs.html
+	nm -ao /home/grondeau/projets/parSem/python/2.4.1/linux/libpython24.a |grep PyExc_OverflowErro
+	/home/grondeau/projets/parSem/python/2.4.1/linux/libpython24.a:exceptions.o:00000004 C PyExc_OverflowError
+	 nm -ao /home/grondeau/projets/parSem/python/2.4.1/linux/shared/libpython24.so | grep PyExc_OverflowErro
+	 /home/grondeau/projets/parSem/python/2.4.1/linux/shared/libpython24.so:0012eb64 B PyExc_OverflowError
+	-->
+        <property name="python.linker.args"     value="-export-dynamic" />
+    </target>
+    
+    <!--  +++++++++++++++++++++ MAC OS X ++++++++++++++++++++++++++++++++ -->
+    <target name="setMacProperties" depends="setMacProperties-xxx, setMacProperties-i386" if="mac" description="define properties for the platform : mac" >
+        <property name="platform" 		value="mac" />
+        <property name="hostname"               value="etretat"/>
+        <property name="obj.suffixe" 		value="o" />
+        <property name="compilerC.name" 	value="gcc" />
+        <property name="system.libC.names"   	value="c, m, z"/>
+        <property name="compilerCplus.name" 	value="g++" />
+        <property name="linker.static.arg"      value="" />
+        <property name="linker.shared.arg"      value="-dynamiclib" />
+        <property name="python.version"         value="2.5" />
+        <property name="python.dir"             location="/Library/Frameworks/Python.framework/Versions/${python.version}" />
+        <property name="python.include.dir"     location="${python.dir}/include/python${python.version}" />
+        <property name="python.lib.dir"         location="${python.dir}" />
+        <property name="python.lib.name"        value="python" />
+        <property name="python.libs"            value="" />
+        <!-- keep the -v option otherwise there is error -->
+        <property name="python.linker.args"     value="-v" />
+        <!-- 
+            otool -hLv /usr/lib/libc.dylib  idem ldd 
+            un fichier lib.dylib est une librairie dynamique
+    
+            universal binaries:
+            http://developer.apple.com/opensource/buildingopensourceuniversal.html
+            http://www.developpez.net/forums/showthread.php?t=395923 
+            http://developer.apple.com/documentation/Porting/Conceptual/PortingUnix/compiling/chapter_4_section_3.html
+            http://developer.apple.com/documentation/Darwin/Reference/ManPages/man1/ld.1.html
+            http://developer.apple.com/documentation/Darwin/Reference/ManPages/man1/gcc.1.html#//apple_ref/doc/man/1/gcc
+            Usually, ld is not used directly.  Instead the gcc(1) compiler driver invokes ld. The compiler driver
+            can be passed multiple -arch options and it will create a universal final linked image by invoking ld
+            multiple times and then running lipo(1) merge the outputs into a universal file.
+            il faut donc compiler les fichiers avec:
+                <compilerarg value="-isysroot" location="start" if="mac" />
+                <compilerarg value="/Developer/SDKs/MacOSX10.4u.sdk" location="start" if="mac" />
+                <compilerarg value="-arch" location="start" if="mac" />
+                <compilerarg value="ppc" location="start" if="mac" />
+                <compilerarg value="-arch" location="start" if="mac" />
+                <compilerarg value="i386" location="start" if="mac" />
+	    et pour que le linker genere une sortie multi archi il faut appeler gcc avec les options "-arch ppc -arch i386" (ce qui
+            generera un exe/lib pour chaque arch et utilisera lipo pour generer une seul fichier) et l'option
+            "-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk":
+		gcc -v "-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" -arch ppc -arch i386 -dynamiclib -shared -o libfst.so 	
+	    mais on pas les moyens avec ant de specifier les parametres de gcc, ni d'invoquer le linker avec "-arch ppc"
+            la solution d'invoquer le linker en utilisant "exec executable="gcc" ..." est OK pour faire l'esecutable xip, 
+            mais pas de solution pour construire les lib (pas de solution pour donner la liste des *.o) 
+        -->
+    </target>
+    
+    <target name="setMacProperties-xxx" depends="" if="mac-ppc" description="define properties for ppc arch" >
+        <property name="system.libCplus.names"  value="m, pthread, z, gcc_s.10.4"/>
+        <property name="platform-arch" 		value="mac-ppc" />
+        <property name="compiler.arg"     	value="-fno-common" />
+    </target>
+    
+    <target name="setMacProperties-i386" depends="" if="mac-i386" description="define properties for I386 arch" >
+        <!--  add gcc_s.10.4 to avoid: undefined symbol "__Unwind_Resume -->
+        <property name="system.libCplus.names"  value="m, pthread, z, gcc_s.10.4"/>
+        <property name="platform-arch" 		value="mac-i386" />
+        <property name="compiler.arg"     	value="-fno-common" />
+    </target>
+    
+    <target name="compilerLinkerCommonSetting" depends=""  >
+        <!-- common to all the build xml,fst,ntm,xip,java -->
+        <compiler id="compilerCommon" debug="${cc.debug}" >
+            <!-- universal binaries -->
+            <compilerarg value="-isysroot" location="start" if="mac" />
+            <compilerarg value="/Developer/SDKs/MacOSX10.4u.sdk" location="start" if="mac" />
+            <compilerarg value="-arch" location="start" if="mac" />
+            <compilerarg value="i386" location="start" if="mac" />
+            <!--
+            <compilerarg value="-arch" location="start" if="mac" />
+            <compilerarg value="ppc" location="start" if="mac" />
+            -->
+            <compilerarg value="${compiler.arg}" location="start"/>
+            <compilerarg value="${compiler.arg.64b}" location="start" if="arch64bits-c-arg" />
+            <compilerarg value="-pg" location="start" if="profileMode" />
+        </compiler>
+        <linker id="linkerCommon" debug="${cc.debug}" >
+            <!-- universal binaries -->
+            <linkerarg value="-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" location="start" if="mac" />
+            <linkerarg value="${linker.arg.64b}" location="start" if="arch64bits-l-arg" />
+        </linker>
+    </target>
+    
+    <target name="xipCompilerLinkerSetting" depends="compilerLinkerCommonSetting" >
+        <!-- used by xip and java(cxxCompile) compilation -->
+        <compiler id="xipCompilerCommon" extends="compilerCommon" >
+            <!-- keep this order: xip include before fst include -->
+            <includepath refid="include.common.path" />
+            <includepath refid="include.fstxip.path" unless="transMode" />
+            <includepath refid="include.python.path" if="python" />
+            <defineset refid="define.basic" />
+        </compiler>
+        <compiler id="compilerSettingsDyn" extends="compilerCommon" >
+            <!-- used also during java compilation -->
+            <defineset define="DYNAMICLIB" if="mac" />
+        </compiler>
+        <compiler id="compilerC++Dyn" extends="xipCompilerCommon" >
+            <defineset define="DYNAMICLIB" if="mac" />
+        </compiler>
+        <compiler id="compilerC++basic" extends="xipCompilerCommon" >
+        </compiler>
+        <compiler id="compilerCbasic" extends="xipCompilerCommon">
+        </compiler>
+        <linker id="xipLinkerCommon" extends="linkerCommon" >
+            <linkerarg value="${python.linker.args}" location="start" if="python" />
+            <syslibset libs="${system.libCplus.names}" />
+            <syslibset libs="${python.libs}" if="python"/>
+        </linker>
+        <linker id="linkerStaticLib" extends="xipLinkerCommon">
+            <linkerarg value="${linker.static.arg}" location="start" />
+            <libset dir="${lib.dir}/staticLib" libs="xip"  unless="python" />
+            <libset dir="${lib.dir}/staticLibPy" libs="xips" if="python" />
+        </linker>
+        <linker id="linkerShared" extends="xipLinkerCommon">
+            <!-- used also during java compilation -->
+            <linkerarg value="${linker.shared.arg}" location="start"  />
+        </linker>
+        <linker id="linkerSharedLib" extends="linkerShared">
+            <libset dir="${lib.dir}/sharedLib" libs="xip"  unless="python" />
+            <libset dir="${lib.dir}/sharedLibPy" libs="xips" if="python" />
+        </linker>
+    </target>
+    
+    <target name="setProfileMode" depends="" description="set profile mode">
+        <property name="profileMode" value="true" />
+    </target>
+    
+    <target name="setDebugMode" depends="" description="set debug mode">
+        <property name="debugMode" value="true" />
+    </target>
+    
+    <target name="info" depends="platformSetting" description="">
+        <echo message="hostname=${hostname}" />
+        <echo message="os.name=${os.name}     os.arch=${os.arch}   sun.arch.data.model=${sun.arch.data.model}   os.version=${os.version}" />
+        <echo message="platform=${platform}     platform-arch=${platform-arch}  "  />
+        <if>
+            <equals arg1="${platform}" arg2="linux" />
+            <then>
+                <loadfile property="kernel" srcFile="/etc/issue"/>
+                <echo message="kernel=${kernel}" />
+            </then>
+        </if>
+    </target>
+    
+    <!--  +++++++++++++++++++++ "platform Identification ++++++++++++++++++++++++++++++++ -->
+    <target name="platformIdentification" depends=""
+            description="platform identification: set the property solaris, windows, 
+            linux or mac to true when one of this platform has been identified">
+        <condition property="windows">
+            <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows Server 2008 R2" arch="amd64"/>  <!-- used by chamonix: windows 64 bits -->
+		<os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="windows64"> <!-- flag used in the fst -->
+            <os name="Windows Server 2008 R2" arch="amd64"/>  <!-- used by chamonix: windows 64 bits -->
+        </condition>
+        <condition property="linux">
+            <os name="Linux" />
+        </condition>
+        <condition property="solaris">
+            <os name="SunOS" />
+        </condition>
+        <condition property="mac">
+            <or>
+                <os name="Mac OS X" />
+                <os name="Darwin" />
+            </or>
+        </condition>
+        <condition property="mac-ppc">
+            <os name="Mac OS X"  />
+        </condition>
+        <condition property="mac-i386">
+            <os name="Darwin" />
+        </condition>
+    </target>
+</project>
+

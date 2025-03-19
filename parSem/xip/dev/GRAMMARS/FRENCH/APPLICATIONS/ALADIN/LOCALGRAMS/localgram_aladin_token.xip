@@ -1,0 +1,168 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Caroline HAGEGE - Octobre 2009 - Local grammar ALADIN
+//!
+//! This file : specific tokenization transformation for ALADIN 
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+/////////////
+///// Desamb specifique pour abreviations et termes medicaux
+
+
+
+
+Désambiguïsation:
+
+
+// une echo abdo (= echographie abdominale)
+1> noun[lemme:"écho",masc:+] %= | det[fem] | noun[fem=+] .
+
+
+1> noun[lemme:"abdo"] %= | noun[fem:+] | adj[fem=+] .
+
+1> noun[lemme:"Douglas"] %= | noun[lemme:sac], prep |  noun[masc:+,sg:+] .
+
+1> noun[lemme:"bassin"] = noun[masc:+,sg:+,lieu1=~,hydronyme=~,geog=~,adjmaj=~] .
+
+
+// Genta pour gentamicyne, n'est pas un prénom
+1> noun<lemme:"Genta"> = noun[pren:~] .
+
+// LEWIS SANTI n'est pas a annoter comme nom de personne
+1> noun[lemme:"Lewis"] = noun[person=~,pren=~] | noun[guessed:+,lemme:"SANTI"] | .
+1> noun[lemme:"Lewis"] = noun[person=~,pren=~] | noun[guessed:+,lemme:"Santi"] | .
+
+
+
+
+// Stades de maladies (cancer, T=tumeur, N=adenopathies regionales, M=metastases). Stade ici n'est pas un trigger de nom de lieu
+1> noun[lemme:stade] %= noun[noun:+, sg:+] | noun[lemme:"T(%d)([a,b,c])"] |.
+
+1> noun[lemme:stade] %= noun[noun:+, sg:+] | noun[lemme:"TNM"] |.
+
+1> noun[lemme:stade] %= noun[noun:+, sg:+] | noun[lemme:"Tx"] |.
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//    DECOUPAGE - REASSEMBLAGE
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+
+
+//-------------------------------
+//****** DECOUPAGE
+//-------------------------------
+
+Fragmenter:
+
+
+
+//***** Num + unite mesure sans espace
+
+// e.g 100mg
+2> %d%d%d%1(m)g(r)%2 : noun[measure=+, unit_weight=+] = num%1[card=+,fstmod=+], noun%2[unit_weight=+,measure=+,abr=+,fstmod=+] .  
+
+// with two digits
+2> %d%d%1(m)g(r)%2 : noun[measure=+, unit_weight=+] = num%1[card=+,fstmod=+], noun%2[unit_weight=+,measure=+,abr=+,fstmod=+] .  
+
+// with one digit
+2> %d%1(m)g(r)%2 : noun[measure=+, unit_weight=+] = num%1[card=+,fstmod=+], noun%2[unit_weight=+,measure=+,abr=+,fstmod=+] .  
+
+// e.g. 400ml
+2> (%d)(%d)%d%1ml%2 : noun[measure=+, unit_vol=+] = num%1[card=+,fstmod=+], noun%2[unit_vol=+,measure=+,abr=+,fstmod=+].
+
+// 32litres
+2>(%d)(%d)%d%1litres%2 : noun[measure=+, unit_vol=+] = num%1[card=+,fstmod=+], noun%2[unit_vol=+,measure=+,fstmod=+] .
+
+// 32l
+2>(%d)(%d)%d%1l%2 : noun[measure=+, unit_vol=+] = num%1[card=+,fstmod=+], noun%2[unit_vol=+,measure=+,fstmod=+] .
+
+
+// 38°3 
+2> [3,4]%d%1?%2%d%3 : noun[measure=+,unit_temper=+] = num%1[card=+,fstmod=+], noun%2[unit_temper=+,measure=+,fstmod=+], num%3[card=+,fstmod=+] .
+
+
+// 37°
+2> 3%d%1°%2	: noun[measure=+,unit_temper=+] = num%1[card=+,fstmod=+], noun%2[unit_temper=+,measure=+,fstmod=+] .
+
+// 40 ou 41 ou 42
+2> 40%1°%2 : noun[measure=+,unit_temper=+] = num%1[card=+,fstmod=+], noun%2[unit_temper=+,measure=+,fstmod=+] .
+2> 41%1°%2 : noun[measure=+,unit_temper=+] = num%1[card=+,fstmod=+], noun%2[unit_temper=+,measure=+,fstmod=+] .
+2> 42%1°%2 : noun[measure=+,unit_temper=+] = num%1[card=+,fstmod=+], noun%2[unit_temper=+,measure=+,fstmod=+] .
+
+// 48heures
+2> %d%d%1heures%2 : noun[tempexpr=+,heure=+,time=+] = num%1[numheure=+,card=+,fstmod=+], noun%2[val_duree=h, heure=+, periode=+,time=+,fstmod=+] .
+
+// on va fragmenter des dates avec point (non autorisé dans gram générale mais autorisé dans contexte aladin 
+2> [0,1,2,3]%d%1.%2%d%d%3.%4%d%d%5 : num = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+
+
+Multimots:
+
+// Unités de mesure complexes non traitees par le parseur general
+// splites dans NTM (mg/l)
+
+3> "mg/l" = noun[abr=+,measure=+].
+3> "mg/L" = noun[abr=+,measure=+].
+
+3> "P/F" = noun[measure=+].
+
+
+
+
+
+//-------------------------------
+//****** REASSEMBLAGE
+//-------------------------------
+
+
+Séquence:
+
+
+// 37°5
+5> noun[measure=+, unit:!] = num[lemme:"[3,4]%d",fstmod], noun[unit_temper], num[fstmod] .
+
+// 10mg
+5> noun[measure=+,unit:!] = num[fstmod], noun[fstmod,!unit:!] .
+
+
+// 37,5°
+// est splitte par fst au niveau de la virgule
+5> noun[measure=+, unit:!] = num[lemme:"[3,4]%d"], punct[form:fcm], noun[estdegre].
+
+
+
+
+
+// 10mg/24h
+
+7> noun[measure=+] = noun[measure:+], punct[form:fslash], ?[lemme:"(%d)%dh"] .
+
+//mg/h
+
+7> noun[measure=+] = noun[measure:+], punct[form:fslash], ?[lemme:"h"] .
+
+// unites par litre
+// u/l
+
+7> noun[measure=+] = ?[lemme:"u"], punct[form:fslash], ?[lemme:"l(\.)"] .
+7> noun[measure=+] = ?[lemme:"u"], punct[form:fslash], ?[lemme:"L(\.)"] .
+
+// ng/ml
+
+7> noun[measure=+] = ?[lemme:"(n)(m)g"], punct[form:fslash], ?[lemme:"(m)(c)(d)[l,L]"]. 
+
+//mmol/l
+
+7> noun[measure=+] = ?[lemme:"(n)(m)mol"], punct[form:fslash], ?[lemme:"(m)(c)[l,L]"]. 
+
+// abdomino-pelvien
+7> adj[mwe=+,traits:!] = prefix, punct[form:fhyph], adj[!traits:!]  .
+
+

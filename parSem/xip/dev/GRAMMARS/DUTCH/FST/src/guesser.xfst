@@ -1,0 +1,163 @@
+# ============================================================================
+# TYPE:		fst script
+# CONTENT:	morphological guesser
+#
+# LANGUAGE:	DUTCH
+#
+# AUTHOR:	Anne Schiller
+#
+# CREATED:	06-Mar-2007
+#
+# ============================================================================
+# USAGE:	xfst -l ThisFile
+# ============================================================================
+ 
+
+! -------------------------------------------------------------------------
+! Character classes
+! -------------------------------------------------------------------------
+echo >>> define character classes
+
+define Up1	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|Ä|Ö|Ü] ;
+define Up2	[À|Á|Å|Â|Ã|Æ|Ç|Ð|È|É|Ê|Ë|Î|Ï|Ì|Í|Ñ|Ó|Ò|Ô|Õ|Ù|Ú|Û|Ý] ;
+define Up	[Up1 | Up2 | I J ];
+
+define Low1	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|ä|ö|ü|ß] ;
+define Low2	[à|á|â|ã|å|æ|ç|è|é|ê|ë|í|î|ï|ì|ñ|ó|ô|ð|ò|õ|ù|ú|û|ý|ÿ] ;
+define Low	[Low1|Low2] ;
+
+define Letter 	[ Up | Low ] ;
+
+define Sym	[%#|%$|%%|%&|%÷|%@|%~|%£|%§|%µ|%^|%×|%Ø|%Þ|%ø|%þ|%·|%¤|%_] ;
+define Math	[%*|%=|%+|%-] ;
+define Dig	[%0|1|2|3|4|5|6|7|8|9] ;
+define Punct	[%.|%,|%;|%:|%!|%?|%-|%"|%'|%`|%||%/|%\|%¦] ;
+define Bracket	[%(|%)|%{|%}|%[|%]|%«|%»|%<|%>] ;
+ 
+define SPC	" " ;	 # white space
+
+define Space	[% | SPC ] ;
+
+# characters in e-mail or WWW addresses:
+define Sys	[%. | %- | %~ ] ;
+ 
+define Any	[ Letter | Sym | Math | Dig | Punct | Bracket ] ;
+define Char	[ Letter | Dig | %- | %' | %: | %& ];
+
+
+define StemLow	[ Low+ ] ;
+define StemUpp	[ Up Low+ ];
+define StemAny	[ (Up) Low+ ];
+
+
+# -------------------------------------------------------------------------
+echo >>> compound parts
+define Trunc	Char+ %- ;
+
+regex [
+	Trunc 		%+CmpdPart:0 
+];
+
+# -------------------------------------------------------------------------
+echo >>> adjectives:
+
+define Adj1	[ {ig} | {lijk} | {riij} | {gerechtigd}  ] ;
+define Adj2a	[ {aal} | {eel} | {baar} | {ief} ] ;
+define Adj2b	[ {aal}:{al} | {eel}:{el} | {baar}:{bar} | {ief}:{iev} ];
+
+define AdjBasic	[ StemLow [ Adj1 | Adj2a ] | StemUpp s | StemAny {isch} ]; 
+define AdjDecl	[ StemLow [ Adj1 | Adj2b ] | StemUpp s | StemAny {isch} ]; 
+
+regex (Trunc) [ 
+  AdjBasic		%+Adj:0 %+Basic:0
+| AdjDecl 0:e		[ %+Adj:0 %+Decl:0 | %+DAdj:0 %+Noun:0 %+MFCon:0 %+Sg:0 ]
+
+| AdjDecl 0:{en}	%+DAdj:0 %+Noun:0 %+MFCon:0 %+Pl:0
+];
+
+# -------------------------------------------------------------------------
+echo >>> common nouns
+define NounSg	[ StemLow [ {tie} | {ing} | {je} | {heid} | {tief} |
+			    {ssie} | {logie} ]	# added by A.S.
+		 ];
+define NounPl	[ StemLow [ {tie} 0:s | {ing} 0:{en} | {je} 0:s | {heid}:{heden}
+			  | {tief}:{tieven} 
+			  | {ssie} 0:s | {logie} 0:{ën} ] ];
+
+regex 	(Trunc) [
+  NounSg 				%+Noun:0 %+Sg:0 
+| NounPl				%+Noun:0 %+Pl:0 
+| StemLow 0:{'s}			%+Noun:0 %+Pl:0 
+];
+
+# -------------------------------------------------------------------------
+echo >>> proper names
+define PropStem		Up [Char]* ;
+
+regex [
+  (Trunc) PropStem			%+Prop:0
+| (Trunc) PropStem 0:{'s}		%+Prop:0 [%+Gen|%+Pl]:0
+| {d'} StemUpp				%+Prop:0 %+Fam:0 %+Sg:0
+
+# Initials:
+#| [Up [Up|Low]* %.]+			%+Init:0
+# for NTM
+| [ Up %. ] [ [Up|Low] %. ]+		%+Init:0
+];
+
+# -------------------------------------------------------------------------
+
+echo >>> verbs
+define VInf	[ StemLow [ {iën} | {igen} | {eren} ] ] ;
+define VStem1	[ StemLow [ {iën}:{ie} | {igen}:{ig} | {eren}:{eer} ] ] ;
+define VStem2	[ StemLow [ {iën}:{ië} | {igen}:{ige} | {eren}:{ere} ] ] ;
+define VStem3	[ StemLow [ {iën}:{ied} | {igen}:{igd} | {eren}:{eerd} ] ] ;
+define VStemGe	[ 0:{ge} VStem3 ] ;
+
+regex [ 
+  VInf			[ %+Verb [ %+Inf | %+Ind %+Pres %+Pl ] ]:0
+| VInf 0:d		[ %+Verb %+PresPart %+Basic ]:0
+| VInf 0:{de}		[ %+Verb %+PresPart %+Decl ]:0
+| VStem1		[ %+Verb [ %+Impv %+Sg | %+Ind %+Pres %+1P %+Sg ] ]:0
+| VStem1 0:t		[ %+Verb [%+Impv %+Pl | %+Ind %+Pres %+Sg ] ]:0
+| VStem2		[ %+Verb %+Con %+Pres %+3P %+Sg ]:0
+| VStem3 0:e		[ %+Verb %+Ind %+Past %+Sg ]:0
+| VStem3 0:{en}		[ %+Verb %+Ind %+Past %+Pl ]:0
+
+| VStemGe		[ [ %+Verb | %+Adj ] %+PastPart %+Basic ]:0
+| VStemGe 0:e		[ [ %+Verb | %+Adj ] %+PastPart %+Decl ]:0
+
+| VStemGe 0:e		[ %+DAdj %+PastPart %+Noun %+MFCon %+Sg ]:0
+| VStemGe 0:{en}	[ %+DAdj %+PastPart %+Noun %+MFCon %+Pl ]:0
+| VStemGe 0:s 		[ %+DAdj %+PastPart %+Noun %+N %+Sg ]:0
+
+];
+
+
+# -------------------------------------------------------------------------
+echo >>> other ...
+define String 	[ Char+ & $[Letter|Dig] ] - [?* Punct ];
+
+regex	[
+# Numbers
+  Dig+ ([%/|%:|%.|%,|Math] Dig+)*		%+Dig:0 
+	
+# Symbols:
+| Sym+						%+Symbol:0 
+
+# Sgml tags
+| %< (%/) [Letter|Math|Dig|%"]+ %>		%+Sgml:0
+
+# File names
+| String [%. String ]+				%+Prop:0
+];
+
+# -------------------------------------------------------------------------
+echo >>> combine
+# -------------------------------------------------------------------------
+union net
+
+define GUESS 
+
+read regex [ GUESS %+#guess:0 ] ;
+

@@ -1,0 +1,265 @@
+<project>
+
+<!-- *********************************************************             -->
+<!-- Code metrics tools.                                                   -->
+<!-- This file contains predefined ant tasks dedicated to                  -->
+<!-- code metrics reports generation.                                      -->
+<!-- *********************************************************             -->
+<!--                                                                       -->
+<!-- Defined Ant tasks are :                                               -->
+<!-- xradar :    a reports aggregator.                                     -->
+<!-- pmd :       detect potential problems (Unused local variables...),    -->
+<!--             run on sources.                                           -->
+<!-- cpd :       detect duplicate code.                                    -->
+<!-- findbugs :  detect potential problems, run on classes.                -->
+<!-- jdepend :   measure the quality of a design in terms of its           -->
+<!--             extensibility, reusability, and maintainability           -->
+<!--             to manage package dependencies effectively.               -->
+<!-- javancss :  measures code lines, classes number and so on.            -->
+<!-- ckjm :      calculates Chidamber and Kemerer object-oriented metrics, -->
+<!--             run on bytecode.                                          -->
+<!-- depfinder : constructs a graph representing dependencies.             -->
+<!-- cobertura : measures junit tests coverage.                            -->
+<!-- *********************************************************             -->
+
+
+	<target name="setproperties">
+                <property name="common.codemetrics" value="/opt/ParSem/tools/codemetrics" />
+        	<property name="project.src" value="src" />
+                <property name="project.classes" value="build/classes" />
+                <property name="project.junit.src" value="test" />
+		<property name="project.junit.classes" value="build/junitClasses" />
+                <property name="project.libs" value="libExt" />
+		<property name="project.reports" value="reports" />
+		<path id="libs.classpath">
+			<fileset dir="${project.libs}">
+                                <include name="**/*.jar" />
+                        </fileset>
+		</path>
+                <echo>Generated code metrics reports are in ${basedir}/${project.reports}</echo>
+    	</target>
+
+
+<!-- ************************************   -->
+<!-- XRadar : tools report aggregator       -->
+<!-- ************************************   -->
+	<target name="xradar" depends="jdepend, cpd, pmd, javancss, findbugs, ckjm, cobertura, depfinder">
+                <path id="xradar.classpath">
+    			<fileset dir="${common.codemetrics}/xradar-1.1.2/lib">
+        			<include name="*.jar"/>
+    			</fileset>
+		</path>
+		<taskdef name="xradar-statics" classname="org.sourceforge.xradar.ant.StaticsTask">
+   			<classpath refid="xradar.classpath"/>
+		</taskdef>
+
+		<xradar-statics  debug="false"
+                 properties="${common.codemetrics}/xradar-1.1.2/xrce/etc/release1.properties"
+                 config="${common.codemetrics}/xradar-1.1.2/xrce/etc/radar-config.xml"
+                 offline="true"
+                 target="${basedir}/${project.reports}/xradar"
+                 javadocEnabled="false"
+                 java2htmlRoot="htmlcode"> 
+   			<report file="${project.reports}/jdepend_report.xml"      type="jdepend"/>
+			<report file="${project.reports}/cpd_report.xml"          type="cpd"/>
+   			<report file="${project.reports}/pmd_report.xml"          type="pmd"/>
+   			<report file="${project.reports}/javancss_report.xml"     type="javancss"/>
+  			<report file="${project.reports}/ckjm_report.xml"         type="ckjm"/>
+			<report file="${project.reports}/depfind_report.xml"      type="depfind"/>
+   			<report file="${project.reports}/coverage.xml"            type="cobertura"/> 
+   			<report file="${project.reports}/findbugs_report.xml"     type="findbugs"/>
+   			<!-- <report file="${project.reports}/cloc.xml"                type="cloc"/>
+   			<report file="${project.reports}/emma.xml"                type="emma"/> -->
+		</xradar-statics>
+	</target>
+
+
+<!-- ************************************   -->
+<!-- PMD                                    -->
+<!-- ************************************   -->
+	<target name="pmd" depends="setproperties">
+        	<path id="pmd.classpath">
+    			<fileset dir="${common.codemetrics}/pmd-bin-4.3/lib">
+        			<include name="*.jar"/>
+    			</fileset>
+		</path>
+ 		<taskdef name="pmd" classname="net.sourceforge.pmd.ant.PMDTask" classpathref="pmd.classpath" />
+ 		<pmd shortFilenames="true">
+		        <auxClasspath> 
+		       		<pathelement location="${project.classes}" /> 
+		        </auxClasspath>
+			<ruleset>rulesets/basic.xml</ruleset>
+			<ruleset>rulesets/imports.xml</ruleset>
+			<ruleset>rulesets/unusedcode.xml</ruleset>
+			<ruleset>rulesets/finalizers.xml</ruleset>
+		        <ruleset>rulesets/favorites.xml</ruleset>
+		        <ruleset>rulesets/design.xml</ruleset>
+                        <formatter type="xml" toFile="${project.reports}/pmd_report.xml" />
+	  		<formatter type="html" toFile="${project.reports}/pmd_report.html" linkPrefix="http://pmd.sourceforge.net/xref/"/>
+	  		<fileset dir="${project.src}">
+	   			<include name="**/*.java"/>
+	  		</fileset>
+ 		</pmd>
+	</target>
+
+
+<!-- ************************************   -->
+<!-- CPD                                    -->
+<!-- ************************************   -->
+	<target name="cpd" depends="setproperties">
+		<path id="pmd.classpath">
+	    		<fileset dir="${common.codemetrics}/pmd-bin-4.3/lib">
+				<include name="*.jar"/>
+	    		</fileset>
+		</path>
+	    	<taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask" classpathref="pmd.classpath" />
+	    	<cpd minimumTokenCount="100" format="xml" outputFile="${project.reports}/cpd_report.xml">
+			<fileset dir="${project.src}">
+		    		<include name="**/*.java"/>
+			</fileset>
+	    	</cpd>
+    	</target>
+
+
+<!-- ************************************   -->
+<!-- Findbugs                               -->
+<!-- ************************************   -->
+	<target name="findbugs" depends="setproperties">
+	 	<path id="findbugs.classpath">
+			<fileset dir="${common.codemetrics}/findbugs-2.0.0/lib">
+				<include name="*.jar"/>
+			</fileset>
+		</path>
+		<taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpathref="findbugs.classpath" />
+		<findbugs home="${common.codemetrics}/findbugs-2.0.0"
+		      output="xml"
+		      outputFile="${project.reports}/findbugs_report.xml" >
+                        <auxClasspath refid="libs.classpath" />
+			<sourcePath path="${project.src}" />
+			<class location="${project.classes}" />
+		</findbugs>
+                <findbugs home="${common.codemetrics}/findbugs-2.0.0"
+		      output="html"
+		      outputFile="${project.reports}/findbugs_report.html" >
+			<auxClasspath refid="libs.classpath" />
+			<sourcePath path="${project.src}" />
+			<class location="${project.classes}" />
+		</findbugs>
+	</target>
+
+
+<!-- ************************************   -->
+<!-- JDepend                                -->
+<!-- ************************************   -->
+	<target name="jdepend" depends="setproperties">
+		<jdepend format="xml" outputfile="${project.reports}/jdepend_report.xml">
+			<exclude name="java.*"/>
+			<exclude name="javax.*"/>
+			<classespath>
+				<pathelement location="${project.classes}" />
+			</classespath>
+			<classpath location="classes" />
+		</jdepend>
+
+		<style basedir="${project.reports}" destdir="${project.reports}"
+		 includes="jdepend_report.xml" 
+		 style="${ant.home}/etc/jdepend.xsl" />
+	</target>
+
+
+<!-- ************************************   -->
+<!-- Javancss                               -->
+<!-- ************************************   -->
+	<target name="javancss" depends="setproperties">
+		<path id="javancss.classpath">
+			<fileset dir="${common.codemetrics}/javancss-32.53/lib" />
+		</path>
+		<taskdef name="javancss" classpathref="javancss.classpath" classname="javancss.JavancssAntTask" />
+		<javancss srcdir="${project.src}" includes="**/*.java" generateReport="true" outputfile="${project.reports}/javancss_report.xml" format="xml"/>
+	</target>
+
+
+<!-- ************************************   -->
+<!-- Ckjm                                   -->
+<!-- ************************************   -->
+	<target name="ckjm" depends="setproperties">
+		<path id="ckjm.classpath">
+			<fileset dir="${common.codemetrics}/ckjm-1.9/build" />
+		</path>
+		<taskdef name="ckjm" classpathref="ckjm.classpath" classname="gr.spinellis.ckjm.ant.CkjmTask" />
+  		<ckjm outputfile="${project.reports}/ckjm_report.xml" format="xml" classdir="${project.classes}">
+    			<include name="**/*.class" />
+    			<exclude name="**/*Test.class" />
+                        <!-- <extdirs path="${project.libs}" /> -->
+  		</ckjm>
+  		<style in="${project.reports}/ckjm_report.xml" style="${common.codemetrics}/ckjm-1.9/xsl/ckjm.xsl" out="${project.reports}/ckjm_report.html" />
+	</target>
+
+
+<!-- ************************************   -->
+<!-- DependencyFinder                       -->
+<!-- ************************************   -->
+	<target name="depfinder" depends="setproperties">
+		<property name="dependencyfinder.home" value="${common.codemetrics}/DependencyFinder-1.2.1-beta4"/>
+		<path id="dependencyfinder.classpath">
+			<pathelement location="${dependencyfinder.home}/classes"/>
+			<pathelement location="${dependencyfinder.home}/lib/DependencyFinder.jar"/>
+			<pathelement location="${dependencyfinder.home}/lib/jakarta-oro.jar"/>
+			<pathelement location="${dependencyfinder.home}/lib/log4j.jar"/>
+		</path>
+		<taskdef resource="dependencyfindertasks.properties" classpathref="dependencyfinder.classpath" />
+	    	<dependencyextractor destfile="${project.reports}/depfind_report.xml" xml="yes" filterincludes="/^xrce\./">
+	    		<path>
+	      			<pathelement location="${project.classes}"/>
+	    		</path>
+	  	</dependencyextractor>
+		<!-- <dependencyreporter srcfile="${project.reports}/depfind_report.xml"
+		              destfile="${project.reports}/dependencyfinder_c2c.xml"
+		              c2c="yes" />
+	  	<xslt style="${dependencyfinder.home}/etc/DependencyGraphToHTML.xsl"
+			in="${project.reports}/dependencyfinder_c2c.xml"
+			out="${project.reports}/dependencyfinder_c2c.html"/> -->
+    	</target>
+
+
+<!-- ************************************   -->
+<!-- Cobertura                              -->
+<!-- ************************************   -->
+	<target name="cobertura" depends="setproperties">
+		<property name="cobertura.home" location="${common.codemetrics}/cobertura-1.9.4.1" />
+		<path id="cobertura.classpath">
+            		<fileset dir="${cobertura.home}">
+                		<include name="cobertura.jar" />
+                		<include name="lib/*.jar" />
+            		</fileset>
+        	</path>
+        	<taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+		<delete file="cobertura.ser" />
+        	<mkdir dir="instrument" />
+        	<cobertura-instrument todir="instrument">
+            		<ignore regex="org.apache.log4j.*" />
+            		<fileset dir="${project.classes}">
+                		<include name="**/*.class" />
+                		<exclude name="**/*Test.class" />
+           		 </fileset> 
+        	</cobertura-instrument>
+                <junit fork="yes" showoutput="no" haltonfailure="no">
+		    <sysproperty key="net.sourceforge.cobertura.datafile"
+		                 file="cobertura.ser" />
+		    <classpath location="instrument" />
+                    <classpath location="${project.classes}" />
+                    <classpath location="${project.junit.classes}" />
+		    <classpath refid="libs.classpath" />
+		    <classpath refid="cobertura.classpath"/>
+		    <formatter type="xml" />
+		    <batchtest todir="${project.reports}">
+		        <fileset dir="${project.junit.src}">
+		            <include name="**/*Test.java" />
+		        </fileset>
+		    </batchtest>
+        	</junit>
+		<cobertura-report format="xml" destdir="${project.reports}" srcdir="${project.src}" />
+                <cobertura-report format="html" destdir="${project.reports}/cobertura" srcdir="${project.src}" />
+        </target>
+
+</project>

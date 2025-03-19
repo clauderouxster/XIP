@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="evaluationthread" default="all" basedir=".">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="/opt/ParSem/tools/ant-contrib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <target name="all" depends="clean, jar, makInst" />
+
+    <target name="compile" depends="init">
+        <mkdir dir="${classDir}"/>
+        <javac srcdir="${srcDir}" destdir="${classDir}" failonerror="true" >
+            <include name="**/*.java"/>
+            <compilerarg value="-Xlint"/>
+            <classpath refid="comp.class.path" />
+        </javac>
+    </target>
+
+    <target name="run" depends="init" description="compile,and run">
+        <java  classname="evaluationthread.Main" fork="true" failonerror="true" maxmemory="512m">
+            <classpath refid="comp.class.path" />
+        </java>
+    </target>
+
+    <target name="jar" depends="init, compile" description="compile, and build jar">
+        <delete file="${jarFile}" />
+        <jar basedir="${classDir}" destfile="${jarFile}" >
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-class" value="evaluationthread.Main"/>
+                <attribute name="Class-path" value="."/>
+            </manifest>
+            <zipfileset src="${cacao.jar}" />
+        </jar>
+    </target>
+
+    <target name="runJar" depends="init" description="run using the jar" >
+        <java  fork="true" failonerror="true" maxmemory="512m" classname="evaluationthread.Main">
+            <classpath>
+                <pathelement location="${configDir}"/>
+                <pathelement location="${jarFile}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="makInst" depends="init" description="copy ${jarFile} on makalu">
+        <!-- copy advUI.war in the tomcat dir-->
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:${makalu.test.dir}"
+                verbose="true"  failonerror="true" >
+            <fileset file="${jarFile}" />
+        </scp>
+    </target>
+
+    <target name="clean" depends="propertiesSetting">
+        <delete dir="${buildDir}"/>
+    </target>
+
+    <target name="init" depends="propertiesSetting">
+        <mkdir dir="${buildDir}"/>
+        <mkdir dir="${classDir}"/>
+    </target>
+
+    <target name="propertiesSetting">
+        <property name="srcDir" location="${basedir}/src" />
+        <property name="buildDir" location="${basedir}/build" />
+        <property name="configDir" location="${basedir}/config" />
+        <property name="classDir" location="${buildDir}/classes" />
+        <property name="libExt" location="${basedir}/../../../libExt" />
+        <property name="jarFileName" value="evaluationthread.jar" />
+        <property name="jarFile" location="${buildDir}/${jarFileName}" />
+        <property name="cacao.jar" location="${libExt}/ws/0.2/cacao_client.jar" />
+        <path id="comp.class.path">
+            <pathelement location="${configDir}"/>
+            <pathelement path="${classDir}"/>
+            <pathelement location="${cacao.jar}"/>
+        </path>
+        <property name="rhost.name" value="makalu.xrce.xerox.com" />
+        <property name="rhost.login" value="cacao" />
+        <property name="keyfile" location="${user.home}/.ssh/id_rsa" />
+        <property name="makalu.test.dir" location="/cacao" />
+    </target>
+</project>

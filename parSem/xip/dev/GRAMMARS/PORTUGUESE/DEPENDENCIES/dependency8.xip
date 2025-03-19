@@ -1,0 +1,131 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency8.xip                                             !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating and correcting some SUBJ-CDIR dependencies      !
+//!                                                                            !
+//!   Dependencies handled in this file:  SUBJ-OBJ Adjustements                !
+//!                                       DICENDI verbs (subjects)             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency8.xip,v 1.2 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// SUBJ-OBJ Adjustements
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If a passive form has no subject on its left and if there is a NP
+// on its right (that have been calculated previously as object of
+// another verb on the left, then this NP is the subject.
+//
+// Example: Assim que foram reconhecidos os resultados
+//                                                   SUBJ(reconhecer,resultados)
+//
+| #1[verb,pastpart], NP#2 |
+ if ( HEAD(#3,#1) & VDOMAIN(?,#3[pastpart]) & VLINK(#6[lemma:ser],#3) // passive
+   &
+   ~SUBJ[pre](#3,?) // verbo nao tem sujeito a esquerda
+   &
+   HEAD(#4,#2)
+   &
+   ^CDIR[post](#3,#4) // foi considerado este NP como objecto de maneira inadequada
+   &
+   )
+   SUBJ[post=+](#3,#4)  // este objecto passa a ser um sujeito
+
+
+
+// If something is at the same time a subj_pre and a subj_post
+// Because subj_post are not calculated by default rules but by explicit rules
+// then we destroy the subj_pre relation
+//
+// Example: Assim que foram reconhecidos os resultados demitiu-se
+//                                                     *SUBJ(demitir,resultados)
+//
+ if ( SUBJ[post](?,#2) & ^SUBJ[pre](?,#2) )
+   ~
+
+// HAGEGE-10-5-07
+// Correcting erroneous CDIR dependencies when the dependent is a reflex pronoun
+// And if the governor bears feature intrans:+, vrefl:+
+//
+// Example: dignou-se o Pedro a comparecer. PARTICLE_REFL(dignou,se)
+if ( ^CDIR[post](#1[intrans,vrefl],#2[surface:"se"]) )
+	PARTICLE[post=~,refl=+](#1,#2)
+
+// HAGEGE-10-5-07
+// Dealing with inverted subject of intransitive verbs which are reflexive
+//
+// Example : Dignou-se o Pedro SUBJ(dignou,Pedro)
+| NP{#2[pron]}, NP#3 |
+if ( PARTICLE[refl](#1[intrans,vrefl],#2) & ~SUBJ[pre](#1,?) & HEAD(#4,#3) )
+SUBJ[post=+](#1,#4)
+
+
+// Correcting erroneous CDIR dependencies when the dependent is marked as quantity
+// i.e. length, etc which supertype is meastype)
+// The quantity feature is going to be passed to the MOD dependency...
+//
+// Example: O João correu 2 metros
+//
+| #3[meastype] |
+if ( ( ^CDIR[post](#1[intrans],#2) | ^SUBJ[post](#1[intrans],#2) ) & HEAD(#2,#3[!meastype:!]) )
+	MOD(#1,#2)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// DICENDI VERBS (SUBJECTS)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If at the end of a sentence we have a dicendi verb followed by a NP
+// (calculated previously as a CDIR) and
+// if this verb has no subject,
+// then what has ben calculated as an object is in fact a subject.
+//
+// Example: "acho que o Brasil precisa", afirmou o Lula.
+//
+// NP is the last element of the sentence
+//
+// CH - 2008/Jan
+// Restriction added - festejaram o Natal (festejar is marked as dicendi)
+//
+| NP#1[end] |
+ if ( HEAD(#2[feast_event:~],#1) & ^CDIR(#3[dicendi],#2) & ~SUBJ(#3,?) )
+   SUBJ(#3,#2)
+
+// NP is the before last element of a sentence on the left of a punctuation mark.
+| NP#1, punct[end] |
+ if ( HEAD(#2[feast_event:~],#1) & ^CDIR(#3[dicendi],#2) & ~SUBJ(#3,?) )
+   SUBJ(#3,#2)
+
+
+// CH -  May, 17th
+// Allowing a SUBJ[post] of a dicendi verb even not at the end of the sentence
+// if the potential SUBJ is a proper name followed by punctuation
+// This rule has to be further refined to only allow person names here.
+//
+// Example: Ai - disse o Rui, acho que vou sair...
+//
+| NP#1, punct[comma] |
+ if ( HEAD(#2,#1) & ^CDIR(#3[dicendi],#2) & ~SUBJ(#3,?) )
+   SUBJ(#3,#2)
+

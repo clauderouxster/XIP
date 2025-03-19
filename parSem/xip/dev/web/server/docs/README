@@ -1,0 +1,129 @@
+fichier in: /home/grondeau/projets/xip/xip/dev/web/server/docs/README
+
+pour utiliser tomcat seul:
+=========================
+
+sur PC:
+ vi /home/grondeau/tools/apache/jakarta-tomcat-5.0.25/bin/setclasspath.bat
+ ajouter a la fin du fichier:
+	set CLASSPATH=%CLASSPATH%;..\webapps\xip\WEB-INF\lib\jxip.jar
+
+sur linux:
+ vi /home/grondeau/tools/apache/jakarta-tomcat-5.0.25/bin/setclasspath.sh
+ ajouter a la fin du fichier:
+	# doit etre de path absolu pour permettre de demarrer tomcat de n'importe quel directory
+	TOM_ROOT=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+	CLASSPATH="$CLASSPATH:$TOM_ROOT/webapps/xip/WEB-INF/lib/jxip.jar"
+	LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TOM_ROOT/temp/grondeau/linux"
+
+==================================================================
+utilisation TOMCAT + APACHE httpd
+
+-----------------tomcat ----------------------------------
+vi /home/grondeau/tools/apache/jakarta-tomcat-5.0.25/bin/setclasspath.sh
+ # doit etre de path absolu pour permettre de demarrer tomcat de n'importe quel directory
+< TOM_ROOT=/home/grondeau/tools/apache/jakarta-tomcat-5.0.25
+< CLASSPATH="$CLASSPATH:$TOM_ROOT/webapps/xip/WEB-INF/lib/jxip.jar"
+< LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TOM_ROOT/temp/grondeau/linux"
+
+--------------apache httpd -----------------------------
+creer /home/grondeau/tools/apache/httpd-2.0.49-src a partir du tar file
+mkdir /home/grondeau/tools/apache/httpd-2.0.49
+cd /home/grondeau/tools/apache/httpd-2.0.49-src
+./configure --prefix=/home/grondeau/tools/apache/httpd-2.0.49
+make
+make install
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/httpd.conf
+#Listen 80
+#13.202.220.196 = choranche
+Listen 13.202.220.196:5080
+
+pour demarer/stopper serveur:
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apachectl start
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apachectl stop
+pour tester:
+http://choranche.grenoble.xrce.xerox.com:5080/
+
+--------- connector -----------------
+creer /home/grondeau/tools/apache/jakarta-tomcat-connectors-jk2-2.0.4-src a partir du tar file
+cd /home/grondeau/tools/apache/jakarta-tomcat-connectors-jk2-2.0.4-src/jk/native2
+.configure --with-apxs2=/home/grondeau/tools/apache/httpd-2.0.49/bin/apxs
+make
+cd ../build/jk2/apache2
+/home/grondeau/tools/apache/httpd-2.0.49/bin/apxs -n jk2 -i mod_jk2.so
+
+---------------------httpd server ------------------------
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/httpd.conf
+chercher LoadModule et ajouter la ligne:
+LoadModule jk2_module modules/mod_jk2.so
+
+vi /home/grondeau/tools/apache/httpd-2.0.49/conf/workers2.properties
+[channel.socket:localhost:8009]
+port=8009
+host=127.0.0.1
+ 
+[ajp13:localhost:8009]
+channel=channel.socket:localhost:8009
+ 
+[uri:/jsp-examples/*]
+worker=ajp13:localhost:8009
+
+[uri:/xip/*]
+worker=ajp13:localhost:8009
+
+
+voir example: /home/grondeau/tools/apache/jakarta-tomcat-connectors-jk2-2.0.4-src/jk/conf/workers.properties
+
+test:
+http://choranche.grenoble.xrce.xerox.com:5080/jsp-examples/
+
+
+cp /opt/W3/public/docs/*  /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r  /opt/W3/public/docs/competencies/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/images/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/include/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/stylesheets/ /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+cp -r /opt/W3/public/docs/sys /home/grondeau/tools/apache/httpd-2.0.49/htdocs
+vi /home/grondeau/tools/apache/httpd-2.0.49/htdocs/competencies/content-analysis/homepage.en.html
+rajouter la ligne 141:
+ <li><a href="/xip/page1.jsp">XIP parser</a></li>
+vi /home/grondeau/tools/apache/httpd-2.0.49/htdocs/competencies/content-analysis/robustparsing/home.en.html
+rajouter la ligne 167:
+ <br><br>XIP <a href="/xip/page1.jsp"> demos.</a>
+tester:
+http://choranche.grenoble.xrce.xerox.com:5080/competencies/content-analysis/homepage.en.html
+
+====================================================================================
+site de dev:
+les pages sont dans: /opt/W3/synchro  et sont recopier dans /opt/W3/public(site externe) tous les soirs
+http://www2.grenoble.xrce.xerox.com:8003/competencies/content-analysis/tools/xip/guesser.en.html
+
+====================================================================================
+site web extern de reference: sur le hostname=www
+les pages sont dans: /opt/W3/synchro  et sont recopier dans /opt/W3/public(site externe) tous les soirs
+http://www.xrce.xerox.com/competencies/content-analysis/homepage.en.html
+
+pour mise a jour:
+scp xip.war webadm@www.xrce.xerox.com:/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/webapps
+cp xip.war /opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/webapps
+rm -rf /opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/webapps/xip
+
+Pour arreter ou demarer tomcat(extern):
+ssh www.xrce.xerox.com -l webadm
+cd  /opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/webapps
+Pour demarrer tomcat:
+/opt/W3/tools/Lirix2/bin/lirix2_start /opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/bin/startup.sh
+
+Pour arreter tomcat:
+/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14/bin/shutdown.sh
+
+/etc/init.d/mysqld start
+/opt/W3/public/bin/apachectl start
+====================================================================================
+Ligne rajoute au fichier tomcat conf/jk2.properties
+# added by G. Rondeau (10 septembre 2004 16:14) to remove the following messages in the log:
+# WARNING: Error registering request
+# and Unknown message 0
+# and to remove also (I hope ) the message: java.lang.OutOfMemoryError
+request.registerRequests=false
+====================================================================================

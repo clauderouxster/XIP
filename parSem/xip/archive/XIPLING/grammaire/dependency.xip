@@ -1,0 +1,116 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Englis XIP toy grammar
+//!   filename   : dependency.xip
+//!   Date       : January 2005
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Variables:
+dictionary equivalences;
+string sx;
+
+Initial:
+equivalences["NOM"]="NOM";
+equivalences["ACC"]="ACC";
+equivalences["DAT"]="DAT";
+equivalences["GEN"]="GEN";
+
+DependencyRules:
+
+|NP[case:nom]{?*,#1[last,np:~];NP{?*,#1[last]}},?*,VP[last]{?*,#2[last,vp:~];VP{?*,#2[last]}}|
+   subj(#2,#1).
+
+|NP[case:acc]{?*,#1[last,np:~];NP{?*,#1[last]}},?*,VP[last]{?*,#2[last,vp:~];VP{?*,#2[last]}}|
+   obj(#2,#1).
+
+
+|PP#{prep,NP{?*,#1[last]}},NP[case:gen]{?*,#2[last]}|
+      nmod(#1,#2).
+
+|NP{?*,#2[last,np:~];NP{?*,#2[last]}},NP*;PP*,PP#3[case:gen]{?*,NP{?*,#1[last,np:~];NP{?*,#1[last]}}}|
+	if ( equivalences[#2[case]]:#3[antecedentcase] | (#2[case:nom] & #3[antecedentcase:~]))
+		nmod(#2,#1).
+
+|NP{?*,#2[last,np:~];NP{?*,#2[last]}},NP[case:gen]{?*,#1[last,np:~];NP{?*,#1[last]}}|
+	nmod(#2,#1).
+
+|NP{?*,#2[last,np:~];NP{?*,#2[last]}},?*,SREL{NP[pron]{pron#1}}|
+	if (~antecedent(#1,?) & equivalences[#2[case]]:#1[antecedentcase] )
+	 antecedent(#1,#2).
+
+|NP{?*,NP{?*,#2[last]}},?*,SREL{NP[pron]{pron#1}}|
+	if (~antecedent(#1,#2) & equivalences[#2[case]]:#1[antecedentcase] )
+	 antecedent(#1,#2).
+
+|NP{?*,ADJ#1,?*,Noun#2[last]}|
+    amod(#2,#1).
+
+|NP{?*,det#1,?*,Noun#2[last]}|
+    determ(#2,#1).
+
+|PP{?*,NP{?*,#1[last,np:~];NP{?*,#1[last]}}},?*,SREL{pron#2[antecedentcase:dat]}|
+               if (~antecedent(#1,?))
+	   antecedent(#2,#1).
+
+|PP{prep#1,NP{?*,#3[last]}}|
+   pmod(#3,#1).
+
+|PP{prep[antecedentcase:~,case:nom],NP{?*,#3[last]}},?*,VP{?*,verb#2[last]}|
+         mod(#2,#3).
+
+|#1[terminal,neg]|	neg(#1).
+
+|VP#3{?*,VP#1,?*,VP#2[last,coord]}|
+     vpcoord(#3),coord(#2,#1).
+
+|NP{?*,NP#1,?*,NP#2[last,coord]}|
+     coord(#2,#1).
+
+|PP{?*,PP#1,?*,PP#2[last,coord]}|
+     coord(#2,#1).
+
+|S{?*,VP[last]{?*,VP#1}}|
+	main(#1).
+
+|S{?*,VP#1}|
+	if (~VPCOORD(#1))
+		main(#1).
+if (^vpcoord(#1))
+	~.
+
+	
+Script:
+
+if ($1(#1,#2)) {
+   construitdependence($1);
+}
+
+if ($1(#1)) {
+   construitunaire($1);
+}
+
+|top#1| {
+	arbre(#1);
+}  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

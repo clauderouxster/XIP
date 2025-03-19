@@ -1,0 +1,115 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Marqueur:
+//pluriels
+
+7> det[sg,pl:~], noun[pl=~].
+7> prep[sg,pl:~], noun[pl=~].
+
+7> noun[guessedComp=+]{noun[guessed:+], punct[hyph:+], noun[guessed:+]}.
+
+8> noun[guessed:+, inconnu=+].
+8> noun[guessedComp:+, inconnu=+].
+
+
+/************** personnes ****************\
+
+
+10> noun[maj, lemme:"camomille", pren=+, prenamb1=+].
+
+10> det[poss], noun[lemme:compatriote, nat=+].
+
+/************** organisations ****************\
+
+Séquence:
+
+/Congrès national africain\
+12> Noun[org=+]  = noun[lemme:congrès, maj], adj[lemme:national], adj[lemme:africain].
+
+
+
+/****************dates et périodes*********************\
+//ajout maud:
+
+
+// pb avec "....de plus de trois heures" : 
+// "de plus" sort en ADV et "de" en DET
+// il faut : "de" en PREP et "plus de" en DET complx
+// à ne faire que si determinant et num derrière  
+// idem pour "en moins de"
+
+
+Marqueur:
+// acces aux traits lexicaux necessaire pour la fregmentation
+
+14> adv<lemme:"de plus",tosegment=+>,det[form:fde],num.
+
+14> adv<lemme:"de plus",tosegment=+>,   prep[lemme:"de"] .
+
+14> adv<lemme:"en moins",tosegment=+>,det[form:fde],num.
+
+14> adv<lemme:"en moins",tosegment=+>, prep[lemme:"de"] .
+
+
+Fragmenter:
+
+16> "de%1% %2plus%3"  :  adv[tosegment] = prep%1, adv%3.
+
+16> "en%1% %2moins%3" :  adv[tosegment] = prep%1, adv%3.
+
+
+//la faute de la fille --> faute de n'est pas une prep
+
+16> "faute%1 %2de%3" :: prep[tosegment=+] = |det| noun%1[fem=+,sg=+,lemme="faute",noun=+], prep%3[prep=+,form=fde]  .
+
+16> "faute%1 %2de%3" :: prep[tosegment=+] = |?[punct:~]| noun%1[fem=+,sg=+,lemme="faute",noun=+], prep%3[prep=+,form=fde] |det[def]|   .
+
+Séquence:
+
+// Gestion des déterminants complexes indéfinis à valeur quantificatrice:
+//  plus de, moins de, 
+
+18> det[indef=+,quant=+,complx=+,t_mod=less_than] @= adv[lemme:"moins"],det[indef]|num;det[quant:+]|.
+
+18> det[indef=+,quant=+,complx=+,t_mod=less_than] @= adv[lemme:"un\ peu\ moins"],det[indef]|num;det[quant:+]|.
+
+18> det[indef=+,quant=+,complx=+,t_mod=more_than] @= adv[lemme:"plus"],det[form:fde]|num;det[quant:+]|.
+
+18> det[indef=+,quant=+,complx=+,t_mod=more_than] @= adv[lemme:"un\ peu\ plus"],det[indef]|num;det[quant:+]|.
+
+// plus tôt est un adverbe
+
+18>ADV[mwe=+,postdate=+] = adv[lemme:"plus",adv],adv[adv,lemme:"tôt"].
+
+
+// tempexpr : d'ici deux ans: "d'ici" est une prep
+// aussi pour "d'ici deux à trois jours"
+18> prep[predate=+,pointage=+]@= prep[form:fde,surface:"d'"],adv[lemme:"ici"] |num,(coord;prep[form:fa],num),noun[periode]|.
+
+//  d'ici demain,
+18> prep[predate=+,pointage=+]@= prep[form:fde,surface:"d'"],adv[lemme:"ici"] |noun[tempexpr,temp_ref=s];adv[tempexpr,temp_ref=s]|.
+
+
+// d'ici mardi/mars
+18> prep[predate=+,pointage=+]@= prep[form:fde,surface:"d'"],adv[lemme:"ici"] |noun[jour];noun[mois]|.
+
+// Gestion du présentatif "cela fait" : joue le rôle d'une prep devant des ET
+18> prep[predate=+,presentatif=+]@= pron[lemme:"cela"], verb[lemme:"faire"]|(adv[t_mod]), (det[complx:+]), num,(coord,num), noun[periode]|.
+
+// il est parti au bout d'une semaine : "au bout de" est une prep dans un ctxt d'ET
+// rq : prevoir d'enlever le trait postdate ...
+18> prep[predate=+,postdate=+]@= prep[form:fa],noun[lemme:"bout"],prep[form:fde] | num, noun[periode]|.
+
+/************** lieux ****************\
+
+
+/afro-cubain\
+18> adj[nat=+] = prefix[nat1], adj[nat, !sg:!, !pl:!, !masc:!, !fem:!].
+
+

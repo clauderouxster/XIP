@@ -1,0 +1,762 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : localgram_temp__spec_temp.xip
+//!   Date       : January 2005-2007
+//!   Author     : Caroline Hagege - Xavier Tannier
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// This file contains local rules dedicated to temporal expressions
+// See also C. Brun's files applied before (localdates.xip)
+
+
+// EN COURS
+
+
+Sequence:
+
+
+// ANCHORED_DATEs
+/////////////////////////
+// two years ago, 3 days later, ...
+// Rule 1
+5> ADV[tempexpr:+,mwe:+,c_anchor:+,stand_alone=+] = 
+	#1[noun, c_dur], adv#2[temp_rel,temp_ref],
+		where(merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+// year-earlier
+5> adj[tempexpr:+,mwe:+,c_anchor:+] = 
+	noun#1[period,period:~+,date:~,spec_period:~], punct[form:fhyph,left,right], #2[surface:earlier],
+	where(add_duration_x(#1, #1) & add_explicit_temporal_relation(#2, "before", "r") & 
+		merge_anchor_date_and_duration(#2, #1, #0)).
+
+// year-ago
+5> adj[tempexpr:+,mwe:+,c_anchor:+] = 
+	noun#1[period,period:~+,date:~,spec_period:~], punct[form:fhyph,left,right], #2[lemme:ago],
+	where(add_duration_x(#1, #1) & add_explicit_temporal_relation(#2, "before", "s") & 
+		merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+// two years away
+// Special rule because away is not exactly a temp_rel
+// two cases: 
+//    - "two years away from..." here we consider the chunk as a duration (to be changed ???)
+//         because the "from" gives the temporal information
+//    - "two years away" alone, it is an ANCHOR (proper interpretation this time)
+5> ADV[tempexpr:+,mwe:+,c_dur:+] = #1[noun, c_dur], adv#2[lemme:away] | prep[temp_rel];prep[form:ffrom] |,
+	where(copy(#1, #0, "DURATION")).
+5> ADV[tempexpr:+,mwe:+,c_anchor:+] = #1[noun, c_dur], adv#2[lemme:away] ~| prep[temp_rel];prep[form:ffrom] |,
+	where(SetFeature(#2, "temp_rel", "before_after") & SetFeature(#2, "temp_ref", "r") & 
+		add_temporal_relation(#2) & merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+// {two years ago} {yesterday}
+//  See chunk_temp
+
+
+// two years after...
+// Rule 1bis
+// only prep, because conj are part of a longer chunk
+//   eg: two years after, the general became consul  OK
+//   eg: two years after the general became consul, he won the second campaign of Italy    NO!
+//       no verb before the punct
+//   transform first the noun[c_dur] into NP[c_dur] to unify all dependency rules
+//       afterwards (we'll need a HEAD)
+//   negated left context: to avoid "the four days before..." which has a different meaning
+//                                  (duration + c_anchor)
+//5> NP[tempexpr:+,mwe:+,c_dur:+] = ~| det[def];det[det_dem] | noun#1[c_dur]
+//	| prep#2[temp_rel,temp_ref], punct |, 
+//	where(copy(#1, #0)).
+//5> NP[tempexpr:+,mwe:+,c_dur:+] = ~| det[def];det[det_dem] | noun#1[c_dur] 
+//	| prep#2[temp_rel,temp_ref], ?*[punct:~], ?[verb], ?*[punct:~], punct[comma];punct[strongbreak];punct[sent] |,
+//	where(copy(#1, #0)).
+// ... then create the ADV
+////    (commented the python function, treated later by dependencies)
+//6> ADV[tempexpr:+,mwe:+,c_dur:+,c_anchor:+] = ~| det[def];det[det_dem] | NP#1[c_dur], prep#2[temp_rel,temp_ref] | punct |.
+////	where(merge_anchor_date_and_duration(#2, #1, #0)).
+//6> ADV[tempexpr:+,mwe:+,c_dur:+,c_anchor:+] = ~| det[def];det[det_dem] | NP#1[c_dur], prep#2[temp_rel,temp_ref]
+//	| ?*[punct:~], ?[verb], ?*[punct:~], punct[comma];punct[strongbreak];punct[sent] |.
+////	where(merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+
+// "long ago" or "not (that | so) long (time) ago" are taken as ADV[tempadv:+]
+// NOTE : other expressions with "ago" are treated in the chunker
+//  XT long_time is grouped before, why?
+5> ADV[tempexpr:+,mwe:+,t_relat:+,c_anchor:+] = 
+	(quant;det[indef]), (adv[form:fnot]), (conj[form:fthat]), (adv[form:fso]), ?[lemme:long];?[lemme:long_time];noun[lemme:time], adv#1[temp_rel,temp_ref], 
+	where(copy(#1, #0)).
+
+
+// later than October 12th
+//5> ADV[tempexpr:+, date:+] = #1[temp_rel], noun#2[tempexpr,date];NP#2[tempexpr,date],
+//	where(merge_anchor_date_and_date(#1, #2, #0)).
+
+
+// two consecutive c_anchors, like in
+//    two years ago yesterday, two years ago in two days, ...
+// must check if it's OK
+// Rule 2
+//6> ADV[tempexpr:+,mwe:+,c_anchor:+] = #1[c_anchor], #2[c_anchor], 
+//	where(merge_anchor_dates(#1, #2, #0)).
+
+
+// duration + prep[temp_rel] + c_anchor, like in
+//    two years before yesterday
+// Rule 10
+//6> NP[tempexpr:+,mwe:+,c_anchor:+] = #1[c_dur], #2[temp_rel], #3[c_anchor], 
+//	where(merge_anchor_date_and_duration(#2, #1, #0) & merge_anchor_dates(#0, #3, #0)).
+
+
+
+
+
+
+
+
+// FREQUENCY ADVERBIALS
+/////////////////////////
+// once
+//    not in beginning of the sentence, not a verb just after. (once installed...)
+//      in this case it will be a temp_rel after (see Marker rule at the end of the file)
+5> ADV[tempexpr:+,mwe:+,c_set:+] = adv[lemme:once, start:~] ~| verb | ,
+	where(str_type = "1" & add_set(#0, str_type)).
+// twice
+5> ADV[tempexpr:+,mwe:+,c_set:+] = adv[lemme:twice],
+	where(str_type = "2" & add_set(#0, str_type)).
+// three times
+5> ADV[tempexpr:+,mwe:+,c_set:+] = 
+	dig#1;num#1[card:+], noun[lemme:time, pl],
+	where(add_set_implicit(#0, #1)).
+// often, sometimes
+5> ADV[tempexpr:+,mwe:+,c_set:+] = adv[lemme:often];adv[lemme:sometimes];adv[lemme:sometime],
+	where(str_type = "X" & add_set(#0, str_type)).
+// so many times
+5> ADV[tempexpr:+,mwe:+,c_set:+] = (adv[lemme:so]), quant[lemme:many], noun[lemme:time],
+	where(str_type = "X" & add_set(#0, str_type)).
+// several times, very few times
+5> ADV[tempexpr:+,mwe:+,c_set:+] = (adv[lemme:very]), quant, noun[lemme:time,pl],
+	where(str_type = "X" & add_set(#0, str_type)).
+// time and again
+5> ADV[tempexpr:+,mwe:+,c_set:+] = noun[lemme:time], conj[lemme:and], (noun[lemme:time]), adv[lemme:again],
+	where(str_type = "X" & add_set(#0, str_type)).
+// time after time
+5> ADV[tempexpr:+,mwe:+,c_set:+] = noun[lemme:time], adv[lemme:after], noun[lemme:time],
+	where(str_type = "X" & add_set(#0, str_type)).
+// from time to time
+5> ADV[tempexpr:+,mwe:+,c_set:+] = prep[form:ffrom], ?[lemme:time], prep[lemme:to], ?[lemme:time],
+	where(str_type = "X" & add_set(#0, str_type)).
+// again and again
+5> ADV[tempexpr:+,mwe:+,c_set:+] = adv[lemme:again], conj[lemme:and], adv[lemme:again],
+	where(str_type = "X" & add_set(#0, str_type)).
+// every time 
+5> ADV[tempexpr:+,mwe:+,c_set:+] = quant#1[c_set], ?[lemme:time],
+	where(str_type = "X" & add_set(#0, str_type)).
+
+// this time
+//   interpretation for the moment : same as "once"
+5> ADV[tempexpr:+,mwe:+,c_set:+] = det[det_dem], ?[lemme:time],
+	where(str_type = "1" & add_set(#0, str_type)).
+
+
+// EACH, EVERY
+// each + date
+5> NP[c_set:+,tempexpr:+,mwe:+] = 
+	#1[c_set], #2[tempexpr, date];#2[spec_period,spec_period:~+],
+		where(merge_set_and_date(#1, #2, #0)).
+
+// every 2 days
+5> NP[c_set:+,tempexpr:+,mwe:+] = quant#1[c_set], #2[tempexpr, c_dur],
+	where(merge_set_and_duration(#1, #2, #0)).
+
+
+// each month, every month
+5> NP[c_set:+,tempexpr:+,mwe:+] = 
+	quant#1[c_set,form:feach];quant#1[c_set,lemme:every];quant#1[c_set,lemme:most], 
+	#2[noun, period, spec_period:~, date:~],
+		where(add_duration(#1, #2, #2) & merge_set_and_duration(#1, #2, #0)).
+
+// per month
+5> ADV[c_set:+,tempexpr:+,mwe:+] =
+	 prep#1[c_set,lemme:per], #2[noun, period, spec_period:~, date:~],
+		where(add_duration(#1, #2, #2) & merge_set_and_duration(#1, #2, #0)).
+
+// an hour, when an has feature c_set ($2 an hour)
+5> ADV[c_set:+,tempexpr:+,mwe:+] =
+	 det#1[indef, c_set], #2[noun, period, spec_period:~, date:~],
+		where(add_duration(#1, #2, #2) & 
+			merge_set_and_duration(#1, #2, #0)).
+
+
+
+
+// SET + DURATION(indef) => see dependency rule D1 in localdates
+// twice a week
+6> ADV[tempexpr:+,mwe:+,c_set:+] = ADV#1[tempexpr,c_set], #2[noun, tempexpr,c_dur,indef],
+	where(merge_set_and_duration(#1, #2, #0) & add_quant(#0, "EACH")).
+
+
+// DURATION + SET
+// three days each week
+// Rule 50
+6> NP[tempexpr:+,mwe:+,c_set:+] = #1[noun, tempexpr:+,c_dur:+], NP#2[tempexpr:+,c_set:+], 
+	where(merge_duration_and_set(#1, #2, #0)).
+
+
+// DURATION + DURATION(indef) => see dependency rule in localdates
+// three days a week
+// do not remove one of the two add_quant, the first one creates the set, the last one adds the quant.
+6> NP[tempexpr:+,c_set:+] = #1[noun, tempexpr,c_dur], #2[noun, tempexpr,c_dur,indef],
+	where(add_quant(#0, "EACH") & 
+		merge_set_and_duration(#0, #2, #0) & 
+		merge_duration_and_set(#1, #0, #0) & 
+		add_quant(#0, "EACH")).
+
+// SET + SET
+// twice each week
+6> ADV[tempexpr:+,mwe:+,c_set:+] = ADV#1[tempexpr:+,c_set:+], NP#2[c_set:+,tempexpr:+],
+	where(merge_sets(#1, #2, #0)).
+
+
+// see also :
+// 180,000 a month, 3 meals a/per day => SET
+// in Marker rules at the end (layer 35)
+
+
+//    two years before yesterday
+// Rule 10
+//6> NP[tempexpr:+,mwe:+,c_anchor:+] = #1[c_dur], #2[temp_rel], #3[c_anchor], 
+//	where(merge_anchor_date_and_duration(#2, #1, #0) & merge_anchor_dates(#0, #3, #0)).
+
+
+
+// SET + in a row
+6> ADV[tempexpr:+,mwe:+,c_set:+] = ADV#1[tempexpr,mwe,c_set], prep[form:fin], det[indef], noun[lemme:row],
+	where(copy(#1, #0)).
+
+6> NP[tempexpr:+,mwe:+,c_set:+] = #1[noun,tempexpr,mwe,c_set], prep[form:fin], det[indef], noun[lemme:row],
+	where(copy(#1, #0)).
+
+
+//IDrules:
+
+//==================================== ADVs ============================
+
+
+// XT treated in Rule 1
+// two years ago 
+//10> ADV[tempexpr:+,mwe:+] -> noun#1[c_dur], adv#2[form:fago], where(merge_durations(#1, #2, #0)).
+
+// two years ago today/yesterday/tomorrow
+// Rule 2
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> dig[first:+], noun[period], adv[lemme:ago], noun[tempexpr:+,last:+] .
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> num[first:+], noun[period], adv[lemme:ago], noun[tempexpr:+,last:+] .
+
+
+// Rule 1
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> dig[first:+], noun[period], adv[form:fago,last:+].
+
+
+//SC{NP{He} FV{left}} ADV{ten days ago}
+//NP{Ethiopia 's government two weeks} TEST{ago said}
+// Rule 1
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> num[first:+], noun[period], adv[form:fago,last:+].
+
+// a year ago today/tomorrow/yesterday
+// Rule 2
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> det[first:+,indef:+], noun[period], adv[form:fago], noun[tempexpr:+,last:+] .
+
+//a year ago  - a week ago etc
+// See Rule 1
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> det[first:+,indef:+], noun[period], adv[form:fago,last:+].
+
+
+//a_few+QUANT decades ago
+//some time ago
+//many years ago
+// Rule 1
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> quant[first:+], noun[period], adv[form:fago,last:+].
+
+//several+adj years ago
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> adj[first:+], noun[period], adv[form:fago,last:+].
+
+
+
+// decades ago, years ago
+// See Rule 1
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> noun[pl:+,first:+,period], adv[form:fago,last:+] .
+
+
+
+//"two days before/after/later
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> dig[first:+], noun[period], adv[time:+,last:+] | ?[det:~,tempexpr:~] |.
+//10> ADV[tempexpr:+,mwe:+,t_relat:+] -> num[first:+], noun[period], adv[time:+,last:+] | ?[det:~,tempexpr:~] |.
+
+
+/////////////////////////////// NOMINAL EXPRESSIONS
+
+
+
+
+// Temporal expresssion of the form "the 1980s" when they are preceeded by a preposition
+// XT treated in localdates
+//10> NP[tempexpr:+,mwe:+,interval:+] -> | prep | det[def:+], noun[date:+,card:~] | ?[noun:~] | .
+
+//Sequence:
+
+
+
+
+
+
+
+
+//IDRules:
+
+
+
+
+//every/each day/week/month/year/Spring/time
+//!!the last[preperiod:+] ADV{few weeks} 
+//!!these ADV{few weeks}
+//!!through ADV{all time}
+//NP{The AP{same} revolution+NOUN every+QUANT year}
+//a ADV{year more} - last:+
+// CH 20 juillet
+// Every 2 days
+// See above (Frequency adverbials)
+//10> NP[tempexpr:+,mwe:+,c_set:+] ->  quant[preperiod:+], (dig), noun[period,last:+].
+
+//10> NP[tempexpr:+,mwe:+,c_set:+] ->  quant[preperiod:+], (num), noun[period,last:+].
+
+// nadj[preperiod] + quant/num/dig period
+// e.g. the last few weeks, the next two weeks...
+// See localdates Rule 20
+//10> NP[tempexpr:+,mwe:+,t_relat:+] -> det, nadj[preperiod:+], (dig), (num), (quant), (adj), noun[period] .
+
+
+// recent years 
+// See localdates Rule 20
+//10> NP[tempexpr:+,mwe:+,t_relat:+] -> (det[first:+]), adj[period], noun[period,last:+] .
+// late years
+//10> NP[tempexpr:+,mwe:+,t_relat:+] -> (det[first:+]), adj[time:+], noun[period,last:+] .
+
+
+// CH 8th October
+// NP's like the 50's
+// XT already treated
+//10> NP[tempexpr:+,t_absolut:+] -> det, dig, part . 
+
+
+//CH 24 juillet. NP's like "(the) last/next year" have a special feature.
+//They will be subject only if followed by a principal finite verb. 
+//Otherwise they will be considered as adverbials. 
+
+//10> NP[tempexpr:+] -> (det), (quant), nadj[preperiod:+], ( AP+), noun[period,last:+].
+
+
+
+// 2 days - two days
+// See durations
+//10> NP[tempexpr:+] -> num[card:+,first:+], adj*, noun[period,last:+].
+//10> NP[tempexpr:+] -> dig[card:+,first:+], adj*, noun[period,last:+] .
+
+
+
+// Friday evening
+// XT treated in localdates
+// (see Rule 200)
+//10> NP[tempexpr:+,t_relat:+] -> noun[day:+,t_relat=+], noun[posttime:+] .
+
+
+
+
+//Sequence: 
+
+
+// the past, the future
+// adj:~ added to avoid the adjective "past" interpreted as nadj to trigger this rule
+10> NP[tempexpr:+,c_anchor:+] @= (det[def:+]), #1[noun,lemme:past]   ~| ?[noun];?[adj];prep[form:fof] |, 
+	where(add_temp_ref(#1, "s") & copy(#1, #0)).
+10> NP[tempexpr:+,c_anchor:+] @= (det[def:+]), #1[noun,lemme:future] ~| ?[noun];?[adj];prep[form:fof] |, 
+	where(add_temp_ref(#1, "s") & copy(#1, #0)).
+
+
+
+
+// MOD
+//////////
+// beginning/end/middle of the year
+// with date
+15> NP[tempexpr:+,date:+,temp_level:!] @= 
+	(det), #1[noun, t_mod], prep[form:fof], (det), #2[tempexpr,date,temp_level],
+		where(add_mod(#2, #1, #0, "DATE") & #0[temp_level] = {#2}).
+// with c_anchor
+15> NP[tempexpr:+,c_anchor:+] @= 
+	(det), #1[noun, t_mod], prep[form:fof], (det), #2[tempexpr:+,c_anchor],
+		where(add_mod(#2, #1, #0, "ANCHOR")).
+// with duration
+15> NP[tempexpr:+,date:+,c_dur:+]       @= 
+	(det), #1[noun, t_mod], prep[form:fof], (det), #2[tempexpr:+,c_dur],
+		where(add_mod(#2, #1, #0, "DURATION")).
+// with set
+15> NP[tempexpr:+,c_set:+]      @= 
+	(det), #1[noun, t_mod], prep[form:fof], (det), #2[tempexpr:+,c_set],
+		where(add_mod(#2, #1, #0, "SET")).
+
+// "year-end" ou year's end
+15> NP[tempexpr:+,c_anchor:+] @= 
+	(det), #2[tempexpr:+,c_anchor], punct[form:fhyph];part, #1[noun, t_mod],
+		where(add_mod(#2, #1, #0, "ANCHOR")).
+
+
+
+// with non tempexpr
+//   "the end of his term"
+15> NP[tempexpr:+, date:+, temp_level:+]   @=
+	(det), #1[noun, t_mod] | prep[form:fof], (det), ?[tempexpr:~, time_span_n] |,
+		where(add_mod_alone(#1) & copy(#1, #0)).
+
+
+// DURATION + of + DATE
+// a beautiful day of October
+// the first six months of 2006.
+// c_set:~ to avoid "the first six months of each year" (see next rule).
+// interpretation done in temp_post_dependency
+15> noun[mwe:+,tempexpr:+,c_anchor:+] = 
+	noun#1[tempexpr,c_dur], prep#3[form:fof], #2[noun,tempexpr,date,c_set:~,c_anchor:~],
+		where(add_explicit_temporal_relation(#3, "during", "r") &
+			merge_anchor_date_and_date(#3, #2, #2) &
+			merge_anchor_date_and_duration(#2, #1, #0)).
+
+//	where(merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+// DURATION + of + ANCHOR
+// the first six months of the year
+15> noun[tempexpr:+,c_anchor:+] = 
+	noun#1[tempexpr,c_dur], prep#3[form:fof], #2[noun,tempexpr,c_anchor],
+		where(add_explicit_temporal_relation(#3, "during", "r") & 
+			merge_anchor_dates(#3, #2, #3) & 
+			merge_anchor_date_and_duration(#3, #1, #0)).
+
+
+// DURATION + of + SET
+// the first six months of each year
+15> noun[tempexpr:+,c_anchor:+] = 
+	noun#1[tempexpr,c_dur], prep[form:fof], #2[noun,tempexpr,c_set],
+		where(copy(#1, #0, "DURATION") & copy(#2, #0, "SET")).
+
+
+//Sequence:
+
+// (THE) EARLY 60s
+15> NP[tempexpr:+, date:+] = (det[def]), #1[time,t_mod], noun#2[tempexpr,date];NP#2[tempexpr,date],
+	where(add_mod(#2, #1, #0, "DATE")).
+
+
+
+
+// LATE... + c_anchors
+// (very) late last night
+//   would be better if ADV, but keep NP for version homogeneity
+// removed because not compatible any more with the rule of the "truth value"
+//16> NP[tempexpr=+,hasadv=+,c_anchor:+] @= (adv), adv#1[time,t_mod], (prep[form:fin];prep[form:fon]), #2[c_anchor],
+//	where(add_mod(#2, #1, #0, "ANCHOR")).
+
+// LATE... + dates
+// early in the morning
+//   would be better if ADV, but keep NP for version homogeneity
+16> NP[tempexpr=+,hasadv=+,date:+,temp_level:!] @= (adv), adv#1[time,t_mod], (prep[form:fin];prep[form:fon]), #2[date,!temp_level:!],
+	where(add_mod(#2, #1, #0, "DATE")).
+
+
+
+
+////////////////////////////
+////////////////////////////
+// A digit (year:+) preceeded by preposition of which is preceeded by something that is not a digit forms a NP[tempexpr]
+20> NP[tempexpr:+,t_absolut:+] = | ?[dig:~], prep[lemme:of] | dig[date:+,year:+] .
+
+// A digit (year:+) preceeded by preposition TO preceeded by time_span noun forms a NP[tempexpr]
+20> NP[tempexpr:+] = | ?[time_span:+], prep[lemme:to] | dig[date:+,year:+] .
+
+
+// The expression "real time" is not a temporal expression.
+20> nadj[mwe:+,tempexpr=~] = ?[lemme:real], ?[lemme:time,period=~,tempexpr=~] .
+
+// Build a NP with expressions "coming" + period
+//20 > NP[tempexpr:+] @= 
+//	| prep[lemme:in] | (det), adj[lemme:come,vprog:+], noun[period];noun[time_span];noun[time_span_n].
+//20 > NP[tempexpr:+] @= 
+//	(det[start]), adj[lemme:come,vprog:+], noun[period];noun[time_span];noun[time_span_n].
+
+// "EVERY TIME" can be either a temporal np or a conjunction introducing a sub-clause.
+//10> CONJ
+
+
+// The future period
+20> NP[tempexpr=+, temp_rel:!, temp_ref:!, c_anchor=+, time_span=+] @=
+	(det), adj#1[preperiod, temp_rel, !temp_rel:!, !temp_ref:!];nadj#1[preperiod, temp_rel, !temp_rel:!, !temp_ref:!], noun[time_span], 
+		where(copy(#1, #0)).
+
+
+// The 1998 period
+20> NP[tempexpr=+, date=+, time_span=+] = 
+	det[def], #1[tempexpr,noun,date], noun[time_span],
+		where(copy(#1, #0) & #0[temp_level]={#1}).
+
+
+
+// ABOUT, NEARLY, MORE THAN + durations and c_anchors
+//  about 10 years, ...
+//   for "exactly in two days", the PP is not built yet, so see in chunk_temp
+25> NP[tempexpr:+, c_dur:+] = #1[t_mod], #2[noun, tempexpr,c_dur],
+	where(add_mod(#2, #1, #0, "DURATION")).
+25> ADV[tempexpr:+, c_anchor:+] = #1[t_mod], ADV#2[tempexpr,c_anchor],
+	where(add_mod(#2, #1, #0, "ANCHOR")).
+25> ADV[tempexpr:+, c_dur:+] = #1[t_mod], ADV#2[tempexpr,c_dur],
+	where(add_mod(#2, #1, #0, "DURATION")).
+25> NP[tempexpr:+, date:+] = #1[t_mod], #2[noun, tempexpr, date],
+	where(add_mod(#2, #1, #0, "DATE")).
+
+
+// ABOUT, NEARLY, MORE THAN + sets
+//  more than each week
+25> ADV[tempexpr:+, c_set:+] = #1[t_mod], ADV#2[tempexpr,c_set].
+//	where(add_mod(#2, #1, #0, "SET")).
+// more than twice a week
+25> NP[tempexpr:+, c_set:+] = #1[t_mod], noun#2[tempexpr,c_set];NP#2[tempexpr,c_set],
+	where(add_mod(#2, #1, #0, "SET")).
+
+
+
+// MOD alone (early)
+26> ADV[tempexpr:+,date:+]     @= 
+	~| prep | (adv*[t_mod:~]), adv#1[time,t_mod],
+		where(add_mod_alone(#1) & copy(#1, #0)).
+
+
+
+// BETWEEN <date> AND <date>
+30> ADV[date=+,interval=+,tempexpr=+,temp_level=+] = 
+	?[lemme:through];prep[form:fbetween], #1[tempexpr,date], conj[lemme:and], #2[tempexpr,date],
+		where(check_year_interval(#1, #2) & add_interval(#1, #2, #0, "", "")).
+
+
+
+Marker:
+// if the former sequence rule does not apply, 
+//  then remove date and tempexpr features
+//             (eg: between 1900 and 1500...)
+31> prep[form:fbetween], #1[tempexpr=~,date=~], conj[lemme:and], #2[tempexpr=~,date=~].
+
+
+Sequence:
+
+// FROM <date> TO <date>
+// We consider that From... to... is not splitable.
+30> ADV[date=+,interval=+,tempexpr=+,temp_level=+] = 
+	prep[form:ffrom], #1[tempexpr,date], prep[lemme:through];prep[lemme:to];prep[lemme:until];prep[lemme:till], #2[tempexpr,date],
+		where(check_year_interval(#1, #2) & add_interval(#1, #2, #0, "", "")).
+
+Marker:
+// if the former sequence rule does not apply, 
+//  then remove date and tempexpr features
+//             (eg: numbers are set to drop from 1611 to 1161 as a result of...)
+31> prep[form:ffrom], #1[tempexpr=~,date=~]{dig}, 
+	prep[lemme:through];prep[lemme:to];prep[lemme:until];prep[lemme:till], #2[tempexpr=~,date=~]{dig}.
+
+
+
+Sequence:
+
+// BETWEEN <date;c_anchor> AND <date;c_anchor>
+//   case of two dates is treated above
+30> ADV[c_anchor=+,interval=+,tempexpr=+,temp_level=+] = 
+	?[lemme:through];prep[form:fbetween], #1[tempexpr,date];#1[tempexpr,c_anchor], conj[lemme:and], #2[tempexpr,date];#2[tempexpr,c_anchor],
+		where(~(#1[date] & #2[date]) & add_anchor_interval(#1, #2, #0)).
+
+// FROM <date;c_anchor> TO <date;c_anchor>
+// We consider that From... to... is not splitable.
+//   case of two dates is treated above
+30> ADV[date=+,interval=+,tempexpr=+,temp_level=+] = 
+	prep[form:ffrom], #1[tempexpr,date];#1[tempexpr,c_anchor], prep[lemme:through];prep[lemme:to];prep[lemme:until];prep[lemme:till], #2[tempexpr,date];#2[tempexpr,c_anchor],
+		where(~(#1[date] & #2[date]) & add_anchor_interval(#1, #2, #0)).
+
+
+// Sept, 23 - Oct, 5
+// negated contexts to avoid:
+//   - lists of dates or dates in tables
+30> NP[tempexpr=+,interval=+,temp_level=+] = 
+	~| punct[form:fhyph] |
+	noun#1[tempexpr,date], punct[form:fhyph], noun#2[tempexpr,date]
+	~| punct[form:fhyph] |, 
+		where(add_interval(#1, #2, #0, "", "")).
+
+
+// DURATION + DATE
+// 20 days in October 1999
+//30> NP[tempexpr=+,c_dur:+] = #1[c_dur] (prep[form:fin];prep[form:fon]), #2[date],
+//	where(add_duration_to_date(#2, #1, #0, "DATE")).
+
+
+
+// SET + of + DURATION
+// each day of the month
+30> ADV[tempexpr:+,mwe:+,c_set:+] = #1[noun,tempexpr,c_set], prep[form:fof], #2[noun, c_dur,tempexpr],
+	where(anchor_duration_to_set(#1, #2, #0)).
+
+
+// SET + of + C_ANCHOR
+// each day of this month
+30> ADV[tempexpr:+,mwe:+,c_set:+] = #1[noun,tempexpr,c_set], prep[form:fof], #2[noun, c_anchor,tempexpr],
+	where(merge_set_and_anchor_date(#1, #2, #0)).
+
+
+
+// at any time (see also Markers layer 35 for "once"...)
+30> ADV[tempexpr:+,mwe:+] = prep[form:fat], quant#1[lemme:any], ?[lemme:time],
+	where(SetFeature(#0, "temp_rel", "after") & add_temporal_relation(#0)).
+
+
+
+// the year ending June 30.
+30> NP[tempexpr:+,c_anchor:+] =
+	NP#1[c_anchor,def], #3[vprog,surface:ending], #2[tempexpr,date],
+		where(add_explicit_temporal_relation(#3, "before", "r") & 
+			add_mod_explicit(#1, #1, "EXACT", "DURATION") &
+			merge_anchor_date_and_duration(#3, #1, #1) &
+			merge_anchor_date_and_date(#1, #2, #1) &  
+			inverse_anchor_date_relation(#1) &
+			add_anchor_interval(#1, #2, #0)).
+
+
+// "the January-June period of 1988".
+30> NP[tempexpr:+,date:+,temp_level=p] =
+	NP#1[time_span], prep[form:fof];prep[temp_rel:during], #2[tempexpr, date],
+		where(merge_dates(#1, #2, #0, "", "")).
+
+Marker:
+
+
+// 180,000 a month, 3 meals a/per day => SET
+34> ?[card], noun*;adj*;nadj*;adv*, #2[noun,tempexpr,indef,c_dur,c_set=+,c_dur=~],
+	where(str_type = "1" & add_set(#2, str_type) & merge_set_and_duration(#2, #2, #2)).
+
+
+
+
+// special: preposition 'until'
+//  if a duration after the 'until' => temp_rel = ???
+//  e.g.  It wasn't until twenty years after the first astronauts were chosen
+36> prep#1[temp_rel=~, form:funtil], (?), ?[tempexpr, c_dur, adj:~].
+
+
+// special: preposition 'by'
+//  if a tempexpr after the 'by' => temp_rel = before
+//  if 'by night' => temp_rel = during
+35> prep#1[form:fby], noun[lemme:night],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+36> prep#1[form:fby], (?), ?[tempexpr, date, adj:~, lemme:~night];?[time_span];?[time_span_n],
+	where(SetFeature(#1, "temp_rel", "before_or_during") & add_temporal_relation(#1)).
+
+
+// special: preposition 'in'
+//  if a tempexpr after the 'in' => temp_rel = during
+//    it can be after in many cases, this is treated in cosmetics_temp
+//35> prep#1[lemme:in], (det;pron), (adj;nadj;adv;num), ?[tempexpr, adj:~];?[time_span],
+//	where(SetFeature(#1, "temp_rel", "after") & SetFeature(#1, "temp_ref", "s") & add_temporal_relation(#1)).
+35> prep#1[lemme:in], (det;pron), (adj;nadj;adv;num), ?[tempexpr, adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+
+// special: preposition 'on'
+//  if a tempexpr (but not a duration) after the 'on' => temp_rel = during
+35> prep#1[lemme:on], (det;pron), (adj;nadj;adv;num), ?[tempexpr, c_dur:~, adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+// special: preposition 'over'
+// if an anchor after the 'over' => temp_rel = during
+// "over the next month"
+35> prep#1[lemme:over], (det;pron), (adj;nadj;adv;num), ?[tempexpr, c_dur:~, c_anchor],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+// special: preposition 'at'
+//  if a time after the 'at' => temp_rel = during
+35> prep#1[form:fat], (det;pron), (adj;nadj;adv), ?[tempexpr,hour,adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+// if a t_mod after the 'at' => temp_rel = during
+// eg : at the end of April
+35> prep#1[form:fat], NP{(det), noun[t_mod]},
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+
+
+// special: preposition 'behind'
+//  if a tempexpr after or before the 'behind' => temp_rel = after
+35> prep#1[lemme:behind], (det;pron), (adj,nadj,adv;num), ?[tempexpr, adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "after") & add_temporal_relation(#1)).
+35> ?[tempexpr], prep#1[lemme:behind],
+	where(SetFeature(#1, "temp_rel", "after") & add_temporal_relation(#1)).
+35> ?[time_span], prep#1[lemme:behind],
+	where(SetFeature(#1, "temp_rel", "after") & add_temporal_relation(#1)).
+
+
+// special: preposition 'towards'
+//  if a tempexpr after the 'towards' => temp_rel = before
+//    towards the end
+35> prep#1[lemme:towards], (det;pron), ?[tempexpr, adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "before") & add_temporal_relation(#1)).
+35> prep#1[lemme:towards, temp_rel=before], (det;pron), ?[tempexpr, adj:~];?[time_span],
+	where(SetFeature(#1, "temp_rel", "before") & add_temporal_relation(#1)).
+
+
+// special: preposition 'from'
+//  if a tempexpr after the 'towards' => temp_rel = before
+//35> prep#1[lemme:from], (det;pron), (adj,nadj,adv), ?[tempexpr, adj:~];?[time_span],
+//	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+
+// for + <duration>
+//   in this case 'for' gets temp_rel
+//   "for 3 months"
+35> prep#1[form:ffor], ?[tempexpr, c_dur],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+//   "for the last 3 months"
+35> prep#1[form:ffor], ?[c_anchor]{?*, ?[tempexpr, c_dur]},
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+// for + <time_span>
+//   in this case 'for' gets temp_rel
+35> prep#1[form:ffor], (det;pron), (adj;nadj;adv;num), ?[time_span],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+// for + <date>
+//   actually 'for' can also be linked to dates
+//     the elections are planned for January
+35> prep#1[form:ffor], (det;pron), (adj;nadj;adv;num), ?[tempexpr, c_dur:~, adj:~, date],
+	where(SetFeature(#1, "temp_rel", "during") & add_temporal_relation(#1)).
+
+
+// once
+//    in beginning of the sentence or with a verb just after. (once installed...)
+35> adv#1[tempexpr:+,lemme:once, temp_rel=after], verb,
+	where(SetFeature(#1, "temp_rel", "after") & add_temporal_relation(#1)).
+35> adv#1[tempexpr:+,lemme:once, start, temp_rel=after],
+	where(SetFeature(#1, "temp_rel", "after") & add_temporal_relation(#1)).
+
+
+
+// prep followed by an element that can be a duration of a date
+//   => not a duration
+//  exception : if prep stands for 'during' (for, on...)
+35> prep[temp_rel:~during], ?[tempexpr,date,c_dur, c_dur=~].
+
+
+

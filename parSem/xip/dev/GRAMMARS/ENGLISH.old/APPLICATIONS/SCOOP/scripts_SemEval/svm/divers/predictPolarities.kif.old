@@ -1,0 +1,273 @@
+use("kifliblinear");
+
+loadin("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/dictionariesPolarity.kif");
+
+liblinear predFood("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_test_food");
+liblinear predPrice("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_test_price");
+liblinear predAmbience("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_test_ambience");
+liblinear predService("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_test_service");
+liblinear predMisc("/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_test_annecdote");
+
+string path = '/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+parser p(path);
+
+vector sentences;
+vector terms;
+istreemap polarities={0:"positive",1:"negative",2:"neutral",3:"conflict"};
+map categmodel={"food":predFood,"price":predPrice,"ambience":predAmbience,"service":predService,"anecdotes/miscellaneous":predMisc};
+string polarity; 
+sitreemap allwordsinstring;
+treemap problabel;
+string currentCategory;
+string FoundCategory="";
+smap FoodTerms,PriceTerms,ServiceTerms,AmbienceTerms;
+
+string rule=@"
+
+script:
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+
+if(FOOD$2(#1)){
+     getdeps($2);
+}
+
+if(SERVICE$3(#1)){
+     getdeps($3);
+}
+
+if(AMBIENCE$4(#1)){
+     getdeps($4);
+}
+
+if(PRICE$5(#1)){
+     getdeps($5);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$6(#1)){
+    getdeps($6);
+}
+
+if(SENTIMENT$7(#1)){
+    getdeps($7);
+}
+
+if(SENTIMENT$7(#1,#2)){
+    getdeps($7);
+}
+
+"@;
+p.addendum(rule,true);
+
+function storewords(node n){
+     string s=n.lemma().lower();
+     if(allwordsinstring.test(s)==true){
+          allwordsinstring[s] ++;
+      }     
+     else if (allwordsinstring.test(s)==false){     	
+          allwordsinstring[s]=1;
+     }    
+}
+
+function storedepwords(string s){
+	s = s.lower();
+     	if(allwordsinstring.test(s)==true){
+          allwordsinstring[s] ++;
+	}     
+     	else if(allwordsinstring.test(s)==false){     	
+          allwordsinstring[s]=1;
+        }
+        println(allwordsinstring[s]+ "---" + s);
+
+}
+
+function findCorrespondingCategory(string s){
+     	//println("Finding category for term " + s);
+	if(FoodTerms.test(s))
+          FoundCategory = "FOOD";
+     	else if(PriceTerms.test(s))
+          FoundCategory="PRICE";
+     	else if(AmbienceTerms.test(s))
+          FoundCategory="AMBIENCE";
+     	else if(ServiceTerms.test(s))
+          FoundCategory="SERVICE";
+     	//println("Found category " + FoundCategory);
+}
+
+
+function getdeps(dependency d){
+     	if (d.name()=="FOOD" ){
+        	vector v1 = d.parameters();
+          	node n1 = v1[0];
+          	string s1 = n1.lemma();
+		FoodTerms[s1]=1;                 
+	}
+     	else if (d.name()=="PRICE" ){
+        	vector v1 = d.parameters();
+          	node n1 = v1[0];
+          	string s1 = n1.lemma();
+		PriceTerms[s1]=1;                                            
+	}
+     	else if (d.name()=="AMBIENCE" ){
+        	vector v1 = d.parameters();
+          	node n1 = v1[0];
+          	string s1 = n1.lemma();
+		AmbienceTerms[s1]=1;                                            
+	}
+     	else if (d.name()=="SERVICE" ){
+        	vector v1 = d.parameters();
+          	node n1 = v1[0];
+          	string s1 = n1.lemma();
+		ServiceTerms[s1]=1;                                            
+	}
+	else if (d.name()=="OPINION-ON-ASPECT-CATEGORY"){
+          	vector v1 = d.features();
+          	vector v2 = d.parameters();
+          	node n1 = v2[0];
+          	string s1 = n1.surface();
+          	string pol = v1[0];
+          	if(s1==currentCategory && pol!=null && pol!="") {
+          		storedepwords(pol + "_" + s1);
+			storedepwords(pol);
+		}                    
+	}  
+     	else if (d.name()=="SENTIMENT"){
+          	vector v2 = d.parameters();
+                // find the category the term is in and if it is the same as the current analyzed category, add info.
+          	node param;
+          	//boolean foundC=false;
+          	for(param in v2){
+               		findCorrespondingCategory(param.lemma());
+               		if(FoundCategory.lower()==currentCategory.lower() 
+//&& foundC==false
+){                    
+                    		vector v1 = d.features();
+                    		string feature;
+  //                  		boolean stored = false;
+    //                		foundC=true;
+                    		for(feature in v1){
+      //                   		if(stored==true)
+        //                      			break;
+//                         		else 
+if(feature.lower()=="positive" || feature.lower()=="negative" 
+//&& stored==false
+){               
+                              			storedepwords(feature+"_"+FoundCategory);
+                              			println("Storing " + feature + " " +FoundCategory + " from dep " + param.lemma());
+  //                            			stored=true;
+					}                         
+				}                    
+			}               
+		}  
+	}
+}
+
+function readXml(xml n, self s){
+     if(n.name()=="aspectTerms"){
+		terms.push(n);
+     }
+     elif(n.name()=="sentence"){
+          	sentences.push(n);
+     }     
+}
+
+function predictforstring(string str, string cat, ssmap props){
+     println("\nStarting prediction...");
+     //string str="The fish was quite fine, although in terms of the waiters, things were far worse.";
+     //svector wrds=str.tokenize().lower();
+     allwordsinstring.clear();
+     FoodTerms.clear();
+     PriceTerms.clear();
+     AmbienceTerms.clear();
+     ServiceTerms.clear();
+     currentCategory = cat;
+
+     p.parse(str);
+          println(FoodTerms);
+     //string polcat = props["polarity"] + "_" + currentCategory;
+     //storedepwords(polcat);
+     println("All words and their frequencies: " + allwordsinstring + "\n");
+
+     vector donnees;
+     fvector labels=[0];
+     iftreemap imd;
+
+     for (str in allwordsinstring) {
+          if (allthewords.test(str)){
+               imd[allthewords[str]]=allwordsinstring[str];
+	  }          
+     }
+     donnees.push(imd);
+     println(donnees);
+     
+     vector reponse=categmodel[cat].predict(donnees,true,true);     	
+     vector predictedclassresults = reponse[1];
+     int predictedclass = predictedclassresults[0];
+     polarity = polarities[predictedclass];
+     println("Result of prediction...");
+     println(reponse);
+     println(polarity);
+}
+
+xmldoc inputXml with readXml;
+inputXml.load('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/Corpus/restaurants-trial.xml');
+//'/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/Corpus/SemEval/Restaurants/Restaurants/Restaurants_Train_v2.xml');
+
+xml n,nsub;
+string c,sent,category;
+ssmap props;
+for(n in sentences){
+     	nsub = n.child();
+     	while(nsub!=null){
+          	c=nsub.name().trim();
+          	if(c=="aspectCategories"){
+               		nsub = nsub.child();
+               		while(nsub!=null){
+                    		if(nsub.name()=="aspectCategory"){
+                         		props = nsub.properties();
+                         		ssmap newProps;
+                         		category = props["category"];
+                         		println("\n----\n");
+                         		println(sent);
+                         		// make prediction for each category
+                         		predictforstring(sent,category,props);
+                         		// store predicted polarity in the xml
+                         		newProps["category"] = category;
+                         		newProps["polarity"] = polarity;
+                         		nsub.properties(newProps);
+                         		println(sent + " " + newProps);
+				}
+                                nsub = nsub.next();
+			}
+                        break;
+		}
+                else{
+               		c = nsub.content().trim();
+               		if(c!="")
+                    		sent = c;
+		}
+                nsub = nsub.next();
+	}     
+}
+
+xml t;
+for(t in terms){
+	t.delete();
+}
+
+inputXml.save('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/Corpus/restaurants-trial_polarities_diana_21032014.xml');
+inputXml.close();
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,491 @@
+// deduction_sentiments_2.xip
+// dépendances de sentiments, 2ème partie (de deduction_sentiments.xip), inversion de la polarité,
+// coordination, coréférence et annulation de sentiments
+// créé: 25.6.2007 (Sigrid Maurel)
+// modifié: 3.2.2009 (Sigrid Maurel)
+
+
+Déduction:
+
+//----------------------------------------------------------------------------------------------------
+// inversion de sentiments ( pas positif > négatif OU pas négatif > positif )
+// pas (encore?) de re-attribution de confiance, confiance initiale gardée
+
+// pas positif > négatif
+
+// Un hôtel pas agréable.
+// Pour la couleur idem mais un p'tit peu moins rapide.
+// Pour la couleur idem mais un petit peu moins rapide.
+// Ce sont nos deux plus belles journées de vacances dans la région.
+// PB: "plus" peut être utilisé comme négation (j'aime plus [plu] (du tout) cette ville),
+// mais aussi comme comparation (j'aime plus [pluS] cette ville (que ce village)).
+// ici, avec un adj, "plus" devrait être plus souvent comparatif
+if ( ^SENTIMENT[positif:+](#1[adj:+, positif:+], #2) & ADJMOD(#1, #3[psneg:+, lemme:~plus])
+ & ~ADVMOD(#3[lemme:~moins], #4[psneg:+]) )
+SENTIMENT[negatif=+, positif=~, confiance=~, confiance=2](#1, #2).
+
+// Un hôtel pas très agréable.
+if ( ^SENTIMENT[positif:+](#1[adj:+, positif:+], #2) & ADVMOD(#4, #3[psneg:+, lemme:~plus])
+ & ADJMOD(#1, #4[psneg:~]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// C'est pas une bonne idée.
+if ( ^SENTIMENT[positif:+](#1[adj:+, positif:+], #2) & NMOD(#2, #1) & OBJ[spred:+](#3, #2)
+ & VMOD(#3, #4[psneg:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// C'est pas top.
+if ( OBJ(#1, #2[positif:+, noun:+]) & SUBJ(#1, #3) & VMOD(#1, #4[psneg:+, lemme:~plus])
+ & ^SENTIMENT[positif:+](#2, #3) & ~PREPOBJ(#2[positif:+], #5[sfsans:+]) )
+SENTIMENT[negatif=+, positif=~](#2, #3).
+
+// Rien n'est bon marché.
+if ( OBJ[spred:+](#2, #1) & SUBJ(#2, #3) & NEGAT(#2) & ^SENTIMENT[positif:+](#1[positif:+], #3)
+ & ~PREPOBJ(#1[positif:+], #4[sfsans:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #3).
+
+// Rien est bon marché.
+if ( OBJ[spred:+](#2, #1) & SUBJ(#2, #3) & ^SENTIMENT[positif:+](#1[positif:+], #3[lemme:rien]) )
+SENTIMENT[negatif=+, positif=~](#1, #3).
+
+// Il n'y a rien à voir.
+// PB: ça n'a rien à voir. rien à voir avec ...
+| NP{#3[lemme:rien]}, IV{#1, #2} |
+if ( PREPOBJ(#2[positif:+, averb:+, inf:+], #1[lemme:à]) & ^SENTIMENT[positif:+](#1, #2) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Il n' y a pas grand chose à faire à part les excursion en bateau.
+// Versailles le plus extravagant toutefois pas le plus agréable à visiter à cause de la foule
+// et trop c'est trop.
+// Globalement sur l'île il n'y a pas tant de choses à voir que cela et coté paysage à part le Troodos.
+| ADV[psneg:+], (ADV[lemme:tant]), NP, IV{#1, #2} |
+if ( PREPOBJ(#2[positif:+, averb:+, inf:+], #1[lemme:à]) & ^SENTIMENT[positif:+](#1, #2) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// La région n'est pas une de mes préférées.
+if ( OBJ(#1, #2) & SUBJ(#1, #4) & NMOD(#2, #3[positif:+, noun:+]) & VMOD(#1, #5[psneg:+])
+ & ^SENTIMENT[positif:+](#3, #10) )
+SENTIMENT[negatif=+, positif=~](#3, #4).
+
+// Je n'aime pas les vacances.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & NEGAT(#1) & ~VMOD(#1, #4[lemme:que]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Je n'ai pas aimé les vacances.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #3) & AUXIL(#1, #2) & NEGAT(#2) & ~VMOD(#1, #4[lemme:que]) )
+SENTIMENT[negatif=+, positif=~](#1, #3).
+
+// Je n'aime pas quand il fait beau.
+if ( ^SENTIMENT[positif:+](#1[positif:+]) & NEGAT(#1) & ~VMOD(#1, #2[lemme:que]))
+SENTIMENT[negatif=+, positif=~](#1).
+
+// Je n'ai pas aimé quand il fait beau.
+if ( ^SENTIMENT[positif:+](#1[positif:+]) & AUXIL(#1, #2) & (NEGAT(#2) | VMOD(#2, #3[psneg:+, lemme:~que])) )
+SENTIMENT[negatif=+, positif=~](#1).
+
+// J'aime pas quand il fait beau.
+if ( ^SENTIMENT[positif:+](#1[positif:+]) & VMOD(#1, #2[psneg:+, lemme:~que]) )
+SENTIMENT[negatif=+, positif=~](#1).
+
+// J'aime pas les vacances.
+// (a) J'aime plus les vacances. -> j'ai aimé les vacances mais maintenant c'est fini, je ne les aime plus.
+// (b) J'aime plus les vacances. -> j'aime plus les vacances que le travail, je préfère les vacances
+// au travail, j'aime moins le travail.
+// PB: "plus" peut être utilisé comme négation (j'aime plus [plu] (du tout) cette ville),
+// mais aussi comme comparation (j'aime plus [pluS] cette ville (que ce village)).
+// solution? ne pas appliquer la règle avec "plus" comme pour les cas avec ADJMOD (#3[lemme:~plus] / compar:~),
+// mais les phrases (a) ne seraient alors pris en charge par cette règle et restent POSITIF
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & VMOD(#1, #3[psneg:+, start:~]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Je ne peux pas la conseiller.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & NEGAT(#3) & ~VMOD(#3, #4[lemme:que])
+ & OBJ(#3, #1[sents:+, positif:+, conseil:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Je n'ai pas pu la conseiller.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & AUXIL(#5, #3) & NEGAT(#3) & ~VMOD(#5, #4[lemme:que])
+ & OBJ(#5, #1[sents:+, positif:+, conseil:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Dès le départ, le mélange est intéressant à défaut d'être convaincant.
+if ( PREPOBJ(#1, #3[lemme:"à défaut de"]) & ^SENTIMENT[positif:+](#2[sents:+, positif:+], #1) )
+SENTIMENT[negatif=+, positif=~](#2, #1).
+
+// On ne voit pas bien ce qui a été réalisé.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & NEGAT(#2) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Ce papier est plutôt imprécis et ne montre pas d' objectif clair.
+if ( OBJ(#1[negatif:~], #2) & NEGAT(#1[inf:~, imp:~]) & ^SENTIMENT[positif:+](#3[sents:+, positif:+], #2)
+ & ~VMOD(#1, #4[lemme:que]) )
+SENTIMENT[negatif=+, positif=~](#3, #2).
+
+// Cela ne me semble pas être la bonne place pour ce papier.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & OBJ[spred:+](#3, #2) & OBJ[spred:+](#4, #3) & NEGAT(#4) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// La méthodologie n'est pas assez bien expliquée.
+if ( ^SENTIMENT[positif:+](#2[positif:+], #1) & VMOD(#1, #2[sents:+, positif:+, adv:+])
+ & AUXIL[passive:+](#1, #3) & NEGAT(#3) )
+SENTIMENT[negatif=+, positif=~](#2, #1).
+
+// L'interface ne présente aucun intérêt.
+if ( OBJ(#1, #2[positif:+, noun:+, adj:~]) & SUBJ(#1, #3) & ^SENTIMENT[positif:+](#2, #3) & NEGAT(#1)
+ & ~PREPOBJ(#2[positif:+], #4[sfsans:+]) )
+SENTIMENT[negatif=+, positif=~](#2, #3).
+
+// Sans intérêt quand meme ce topic...
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & VMOD(#2, #1) & PREPOBJ(#1, #3[sfsans:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Personne ne parle de Chypre qui en effet (ne) doit pas valoir le coup.
+if ( SUBJ(#1, #2) & OBJ(#1, #3[positif:+, val:+, cond:~, fut:~]) & VMOD(#1, #4[psneg:+])
+ & ^SENTIMENT[positif:+](#3, #2) )
+SENTIMENT[negatif=+, positif=~](#3, #2).
+
+// De plus un CISS sur une multifonction ça ne doit pas être simple à installer.
+if ( SUBJ(#1, #2) & OBJ[spred:+](#1, #3[positif:+, cond:~, fut:~]) & OBJ(#5, #1) & VMOD(#5, #4[psneg:+])
+ & ^SENTIMENT[positif:+](#3, #2) )
+SENTIMENT[negatif=+, positif=~](#3, #2).
+
+// Mais il ne faut surtout pas admirer Limassol!
+if ( OBJ(#1[lemme:falloir], #2[verb:+, inf:+, sents:+, positif:+]) & ^SENTIMENT[positif:+](#2[positif:+], #3)
+ & VMOD(#1, #4[psneg:+]))
+SENTIMENT[negatif=+, positif=~](#2, #3).
+
+// C'est bien dommage.
+// L'intérêt du jeu est lui nul.
+if ( ^SENTIMENT[positif:+](#1[positif:+, lemme:bien], #2[negatif:+])
+ | ^SENTIMENT[positif:+](#1[positif:+, lemme:intérêt], #2[negatif:+]))
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Il vaut mieux ne pas le faire.
+if ( ^SENTIMENT[positif:+](#1[positif:+, val:+], #2) & OBJ(#1, #3[verb:+, inf:+]) & NEGAT(#3) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// A ne pas recommander.
+if ( ^SENTIMENT[positif:+](#1[lemme:à], #2[positif:+, averb:+, inf:+]) & NEGAT(#2) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Il est sans charme.
+if ( ^SENTIMENT[positif:+](#1, #2) & PREPOBJ(#1[positif:+], #3[sfsans:+]) & OBJ(#4, #1)
+ & ~VMOD(#4, #5[psneg:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// La qualité d'impression est top, sans belle surprise.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & PREPOBJ(#2, #3[sfsans:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Aucune idée intéressante dans ce soft...
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & DETERM[quant:+](#2, #3[lemme:aucun]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+// Je pense pas que ce soit une excellent idée de lui donner de l'eau.
+if ( ^SENTIMENT[positif:+](#1[positif:+], #2) & OBJ(#3[form:fetre], #2) & OBJ(#4, #3) & VMOD(#4, #5[psneg:+]) )
+SENTIMENT[negatif=+, positif=~](#1, #2).
+
+
+//------------------------
+// pas négatif > positif
+
+// Bars dansant sympas et pas chers.
+// Bars dansant sympas et plus chers.
+// PB: "plus" peut être utilisé comme négation (j'aime plus [plu] (du tout) cette ville),
+// mais aussi comme comparation (j'aime plus [pluS] cette ville (que ce village)).
+// ici, avec un adj, "plus" devrait être plus souvent comparatif
+if ( ^SENTIMENT[negatif:+](#1[adj:+, negatif:+], #2) & ADJMOD(#1, #3[psneg:+, lemme:~plus]) )
+SENTIMENT[positif=+, negatif=~, confiance=~, confiance=2](#1, #2).
+
+// Bars dansant sympas et pas très chers.
+// Je pense que ce n'est pas beaucoup plus difficile qu'au Bresil.
+if ( ^SENTIMENT[negatif:+](#1[adj:+, negatif:+], #2) & ( ADVMOD(#4, #3[psneg:+, lemme:~plus])
+ | ADVMOD(#4[lemme:plus], #3) & ADVMOD(#3, #5[psneg:+]) ) & ADJMOD(#1, #4) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// C'est pas une mauvaise idée.
+if ( ^SENTIMENT[negatif:+](#1[adj:+, negatif:+], #2) & NMOD(#2, #1) & OBJ[spred:+](#3, #2)
+ & VMOD(#3, #4[psneg:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Un hôtel pas très mauvais.
+if ( ^SENTIMENT[negatif:+](#1[adj:+, negatif:+], #2) & ADVMOD(#4, #3[psneg:+, lemme:~plus])
+ & ADJMOD(#1, #4[psneg:~]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Rien n'est cher.
+if ( OBJ[spred:+](#2, #1) & SUBJ(#2, #3) & NEGAT(#2) & ^SENTIMENT[negatif:+](#1[negatif:+], #3) )
+SENTIMENT[positif=+, negatif=~](#1, #3).
+
+// Rien est cher.
+if ( OBJ[spred:+](#2, #1) & SUBJ(#2, #3) & ^SENTIMENT[negatif:+](#1[negatif:+], #3[lemme:rien]) )
+SENTIMENT[positif=+, negatif=~](#1, #3).
+
+// Prague est une ville fantastique alors ne la rates pas.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & NEGAT(#1) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Prague a été une ville fantastique alors ne la rates pas.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #10) & AUXIL(#1, #2) & NEGAT(#2) )
+SENTIMENT[positif=+, negatif=~](#1, #10).
+
+// On est pas déçu.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+]) & VMOD(#1, #2[psneg:+]) )
+SENTIMENT[positif=+, negatif=~](#1).
+
+// Je me lasse pas de jouer ce jeu.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & VMOD(#1, #3[psneg:+, start:~]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// A ne pas rater dans la région que tu visites.
+if ( ^SENTIMENT[negatif:+](#1[lemme:à], #2[negatif:+, averb:+, inf:+]) & NEGAT(#2) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// J'ai fait ce voyage en train et cela ne m'a pas déplu.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+]) & AUXIL(#1, #2) & (NEGAT(#2) | VMOD(#2, #3[psneg:+, lemme:~que])) )
+SENTIMENT[positif=+, negatif=~](#1).
+
+// Dès le départ, le mélange est inintéressant à défaut d'être lassant.
+if ( PREPOBJ(#1, #3[lemme:"à défaut de"]) & ^SENTIMENT[negatif:+](#2[sents:+, negatif:+], #1) )
+SENTIMENT[positif=+, negatif=~](#2, #1).
+
+// Ce papier est précis et ne montre pas d'objectif faible.
+if ( OBJ(#1, #2) & NEGAT(#1[inf:~, imp:~]) & ^SENTIMENT[negatif:+](#3[sents:+, negatif:+], #2) )
+SENTIMENT[positif=+, negatif=~](#3, #2).
+
+// Cela ne me semble pas être la mauvaise place pour ce papier.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & OBJ[spred:+](#3, #2) & OBJ[spred:+](#4, #3) & NEGAT(#4) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// La méthodologie n'est pas mal expliquée.
+if ( ^SENTIMENT[negatif:+](#2[negatif:+], #1) & VMOD(#1, #2[sents:+, negatif:+, adv:+])
+ & AUXIL[passive:+](#1, #3) & NEGAT(#3) )
+SENTIMENT[positif=+, negatif=~](#2, #1).
+
+// Mais il ne faut surtout pas rater Honfleur!
+if ( OBJ(#1[lemme:falloir], #2[verb:+, inf:+, sents:+, negatif:+]) & ^SENTIMENT[negatif:+](#2[negatif:+], #3)
+ & VMOD(#1, #4[psneg:+]))
+SENTIMENT[positif=+, negatif=~](#2, #3).
+
+// De plus un CISS sur une multifonction ça ne doit pas être difficile à installer.
+if ( SUBJ(#1, #2) & OBJ[spred:+](#1, #3[negatif:+, cond:~, fut:~]) & OBJ(#5, #1) & VMOD(#5, #4[psneg:+])
+ & ^SENTIMENT[negatif:+](#3, #2) )
+SENTIMENT[positif=+, negatif=~](#3, #2).
+
+// Le coût du jeu est faible
+if ( ^SENTIMENT[negatif:+](#1[negatif:+, lemme:faible], #2[pos-faible:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Je ne peux pas la déconseiller.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & NEGAT(#3) & ~VMOD(#3, #4[lemme:que])
+ & OBJ(#3, #1[sents:+, negatif:+, avertissement:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Je n'ai pas pu la déconseiller.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & AUXIL(#5, #3) & NEGAT(#3) & ~VMOD(#5, #4[lemme:que])
+ & OBJ(#5, #1[sents:+, negatif:+, avertissement:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Je déteste pas quand il fait beau.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+]) & VMOD(#1, #2[psneg:+, lemme:~que]) )
+SENTIMENT[positif=+, negatif=~](#1).
+
+// Durant votre séjour, ne manquez pas d'aller à Cambrils.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+]) & NEGAT(#1) & ~VMOD(#1, #2[lemme:que]))
+SENTIMENT[positif=+, negatif=~](#1).
+
+// La qualité d'impression est top, sans mauvaise surprise.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & PREPOBJ(#2, #3[sfsans:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Aucune idée ennuyante dans ce soft...
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & DETERM[quant:+](#2, #3[lemme:aucun]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Ni trop petite, ni trop longue.
+| COORD#3[lemme:ni], AP{ADV#1[first:+, lemme:trop], ?*} |
+if ( ^SENTIMENT[negatif:+](#1[trop:+], #2) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+// Je pense pas que ce soit une mauvaise idée de lui donner de l'eau.
+if ( ^SENTIMENT[negatif:+](#1[negatif:+], #2) & OBJ(#3[form:fetre], #2) & OBJ(#4, #3) & VMOD(#4, #5[psneg:+]) )
+SENTIMENT[positif=+, negatif=~](#1, #2).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// coordination de sentiments
+// confiance toujours =1, parce que coordination souvent problématique
+
+// Je pourrais vous conseiller Venise, Rome ou Florence...
+if ( SENTIMENT[positif:+](#1, #2) & SEQNP(#2, #3[no-sents:~]) & ~SENTIMENT(#1, #3) & ~SENTIMENT(#10, #3) )
+SENTIMENT[positif=+, confiance=1](#1, #3).
+
+// Je pourrais vous déconseiller Venise, Rome ou Florence...
+if ( SENTIMENT[negatif:+](#1, #2) & SEQNP(#2, #3[no-sents:~]) & ~SENTIMENT(#1, #3) & ~SENTIMENT(#10, #3) )
+SENTIMENT[negatif=+, confiance=1](#1, #3).
+
+// Ce café au décor mauresque est magnifique et très romantique.
+if ( COORD(#10, #1[sents:+, positif:+], #2) & SENTIMENT(#2, #3) & ~SENTIMENT(#1, #3) )
+SENTIMENT[positif=+, confiance=1](#1, #3).
+
+// La ville est vraiment moche et affreuse.
+if ( COORD(#10, #1[sents:+, negatif:+], #2) & SENTIMENT(#2, #3) & ~SENTIMENT(#1, #3) )
+SENTIMENT[negatif=+, confiance=1](#1, #3).
+
+// C'est les villages de Fira et d'Oia sur l'ile de Santorini en Grèce, vraiment à couper le souffle.
+| COORD#10[lemme:et] |
+if ( (#1 < #10) & SENTIMENT[positif:+](#1, #2) & ( COORDITEMS(#2, #3[no-sents:~])
+ | COORDITEMS(#3[no-sents:~], #2) ) & ~SENTIMENT(#1, #3) & ~SENTIMENT(#11, #3) )
+SENTIMENT[positif=+, confiance=1](#1, #3).
+
+// C'est les villages de Fira et d'Oia sur l'ile de Santorini en Grèce, vraiment triste.
+| COORD#10[lemme:et] |
+if ( (#1 < #10) & SENTIMENT[negatif:+](#1, #2) & ( COORDITEMS(#2, #3[no-sents:~])
+ | COORDITEMS(#3[no-sents:~], #2) ) & ~SENTIMENT(#1, #3) & ~SENTIMENT(#11, #3) )
+SENTIMENT[negatif=+, confiance=1](#1, #3).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// coréférence de (cause de) sentiments
+// confiance toujours =2, parce que coréférence souvent problématique
+
+// si possible, remplacer la préposition "à" par le sujet ou l'objet
+// La France est à visiter.
+if ( ^SENTIMENT(#1[lemme:à], #2[averb:+, inf:+]) & VMOD(#4, #2) & SUBJ(#4, #3) )
+SENTIMENT[confiance=~, confiance=2](#2, #3).
+
+// Dans le Cantal, à voir absolument: Salers, village renaissance à la croisée de 3 vallées.
+if ( ^SENTIMENT(#1[lemme:à], #2[averb:+, inf:+]) & OBJ(#2, #3) )
+SENTIMENT[confiance=~, confiance=2](#2, #3).
+
+// Les parties que j'ai apprécié: Ajaccio, Bastia.
+// Marseille est une ville qui vaut pas le détour hiver comme été.
+// A mon avis, au niveau de la nourriture, c'est surtout la viande qui est plus chère qu'en France
+// ou en Allemagne.
+if ( ^SENTIMENT(#1, #2) & COREF(#3, #2) )
+SENTIMENT[confiance=~, confiance=2](#1, #3).
+
+
+
+
+//----------------------------------------------------------------------------------------------------
+// correction d'argument
+
+// Je te recommande d'aller a int1.
+if ( ^SENTIMENT(#1[verb:+, sents:+], #2[pron:+, dem:~]) & OBJ(#1, #2) & VMOD(#1, #3[verb:+, inf:+])
+ & SENTIMENT(#1, #3) )
+~.
+
+// Je vous conseille de l'acheter, il est vraiment pas mal du tout.
+if ( ^SENTIMENT(#1[verb:+, sents:+], #2[pron:+, dem:~]) & OBJ(#1, #2) & VMOD(#1, #3[verb:+, inf:+]) )
+SENTIMENT(#1, #3).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// annulation de sentiment
+// dans des phrases interrogatives et subordonnées, il ne s'agit pas de "vrai" sentiment.
+
+// dans une phrase avec "si" ou "quand"
+// Si on aime, on pardonne toujours.
+// Si vous aimez le genre, vous savez ce qu' il vous reste à faire.
+| CONJ#3[lemme:si] |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1) | ^SENTIMENT(#1, #2, #4) ) & CONNECT(#1, #3[conj:+, sub:+]) )
+~.
+
+// Si tu regardes bien, il y a un mitron qui enfourne son pain mais il faut bien regarder.
+| CONJ#3[lemme:si] |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1, #2, #4) ) & CONNECT(#1, #3[conj:+, sub:+]) )
+~.
+
+// S'il est agréable et véritablement sympathique de se laisser emporter par l'émotion, la lassitude
+// reprend bien vite le dessus.
+| CONJ#3[lemme:si] |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1, #2, #5) ) & SUBJ(#3, #2) & CONNECT(#1, #3[conj:+, sub:+]) )
+~.
+
+// Pour moi, ça vaut le coup : qualité et économie si on prend une bonne marque de compatible.
+if ( (^SENTIMENT(#1, #2) ) & OBJ(#3, #2) & CONNECT(#3, #4[conj:+, sub:+, lemme:si]) )
+~.
+
+// dans une phrase avec "est-ce que"
+// Est-ce que vous aimez le film?
+// Et est-ce que la qualité dans ce format est bonne pour de l'impression sur du papier style canson / bristol.
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1) | ^SENTIMENT(#1, #2, #4) )
+ & ( CONNECT(#1, #3[adv:+, lemme:"est-ce que"]) | (CONNECT(#5, #3[adv:+, lemme:"est-ce que"])
+ & OBJ(#5, #1)) ) )
+~.
+
+// dans une phrase d'inversion
+// Qu'y a-t-il à voir?
+// Y a-t-il des endroits sympas pour loger, grand hôtel ou chambres d'hôtes de charme?
+// PB: tous les SENTIMENT des "phrases" très longues sans ponctuation qui finissent finalement par un ?
+// seront effacés.
+// sent:+, end:+, en commentaire pour avoir aussi des relations avec ? à l'intérieur d'une longue phrase
+| SENT#3; PUNCT#3 |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1) | ^SENTIMENT(#1, #2, #4)) & #3[question:+]
+ & ((#1<#3 & #2<#3) | (#1<#3)) )
+~.
+
+// Quelles sont les couts à la page et surtout quel est l'imprimante ayant le meilleur rapport qualité/prix.
+| PRON#3[start:+, int:+] |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1) | ^SENTIMENT(#1, #2, #4)) )
+~.
+
+// dans le titre du message commençant par "Re:"
+// uniquement pour le corpus de forum:
+// Re: [Lineuh] Chypre : superbe destination à découvrir !
+| ?{#3[start:+, surface:Re], ?*} |
+if ( (^SENTIMENT(#1, #2) | ^SENTIMENT(#1) | ^SENTIMENT(#1, #2, #4) ) )
+~.
+
+// l'objet du verbe "souhaiter"
+// Je te souhaite bonne recherche et bon snow la saison prochaine.
+if ( ^SENTIMENT(#1, #2) & OBJ(#3[lemme:souhaiter], #2) )
+~.
+
+// Une imprimante très pratique, simple, peu encombrante et d'une mauvaise qualité.
+// Qualité d'impression mauvaise.
+if ( ^SENTIMENT[positif:+](#1[noun:+], #2) & SENTIMENT[negatif:+](#3, #1) )
+~.
+
+// N de N, seul la relation avec le 1er N est souhaitée
+// Ce que j'ai pu en retirer : imprimante de très bonne qualité, assez rapide.
+// Elles ne sont jamais la meilleure solution (cartouches trop chères et/ou durée de vie trop faible).
+if ( ^SENTIMENT(#2, #1) & SENTIMENT(#2, #3) & NMOD(#1, #2[sents:+, verb:~]) & NMOD(#3, #1)
+ & ( PREPOBJ(#1, #4) | #3[lemme:qualité] ) )
+~.
+
+// "besoin de N", la relation avec le N n'est pas souhaitée
+// J'ai donc besoin d'un matériel fiable, assez rapide et surtout performant pour l'impression en couleurs,
+// avec si possible un coût faible a la page.
+if ( ^SENTIMENT(#1, #2) & NMOD(#3[lemme:besoin], #2) & PREPOBJ(#2, #4) )
+~.
+
+// verbe au conditionnel
+// Alors qu'il devrait sortir de la bonne qualité.
+if ( ^SENTIMENT(#1, #2) & VMOD(#3, #2) & OBJ(#4[cond:+], #3) )
+~.
+
+// objet d'un verbe au conditionnel
+// Ce serait un bon début.
+if ( ^SENTIMENT(#1, #2) & OBJ(#3[cond:+], #2) )
+~.
+
+// objet d'un verbe avec le trait [no-sents:+]
+// Je cherche un produit fiable.
+if ( ^SENTIMENT(#1, #2) & OBJ(#3[no-sents:+], #2) )
+~.
+
+// prep-objet d'un verbe avec le trait [no-sents:+]
+// Je recherche un matos de bonne qualité quand meme.
+if ( ^SENTIMENT(#1, #2) & OBJ(#4[no-sents:+], #3) & PREPOBJ(#2[desn:+], #5[lemme:de]) & NMOD(#3, #2) )
+~.
+
+// phrase commençant par "bon"
+// Bon, Samsung se rattrape un peu sur le prix des cartouches, c'est vrai.
+| AP{ADJ#1[start:+, lemme:bon]}, PUNCT |
+if ( ^SENTIMENT(#1, #2) )
+~.

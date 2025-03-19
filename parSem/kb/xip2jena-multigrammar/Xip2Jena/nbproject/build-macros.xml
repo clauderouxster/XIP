@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Xip2Jena-macros" default="default" basedir=".">
+
+    <!-- Find the antcontrib tasks via the shared library directory. -->
+    <dirname property="xip2jena.nbproject.dir" file="${ant.file.Xip2Jena-macros}"/>
+    <dirname property="xip2jena.dir" file="${xip2jena.nbproject.dir}"/>
+    <property file="${xip2jena.dir}/lib/nblibraries.properties"/>
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+	    <classpath>
+	        <pathelement location="${libs.ant-contrib.classpath}"/>
+	    </classpath>
+    </taskdef>
+
+    <macrodef name="schemagenmacro">
+        <attribute name="package"/>
+        <attribute name="base"/>
+        <attribute name="fqname" default="@{package}.@{base}"/>
+        <sequential>
+            <propertyregex property="@{fqname}.pathtmp" input="@{fqname}" regexp="\." replace="/" global="true"/>
+            <property name="@{fqname}.path" value="src/${@{fqname}.pathtmp}"/>
+            <property name="@{fqname}.owlfile" value="${@{fqname}.path}.owl"/>
+            <property name="@{fqname}.javafile" value="${@{fqname}.path}.java"/>
+            <uptodate property="@{fqname}.uptodate" srcfile="${@{fqname}.owlfile}" targetfile="${@{fqname}.javafile}"/>
+            <if>
+                <not>
+                    <isset property="@{fqname}.uptodate"/>
+                    </not>
+                    <then>
+                       <!-- For some reason, without fork="true" it works under netbeans, but
+                            not on the command line: when I launched a build of a dependent
+                          project that triggered a build of Xip2Jena, it tried to run schemagen
+                          in the dependent project's directory rather than Xip2Jena's.
+                           -->
+                        <java classname="jena.schemagen" classpath="${javac.classpath}" failonerror="true" fork="true">
+                            <arg value="-i"/>
+                            <arg value="${@{fqname}.owlfile}"/>
+                            <arg value="-o"/>
+                            <arg value="${@{fqname}.javafile}"/>
+                            <arg value="--package"/>
+                            <arg value="@{package}"/>
+                            <arg value="--ontology"/>
+                        </java>
+                </then>
+            </if>
+        </sequential>
+    </macrodef>
+
+</project>

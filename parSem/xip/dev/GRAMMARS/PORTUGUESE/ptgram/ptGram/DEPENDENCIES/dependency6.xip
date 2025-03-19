@@ -1,0 +1,1276 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency6.xip                                             !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!   Revised by : Diogo Oliveira (2010/August)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating embeded sub-clause                              !
+//!                                                                            !
+//!   Dependencies handled in this file:   INTROD                              !
+
+
+
+// INCOMPLETE!!!!!!!!!!!!!!!
+
+
+
+//!                                        MOD (when this modifier is          !
+//!                                             infinitive or sentential       !
+//!                                        MOD when the modifier is a WH-      !
+//!                                                                            !
+//!   Features associated to these dependencies:                               !
+//!                                        COMPLETIV (completiva)              !
+//!                                        RELAT (relativa)                    !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/22
+// Changed all "local" occurrences to "location"
+
+
+DependencyRules:
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CLEANING DEPENDENCIES COMING FROM THE PRECEEDING LAYERS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Recall that QU are considered as pronouns, and are build within NPs and PPs by general
+// rules
+// Before anything, we ensure that no qu:+ or conjunctions that are now within a NP
+// are linked to verbs by SUBJ, CDIR or MOD dependencies
+//
+// Example: Soube que saiu de noite.
+//          We do not want SUBJ(saiu,que) which is the case if this rule does not apply
+//
+if ( ^SUBJ(?,?[qu]) | ^CDIR(?,?[qu]) | ^MOD(?,?[qu,lemma:~cujo]) | ^ATTRIB(?[qu],?) )
+~
+
+//NJM, 2012/02/04
+//
+// Word CUJO is special
+// Example: O livro cujo autor o Pedro gostava
+// Example: O livro extraordinário cujo autor era famoso esgotou-se
+//
+if ( ^MOD(?[verb],?[qu]) )
+~
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  SUBORDINADAS COMPARATIVAS, SUPERIORIDADE e INFERIORIDADE
+//
+// In a sentence, is the subclause that defines a comparison between the
+// subclause and the action expressed by the sentence MAIN verb.
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Ele é mais bonito (do/de) que o Pedro
+//     -> ANTECEDENT_COMPARATIVE(bonito,que)
+//     -> COMPAR_SUPERIOR(mais,que)
+//     -> INTROD-AUX_COMPARATIVE(que,Pedro)
+//
+// Example: Ele é muito menos bonito (do/de) que o Pedro poderia ter sido
+//     -> ANTECEDENT_COMPARATIVE(bonito,que)
+//     -> COMPAR_INFERIOR(menos,que)
+//     -> INTROD-AUX_COMPARATIVE(que,sido)
+//
+//| ap#1{?*,adv#3[lemma:mais],?*},  pron#2[qu];conj#2{prep,pron[qu]};sc{pron#2[qu],?*,NP{?[surface:~se]}};sc{conj#2{prep,pron[qu],?*,NP{?[surface:~se]}}} |
+// if ( head(#4,#1) )
+//   ANTECEDENT[COMPARATIVE=+](#4,#2),
+//   COMPAR[SUPERIOR=+](#3,#2)
+//
+//| ap#1{?*,adv#3[lemma:menos],?*}, pron#2[qu];conj#2{prep,pron[qu]};sc{pron#2[qu],?*,NP{?[surface:~se]}};sc{conj#2{prep,pron[qu],?*,NP{?[surface:~se]}}} |
+// if ( head(#4,#1) )
+//   ANTECEDENT[COMPARATIVE=+](#4,#2),
+//   COMPAR[INFERIOR=+](#3,#2)
+
+// Example: Ele é tão bonito como/quanto o Pedro
+//     -> ANTECEDENT_COMPARATIVE(bonito,como)
+//     -> COMPAR_IGUAL(tão,como)
+//     -> INTROD-AUX_COMPARATIVE(como,Pedro)
+//
+//| ap#1{?*,adv#3[lemma:tão];adv#3[lemma:assim],?*}, conj#2[lemma:como];#2[lemma:quanto];sc{conj#2[lemma:como];conj[lemma:quanto]} |
+// if ( head(#4,#1) )
+//   ANTECEDENT[COMPARATIVE=+](#4,#2),
+//   COMPAR[IGUAL=+](#3,#2)
+
+// Example: bonito como/quanto o Pedro não há ninguém
+//     -> ANTECEDENT_COMPARATIVE(bonito,como)
+//     -> COMPAR_IGUAL(como,como)
+//     -> INTROD-AUX_COMPARATIVE(como,Pedro)
+//
+//| ap#1;np#1, conj#2[lemma:como];#2[lemma:quanto];sc{conj#2[lemma:como];conj[lemma:quanto]} |
+// if ( head(#3[nop:~],#1[start]) & ~introd(#3,#2) )
+//   ANTECEDENT[COMPARATIVE=+](#3,#2),
+//   COMPAR[IGUAL=+](#2,#2)
+
+// Example: Ele é  bonito como/quanto o Pedro
+//     -> ANTECEDENT_COMPARATIVE(bonito,como)
+//     -> COMPAR_IGUAL(como,como)
+//     -> INTROD-AUX_COMPARATIVE(como,Pedro)
+//
+// Example: *O modo ansioso como a Ana fala está ultrapassado
+//
+//| #4, ap#1;np#1, conj#2[lemma:como];#2[lemma:quanto];sc{conj#2[lemma:como];conj[lemma:quanto]} |
+// if ( head(?[nop:~],#4) & head(#3[nop:~],#1) & ~introd(#3,#2) )
+//   ANTECEDENT[COMPARATIVE=+](#3,#2),
+//   COMPAR[IGUAL=+](#2,#2)
+
+// Example: ?????????????????
+//
+| TOP{?*, conj#1;pron#1[qu], NP#2, ?*[verb:~,pastpart:~]} |
+ if ( HEAD(#3,#2) & INTROD(?,#1))
+      INTROD-AUX[COMPARATIVE=+](#1,#3)
+
+// Example: ?????????????????
+//
+| sc{conj#1;pron#1[qu], ?*, #2[np:~,last]} |
+ if ( HEAD(#3,#2) & VDOMAIN(#3,#4) & INTROD(?,#1))
+      INTROD-AUX[COMPARATIVE=+](#1,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// SUBORDINADAS COMPARATIVAS SUPERLATIVAS de SUPERIORIDADE e INFERIORIDADE
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+//// Example: O Zé é o (ainda) mais comprido do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(aluno,mais)
+////     -> COMPAR_SUPERLATIVO(mais,mais)
+////
+//| NP#4{art#5, adv*, adv#2[lemma:mais], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,SUPERIOR=+](#2,#2)
+//
+//| NP#4{art#5, adv*, adv#2[lemma:menos], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,INFERIOR=+](#2,#2)
+//
+//
+//// Example: O Zé é dos alunos (ainda) mais compridos do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(aluno,mais)
+////     -> COMPAR_SUPERLATIVO_INFERIOR(mais,mais)
+////
+//// Example: O Zé é o aluno (ainda) menos comprido do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(aluno,mais)
+////     -> COMPAR_SUPERLATIVO_INFERIOR(mais,mais)
+////
+//// Example: O Zé é um dos alunos (ainda) mais compridos do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(aluno,mais)
+////     -> COMPAR_SUPERLATIVO_SUPERIOR(mais,mais)
+////
+//| NP#4{?*,#5};PP#4{prep[lemma:de], ?*, #5}, AP#1{adv*, adv#2[lemma:mais], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & HEAD(#5,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,SUPERIOR=+](#2,#2)
+//
+//| NP#4;PP#4{prep[lemma:de], ?*, #5}, AP#1{adv*, adv#2[lemma:menos], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & HEAD(#5,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,INFERIOR=+](#2,#2)
+//
+//
+//// Example: O Zé é um dos (ainda) mais compridos do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(um,mais)
+////     -> COMPAR_SUPERLATIVO(mais,mais)
+////
+//| NP#4{pron;num}, PP#1{prep[lemma:de], adv*, adv#2[lemma:mais], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & HEAD(#5,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,SUPERIOR=+](#2,#2)
+//
+//| NP#4{pron;num}, PP#1{prep[lemma:de], adv*, adv#2[lemma:menos], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & HEAD(#5,#4) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#5,#2),
+//   COMPAR[SUPERLATIVO=+,INFERIOR=+](#2,#2)
+//
+//
+//// Example: O Zé é dos (ainda) mais compridos do Colégio.
+////     -> ANTECEDENT_SUPERLATIVO(aluno,mais)
+////     -> COMPAR_SUPERLATIVO(mais,mais)
+////
+//| PP#1{prep#4[lemma:de,art], adv*, adv#2[lemma:mais], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#4,#2),
+//   COMPAR[SUPERLATIVO=+,SUPERIOR=+](#2,#2)
+//
+//| PP#1{prep#4[lemma:de,art], adv*, adv#2[lemma:menos], adv*, adj#3;pastpart#3} |
+// if ( head(#3,#1) & ~INTROD(?,#2) )
+//   ANTECEDENT[SUPERLATIVO=+](#4,#2),
+//   COMPAR[SUPERLATIVO=+,INFERIOR=+](#2,#2)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// SUBORDINADAS COMPARATIVAS SUPERLATIVAS de SUPERIORIDADE e INFERIORIDADE
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// RELATIVES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// NP is starting the sentence, the first "qu" appearing on the right of this NP
+// and when no verbs appear between this NP and the "qu" is considered as a
+// relative attached to the NP head. This rule works with relative that also are
+// preceeded by a preposition e.g. "do qual"
+// NOTE that we do not consider here completive of names
+//
+// A MOD_RELAT dependency is created between the main verb of the relative clause
+//  and the head noun that is the antecendent of the relative pronoun.
+//
+// Example: O rapaz que veio -> ANTECEDENT_RELAT(rapaz,que)
+//                           -> INTROD-AUX_RELAT(que,veio)
+//                           -> MOD_RELAT(rapaz,veio)
+//
+//NJM+JB, 2011/03/28 (removed restriction of NP being the first node of the sentence)
+//
+//| NP#1[start], ?*[verb:~,noun:~,scfeat:~], SC#5{#3[lemma:cujo];#3[qu,location:~,temporal:~];#3[rel,location:~,temporal:~]} |
+| NP#1{?[dat:~,nom:~,obl:~,ref:~]}, ?*[verb:~,noun:~,scfeat:~], SC#5{#3[lemma:cujo];#3[qu,location:~,temporal:~,manner:~,causal:~,sub:~];#3[rel,location:~,temporal:~]} |
+ if ( HEAD(#4,#1) & HEAD(#2,#5) & ~HEAD(?,#2) & HEAD(#6,#3) & VDOMAIN(#2,#7) )
+   ANTECEDENT[relat=+](#4,#6),
+   INTROD-AUX[relat=+](#6,#2),
+   MOD[relat=+,post=+](#4,#7)
+
+
+// Example: O lugar onde a Ana trabalhava -> ANTECEDENT_RELAT_LOCATION(lugar,onde)
+//                                        -> INTROD-AUX_RELAT_LOCATION(onde,trabalhava)
+//                                        -> MOD_PRE_LOCATION(trabalhava,onde)
+//                                        -> MOD_POST_RELAT(lugar,trabalhava)
+//
+//NJM+JB, 2011/03/28 (removed restriction of NP being the first node of the sentence)
+//
+//| NP#1[start], ?*[verb:~,noun:~,scfeat:~], SC#5{#3[qu,location];#3[rel,location]} |
+| NP#1, ?*[verb:~,noun:~,scfeat:~], SC#5{#3[qu,location];#3[rel,location]} |
+ if ( HEAD(#4,#1) & HEAD(#2,#5) & ~HEAD(?,#2) & HEAD(#6,#3) & VDOMAIN(#2,#7) )
+   ANTECEDENT[relat=+,location=+](#4,#6),
+   INTROD-AUX[relat=+,location=+](#6,#2),
+   MOD[location=+,pre=+](#7,#6),
+   MOD[relat=+,post=+](#4,#7)
+
+// A relative pronon "que" which is just on the left of the verb is subj of relative clause
+//
+// Example: O rapaz que via mal ao longe -> SUBJ_PRE(via,que)
+//
+| SC{#1[lemma:que], ?{?#2[verb,last]}} |
+ if ( INTROD-AUX[relat](#1,#2) & VDOMAIN(#2,#3) & ~SUBJ(#3,?) & ~CDIR(?,#1)  )
+   SUBJ[pre=+](#3,#1)
+
+// Relative pronoun "cujo" which is just on the left of a NP
+// is a nominal pre-modifier of this NP
+//
+// Example: A estrutura cujo afundamento causou 3 mortes. -> MOD_PRE(afundamento,cujo)
+//
+//| SC{#1[lemma:cujo], NP#2} |
+//if ( HEAD(#4,#2) )
+//   MOD[pre=+](#4,#1)
+
+
+// Relative pronoun "como" which is just on the left of the NPs whose heads are
+//    forma
+//    jeito
+//    maneira
+//    modo
+// is an adverbial modifier of the relative main verb
+//
+// Example: A Joana gosta do modo como o Pedro fala de si
+//                      -> ANTECEDENT_MANNER_RELAT(modo,como)
+//                      -> INTROD-AUX_MANNER_RELAT(como,fala)
+//                      -> MOD_PRE_MANNER(fala,como)
+//                      -> MOD_POST_RELAT(modo,fala)
+//
+| PP#1;NP#1, (AP), ?*[verb:~,noun:~,scfeat:~], SC#5{#3[surface:como]} |
+ if ( HEAD(#4[nop,manner],#1) & HEAD(#2,#5) & ~HEAD(?,#2) & HEAD(#6,#3) & VDOMAIN(#2,#7) )
+   ANTECEDENT[relat=+,manner=+](#4,#6),
+   INTROD-AUX[relat=+,manner=+](#6,#2),
+   MOD[manner=+,pre=+](#7,#6),
+   MOD[relat=+,post=+](#4,#7).
+
+
+| PP#5, SC{#1[lemma:como], NP#2} |
+if ( HEAD(#6[lemma:modo],#5) & INTROD-AUX[relat](#1,#3) & INTROD[relat](?,#1) & SUBJ[pre](#3,#4) & HEAD(#4,#2) )
+   MOD[pre=+](#4,#1)
+
+
+// Functions of the relative pronoun within a relative clause
+// NOTE: It will then be easy to replace the "que" by its antecedent
+//       (through the ANTECEDENT relation)
+//
+// A relative pronoun "que"  which is followed by a NP under the
+// SC has the function of OBJECT
+//
+// Example: O rapaz que ele via -> CDIR_PRE(via,que)
+//
+| SC{#1[lemma:que],NP#4} |
+ if ( INTROD-AUX[relat](#1,#2) & VDOMAIN(#2,#3) & ~CDIR(#3,?) )
+   CDIR[pre=+](#3,#1)
+
+
+//NJM+JB, 2011/03/29
+// Defining the subject of the verb of the main clause as the head of the NP
+// that is the antecedent of a relative clause,  irrespective of the presence of a subject
+// of the relative clause.
+//
+// Example: A aldeia onde o Pedro nasceu desapareceu        -> SUBJ_pre(desapareceu,aldeia)
+// Example: A aldeia onde o Pedro nasceu tinha desaparecido -> SUBJ_pre(desaparecido,aldeia)
+//
+|NP#1, ?*[np:~], SC#3, ?*[verb:~], #5[verb] |
+ if ( HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) &
+      INTROD-AUX[relat](?,#4) & VDOMAIN(#6,#7) & ~SUBJ(?,#2) & ~SUBJ(#7,?) )
+   SUBJ[pre=+](#7,#2)
+
+
+//NJM+JB, 2011/03/30
+// Example: o livro de que o Pedro gostava tinha-se esgotado -> SUBJ_pre(esgotado,livro)
+//                                                           -> *SUBJ_pre(esgotado,se)
+//
+|NP#1, ?*[np:~], SC#3, ?*[verb:~], #5[verb] |
+ if ( HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) &
+      INTROD-AUX[relat](?,#4) & VDOMAIN(#6,#7) & ~SUBJ(?,#2) & ^SUBJ(#7,?) )
+   SUBJ[pre=+](#7,#2)
+
+
+//NJM+JB, 2011/03/29
+// Example: A aldeia onde o Pedro tinha nascido desapareceu -> SUBJ_pre(desapareceu,aldeia)
+//
+|NP#1, ?*[np:~], SC#3, ?*, #7[verb], ?*[verb:~], #5[verb] |
+ if ( HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) &HEAD(#8,#7) &
+      INTROD-AUX[relat](?,#4) & VDOMAIN(#4,#8) & VDOMAIN(#6,#9) & ~SUBJ(#9,?) & ~SUBJ(?,#2) )
+   SUBJ[pre=+](#9,#2)
+
+
+//NJM+JB, 2011/03/30
+// Example: o livro de que o Pedro tinha gostado tinha-se esgotado -> SUBJ_pre(esgotado,livro)
+//                                                                 -> *SUBJ_pre(esgotado,se)
+//
+|NP#1, ?*[np:~], SC#3, ?*, #7[verb], ?*[verb:~], #5[verb] |
+ if ( HEAD(#2,#1) & HEAD(#4,#3) & HEAD(#6,#5) &HEAD(#8,#7) &
+      INTROD-AUX[relat](?,#4) & VDOMAIN(#4,#8) & VDOMAIN(#6,#9) & ^SUBJ(#9,?) & ~SUBJ(?,#2) )
+   SUBJ[pre=+](#9,#2)
+
+
+//NJM+JB, 2011/04/11
+// Example: O livro de cujo autor o Pedro gostava esgotou. -> MOD_PRE(gostava,autor)
+//
+| prep, SC{#1[lemma:cujo],NP#4,NP#6} |
+ if ( INTROD-AUX[relat](#1,#2) & VDOMAIN(#2,#3) & HEAD(#5,#4) & HEAD(#7,#6) & ~CDIR(#3,?) & ~MOD(#3,#5) & SUBJ(#3,#7) )
+   MOD[pre=+](#3,#5)
+
+
+//NJM+JB, 2011/04/11
+// Example: O livro cujo autor o Pedro conhecia esgotou. -> CDIR_PRE(conhecia,autor)
+//
+| SC{#1[lemma:cujo],NP#4,NP#6} |
+ if ( INTROD-AUX[relat](#1,#2) & VDOMAIN(#2,#3) & HEAD(#5,#4) & HEAD(#7,#6) & ~CDIR(#3,?) & ~MOD(#3,#5) & SUBJ(#3,#7) )
+   CDIR[pre=+](#3,#5)
+
+
+//NJM+JB, 2011/04/13
+// Example: O Pedro tinha lido um livro que se tinha esgotado. -> SUBJ_PRE(esgotado,que)
+//
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// FINAL CAUSAL TEMPORAL NEG
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Quando o Pedro veio para fazer bolos  --> INTROD-AUX_FINAL(para,fazer)
+//
+| SC#2{#1[lemma:"para"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[final=+](#1,#6)
+
+| SC#2{#1[lemma:"por"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+| SC#2{#1[lemma:"sem"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[neg=+](#1,#6)
+
+| SC#2{#1[lemma:"ao"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[temporal=+](#1,#6)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// COMPLETIVES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if a subclause introduced by "qu" is just on the right of a verb, we decide
+// this is a completive subclause.
+// This can be confirmed after by subcat information available for the verb
+//
+// Example: Dizia que comia bem -> CONNECTOR_COMPLETIV(Dizia,que)
+//                              -> INTROD-AUX_COMPLETIV(que,comia)
+//
+| #1[verb], (ADVP), SC#5{#3[qu,lemma:que]} |
+ if ( HEAD(#2,#1) &  HEAD(#6,#5) //& ~HEAD(?,#6)
+    )
+   CONNECTOR[completiv=+](#2,#3),
+   INTROD-AUX[completiv=+](#3,#6).
+
+
+// Example: Dizia à Ana que comia bem -> CONNECTOR_COMPLETIV(Dizia,que)
+//                                    -> INTROD-AUX_COMPLETIV(que,comia)
+//
+| #1[verb], NP{pron[dat]};PP{prep[lemma:a],?*,?[human]}, (ADVP), SC#5{#3[qu,lemma:que]} |
+ if ( HEAD(#2,#1) &  HEAD(#6,#5) //& ~HEAD(?,#6)
+    )
+   CONNECTOR[completiv=+](#2,#3),
+   INTROD-AUX[completiv=+](#3,#6).
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ADVERBIAL SUBORDINATES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// temporal and local subordinates
+// Marking with relevant features the locative subordinates and the localization
+// subordinates conditions :
+//       -they follow a verb immediately
+//       -they are introduced by the relavant qu
+//
+// Example: Estava a comer quando me chamaste
+//                 -> CONNECTOR_TEMPORAL(comer,quando)
+//                 -> INTROD-AUX_TEMPORAL(quando,chamaste)
+//                 -> MOD_TEMPORAL_PRE(chamaste,quando)
+//
+| #1[verb], (ADVP), SC#5{#3[qu,temporal]} |
+ if ( HEAD(#2,#1) & HEAD(#6,#5) )//& ^INTROD-AUX(#3,#6) )
+   INTROD-AUX[temporal=+](#3,#6),
+   CONNECTOR[temporal=+](#2,#3),
+   MOD[pre=+,temporal=+](#6,#3).
+
+// Example: Estava a comer onde o Pedro trabalha
+//                 -> CONNECTOR_LOCAL(comer,onde)
+//                 -> INTROD-AUX_LOCAL(onde,trabalha)
+//                 -> MOD_LOCAL_PRE(trabalha,onde)
+//
+| #1[verb], (ADVP), SC#5{#3[qu,location]} |
+ if ( HEAD(#2,#1) & HEAD(#6,#5) )//& ^INTROD-AUX(#3,#6) )
+   INTROD-AUX[location=+](#3,#6),
+   CONNECTOR[location=+](#2,#3),
+   MOD[pre=+,location=+](#6,#3).
+
+
+// porque
+// Example: A Margarida começou a chorar, porque o Tomaz lhe deu uma má notícia.
+//                 -> INTROD-AUX_CAUSAL(porque,deu)
+//
+| SC#2{conj#1[lemma:"porque"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+// Uma vez que
+// Example:
+//
+// A competência administrativa para gerir a escola é o menos importante dos
+// requisitos, uma vez que um bom contador pode tomar conta de tudo.
+| SC#2{conj#1[surface:"uma vez que"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+// Pois que
+// Example: Será um processo delicado, pois que será difícil motivá-las agora para o projeto.
+//
+| SC#2{conj#1[surface:"Pois que"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+// "visto que"
+// Example: O Pedro fez isso visto que estava doente.
+//
+| SC#2{conj#1[surface:"visto %c+"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+// já que
+// Example: Fazia tudo o que lhe vinha à cabeça, JÁ QUE IA MORRER.
+//
+| SC#2{conj#1[surface:"já que"]} |
+ if ( HEAD(#6,#2) & ~HEAD(?,#6) & ~INTROD-AUX(#1,?) )
+   INTROD-AUX[causal=+](#1,#6)
+
+
+
+// We do not know the kind of subordinate clause that is starting by "que"
+// Just create a INTROD-AUX link between the "que" and the main verb of subclause
+// This INTROD-AUX has no feature associated
+//
+// Example: Gosto de que faças isso assim.
+//
+| SC#5{#6[first,qu]} |
+ if ( HEAD(#3,#6) & ~INTROD-AUX(#3,?) & HEAD(#4,#5) & ~HEAD(?,#4) )
+   INTROD-AUX(#3,#4)
+
+| SC#5{#6[first,conj,sub]} |
+ if ( HEAD(#3,#6) & ~INTROD-AUX(#3,?) & HEAD(#4,#5) & ~HEAD(?,#4) )
+   INTROD-AUX(#3,#4)
+
+// Example: Quem detestou o livro também não foi ver o filme -> SUBJ_PRE(detestou,quem)
+//
+//| SC{#1[lemma:que,first], ?*, ?{?#2[verb,last]}} |
+// if ( INTROD-AUX(#1,#2) & VDOMAIN(#2,#3) & ~SUBJ(#3,?) & ~CDIR(?,#1)  )
+//   SUBJ[pre=+](#3,#1)
+
+
+
+// If an undetermined subordinate subclause has been found and if it just follows a verb
+// which is the first element of the node (eg, cannot be in a SC node) then we attach this
+// subordinate to the sentence note that features attached to the already existing
+// INTROD-AUX dependency are inherited by the new created CONNECTOR dependency.
+//
+// Example:
+//
+| #1[verb], (ADVP;PUNCT), SC{#3[first]};SC{?{#3[first]}} |
+ if ( INTROD-AUX[!features:!,temporal:~,location:~](#3,#4) & ~CONNECTOR(?,#3) & HEAD(#2[first],#1) )
+   CONNECTOR(#2,#3)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ADJUNCT (ADVERBIAIS)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/01/11
+//NJM+JB, 2013/06/28, added restrition "completiv:~"
+// Example: O Pedro irritou-se pelo facto da Maria ter dito isso  --> MOD(irritou,dito)
+// Example: O Pedro irritou-se porque a Maria disse isso          --> MOD(irritou,disse)
+//
+| #5[verb,fin], (ADVP), ?*[verb:~,scfeat:~], prep*, SC{#1[!circ:!]} |
+ if ( HEAD(#7,#5) & VDOMAIN(#6,#7) & INTROD-AUX[temporal:~,location:~,completiv:~](#1,#3) & VDOMAIN(#3,#4) & ~MOD(#7,#4) )
+   MOD[SENTENTIAL=+](#7,#4)
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// INTRODUCES INTROD (USING INTROD-AUX and VDOMAIN)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A estrutura cujo afundamento tinha causado 3 mortes -> INTROD(cujo,causado)
+if ( INTROD-AUX[!features:!](#1,#2) & VDOMAIN(#2,#3) & ~INTROD(#1,#3) )
+   INTROD(#1,#3)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// INTRODUCES INTROD (the INTROD-AUX is already defined)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O Zé é o mais comprido que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+// Example: O Zé é dos mais compridos que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+//
+| NP#1{#10[first], ?*, #11[last]};AP#1{#10[first], ?*, #11[last]};PP#1{#10[first], ?*, #11[last]}, SC#2{#6} |
+ if ( HEAD(#3,#1) &
+      HEAD(#4,#2) &
+      ANTECEDENT[SUPERLATIVO](#8,#5) &
+      COMPAR(#5,#5) &
+      INTROD-AUX(#6,#7) &
+      #5<#11 & (#10<#5 | #10::#5) &
+      ATTRIB(#9,#3) &
+       ~ANTECEDENT(?,#6)
+     )
+    ANTECEDENT[relat=+](#3,#6)
+
+
+// Example: O Zé é o aluno mais comprido que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+// Example: O Zé é dos alunos mais compridos que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+//
+| AP#1{#10[first], ?*, #11[last]}, SC#2{#6} |
+ if ( HEAD(#3,#1) &
+      HEAD(#4,#2) &
+      ANTECEDENT[SUPERLATIVO](#8,#5) &
+      COMPAR(#5,#5) &
+      INTROD-AUX(#6,#7) &
+      #5<#11 & (#10<#5 | #10::#5) &
+      ATTRIB(?,#8) &
+      MOD(#8,#3) &
+       ~ANTECEDENT(?,#6)
+     )
+    ANTECEDENT[relat=+](#3,#6)
+
+
+// Example: O Zé é um dos aluno mais compridos que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+//
+| AP#1{#10[first], ?*, #11[last]}, SC#2{#6} |
+ if ( HEAD(#3,#1) &
+      HEAD(#4,#2) &
+      ANTECEDENT[SUPERLATIVO](#8,#5) &
+      COMPAR(#5,#5) &
+      INTROD-AUX(#6,#7) &
+      #5<#11 & (#10<#5 | #10::#5) &
+      ATTRIB(?,#12) &
+      QUANTD(#9,#12) &
+      MOD(#9,#3) &
+       ~ANTECEDENT(?,#6)
+     )
+    ANTECEDENT[relat=+](#3,#6)
+
+
+// Example: O Zé é um dos mais compridos que se conhecia.
+//                    -> INTROD_RELAT(comprido,que)
+| PP#1{#10[first], ?*, #11[last]}, SC#2{#6} |
+ if ( HEAD(#3,#1) &
+      HEAD(#4,#2) &
+      ANTECEDENT[SUPERLATIVO](#8,#5) &
+      COMPAR(#5,#5) &
+      INTROD-AUX(#6,#7) &
+      #5<#11 & (#10<#5 | #10::#5) &
+      ATTRIB(#9,#8) &
+       ~ANTECEDENT(?,#6)
+     )
+    ANTECEDENT[relat=+](#3,#6)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// FUNCTIONAL RELATIONS BETWEEN THE EMBEDED CLAUSE AND THE CLAUSE INTRODUCER
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// To these functions we add the feature sentential in order to distinguish
+// them quickly from the others
+//
+// Example: dizia que vinha                     -> CDIR[post,sentential](dizia,vinha)
+// Example: que seja um disparate nao me admira -> SUBJ[pre,sentential](admira,seja)
+
+// Extracts a MOD dependency (with a sentential feature) between the main verb of a
+// interrogative locative subordinate clause and the main verb of the main clause.
+//
+// ---------  NOT WORKING WHILE "onde" is not properly disambiguated  ----------
+//
+// Example: O Pedro disse onde estava o livro   -> MOD_SENTENTIAL_LOCATION(disse,estava)
+//
+ if ( INTROD(#2,#3) & CONNECTOR[location](#1,#2) & #1 < #2 )
+   MOD[location=+,post=+,sentential=+](#1,#3)
+
+// uma subordinada temporal e um MOD com traco temporal do seu introdutor
+//
+// Example: O Pedro fez isso quando estava em Lisboa   -> MOD_SENTENTIAL_TEMPORAL(fez,estava)
+//
+ if ( INTROD(#2,#3) & CONNECTOR[temporal](#1,#2) & #1<#2 )
+   MOD[temporal=+,post=+,sentential=+](#1,#3)
+
+// A COMPLETIV subord is a direct object
+//
+// Example: O Pedro disse que estava em Lisboa   -> CDIR_POST_SENTENTIAL(disse,estava)
+//
+ if ( INTROD(#2,#3) & CONNECTOR[completiv](#1,#2) & #1<#2 )
+   CDIR[post=+,sentential=+](#1,#3)
+
+// uma relativa é um MOD deo antecedente
+//
+// Example: O Pedro leu o de que a Ana lhe tinha falado -> MOD_RELAT(livro,falado)
+//
+ if ( INTROD(#2,#3) & CONNECTOR[relat](#1,#2) & #1<#2 )
+   MOD[post=+,relat=+](#1,#3)
+
+// os outros casos nao especificados
+//
+// Example: ??????????????????????
+//
+ if ( INTROD(#2,#3) & CONNECTOR[location](#1,#2) & ~?(#1,#3) & #1<#2 )
+   MOD[post=+,sentential=+](#1,#3)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//CH, 2007/05/23
+// FUNCTIONAL RELATIONS BETWEEN THE CLAUSE INTRODUCER AND THE MAIN VERB OF THE
+// SUCLAUSE
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// In case of identified relative clauses, extracts a MOD dependency between the
+// relative pronoun and the verb of the relative clause
+//
+// Example: A rapariga a quem emprestei o livro -> MOD(emprestei,quem)
+//
+if ( INTROD-AUX[relat](#1,#2) & VDOMAIN(#2,#3) & ~?(#3,#1) & PREPD(#1,?) )
+   MOD[pre=+](#3,#1)
+
+
+// In case of an interrogative sentence, extracts a MOD dependency between the
+// interrogative pron and the main verb of the interrogative
+//
+// Example: A quem foi atribuído o prémio ?   -> MOD(atribuído,quem)
+//
+// Possible and maybe necessary to add a constraint to apply this rule for
+// interrogative sentences only - CHECK
+//
+if ( PREPD(#1[qu],?[start]) & INTROD-AUX(#1,#2) & VDOMAIN(#2,#3) & ~?(#3,#1) )
+   MOD[pre=+](#3,#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  INFINITIVE SUBCLAUSES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: de poder falar, nunca se queixou.
+// Example: Poder falar foi importante
+// Example: Para o Pedro poder falar, resolveu sair.
+
+// first marking these infintive subclauses Then attach the verb of the infinitive to the
+// nearest predicate  (caso onde o prep não esta ligado ao vinf)
+//
+// Example: para poder falar
+//
+| prep#5[mark_inf=+], ?*[mark_inf=+], VINF[mark_inf=+]{?*,verb#4[inf,last,mark_inf=+]} |
+ if (  PREPD(#4,#5) )
+   ~
+
+
+// pelo menos 2 verbos na cadeia
+//
+// Example: poder falar
+//
+| #1[verb,mark_inf=+], ?*[mark_inf=+], VINF[mark_inf=+]{?*,verb#4[inf,last,mark_inf=+]} |
+ if ( HEAD(#3,#1)  & VDOMAIN(#3,#4) )
+   ~
+
+// um só verbo na cadeia
+//
+// Example: falar
+//
+| VINF[mark_inf=+]{?*,verb#3[mark_inf=+]} |
+ if ( VDOMAIN(#3,#3) )
+   ~
+
+// caso onde o prep está ligado ao verbo infinitivo
+//
+// Example: Comeu (para resistir) ao frio
+//
+| VINF[mark_inf=+]{prep,VINF[mark_inf]} |
+   ~
+
+
+// Correcting through dependencies a bad chunking in cases like
+// Para o Pedro conseguir falar. where Para o Pedro is a PP
+// This rules transforms PREPD(Pedro,para) in PREPD(falar,para) in "Para o Pedro conseguir falar"
+// also links the subject Pedro to the infinitive falar.
+//
+| PP{prep#6[lemma:para];prep#6[lemma:por]}, #2[mark_inf,verb]{#4[first,last]} |
+ if ( HEAD(#4,#2) & VDOMAIN(#4,#5[mark_inf]) & ^PREPD(#3[refl:~],#6) )
+   PREPD(#5,#6),
+   SUBJ[pre=+,anaph0=+](#5,#3).
+
+
+// Verbs bearing feature s_np_inf followed by NP and by infinitive
+// In this case NP is dir object of the verb and subject of the infinitive
+// And the infinitive is a direct object of the main verb.
+//
+// Example: autorizou os alunos a comerem a sopa.
+// Example: Como o João autorizou os alunos a comerem a sopa, ......
+//
+//NJM+JB, 2010/11/15
+| ?[verb]{?*,#1[last,s_np_inf]};SC{?*,?[verb,last]{?*,#1[last,s_np_inf]}}, NP#3, VF{?*,#2[last]} |
+if ( HEAD(#4,#3) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+   MOD[post=+,inf=+,sentential=+](#1,#2),
+   SUBJ[pre=+,anaph0=+](#2,#4).
+
+//NJM+JB, 2010/11/15
+// Example: Deixou o Pedro a comer a sopa.
+// Example: Como o João deixou o Pedro a comer a sopa, ......
+//
+| ?[verb]{?*,#1[last,s_np_inf]};SC{?*,?[verb,last]{?*,#1[last,s_np_inf]}}, NP#3, VINF{?+,#2[last]} |
+if ( CDIR[post](#1,#4) & HEAD(#4,#3) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+   MOD[post=+,inf=+,sentential=+](#1,#2),
+   SUBJ[pre=+,anaph0=+](#2,#4).
+
+// Example: Deixou o Pedro comer a sopa.
+// Example: Como o João deixou o Pedro comer a sopa, ......
+//
+| ?[lemma:deixar,verb]{?*,#1[last,s_np_inf]};SC{?*,?[verb,last]{?*,#1[last,s_np_inf]}}, NP#3, VINF{#2[last]} |
+if ( ^CDIR[post](#1,#4) & HEAD(#4,#3) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+   CDIR[post=+,inf=+,sentential=+](#1,#2),
+   SUBJ[pre=+](#2,#4).
+
+
+//NJM+JB, 2010/11/15
+// A verb with the 's_np_inf' feature and followed by a complex noun phrase as its
+// direct object and an infinitive chunk (VINF); the complex noun phrase is formed
+// of a NP, whose head is a determinative noun, and a PP; the real head of the
+// direct object is the head of the PP; this head noun is the anaphoric subject
+// of the infinitive.
+//
+// Example: O Pedro convenceu metade dos alunos a fazer isso
+//
+| ?[verb]{?*,#1[last,s_np_inf]};SC{?*,?[verb,last]{?*,#1[last,s_np_inf]}}, NP#5, PP#3, VINF{?*,#2[last]} |
+if ( HEAD(#4,#3) & HEAD(#6,#5) &
+     ( QUANTD(#4,#6) || CLASSD(#4,#6) ) &
+     ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2)
+   )
+// MOD[post=+,inf=+sentential=+](#1,#2),
+   SUBJ[pre=+,anaph0=+](#2,#4).
+
+
+// Verbs bearing feature s_pp_inf followed by PP and by infinitive
+// In this case PP is indirect complement of the verb and anaphoric subject of the infinitive
+// And the infinitive is a direct object of the main verb.
+//
+// Example: O Pedro permitiu à Ana lavar os dentes
+//
+| ?[verb]{?*,#1[last,s_pp_inf]};SC{?*,?[verb]{?*,#1[last,s_pp_inf]}}, PP#3, VINF{?*,#2[last]} |
+if ( HEAD(#4,#3) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+   CDIR[post=+,inf=+,sentential=+](#1,#2),
+   SUBJ[pre=+,anaph0=+](#2,#4).
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  GERUNDIVE SUBCLAUSES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// pelo menos 2 verbos na cadeia
+//
+// Example: estar lendo
+//
+| #1[verb,mark_ger=+], ?*[mark_ger=+], VGER[mark_ger=+]{?*,verb#4[gerund,last,mark_ger=+]} |
+ if ( HEAD(#3,#1)  & VDOMAIN(#3,#4) )
+   ~
+
+// um só verbo na cadeia
+//
+// Example: palitando
+//
+| ?[mark_ger=+]{?*,verb#1[mark_ger=+]} |
+ if ( VDOMAIN(#1,#1) )
+   ~
+
+// Verbs bearing feature s_np_inf followed by NP and by infinitive
+// In this case NP is dir object of the verb and subject of the infinitive
+// And the infinitive is a direct object of the main verb.
+//
+// Example: Deixou o Pedro comer a sopa.
+// Example: Como o João deixou o Pedro comer a sopa, ......
+// Example: Caso o João tenha deixado o Pedro comer a sopa, ......
+//
+| ?[verb]{?*,#1[last,s_np_inf]};SC{?*,?[verb,last]{?*,#1[last,s_np_inf]}}, NP#3, VGER{?*,#2[last]} |
+if ( ^CDIR[post](#1,#4) & HEAD(#4,#3) & ~SUBJ(#2,?) & ~PREDSUBJ(#1,#2) )
+   CDIR[post=+,inf=+](#1,#2),
+   SUBJ[pre=+](#2,#4).
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  REDUCED PARTICIPIAL SUBCLAUSES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////
+//
+// UPDATING (computing new) ATTRIBs
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/03/29
+//This rule makes its first appearance on file dependency5.xip
+// (new subjects have been produced in the meanwhile. See relatives...)
+//
+// X cop Y gives
+//            PREDSUBJ(cop,Y) and SUBJ(cop,X)
+// and now also produces:
+//            ATTRIB(X,Y)
+//
+ if ( PREDSUBJ(#1[cop],#2) & SUBJ(#1,#3) & ~ATTRIB(#3,#2))
+   ATTRIB(#3,#2).
+
+
+////////////////////////////////////////////////////////////////////////
+//
+// Correcting problems in SUBJ -> CDIR dependencies
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/01/07
+// Example: Que o Pedro faça isso obriga àquilo
+// We have here SUBJ(obriga,isso) and CDIR(faça,isso)
+// In this kind of configuration we prefer the CDIR with the verb of the subclause and destroy the SUBJ
+//
+| SC#1, ?*[verb], NP#2, VF#3 |
+ if ( HEAD(#8,#1) & VDOMAIN(#8,#4) & HEAD(#5,#2) & HEAD(#6,#3) & VDOMAIN(#6,#7) &
+      ^SUBJ(#7,#5) & CDIR(#4,#5)
+    )
+   SUBJ[pre=+,sentential=+](#7,#4).
+
+// Example: Comer sopa agrada ao Pedro
+// We have here SUBJ(agrada,sopa) and CDIR(comer,sopa)
+// In this kind of configuration we prefer the CDIR with the infinitive and destroy the SUBJ
+//
+| VINF#1[mark_inf], NP#2, VF#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#2) & HEAD(#6,#3) & VDOMAIN(#6,#7) &
+   ^SUBJ(#7,#5) & CDIR(#4,#5)
+   )
+   ~
+
+// SUBJ-OBJ adjustments (1)
+// attaching infinitives to the nearest verbal predicate on the right or on the left that is not embedded
+// With information about nouns subcategorizing infinitive, this rule should be adapted
+//
+// Example: Comer bolos soube-me bem -> SUBJ_SENTENTIAL_PRE_INF(saber,comer)
+//
+| ?[mark_inf]{?*,verb#1[mark_inf]}, ?*[verb:~,comma:~], #2[verb,mark_inf:~,mark_ger:~] |
+ if ( HEAD(#3,#2) & VDOMAIN(#3,#4)   // searching the first verbal predicate on the right of the inf.
+   & ( ~?(?,#1) | VDOMAIN(?,#1) )    // Verifies that the infinitive is not dependent of anything
+   & ~SUBJ(#4,?)                     // Verifies that the verb on the right has no subject attached
+   )
+   SUBJ[pre=+,inf=+,sentential=+](#4,#1).
+
+
+//CH, 2007/05/17
+// After a coordination conjunction that introduces a clause (no SC is constructed)
+// if this conj is followed only by one verb until the end of the sentence
+// if there is an unattached NP between this conjunction and the verb
+// if this verb has no subject
+// then this NP is the subject of the verb
+//
+// Example: A Guida estava inconsolável, e Graça não se comoveu.
+//
+//NJM, 2010/04/07
+// remove optionality from "NP{pron[refl]}"
+//
+| conj[coord], NP#1, (AP;PP)*, (advp), NP{pron[refl]}, VF{?*,verb#3}, ?*[verb:~] |
+if ( HEAD(#4,#1) & ~SUBJ(#3,?) & ~SUBJ(?,#4) & ~CDIR(?,#4) & ~MOD(?,#4) )
+   SUBJ[pre=+](#3,#4)
+
+
+//CH, 2007/05/17
+// Same as above if we have a complex verbal form
+// The rule above only works for simple verbal forms.
+//
+// Example: A Guida estava inconsolável, e Graça não se tinha comovido.
+//
+//NJM, 2010/04/07
+// rule simplified to rely on VDOMAIN and remove optionality from "NP{pron[refl]}"
+//
+| conj[coord], NP#1, (AP;PP)*, (advp), NP{pron[refl]}, verb{?*,verb#3} |
+if ( HEAD(#4,#1) & VDOMAIN(#3,#5) & ~SUBJ(#5,?) & ~SUBJ(?,#4) & ~CDIR(?,#4) & ~MOD(?,#4) )
+   SUBJ[pre=+](#5,#4)
+
+
+// CDIR links a finite verb with infinitive subclause not introduced by any preposition
+//
+// Example: Apreciei comer bolos -> CDIR_SENTENTIAL_POST_INF(apreciei,comer)
+//
+| #1[verb,mark_inf:~,lemma:~ser], ?*[verb:~], #2[mark_inf,gerund:~]{?[prep:~]} |
+ if ( HEAD(#3,#1) & VDOMAIN(?,#3)
+   &
+   HEAD(#4,#2) & VDOMAIN(#4,#5[mark_inf])
+   &
+   ~CDIR(#3,?)
+   &
+   ~PREDSUBJ(#3,#5)
+   )
+   CDIR[post=+,inf=+,sentential=+](#3,#5)
+
+
+// Outros tipos de ligação entre VF e infinitive à sua direita.
+// Se não se sabe nada, liga-se simplesmente com MOD
+//
+// Example: Comeu para resistir melhor ao frio -> MOD_POST_SENTENTIAL_INF(comer,resistir)
+//
+| #1[verb,mark_inf:~], ?*[verb:~], #2[mark_inf]{prep} |
+ if ( HEAD(#3,#1) & VDOMAIN(?,#3)
+   &
+   HEAD(#4,#2) & VDOMAIN(#4,#5[mark_inf])
+   &
+   ~?[sentential](?,#5)
+   &
+   ~CDIR[post,inf](#3,#5)
+   )
+   MOD[post=+,inf=+,sentential=+](#3,#5)
+
+
+// Example: O Pedro leu o jornal palitando os dentes -> MOD_POST_SENTENTIAL_GERUND(leu,palitando)
+//
+| #1[verb], ?*[verb:~], #2[verb] |
+ if ( HEAD(#3,#1) & VDOMAIN(?,#3)
+   &
+   HEAD(#4,#2) & VDOMAIN(#4[gerund],#5)
+   &
+   ~?[sentential](?,#4)
+   )
+   MOD[post=+,gerund=+,sentential=+](#3,#5)
+
+
+//NJM+JB, 2011/03/02
+// Example: interrompendo a marcha, o Pedro saiu da sala -> MOD_POST_SENTENTIAL_GERUND(saiu,interrompendo)
+//
+| #2[verb], ?*[verb:~], punct[comma], ?*[verb:~], #1[verb] |
+ if ( HEAD(#3,#1) & VDOMAIN(#3,#5)
+   &
+   HEAD(#4,#2) & VDOMAIN(?[gerund,first],#4) &
+   &
+   ~?[sentential](?,#4)
+    )
+   MOD[pre=+,gerund=+,sentential=+](#5,#4)
+
+
+//NJM+JB, 2011/03/10
+// Example: lavada a loiça, o Pedro comeu a sopa -> MOD_POST_SENTENTIAL_PARTICIP(comeu,lavada)
+//
+| VCPART#2[start,verb], NP, ?*[verb:~], punct[comma], ?*[verb:~], #1[verb] |
+ if ( HEAD(#3,#1) & VDOMAIN(#3,#5)
+   &
+   HEAD(#4[pastpart,first],#2) & VDOMAIN(#4,#4) &
+   &
+   ~?[sentential](?,#4)
+    )
+   MOD[pre=+,particip=+,sentential=+](#5,#4)
+
+
+// CDIR - 2a volta
+// When there more than one PP, AP* between the verb and its direct object...
+// If we hava a NP which is not dependent of anything.
+// If there is a verb on its left which has no object complement
+// Then we attach this NP to the verb as its direct object
+//
+//CH: Idealmente, tinha-se que testar que o verbo é um verbo transitivo mas esta informação não está disponível.
+//
+// Example: A IBM apresentou, na semana passada, a nível mundial, os novos modelos da sua linha.
+//          CDIR(apresentou, modelos)
+//
+| ?[verb]{?*, #1[verb, Vai:~, lemma:~ser]}, ?*[verb:~,scfeat:~,coord:~], NP#2 |
+if ( HEAD(#3,#2) & ~SUBJ(?,#3) & ~ATTRIB(?,#3) & VHEAD(#1,#4) & ~CDIR(?,#3)  & ~CDIR(#4,?) & ~PREDSUBJ(#4,#3) & ~MOD(#4,#3) & ~QUANTD(?,#3))
+   CDIR[post=+](#4,#3)
+
+
+//NJM+JB, 2010/04/05
+// Example: "O Pedro leu cinco milhões de livros.
+//          CDIR(leu, livros)
+//
+| ?[verb, lemma:~ser], (PP), NP#1 , PP#2{prep[lemma:de]} |
+if ( HEAD(#3,#1) & HEAD(#4,#2) &
+    ( QUANTD(#4,#3) || CLASSD(#4,#3) ) &
+     ~CDIR[post,inf](#5,?)  & ^CDIR(#5,#3)
+   )
+   CDIR(#5,#4)
+
+| ?[verb, lemma:~ser], (PP), NP#1 , PP#2{prep[lemma:de]} |
+if ( HEAD(#3,#1) & HEAD(#4,#2) &
+    ( QUANTD(#4,#3) || CLASSD(#4,#3) ) &
+     ~CDIR[post,inf](#5,?) & ~CDIR(#5,#4) & ^MOD(#5,#4)
+   )
+   CDIR(#5,#4)
+
+
+// Correction CDIR/SUBJ
+// if an intransitive verb has no subject and a CDIR NP on its right,
+// Then we change the subject function to object function
+//
+// Example: Foi nesse ambiente que decorreu ontem a cerimónia.
+//
+if ( ^CDIR[post](#1[Vai],#2[lemma:~se,tokenend:~]) & ~SUBJ(#1,?) )
+   SUBJ(#1,#2).
+
+
+// Corection Erroneous SUBJECT
+// If we do not have a SUBJ dependency between a reflexive verb
+// and if at the same time we have a NP on the left of the "se" which is not linked
+// to anything. Then, establish it between the verb and this NP
+//
+// Example: a rapariga nunca se consolou *SUBJ(consolou,se) SUBJ(consolou,rapariga)
+//
+//CH, 2007/05/15
+// We also have to check that the subject candidate is not a wh
+// So we can avoid things like "Foi o que se realizou". SUBJ(realizou,o que)
+//
+| NP#3, ?*[verb:~,scfeat:~], NP{?[surface:"se",first,last]}, ?*[verb:~,scfeat:~], ?[verb]{#2} |
+if ( VDOMAIN(#2,#1) & ~SUBJ(#1,?) & HEAD(#4[qu:~],#3) & ~SUBJ(?,#4) & ~CDIR(?,#4) )
+   SUBJ[pre=+](#1,#4)
+
+
+//NJM+JB, 2010/07/23
+// Correction a CDIR into a CINDIR
+//     if the verb is "dative" and there is a clitic [3rd person, dative]
+//
+// Example: O Pedro ofereceu-lhe um livro   --> CINDIR_POST(ofereceu,lhe)
+//
+//NJM+JB, 2011/04/13 - The reflex pronouns are not considered in this rule
+//                     to become CINDIR (for its rarity)
+//
+| #2[verb];sc{?*,#2[verb]}|
+ if ( HEAD(#1[Vdat],#2) & VDOMAIN(?,#1) &
+      ( CLITIC(#1,#3[pers,dat,cli]) || CLITIC(#1,#3[pers,acc,1p,cli]) || CLITIC(#1,#3[pers,acc,2p,cli]) ) &
+      ^CDIR(#1,#3) & ~CINDIR(#1,#3) )
+   CINDIR(#1,#3)
+
+
+//NJM+JB, 2010/11/15
+//NJM+JB, 2013/05/06 - rule commented !!!!
+// Correction a CDIR has to be removed
+//
+// Example: O Jorge convenceu metade dos alunos a fazer isso   remove-> * CDIR_POST(convenceu,alunos)
+//
+//if ( ^CDIR[post](#1,?) & MOD[SENTENTIAL,POST,INF](#1,?) )
+//   ~
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  "CIRC" feature propagation to INTROD-AUX and MOD dependencies
+//
+////////////////////////////////////////////////////////////////////////////////
+
+| SC{#1} |
+ if ( ^INTROD-AUX$3(#1[lemma:~como,!circ:!],#2) )
+   $3(#1,#2)
+
+ if ( ^INTROD$3(#1[lemma:~como,!circ:!],#2) )
+   $3(#1,#2)
+
+// if ( ^MOD$4(#1,#2) & PREPD(#2,#3[!circprep:!]) )
+//   $4(#1,#2)
+//
+// if ( ^MOD$4(#1,#2) & PREPD(#2,#3[!circ:!]) )
+//   $4(#1,#2)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  "modalfeat" feature propagation to INTROD-AUX and MOD dependencies
+//
+////////////////////////////////////////////////////////////////////////////////
+
+ if ( ^INTROD-AUX$3(#1[lemma:~como,nop,!modalfeat:!],#2) )
+   $3(#1,#2)
+
+ if ( ^INTROD$3(#1[lemma:~como,nop,!modalfeat:!],#2) )
+   $3(#1,#2)
+
+ if ( INTROD(#1[nop,!modalfeat:!],#2) & ^SUBJ$4(#3,#2) )
+   $4(#3,#2)
+
+if ( INTROD(#1[nop,!modalfeat:!],#2) & ^MOD$4(#3,#2) )
+   $4(#3,#2)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  Builds the "QBOUNDARY" dependency iteratively:
+//     1 - QBOUNDARY(#1,#1,#2) = INTROD(#1,#2)
+//     2 - adds to the right CDIR/CINDIR/COMPL
+//     3 - adds to the left a preposition
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM, 2011/01/04
+// Example: "O Pedro que tinha lido -> QBOUNDARY(que,que,lido)
+//
+if ( INTROD[!circ:!,!phstruct:!](#1,#2) & ~QBOUNDARY(?,#2,?) )
+   QBOUNDARY(#1,#1,#2)
+
+if ( INTROD[location](#1,#2) & ^QBOUNDARY(#1,#1,#2) )
+   QBOUNDARY[location=+](#1,#1,#2)
+
+// Example: "O Pedro que tinha lido o livro -> QBOUNDARY(que,que,livro)
+//
+ if ( INTROD(#1,#2) & ^QBOUNDARY(#1,#5,#3) & (CDIR(#2,#4) || COMPL(#2,#4) || CINDIR(#2,#4)) & #3<#4 )
+   QBOUNDARY(#1,#5,#4)
+
+//NJM, 2010/03/26
+// Example: "O Pedro acha que a Maria está doente -> QBOUNDARY(que,que,doente)
+//
+ if ( INTROD(#1,#2[cop]) & ^QBOUNDARY(#1,#5,#3) & PREDSUBJ(#2,#4) & #3<#4 )
+   QBOUNDARY(#1,#5,#4)
+
+//NJM, 2011/01/04
+// Example: "O Pedro de que tinha lido o livro -> QBOUNDARY(de,que,livro)
+//
+| prep#3, SC{#1} |
+ if ( INTROD(#1,?) & ^QBOUNDARY(#1,#1,#5) )
+   QBOUNDARY(#3,#1,#5)
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// UPDATING ...
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/03/30
+// Example: O livro de que o Pedro se queixou esgotou
+//                  -> *CDIR(queixou,que)
+//                  -> MOD(queixou,que)
+//
+ if ( QBOUNDARY(#3,#1,#5) & #1~:#3 & ^CDIR(#4,#1) & )
+   MOD(#4,#1)
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// UPDATING (computing new) ATTRIBs
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/03/29
+//This rule makes its first appearance on file dependency5.xip
+// (new subjects have been produced in the meanwhile. See "Correcting problems in SUBJ -> CDIR dependencies..." )
+//
+// X cop Y gives
+//            PREDSUBJ(cop,Y) and SUBJ(cop,X)
+// and now also produces:
+//            ATTRIB(X,Y)
+//
+ if ( PREDSUBJ(#1[cop],#2) & SUBJ(#1,#3) & ~ATTRIB(#3,#2) )
+   ATTRIB(#3,#2).
+
+

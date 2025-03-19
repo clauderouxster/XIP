@@ -1,0 +1,133 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Maud Ehrmann - ESTER2 Output for Dates and HEURE dependencies.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// Annotation on NOUNS and not on NPs and PPs (contrary to deduction_temp)
+
+Déduction:
+
+
+// --------------------------
+// Dependances pour les DATES
+// --------------------------
+
+// Dates absolues 
+
+|NOUN#1[date,absolue,nondate:~,notester:~]|
+	if(~DATE-ESTER[absolue](#1))
+	DATE-ESTER[absolue=+,ester=+](#1).
+
+|NUM#1[date,absolue,nondate:~,notester:~]|
+	if(~DATE-ESTER[absolue](#1))
+	DATE-ESTER[absolue=+,ester=+](#1).
+	
+// Dates relatives 
+
+|NOUN#1[date,relative,duree:~,notester:~]|
+	if(~DATE-ESTER[relative](#1))
+	DATE-ESTER[relative=+,ester=+](#1).
+
+
+//Hier (matin), le mois prochain, etc.
+
+|ADV#1[relative,mwe:~,notester:~]|
+	if(~DATE-ESTER(#1) )
+	DATE-ESTER[relative=+,ester=+](#1).
+
+|NOUN#1[relative,mwe:~,notester:~]|
+	if(~DATE-ESTER(#1) )
+	DATE-ESTER[relative=+,ester=+](#1).
+
+
+// Configs speciales Ester
+
+// la semaine dernière : que "semaine" doit être annotée et non "semaine dernière"
+|NOUN#1{NOUN#2,ADJ[timemod:+]}|
+	if ( ^DATE-ESTER[relative](#1))
+	DATE-ESTER[ester=+](#2)
+
+|NOUN#1{NOUN#2,NOUN[timemod:+]}|
+	if ( ^DATE-ESTER[relative](#1))
+	DATE-ESTER[ester=+](#2)
+
+
+
+
+
+//----------
+//  HEURES
+//----------
+
+|NOUN#1[heure:+,duree:~,periode:~,postjour:~]|	
+	if (~HEURE-ESTER(#1))
+	HEURE-ESTER[ester=+](#1)
+
+|NOUN#1[heureambig]|	
+	if (HEURE(#1)& ~HEURE-ESTER(#1))
+	HEURE-ESTER[ester=+](#1)
+
+
+//----------
+//  DUREES
+//----------
+
+|NOUN#1[duree:+,notester:~]|	
+	if (~DUREE-ESTER(#1))
+	DUREE-ESTER[ester=+](#1)
+
+|NOUN#1|
+	if(~DUREE-ESTER(#1) & DUREE(#1))
+	DUREE-ESTER[ester=+](#1)
+
+
+//----------
+//  EFFACEMENTS
+//----------
+
+// duree et age
+if(^DUREE-ESTER(#1) & AGE(#1))
+		    ~.
+
+// 2 deps du même type à des niveaux differents
+|NOUN#1{noun,num#2}|
+if ( DATE-ESTER(#1) & ^DATE-ESTER(#2))
+     ~.
+
+// une date dans un nom de produit : ex la sonde Mars Global Surveyor
+|NOUN#1{?*,NOUN#2,?*}|
+	if(PRODUIT(#1) & ^DATE-ESTER(#2) )
+	~.
+
+//2 deps identiques sur le même noeud
+
+|NOUN(#1)|
+	if (DATE-ESTER[relative](#1) & ^DATE-ESTER[relative](#1))
+	~.
+
+//Si deux deps différentes : on garde celle du noeud supérieur sauf si elle a le trait ester
+|?#1{?,?#2[person:~]}|
+if ($1(#1) & ^$2[ester:~,interval:~](#2))
+   ~.
+
+|?#1{?#2[person:~],?}|
+if ($1(#1) & ^$1[ester:~,interval:~](#2))
+   ~.
+
+
+// CHANGEMENTS POUR PRISE EN COMTPE
+// DES CHANGEMENTS DANS deduction_temp_post
+
+|NP#1{NOUN(#2)}|
+if(^DATE-ESTER(#2) & DUREE(#1))
+	DUREE-ESTER(#2),
+	~.	  
+
+//Pour effacer la dep de ESTER si générique sur noeud sup
+
+if (^DATE-ESTER[relative](#1) & Mother(#1,#2) & GENERIQUE(#2))
+   ~.

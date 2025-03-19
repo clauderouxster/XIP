@@ -1,0 +1,134 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : localdates.xip
+//!   Date       : 18/08/2003
+//!   Author     : C. Brun
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// A local grammar for monetary expressions 
+
+Sequence:
+
+// First of all one needs num complex expressions
+
+// one hundred and sixty two million ...
+
+1> num[mwe:+,card:+] @= num*[card], num[card,preconj],  num*[card] , conj[coord], num+[card]   .
+
+
+1> num[mwe:+,card:+] @= num+[card], num+[card]. 
+
+
+//$78 billion
+
+1> num[mwe:+,card:+,money:+] @= dig[money], num+[card]. 
+
+1> num[mwe:+,card:+,money:+] @= noun[curr], dig[rom:~] , (num[card]).
+
+
+
+// 678 billion 
+1>  num[mwe:+,card:+] @= dig, num+[card]. 
+
+// 10 U.S. dollars : to be checked 
+
+// Israel Shekel
+1> noun[curr:+] = noun[country:+], noun[curr:+].
+
+// Irish Punt 
+1> noun[curr:+] = nadj[country:+], noun[curr:+].
+
+//New Israel Shekel
+2> noun[curr:+] = nadj[lemme:new] , noun[curr:+].
+
+2> noun[curr:+] = nadj[lemme:old] , noun[curr:+].
+
+
+
+
+
+// Patterns for Moneys 
+// 10 dollars
+//3> noun[curr:+] = noun[guesscurr:+], num.
+
+// The context def:~ prevent "the <money>1994 Mexican Peso</money> crisis" 
+
+
+3> noun[mwe:+,money:+] @=  | ?[def:~] | dig, (punct[form:fhyph,left,right]), noun[curr].
+
+3> noun[mwe:+,money:+] @=  | ?[def:~] | num[card], noun[curr].
+
+3> num[mwe:+,card:+,money:+] @= dig;num[card],  noun[curr].
+
+3> num[mwe:+,card:+,money:+] @= dig, nadj[lemme:mln];nadj[lemme:bln], noun[lemme:dlr];noun[curr].
+
+3> num[mwe:+,card:+,money:+] @= dig, nadj[lemme:mln];nadj[lemme:bln], nadj[lemme:dlr];noun[curr].
+
+// Ftrouilleux marked elements like NIS400 billion / million
+// etc : but one need to have regular expressions to
+// account for NIS400, i.e. add it in the lexicons ?
+// moreover such rules seem to be risky ...
+// Let's mark these expressions if and only if
+// another money has been found in the context
+// 3 Maj followed by at least one digit ...
+
+4>  noun[mwe:+,money:+] =  noun[toutmaj,proper,lemme:"%C%C%C%d+"], num[card,lemme:million];num[card,lemme:billion];num[card,lemme:trillion].
+
+4> noun[mwe:+,money:+] = | ?*, ?[money], ?* | noun[toutmaj,proper,lemme:"%C%C%C%d+"].
+
+4> noun[mwe:+,money:+] = noun[toutmaj,proper,lemme:"%C%C%C%d+"] | ?*, ?[money], ?* | .
+
+/////////////////////////////////////////////////////
+// A simple account for elements involving units
+// like 340 km/hour
+//////////////////////////////////////////////////////
+
+// composed units
+// need to account for kilowatt per second, but desamb problems
+// with second and minute, hour should be ok
+
+// degree Celsius/Fahrenheit/centigrade
+4> noun[unit:+] = noun[lemme:degree,unit:+], noun[lemme:Fahrenheit].
+
+4> noun[unit:+] = noun[lemme:degree,unit:+], noun[lemme:centigrade].
+
+4> noun[unit:+] = noun[lemme:degree,unit:+], adj[lemme:Celsius].
+
+//meter^2 ; centimer^3 
+
+4> noun[unit:+] = noun[unit], punct[spec:+,form:fcirc], dig[lemme:2].
+
+4> noun[unit:+] = noun[unit], punct[spec:+,form:fcirc], dig[lemme:3].
+
+// joule per meter; joule / meter
+5> noun[unit:+]  @=  noun[unit], (prep[lemme:per];punct[spec:+,form:fslash];punct[form:fhyph,left,right]), noun[unit], (noun[unit]).
+
+//999/km²
+5> noun[mwe:+,unit:+] @=  dig, punct[spec:+,form:fslash], meas[abr:+,meas:+].
+
+5> noun[mwe:+,unit:+] @=  | ?[def:~] | dig, (punct[form:fhyph,left,right]),  noun[unit].
+
+5> noun[mwe:+,unit:+] @=   | ?[def:~] | num[card], noun[unit].
+
+// with abbreviations of mesure like g.
+5>  noun[mwe:+,unit:+] @=   dig, meas;dig[hmm_meas],  punct[spec:+,form:fslash], meas;dig[hmm_meas].
+
+5>  noun[mwe:+,unit:+] @=  | ?[def:~] | dig, meas[abr:+,meas:+].
+
+
+
+
+Tagging:
+
+//I transform noun[guess,maj] in noun[proper] to simplify the later rules application
+
+10> noun[maj,toutmaj:~,guille:~,guess] %= |noun[proper]| noun[proper=+] .
+
+10> noun[maj,toutmaj:~,guille:+,guess] %= |noun[proper]| noun[proper=+,guille=+] .

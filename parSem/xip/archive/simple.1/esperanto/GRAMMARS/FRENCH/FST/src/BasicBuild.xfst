@@ -1,0 +1,220 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      remove flag diacritics from French Analyser
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+#
+# ============================================================================
+# USAGE:        xfst 	-s [LEX.fst] -s [Filter.fst] -s [Map.fst] 
+#			-l [ThisFile]
+# ============================================================================
+
+# load ../aux/Clit.fst
+# define clitix
+
+# load ../aux/Map.fst
+define map
+
+# load ../aux/FilterLex.fst
+define filter 
+
+# load ../aux/FrenchSmall+Syn.fst 
+define fre
+
+clear stack
+
+# -----------------------------------------------------------------------------
+# extract clitics from morphological analyser
+# specials for clitics (-il -m'en) which may appear at the end of a verb
+
+define clitix  $[%+PC] .o. fre ;
+
+define clitpuncs  clitix .o. $[%'| %- | %/ | %.];
+
+# makes sure begins with  hyphen: removes l'on, m', s' ... from the list
+define clitpuncs clitpuncs .o. [%- ?*];
+
+# add forms like -t-il  't-il t-il
+define clitpuncs  clitpuncs | ([0:%- | 0:%']) [0:t] [$[%+Nom ?* %+P3] .o. clitpuncs] ;
+
+# add the HYPH feature
+define clitpuncs [%+HYPH %+PC <- %+PC] .o. clitpuncs ;
+
+
+# all clitics 
+define clitix [clitix .o. [?* - clitpuncs.2]] | clitpuncs ;
+
+# modify nous/vous as PC (separate InvCase between Nom and Dat/Acc (NNom
+read regex  [
+	[%+Nom | %+NNom] <- %+InvCase || _  ?* [%+P1 | %+P2] %+PC 
+.o. 	clitix 
+];
+define clitix
+
+# ----------------------------------------------------------------------------
+read regex
+[ a | à | â | b | c | ç | d | e | é | è | ê | ë | f | g | h | i | î |
+ï | j | k | l | m | n | ñ | o | ô | ö | p | q | r | s | t | u | ù | û | ü | 
+v | w | x | y | z ] ;
+
+define lower ;
+
+read regex
+[ A | À | Â | B | C | Ç | D | E | É | È | Ê | Ë | F | G | H | I | Î |
+Ï | J | K | L | M | N | Ñ | O | Ô | Ö | P | Q | R | S | T | U | Ù | Û | Ü | 
+V | W | X | Y | Z ] ;
+
+define upper ;
+
+read regex
+[
+[a:A]  |  [à:À]  |  [â:Â]  |  [à:A]  |  [â:A ]  | 
+[b:B]  |  [c:C]  |  [ç:Ç]  |  [ç:C]  |  [d:D]  |  
+[e:E]  |  [ê:Ê]  |  [è:È]  |  [ é:É]  |  [ë:Ë]  |  
+[ê:E]  |  [è:E]  |  [ é:E]  |  [ë:E]  | 
+[f:F]  |  [g:G]  |  [h:H]  |  
+[i:I]  |  [ î:Î]  |  [ï:Ï]  |  [î:I]  |  [ï:I]  | 
+[j:J]  |  [k:K]  |  [l:L]  |  [m:M]  |  [n:N]  |  [ñ:N]  |  [ñ:Ñ]  |  
+[o:O]  |  [ ô:Ô]  |  [ô:O]  | 
+[p:P]  |  [q:Q]  |  [r:R]  |  [s:S]  |  [t:T]  |  [u:U]  |  
+[v:V]  |  [ w:W]  |  [x:X]  |  [y:Y]  |  [z:Z]
+] ;
+
+define low2up ;
+
+read regex
+[
+[A:a]  |  [À:à]  |  [Â:â]  |  [A:à]  |  [A:â ]  | 
+[B:b]  |  [C:c]  |  [Ç:ç]  |  [C:ç]  |  [D:d]  |  
+[E:e]  |  [Ê:ê]  |  [È:è]  |  [ É:é]  |  [Ë:ë]  |  
+[E:ê]  |  [E:è]  |  [ E:é]  |  [E:ë]  | 
+[F:f]  |  [G:g]  |  [H:h]  |  
+[I:i]  |  [ Î:î]  |  [Ï:ï]  |  [I:î]  |  [I:ï]  | 
+[J:j]  |  [K:k]  |  [L:l]  |  [M:m]  |  [N:n]  |  [N:ñ]  |  [Ñ:ñ]  |  
+[O:o]  |  [ Ô:ô]  |  [O:ô]  | 
+[P:p]  |  [Q:q]  |  [R:r]  |  [S:s]  |  [T:t]  |  [U:u]  |  
+[V:v]  |  [ W:w]  |  [X:x]  |  [Y:y]  |  [Z:z]
+] ;
+
+define up2low ;
+
+#### the following used to capitalise initial letters (including initial in any part of MWE)
+###define low2up [? | low2up1 ] [~$[% ] | [% ]   [? | low2up1 ] ]* ;
+
+# and the following takes care of all cap as well
+###define low2up low2up | [~$[lower] | low2up1]* ; 
+
+define num [ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ] ;
+
+define ops [  %, | %. |  %> | %< |  %* | %( | %) | %- | %+ | %/ | %= | %% ] ;
+
+
+
+##############################
+echo >>> define measures
+read regex
+[
+  (U S %  ) %$  %+InvGen:0 %+InvPL:0 %+Noun:0 %+NOUN%_INV:0 | 
+  %% %+InvGen:0 %+InvPL:0 %+Noun %+NOUN%_INV:0  |
+  [ ([k|M|G]) [[m|W|t r| h] (%.) ((%/) [h|m n | s | m | k m]) |  H z | F | F F | E C U | W h ] |
+    [k|M|G] [o|b|B] |
+     k g | c c | c m | m m
+ ] (2) %+InvGen:0 %+InvPL:0 %+Measure:0 %+Noun:0 %+NOUN%_INV:0 
+];
+define measure
+clear stack
+
+# remove measures for basic dictionnary
+define fre fre .o. [?* - measure.2];
+clear stack
+
+
+#removes prefixes and suffixes (clitics)
+define fre   ~$[%< | %> | %+PC ] .o. fre ;
+
+
+echo >>> apply filter
+define fre filter .o. fre ;
+
+
+# excludes numerical expressions with digits: 100 000 or 100+3 or +Percent
+define fre ~$[num ?* [%+Card | %+Numeral | %+Percent]] .o. fre ;
+
+# exclude dates and hours
+define fre ~$[%+Date | %+Heure]  .o. fre ;
+
+#removes "de l''" and "de la"  from the list (should be split as de + le)
+define fre fre .o. ~[ d  e [% ] l [%' | a]] ;
+
+
+# modify some entries
+
+# modify "car" as SConj
+define fre [[c a r %+SConj ] <- c a r %+Coord] .o. fre ;
+
+
+# introduce boite as a Noun (a common mispell
+regex 	fre .o. [
+          [b o î t e -> b o [i | î] t e] |   
+          [ o e -> [Ó |  o e]]
+         ]
+ ;
+define fre
+
+
+
+
+# adds forms such as au(x) futur(es) actionnaire(s)  chante(nt), chantai(en)t
+define adj $[%+Adj | %+PaPrt | %+PrPrt]  .o. fre ;
+
+define adjfem  $%+Fem .o. adj ;
+define adjpl $%+PL .o. adj ;
+
+# additional forms for adjectives: futur(es)  future(s) futur(e) futur(s)
+define adjfem1 adjfem .o. [ e s -> [  %( e s %)] || _ .#.] ;
+define adjfem2 adjfem .o. [ e  -> [ %( e  %)] || _ .#.] ;
+define adjpl1 adjpl .o. [ s -> [  %( s %)] || _ .#.] ;
+
+#additional forms for verbs:  chien(s), chapeau(x)
+define nounpl $[%+PL] .o. [$[%+Noun]  .o. fre] ;
+define nounpl1 nounpl .o. [ s -> [  %( s %)] || _ .#.] ;
+define nounpl2 nounpl .o. [ x -> [  %( x %)] || _ .#.] ;
+
+#additional forms for verbs: chante(nt), chantai(en)t
+define verbpl $%+P3 .o. [$[%+PL] .o. [$[%+Verb]  .o. fre]] ;
+define verbpl1 verbpl .o. [ e n t -> [ %( e n %) t | e %( n t %)  ] || _ .#.] ;
+
+#additional forms for dets and preps de(s) and au(x)t
+define misc $%+PL .o. [$[%+Det | %+Prep]  .o. fre] ;
+define misc1 misc .o. [ s -> [  %( s %)] || _ .#.] ;
+define misc1 misc1 | [misc .o. [ x -> [  %( x %)] || _ .#.]] ;
+
+define fre  fre |  adjfem1 | adjfem2 | adjpl1 | nounpl1 | nounpl2 | verbpl1 | misc1;
+
+
+
+# Contracted determiner
+define fre [ %+Prep <-  %+Det ||  %+Prep %= l e ?* %+Def _] .o. fre ; 		 
+#
+## Contracted relative pronoun
+define fre [  %+Dat <-  %+InvCase || à %+Prep %= l e q u e l _  ] .o. fre ; 		 
+define fre [  %+Gen <-  %+InvCase || d e %+Prep %= l e q u e l _  ] .o. fre ; 		 
+
+################################################################################################
+# Map tags to HMM tagset       
+################################################################################################
+echo >>> apply map
+regex map .o. fre ;
+define fre ;
+
+################################################################################################
+# add some sub-lexicons (e.g. clitic pronouns like t-il )
+################################################################################################
+echo >>> add sub-lexicons
+read regex	[ fre | clitix | measure ];
+

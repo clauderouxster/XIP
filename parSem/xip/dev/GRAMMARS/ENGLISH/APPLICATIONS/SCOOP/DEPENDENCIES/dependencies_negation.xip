@@ -1,0 +1,405 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2001 - 2009 Xerox Corporation.  All Rights Reserved.
+//!Author: C. Brun.
+//!
+//!  Date: Nov. 2009
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// genreric rules for negation which have to be calculated
+// at the end of any application 
+
+DependencyRules:
+
+
+//*** generic rules for negation
+
+if(^SENTIMENT[negative,modified:~](#1,#2) & NEGAT(#1) & ~FUTURE(#1) )
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2)
+
+
+//if(^SENTIMENT[positive,modified:~](#1,#2) & NEGAT(#1) & ~FUTURE(#1) )
+//	SENTIMENT[modified=+,negative=+,positive=~](#1,#2)
+
+
+if(^SENTIMENT[negative,modified:~](#1,#2) & NUCL(#3,#2) &  NEGAT(#3) & ATTRIB(#1,#2))
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2)
+
+
+if(^SENTIMENT[positive,modified:~](#1,#2) & NUCL(#3,#2) & NEGAT(#3) & ATTRIB(#1,#2))
+	SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+// it isn't low quality
+
+if(^SENTIMENT[negative,modified:~](#4,#2) &  NEGAT(#3) & NUCL(#3,#4) )
+	SENTIMENT[positive=+,negative=~,modified=+](#4,#2)
+
+
+if(^SENTIMENT[positive,modified:~](#4,#2) & NEGAT(#3) & NUCL(#3,#4) )
+	SENTIMENT[negative=+,positive=~,modified=+](#4,#2)
+
+// When compared with the average laser printer the 6L is not a bad printer
+
+if(^SENTIMENT[negative,modified:~](#4,#2) & NEGAT(#2[modified:~]) & ~EMBED(#2,#4) )
+	SENTIMENT[positive=+,negative=~,modified=+](#4,#2)
+
+
+if(^SENTIMENT[positive,modified:~](#4,#2[sentiments,modified:~]) &  NEGAT(#2) )
+	SENTIMENT[negative=+,positive=~,modified=+](#4,#2)
+
+// I don't have a nice cat
+
+if (NEGAT(#1[sentiments:~,notneg:~,specialneg:~]) & OBJ-N(#1[no-sents:~],#2) & ^SENTIMENT[positive,modified:~](#2,#3[modified:~]))
+	SENTIMENT[positive=~,negative=+,modified=+](#2,#3)
+
+if (NEGAT(#1[sentiments:~,notneg:~,specialneg:~]) & OBJ-N(#1[no-sents:~],#2) & ^SENTIMENT[negative,modified:~](#2,#3[modified:~]))
+	SENTIMENT[positive=+,negative=~,modified=+](#2,#3)
+
+if (NEGAT(#1[sentiments:~,notneg:~,specialneg:~]) & OBJ-N(#1[no-sents:~],#2) & ^SENTIMENT[positive,modified:~](#3,#2))
+	SENTIMENT[positive=~,negative=+,modified=+](#2,#3)
+
+if (NEGAT(#1[sentiments:~,notneg:~,specialneg:~]) & OBJ-N(#1[no-sents:~],#2) & ^SENTIMENT[negative,modified:~](#3,#2))
+	SENTIMENT[positive=+,negative=~,modified=+](#2,#3)
+
+
+// It does not have quality
+
+//***** RULES RELATIVE TO NEGATION ******** 
+
+// In case of negative quantification : "it has no default"
+
+if ( ^SENTIMENT[negative,modified:~](#1,#2) & ( QUANTD[neg](#1,#3) | QUANTD(#1,#3[lemme:"zero"]) | QUANTD(#1,#3[lemme:"less"]) | MOD(#3[lemme:"nothing"],#1)))
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2) 
+
+if ( ^SENTIMENT[positive,modified:~](#1[modified:~],#2) & ( QUANTD[neg](#1,#3) |  QUANTD(#1,#3[lemme:"zero"]) | QUANTD(#1,#3[lemme:"less"]) | MOD(#3[lemme:"nothing"],#1)))
+	SENTIMENT[positive=~,negative=+,modified=+](#1,#2) 
+
+
+// There is no way I recommend this movie
+
+|NP{QUANT[lemme:"no"],NOUN[lemme:"way"]}, SC{?*,FV{VERB#1}}|
+	if(^SENTIMENT[positive,modified:~](#1,#2))
+	SENTIMENT[positive=~,negative=+,modified=+](#1,#2)
+
+
+|NP{QUANT[lemme:"no"],NOUN[lemme:"way"]}, SC{?*,FV{VERB#1}}|
+	if(^SENTIMENT[negative,modified:~](#1,#2))
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2)
+
+// I recommend that no one shops/buy/
+
+if (EMBED[complthat](#1,#2[lemme:"recommend"]) & SUBJ-N(#1,#3[lemme:"no_one"]))
+	SENTIMENT[negative=+,modified=+](#2,#1)
+
+
+
+
+// I can't say the cat is nice 
+
+//if (EMBED[complthat](#1,#2[lexneg:~]) & NEGAT(#2) & SUBJ-N(#1,#3) & ^SENTIMENT[positive](#3,#4))
+//	SENTIMENT[modified=+,negative=+,opinion=+,positive=~](#3,#4)
+
+// In case of negation 
+// lexical negation : the quality decreases.
+
+if (SUBJ-N(#1[lexneg],#2[positive]))
+	SENTIMENT[negative=+,modified=+](#1,#2)
+
+// I was moderately satisfied with 
+if (MANNER(#2[positive],#1[lexneg])  & ^SENTIMENT[positive](#2,#3))
+	SENTIMENT[negative=+,modified=+,positive=~](#2,#3)
+
+if (MANNER(#1[lexneg],#2[positive]))
+	SENTIMENT[negative=+,modified=+](#1,#2)
+
+
+//** specific  rules
+
+// "I can't stand X"
+
+if (OBJ-N(#1[lemme:"stand"],#2) & NEGAT(#1))
+	SENTIMENT[negative=+,modified=+](#1,#2) 
+
+// Nothing good to say 
+
+|NP{pron[lemme:"nothing"]},NP{#1[adj,compar:~]}|
+	if (^SENTIMENT[negative,modified:~](#1,#2))
+	     SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+|NP{pron[lemme:"nothing"]},NP{#1[adj,compar:~]}|
+	if (^SENTIMENT[positive,modified:~](#1,#2))
+	     SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+// It is trouble free
+
+    if (GLOBALMOD(#1,#2[lemme:"free"]) & ^SENTIMENT[negative](#3,#1))
+	SENTIMENT[positive=+,modified=+,negative=~](#3,#1)
+
+if (GLOBALMOD(#1[lemme:"proof"],#2) & ^SENTIMENT[negative](#1,#2))
+	SENTIMENT[positive=+,modified=+,negative=~](#1,#2)
+
+
+// 
+
+if (SENTIMENT[positive,modified:~](#1,#2) &  ATTRIB[neg](#1,#2) )
+    SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+if (SENTIMENT[negative,modified:~](#1,#2) &  ATTRIB[neg](#1,#2) )
+	SENTIMENT[positive=+,modified=+,negative=~](#1,#2)
+
+
+
+// There is not much real advantage
+
+if (GLOBALMOD(#1,#2[lemme:"not_much"]) & ^SENTIMENT[positive](#3,#1))
+	  SENTIMENT[negative=+,positive=~,modified=+](#3,#1)
+
+if (GLOBALMOD(#1,#2[lemme:"not_much"]) & ^SENTIMENT[positive](#1,#3))
+	  SENTIMENT[negative=+,positive=~,modified=+](#1,#3)
+
+// Np one complained 
+
+if ( ^SENTIMENT[negative](#3,#1) & SUBJ-N(#3,#2[lemme:"no_one"]))
+	SENTIMENT[positive=+,modified=+,negative=~](#3,#1)
+
+if ( ^SENTIMENT[positive](#3,#1) & SUBJ-N(#3,#2[lemme:"no_one"]))
+	SENTIMENT[negative=+,modified=+,positive=~](#3,#1)
+
+// Not even you improves the thing
+
+|ADV[lemme:"not",start],adv[lemme:"even"],NP#1|
+	if (HEAD(#3,#1) & SUBJ-N(#2,#3) & ^SENTIMENT[positive](#2,#4))
+	SENTIMENT[negative=+,modified=+,positive=~](#2,#4)
+
+
+// ** NEGATION ON SINGLE REL
+
+if (GLOBALMOD(#1,#2[lemme:"not_much"]) & ^SENTIMENT[positive](#1))
+	  SENTIMENT[negative=+,positive=~,modified=+](#1)
+
+
+// Not  a bad idea 
+
+|adv[lemme:"not",start],NP{det,?{?*,#3},#2}|
+	if (^SENTIMENT[positive,modified:~](#2,#3))
+	SENTIMENT[negative=+,positive=~,modified=+](#2,#3)
+
+
+|adv[lemme:"not",start],NP{det,?{?*,#3},#2}|
+	if (^SENTIMENT[negative,modified:~](#2,#3))
+	SENTIMENT[positive=+,negative=~,modified=+](#2,#3)
+
+|adv[lemme:"not"],AP{?*[lemme:~"only"],#1} |
+	if (^SENTIMENT[negative,modified:~](#1))
+	SENTIMENT[positive=+,negative=~,modified=+](#1)
+
+
+|adv[lemme:"not"],AP{?*,#1} |
+	if (^SENTIMENT[positive,modified:~](#1))
+	SENTIMENT[positive=~,negative=+,modified=+](#1)
+
+|adv[lemme:"not"],NP{?*,NADJ#1} |
+	if (^SENTIMENT[positive,modified:~](#1))
+	SENTIMENT[positive=~,negative=+,modified=+](#1)
+
+if ( ^SENTIMENT[negative,modified:~](#1) & QUANTD[neg](#1,#3))
+	SENTIMENT[positive=+,negative=~,modified=+](#1) 
+
+if ( ^SENTIMENT[positive,modified:~](#1) & QUANTD[neg](#1,#3))
+	SENTIMENT[positive=~,negative=+,modified=+](#1) 
+
+
+ if ( MOD(#3[lemme:"nothing"],#1) & ^SENTIMENT[positive,modified:~](#1))
+		SENTIMENT[positive=~,negative=+,modified=+](#1) 
+
+if ( MOD(#3[lemme:"nothing"],#1) & ^SENTIMENT[negative,modified:~](#1))
+		SENTIMENT[positive=+,negative=~,modified=+](#1) 
+
+//wasn't bad 
+
+if( NEGAT(#1) &  NUCL(#1[lemme:"be"],#2) &  ^SENTIMENT[negative,modified:~](#2))
+		SENTIMENT[positive=+,negative=~,modified=+](#2) 
+
+
+if(NEGAT(#1) &  NUCL(#1[lemme:"be"],#2) &  ^SENTIMENT[positive,modified:~](#2))
+		SENTIMENT[positive=~,negative=+,modified=+](#2) 
+
+
+// no one complained 
+
+if (^SENTIMENT[negative](#3) &  SUBJ-N(#3,#2[lemme:"no_one"]))
+	SENTIMENT[positive=+,modified=+,negative=~](#2)
+
+if ( ^SENTIMENT[positive](#3) & SUBJ-N(#3,#2[lemme:"no_one"]))
+	SENTIMENT[negative=+,modified=+,positive=~](#3)
+
+// the least expensive
+
+if (MOD[pre](#1,#2[lemme:"least"]) & ^SENTIMENT[negative](#3,#1) )
+	SENTIMENT[negative=~,positive=+,modified=+](#3,#1) 
+
+if (MOD[pre](#1,#2[lemme:"least"]) & ^SENTIMENT[positive,modified:~](#3,#1))
+		SENTIMENT[negative=+,positive=~,modified=+](#3,#1)
+
+// Nobody is happy with this printer
+
+//if (^SENTIMENT[positive,modified:~](#1,#2[modified:~]) & GLOBALMOD(#3,#1) & NEGAT(#3) )
+//	SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+//if (^SENTIMENT[negative,modified:~](#1,#2) & GLOBALMOD(#3,#1) & NEGAT(#3) )
+//	SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+
+// It is not going to be among my favorite of comedies 
+
+
+//if (^SENTIMENT[positive,modified:~](#2,#1) & GLOBALMOD(#3,#1) & NEGAT(#3) )
+//	SENTIMENT[negative=+,positive=~,modified=+](#1,#2)
+
+//if (^SENTIMENT[negative,modified:~](#2,#1) & GLOBALMOD(#3,#1) & NEGAT(#3))
+//	SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+
+// they are not without trouble
+|ADV[lemme:"not"], PP{#3[lexneg=~],?}|
+if (MOD[post,neg](#1,#2) & PREPD(#2,#3[lemme:"without"]))
+	~
+
+// without easy access
+
+|NP{det*,AP{?*,ADJ#4},NOUN#2}|
+        if ( PREPD(#2,#3[lexneg]) &  ^SENTIMENT[positive](#2,#4))
+        SENTIMENT[negative=+,positive=~](#2,#4)
+
+|NP{det*,AP{?*,ADJ#4},NOUN#2}|
+        if ( PREPD(#2,#3[lexneg]) &  ^SENTIMENT[negative](#2,#4))
+        SENTIMENT[negative=~,positive=+](#2,#4)
+
+
+
+
+
+// It has never performed below perfection
+
+if (GLOBALMOD(#1[verb],#2[lemme:"perfection"]) & NEGAT(#1) & PREPD(#2,#3[lemme:"below"]))
+		SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+
+
+
+
+// There has'nt been a problem with jamming
+
+if(MOD(#1[verb],#2) & ^SENTIMENT[positive,modified:~](#2) & NEGAT(#1))
+	SENTIMENT[positive=~,negative=+,modified=+](#1,#2) 
+
+if(MOD(#1[verb],#2) & ^SENTIMENT[negative,modified:~](#2) & NEGAT(#1))
+	SENTIMENT[positive=+,negative=~,modified=+](#1,#2) 
+
+// there has never been a problem
+
+|NFV{adv[lemme:"never"],verb[lemme:"have"]},NP#1|
+       if (HEAD(#2,#1)  & ^SENTIMENT[modified:~](#3,#2[negative]))
+        SENTIMENT[positive=+, modified=+,negative=~](#3,#2)
+
+|NFV{adv[lemme:"never"],verb[lemme:"have"]},NP#1|
+       if (HEAD(#2,#1)  & ^SENTIMENT[modified:~](#3,#2[positive]))
+        SENTIMENT[negative=+, modified=+,positive=~](#3,#2) 
+
+// don't get me wrong
+
+if (NEGAT(#1[lemme:"get"]) & OBJ-N(#1,#2[lemme:"wrong"]) & ^SENTIMENT(#2))
+	~
+
+//***************************** not sure it works*******************************
+
+// remove any sentiments in case of conditional clause:
+// "if you like cats,  you are great"
+// there are some problems with the EMBED relation
+// in case of negation
+
+if (EMBED[condition](#1,#2) & ^SENTIMENT(#1,#3))
+	~
+
+if (EMBED[condition](#1,#2) & ^SENTIMENT(#2,#1))
+	~
+
+if (EMBED[condition](#1,#2) & ^SENTIMENT(#2,?))
+	~
+
+//******************************************************************************
+// lexical negation
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[positive]) & SUBJ-N(#1,#3) & ~NEGAT(#1) )
+	SENTIMENT[negative=+,modified=+](#2,#3)
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[negative]) & SUBJ-N(#1,#3) & ~NEGAT(#1) )
+	SENTIMENT[positive=+](#2,#3)
+
+if (EMBED(#2[positive],#1[lexneg]) & ^SENTIMENT[positive](#2,#3) & ~NEGAT(#1)  )
+	SENTIMENT[negative=+,positive=~](#2,#3)
+
+if (EMBED(#2[negative],#1[lexneg]) & ^SENTIMENT[negative](#2,#3) & ~NEGAT(#1) )
+	SENTIMENT[positive=+,negative=~](#2,#3)
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[positive]) &  ~SENTIMENT(?,#2) & ~SENTIMENT(#2,?) & ~NEGAT(#1) )
+	SENTIMENT[negative=+](#1,#2)
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[negative]) & ~SENTIMENT(?,#2)  & ~SENTIMENT(#2,?)  & ~NEGAT(#1) )
+	SENTIMENT[positive=+](#1,#2)
+
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[positive]) &  ~SENTIMENT(?,#2) & ~SENTIMENT(#2,?) & NEGAT(#1) )
+	SENTIMENT[positive=+,modified=+](#1,#2)
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[negative]) & ~SENTIMENT(?,#2)  & ~SENTIMENT(#2,?)  & NEGAT(#1) )
+	SENTIMENT[negative=+,modified=+](#1,#2)
+
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[positive]) & SUBJ-N(#1,#3) & NEGAT(#1) )
+	SENTIMENT[positive=+,modified=+](#2,#3)
+
+if ( OBJ-N(#1[lexneg,sentiments:~],#2[negative]) & SUBJ-N(#1,#3) & NEGAT(#1) )
+	SENTIMENT[negative=+,modified=+](#2,#3)
+
+// this is not a machine for you
+
+if (^SENTIMENT[negative,modified:~](#1,#2) & NEGAT(#2[modified:~]) & ~EMBED(#2,#1) )
+	SENTIMENT[positive=+,modified=+,negative=~](#1,#2)
+
+if (^SENTIMENT[positive,modified:~](#1,#2[modified:~]) & NEGAT(#2[modified:~]))
+	SENTIMENT[negative=+,modified=+,positive=~](#1,#2)
+
+
+// rarely --> lexneg
+
+if ( ^SENTIMENT[negative,modified:~](#1,#2) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[positive=+,modified=+,negative=~](#1,#2)
+
+if ( ^SENTIMENT[positive,modified:~](#1,#2) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[negative=+,modified=+,positive=~](#1,#2)
+
+
+	
+// The sentiment on a mother node erase the sentiment on the 
+
+
+// |good : no.
+
+|AP{?#1[adj]},punct,quant[lemme:"no"],punct[sent]|
+	if ( ^SENTIMENT[positive](#1))
+	SENTIMENT[negative=+,positive=~,modified=+](#1).
+
+|AP{?#1[adj]},punct,quant[lemme:"no"],punct[sent]|
+	if ( ^SENTIMENT[negative,modified:~](#1))
+	SENTIMENT[negative=~,positive=+,modified=+](#1).
+
+// it is unlikely to ...
+// invert polarity
+
+
+if (^NEGAT(#1) & NEGAT(#1))
+   ~

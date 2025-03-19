@@ -1,0 +1,102 @@
+##################################################################
+### Urls, Emails adresses and Phone number recognition
+### within  NTM 
+### C. Brun August 2003 (taken from N. Guerin, with some additions)
+##################################################################
+
+
+# Include basic definitions 
+
+#Commented for Makefile  
+#source ./Entity_BasicDef.xfst 
+
+# Domain name:  "xerox.fr", "cnn.news" (future??) , "toto.titi.tutu.tata.org" (but not more!)
+
+define domainName [ [ Letter | Digit | %_ | %- ]+ %. ]^{1,4} Letter^{2,4} ;
+
+# email address
+# Generally email adresses only include alphanumerics, periods, the @ symbol, the underscore, and the hyphen.
+#
+# e.g.:
+# anyletters@toto.com
+
+define email [ Letter | Digit | %_ | %- | %. ]+ %@ domainName ;
+
+define email2  [ %{ [ [ Letter | Digit | %_ | %- | %. | %, | % ] ]+ %} ] %@ domainName ; 
+
+# URL
+# 
+# e.g.s
+# http://user:passwd@www.xrce.xerox.com/dscgi/ds.py/View/Collection-1236
+
+# Any (?) character but blank, < " '
+define AnyChar [ 
+    Letter | Digit 
+    | %& | %~ | %# | %{ | %( | %[ | %- | %| | %_ | %\ | %*
+    | %^ | %@ | %) | %] | %= | %° | %+ | %² | %$ | %£ | %¤ 
+    | %µ | %% | %! | %§ | %: | %/ | %; | %. | %, | %? | %}
+] ;
+
+define URL [ [ {http} | {ftp} | {news} | {nntp} | {telnet} 
+    | {wais} | {file} | {mailto} | {gopher} | {prospero} ]
+    [ {://} | {:/} ]
+    ( AnyChar+ %: AnyChar+ %@ )
+    domainName ( %/ [ AnyChar ]+ ) ] ;
+
+# Telephone/Fax number 
+# e.g. "Tel : 1/800-ANALOGD"
+# Tel: (212) 599-5656
+# Fax: (212) 889-6689
+# Tel: 202.331.2121
+# Fax: 202.331.2496
+# Tel: +972.9.740.9133
+# Fax: 972.3.634.2927
+# Tel (06) 869 0501
+# Tel: 81 3-5371-1921
+# tel: 415-593-7430
+# tel: +44 (0)20 8232-1600 x276
+# tel: + 44 (0) 207 7375 7572
+# Tel.:5449083,5448108 (Corp.Off.) Fax.:5448108
+# Tel = +33-6-09.14.83.53
+# CB ADDED : Phone Freephone etc should be possible 
+# Must:
+# - start with "Tel" or something equivalent
+# - contain at least one digit
+# - end with a digit or a capital letter
+ 
+##### Additions Needed ?
+### freephone helpline 08 626811 ????
+### phone/freephone number ?
+### Toll-free : 0-888-397-3742 
+### free phone  
+
+define Telephone [ [ {Tel} | {Tél} | {TEL} | {TÉL}  | {tel} | {tél} 
+         | {Telephone} | {TELEPHONE} | {Téléphone} | {telephone} | {Fax} | {FAX} 
+         | {ISDN} | {fax} | {Facsimile} | {facsimile} | {PHONE} | {Phone} | {phone} 
+         | {FreePhone} | {FREEPHONE} | {Freephone} | {freephone} 
+         | {toll-free}| {Toll-free} | {TOLL-FREE} | {Toll-Free} 
+     ] 
+    ( %. )
+    ( Space ) ( %: | %= ) Space* 
+    [ Digit | UpperCase | %( | %) | %+ | %.| %/ | %- | %  ]+
+      Digit
+    [ Digit | UpperCase | %( | %) | %+ | %.| %/ | %- | %  ]+
+    [ Digit | UpperCase ] ]  ; 
+
+
+####  Final transducer
+####  CB: add the tag noun to be compatible with XIP
+####  Are they really nouns ?
+
+regex [ email "+NoDict":0 "+Email":0 "+NOUN":0   |
+        email2  "+NoDict":0 "+Email":0 "+NOUN":0   |
+        URL   "+NoDict":0 "+URL":0 "+NOUN":0 | 
+        Telephone   "+NoDict":0 "+Tel":0 "+NOUN":0 
+];
+
+#commented for makefile
+#save ./SpecialStrings.fst
+exit
+
+
+  

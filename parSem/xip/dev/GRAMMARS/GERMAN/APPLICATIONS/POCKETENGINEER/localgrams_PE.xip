@@ -1,0 +1,164 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	localgrams_PE.xip
+//! Content:	Local grammar of the German XIP grammar for the application Pocket Engineer, contains especially proper 
+//!		names of printers,...
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Sigrid Maurel
+//!
+//! Created: 	17 May 2006		:: initial version
+//! Updated:	25 September 2006	:: version based on german grammar v2
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// combination with "/"
+Terms:
+// "Verwenden eines Materialgewichts von mindestens 80 g/m² ."
+4> g : symbol[unit=+] = symbol, symbol[lemma:\/], symbol[lemma:m²].
+// "Möglicherweise ist ein richtiger I/O-Fehler aufgetreten."
+4> I : noun = symbol, symbol[lemma:\/], ?[surface: "O?*"].
+// "Anweisungen zum Ändern der TCP/IP-Adreßzuweisung und zum Bearbeiten der TCP/IP-Adresse auf dem Xerox Document Centre ."
+4> TCP : noun = noun, symbol[lemma:\/], ?[surface: "IP?*"].
+// "Anweisungen zum Konfigurieren des Xerox Document Centre für NetBIOS/NetBEUI und NetBIOS/IP ."
+4> NetBIOS : noun = noun, symbol[lemma:\/], ?[surface: NetBEUI]; ?[surface: IP].
+
+// "Anweisungen zum Anhalten eines Druckauftrags in der Warteschlange (Microsoft Windows 95/98/2000 oder NT 4.0) ."
+4> NT : noun[version=+] = noun, num.
+
+
+// coordination with "/"
+// "Anweisungen zum Hinzufügen von NAMEN/TELEFONNUMMERN zum Wählverzeichnis ."
+DependencyRules:
+5> | noun#1[proper:~], symbol#2[lemma:\/], noun#3[proper:~] |
+	COMBINE(#1, #2, #3).
+
+// "Im Scanbestätigungsbericht wird die Meldung ausgegeben, dass Benutzernamen, Kennwort UND/ODER die Einstellungen überprüft werden sollen ."
+5> | conj#1[coord], symbol#2[lemma:\/], conj#3[coord] |
+	COMBINE(#1, #2, #3).
+
+Reshuffling:
+6> noun#1[!agr:!], symbol#2, noun#3[!agr:!] = noun{#1, #2, #3}, where (COMBINE(#1, #2, #3)).
+6> conj#1, symbol#2, conj#3 = conj[coord=+]{#1, #2, #3}, where (COMBINE(#1, #2, #3)).
+
+// buttonnames in brackets, they are defined as noun, so they become a PEU in any case
+// "Um einen Fehlercode zu finden, gleichzeitig die [Stopp]-Taste und [8] am Gerät drücken."
+// "[Alles löschen] drücken, um die für den vorherigen Auftrag programmierten Einstellungen rückzusetzen."
+7> punct#1[leftbracket:+], +#2, punct#3[rightbracket:+] = noun{#1, #2, #3}.
+
+
+Sequence:
+// Versionsnummern (oder Namen von Druckern), Zahlangaben
+13> version @= | ?[proper], (punct[pleft], (noun[lemma:~ Version])+, punct[pright]); (noun[lemma:~ Version])  | (num; symbol[lemma: ~\/]; noun[allcap:+]; noun[version:+])+, (conj[coord]; punct[comma:+]; punct[lemma:\/]; symbol[lemma:\/], num; symbol; noun[allcap:+]; noun[version:+])*; (prep[lemma:bis], num; symbol; noun[allcap:+]) .
+13> version @= noun[lemma: Pro], (num; symbol[lemma: ~\/]; noun[allcap:+]; noun[version:+])+, (conj[coord]; punct[comma:+]; punct[lemma:\/]; symbol[lemma:\/], (noun[lemma: Pro]), num; symbol; noun[allcap:+]; noun[version:+])*; (prep[lemma:bis], num; symbol; noun[allcap:+]) .
+13> nums @= num, (punct[comma]; conj[coord], num)+.
+
+Terms:
+
+// Xerox
+20> Xerox : noun = noun, ?[surface: Document], ?[surface: "Centre?*", !case:!].
+// " Xerox DC- und ST-Modell"
+20> Xerox : noun @= noun, ?[surface: "DC?*"], (conj, ?[surface: "ST?*"]).
+// PB: no subnodes!
+//20> Xerox : noun = noun, noun{?[surface:  "DC?*"], ?*}.
+20> Xerox : noun @= noun, ?[surface: CentreWare, !case:!], (?[surface: Internet-Services]).
+20> Xerox : noun = noun, ?[surface: CentreWare, !case:!], ?[surface: Internet], ?[surface: Services].
+//@input"Wie lautet der Benutzername und das Kennwort für CentreWare Internet-Services?"
+20>"CentreWare" : NOUN= NOUN, ?[surface:Internet-Services].
+20> Xerox : noun @= noun, ?[surface: WorkCentre, !case:!, !number:!], (?[surface: Pro]), (version).
+20> Xerox : noun @= noun, ?[surface: WorkCentrePro, !case:!, !number:!], (version).
+20> WorkCentre : noun = noun, (?[surface: Pro]), version.
+20> Xerox : noun = noun, ?[surface: TCP\/IP-Anschluss, !case:!].
+20> Xerox : noun = noun, ?[surface: "Druckertreiber?*", !case:!]; ?[lemma: Drucker, !case:!].
+
+20> EFI : noun = noun, (?[surface: Fiery]), ?[surface: Command], ?[lemma: Workstation]; ?[surface: WorkStation].
+20> EFI : noun = noun, ?[surface: Fiery], (version), ?[surface: Server-Bedienfeld, !case:!]; ?[surface: Downloader, !case:!]; ?[surface: Benutzersoftware-CD, !case:!]; ?[surface: Spoolers, !case:!]; ?[surface: WebTools].
+20> EFI : noun @= noun, ?[surface: ColorWise]; ?[surface: Colorwise], (?[surface: Pro]), (version), (noun[lemma:~Version, !case:!]).
+20> EFI : noun = noun, ?[surface: Fiery], (version), ?[surface: Color], ?[surface: Server, !case:!].
+20> EFI : noun @= noun, ?[surface: DocBuilder], (?[surface: Pro]), (version), (noun[lemma:~Version, !case:!]).
+20> EFI : noun = noun, ?[surface: Fiery], (version), ?[surface: Remote], ?[surface: Scan].
+20> EFI : noun = noun, ?[surface: Fiery], ?[surface: Advanced], ?[surface: Controller], ?[surface: Interface, !case:!].
+20> EFI : noun = noun, ?[surface: Fiery, !case:!].			//, (pref[trunc:+], conj[coord])
+20> Fiery : noun = noun, ?[surface: Advanced], ?[surface: Controller], ?[surface: Interface, !case:!].
+
+20> Novell : noun = noun, ?[surface: Netware], version, ?[surface: Bindery, !case:!].
+20> Novell : noun = noun, ?[surface: Netware].
+20> Novell : noun = noun, ?[surface: Directory], ?[surface: Services, !case:!]; ?[surface: Service, !case:!].
+
+20> Command : noun = noun, ?[lemma: Workstation]; ?[surface: WorkStation].
+20> Kodak : noun = noun, ?[surface: Polychrome], ?[surface: Graphics]; ?[surface: Graphic].
+20> Matchprint : noun = noun, ?[surface: Professional], ?[surface: Server, !case:!].
+20> Instant : noun = ?, ?[surface: Access], ?[surface: Control], ?[surface: Panel, !case:!, !number:!]. 	// how when INSTANT is adj??
+20> Printer : noun = noun, ?[surface: Admin], ?[surface: Services, !case:!].
+20> http : noun = noun, ?[surface: Security], ?[surface: Vulnerability], ?[surface: Patch, !case:!].
+20> Color : noun = noun, ?[surface: Laser], ?[surface: Proofing], ?[surface: Paper, !case:!].
+20> Service : noun[proper=+] = noun, ?[surface: Pack].
+20> Raster : noun = noun, ?[surface: Image], ?[surface: Processor].
+20> Encapsulated : noun = noun, ?[surface: PostScript].
+20> Composite : noun = noun, ?[surface: PostScript].
+20> Hot : noun = noun, ?[surface: "Folder?*", !case:!].
+
+// Microsoft
+20> Microsoft : noun = noun, ?[surface: Windows], (version), ?[surface: "Druckertreiber?*", !case:!]; ?[lemma: Server, !case:!].
+20> Microsoft : noun = noun, ?[surface: "Windows?*", !case:!].
+20> Microsoft : noun = noun, ?[surface: Office, !case:!]; ?[surface: Word, !case:!]; ?[surface: "Excel?*", !case:!].		// Excel-Tabelle?, Excel-Datenbank?
+20> Microsoft : noun = noun, ?[surface: Security], ?[surface: Bulletin, !case:!].
+20> Microsoft : noun = noun, ?[surface: Hotfix, !case:!]; ?[surface: Publisher, !case:!].
+//@input"Einen anderen Druckertreiber verwenden, z.B. einen Adobe PostScript-Treiber anstatt eines Microsoft Treibers."
+20> "Microsoft" : NOUN= NOUN,NOUN[lemma:Treiber].
+
+
+// Apple
+20> Apple : noun @= noun, ?[surface: Macintosh-Computer, !case:!].
+20> Apple : noun @= noun, ?[surface: Macintosh, !case:!]; ?[surface: Mac, !case:!], (?[lemma: Computer]).
+20> Apple : noun = noun, ?[surface: Mac, !case:!]; ?[surface: Mac-Computer, !case:!].
+
+// Adobe
+20> Adobe : noun = noun, ?[surface: Acrobat, !case:!]; ?[surface: PageMaker]; ?[surface: Systems]; ?[surface: "PostScript?*"].
+20> DocBuilder : noun = noun, ?[surface: Pro], ?[surface: Adobe], ?[surface: Acrobat], version, ?[surface: Installations-CD].
+
+
+// examples
+// "Beispiel 10-102"
+20> Beispiel : noun = noun, (?[lemma: \:]), num; nums; symbol.
+// formats
+// combination of A and Zoll
+20> Format  : noun @= noun[!case:!], (?[lemma: \:]), num; nums; symbol, conj[coord], num, ?[lemma: x], num, (symbol[unit:+]; noun[lemma: Zoll]).
+20> Format  : noun @= noun[!case:!], (?[lemma: \:]), num, ?[lemma: x], num, (symbol[unit:+]; noun[lemma: Zoll]), conj[coord], num; nums; symbol.
+// Zoll
+20> Format  : noun @= noun[!case:!], (?[lemma: \:]), num, ?[lemma: x], num, (symbol[unit:+]; noun[lemma: Zoll]).
+// A4,...
+20> Format : noun @= noun[!case:!], (?[lemma: \:]), num; nums; symbol, (conj[coord], num; nums; symbol).
+
+
+Sequence:
+
+30> np = (det), noun[!case:!], version.
+
+
+// numerische Mod
+30> np @= (det), ?[lemma: Behälter, !case:!, last=+, !number:!]; ?[surface: Materialbehälter, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+30> np @= (det), ?[lemma: Bereich, !case:!, last=+, !number:!]; ?[surface: Fixierbereich, !case:!, last=+, !number:!]; ?[surface: Fixiererbereich, !case:!, last=+, !number:!], num[last=~]; nums[last=~]; symbol[last=~], (punct[comma]; conj[coord], num[last=~]; nums[last=~]; symbol[last=~])*.
+30> np @= (det), ?[lemma: Gerät, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+30> np @= (det), ?[lemma: Anschluss, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+
+//@input"Ist dies noch nicht erfolgt, mit Abschnitt 1 fortfahren, um die Einzeleinträge in das Wählverzeichnis einzugeben."
+//30>NP @= NOUN[lemma:Abschnitt],NUM.
+30> np @= (det), ?[lemma: Abschnitt, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+
+30> np @= (det), ?[lemma: Sensor, !case:!, last=+, !number:!]; ?[surface: Duplexsensor, !case:!, last=+, !number:!], num[last=~]; nums[last=~]; symbol[last=~].
+30> np @= (det), ?[lemma: Hefter, !case:!, last=+, !number:!]; ?[surface: Heftklammermagazin, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+//30> np @= (det), ?[lemma: Version, !case:!, last=+, !number:!]; ?[surface: Geräteversion, !case:!, last=+, !number:!]; ?[surface: Softwareversion, !case:!, last=+, !number:!]; ?[surface: Software-Version, !case:!, last=+, !number:!], num[last=~]; nums[last=~]; symbol[last=~], (punct[comma]; conj[coord], num[last=~]; nums[last=~]; symbol[last=~])*.
+30> np @= (det), ?[surface: "?*Version?*", !case:!, last=+, !number:!]; ?[surface: "?*version?*", !case:!, last=+, !number:!], num[last=~]; nums[last=~]; symbol[last=~], (punct[comma]; conj[coord], num[last=~]; nums[last=~]; symbol[last=~])*.
+30> np @= (det), ?[lemma: Format, !case:!, last=+, !number:!], symbol[last=~].
+30> np @= (det), ?[lemma: Seite, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+30> np @= (det), ?[surface: Hauptmotor, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+30> np @= (det), ?[surface: Kostenstelle, !case:!, last=+, !number:!], num[last=~]; nums[last=~].
+
+
+// mesures
+// "mindestens 80 g/m² "
+30>  np[unit=+] = (adv), num, (?[lemma: x], num), symbol[unit:+]; noun[lemma: Zoll].

@@ -1,0 +1,170 @@
+# ============================================================================
+# CONTENT:	 check lexicon files
+# 
+# LANGUAGE:	 ITALIAN
+#
+# AUTHOR:	 A. Schiller
+#
+# CREATED:	 15-May-2008
+# ============================================================================
+# USAGE:	 xfst  -s "LEX.fst" -l [ThisFile]
+# ============================================================================
+
+echo >>> ALPHABET:
+print sigma
+
+define LEX
+
+# --------------------------------------------------
+define CAT 	[ %+Adj
+		| %+Adv 
+		| %+Art
+		| %+Conj 
+		| %+Det
+		| %+Noun
+		| %+Prep
+		| %+Pron
+		| %+Prop 
+		| %+QuantPron
+
+		| %+Num
+		| %+Dig
+		| %+Symbol
+		| %+Punct
+		];
+	
+define PART	[ %+Postmod	# post-modifier
+		| %+Premod	# pre-modifier
+		| %+Head	# head word  			"County"
+		];
+
+define NUM	[ %+Sg | %+Pl | %+SP ];
+define GEND	[ %+Masc | %+Fem | %+MF ];
+define PERS	[ %+1P | %+2P | %+3P ];
+define CASE	[ %+Nom | %+Acc | %+Dat ];	
+define TONE	[ %+Ton | %+Aton | %+Preclit ];
+
+define MORPH	NUM | GEND | PERS | DEGR | CASE | TONE ;
+
+
+define MISC	[ %+Abbr	# abbreviation 			"etc.", "i.e."
+		| %+Acron	# Acronym 			"USA", "UNESCO"
+		| %+Apoc
+		| %+Elided
+		| %+Euph
+		| %+Preclit
+		];
+
+
+define GEO 	[ %+Continent	#
+		| %+Country	# country/nation of the world
+		| %+State	# state/province of other country
+		| %+Region	# other region (not further classified)
+		| %+City	#
+		| %+River	#
+		| %+Loc		# location (in general)
+		| %+Place	# unclassified place name (from original analyser)
+		| %+Demonym	# inhabitant (noun or adjective)
+		];
+
+define PROP	[ %+Day		# day of week		"Sunday"
+		| %+Month	# month of year		"April"
+		| %+Title	# person title		"Dr.", "President", "PhD"
+		| %+Firstname	#	
+		| %+Lastname	#
+		| %+Fullname	#
+		| %+Celeb	# celebrity, famous
+
+		| %+Bus		# business organisation
+		| %+Inst	# institution (school, university, ...)
+		| %+Org		# organisation (political party, ...)
+		| %+Product	# product name
+
+		| %+Event
+		| %+Law
+		| %+Doc
+		| %+Relig
+		];
+
+define TYPE	[ %+Def		# definite
+		| %+Dem		# demonstrative
+		| %+Indef	# indefinite
+		| %+Pers	# personal (pronoun)
+		| %+Refl	# reflexive
+		| %+Poss	# possessive
+		| %+Rel		# relative (pronoun)
+		| %+Interrog
+		| %+Ne
+		];
+
+# adverb sub-types
+define ADVTYPE	[ %+AConj	# also conjunction
+		];
+
+# adjective sub-types
+define ADJTYPE	[ %+Poss	# possessive
+		];
+
+# conjunction subtype
+define CTYPE	[ %+Coord	# coordination
+		| %+Subord	# subordination
+		| %+Inf		# with infinitive
+		];
+
+define TAG	[ CAT | PART | MORPH | MISC 
+		| GEO | PROP | TYPE | ADVTYPE | ADJTYPE | CTYPE ];
+
+define CONTEXT	[ RC | LC | EOT | BOT ];
+
+define TBD	"^=" ;
+define CBD	"^|" ;
+define BD	[CBD|TBD];
+
+define CHAR	\[TAG|CONTEXT|BD] ;
+
+define ARTICLE	TBD CHAR* %+Art TYPE GEND NUM (MISC) ;
+define PRONCLIT	TBD CHAR* %+Pron TYPE (CASE) (TONE) (PERS) GEND NUM;
+
+# ======================================================================
+# define well-formed sequences
+
+define SEQ [
+
+# adjectives
+  %+Adj [GEO|ADJTYPE]* (MISC) GEND NUM
+
+# nouns
+| %+Noun [GEO|SYMBOL|NUMERAL]* (MISC) GEND NUM
+
+# proper names
+| %+Prop [GEO|PROP]* (PART) (GEND) (NUM)
+
+
+# Adverbs
+| %+Adv [ADVTYPE]* (MISC)
+
+# Determiners
+| %+Art TYPE GEND NUM (MISC)
+| %+Det (TYPE) GEND NUM (MISC)
+| %+PreDet (TYPE) GEND NUM (MISC)
+
+# pronouns
+| %+Pron TYPE (CASE) (TONE) (PERS) GEND NUM (PRONCLIT) (MISC)
+| %+QuantPron GEND NUM (MISC)
+| %+Quant GEND NUM (MISC)
+
+# conjunctions, prepositions 
+| %+Conj CTYPE (MISC)
+| %+Prep (MISC) ( ARTICLE )
+
+
+];
+
+
+# check ...
+
+
+define CORRECT 	[ CHAR* SEQ ];
+
+read regex ~[CORRECT] .o. LEX ;
+set print-space on

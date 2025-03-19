@@ -1,0 +1,330 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2009 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb_spec .xip
+//! Content:	specific rules for POS disambiguation
+//!
+//! Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//! Author:	Elena Lopez Garcia & C. Hagege
+//!
+//! Date: 	17-Jan-2006	:: initial version
+//! Update:	29-May-2008	:: changed to UTF-8
+//! Update:	October-2008	:: changed to ISO-LATIN-1
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging:
+
+
+// -----------------------------------------------------------------------------
+
+
+// Roman numbers as CC or CCI are considered as abbreviations and not as numbers
+5> num<roman:+>, noun<surface:"CC%*"> = ?[num:~] .
+
+
+// dos, cuatro etc. have two tags according pre-processing which are noun and num
+// we just keep the tag noun
+5> num, noun = num .
+
+
+// "van" after a name in upper case and followed by (der) noun[maj], is not the verb "ir" but a prep
+// e.g. Marco van der Rohe
+5> verb[lemma:ir,surface:"van"] %= | noun[firstname,maj] | prep | (?[surface:"der"]), ?[maj] | .
+
+// general in lower case before word in upper case is the noun (cargo)
+5> adj, noun<lemma:general, maj:~> = noun | ?[maj:+] | .
+
+// general with maj:+ toutmaj:~ is always the cargo if not at the beginning of sentence and not preceeded by another title or cargo
+5> adj, noun<lemma:general, maj:+, toutmaj:~> = |  ?[cargo:~,title:~,introd_org:~] | noun .
+
+// general with maj:+,toutmaj:~ is an adjective if it follows a title, cargo
+// eg. Dirección General, Fiscal General
+5> adj, noun<lemma:general, maj:+, toutmaj:~> = |  ?[cargo:+];?[title:+];?[introd_org:+] | adj .
+
+// Nos can be a pronoun or a proper noun of location
+// if preceding a verb in the fist person plural, then it is a pronoun
+5> pron<lemma:nosotros>, noun<surface:"Nos"> = pron | verb[1p:+, pl:+] | .
+
+
+// "veces" in most of the cases is a noun
+
+5> noun<lemma:vez, pl:+>, verb<lemma:vezar> = noun.
+
+// Mundial in upper case and preceeded by an definite article is a noun, and not an adjective
+5> adj[lemma:mundial,maj:+,toutmaj:~] %= | art[def,masc] | noun[prop=+,masc=+,maj=+,toutmaj=~] . 
+
+
+// Pacífico in uppercase is the proper noun and not the adjective if followed or preceeded by words in lower case
+5> adj, noun<lemma:"Pacífico"> = | ?[maj:~] | noun .
+5> adj, noun<lemma:"Pacífico"> = noun | ?[maj:~] | .
+
+
+// Corte in uppercase after "la" in lower case is a noun feminine and that's all
+5> noun<lemma:"corte">, verb = | art[lemma:el,fem:+,maj:~] | noun<fem:+> .
+
+//"particular" can be a noun only if it's preceded by un article
+
+5>noun, adj<lemma:particular> = |?[art:~]| adj.
+
+//5> noun, adj<lemma:derecho> = noun |prep|.
+
+5> noun, adj<lemma:práctico> = |?[lemma:otro, fem:+]| noun.
+
+5> noun, adj<lemma:otro> = adj |noun|.
+5> noun, adj = |adj[lemma:otro]| noun |?[noun:~]|.
+
+// política can be either a noun either an adjectif. we try to settle the context xhere it will be a noun.
+5> noun, adj<lemma:político> = |prep;art;det| noun.
+
+// "e" must be a conjonction if the word right after starts by "i"
+// e.g. guapa e inteligente
+
+5> conj<lemma:y>,noun<lemma:e> = conj |?[lemma:"i?+"]|. 
+5> conj<lemma:y>, noun<lemma:e> = |art[fem]| noun.
+
+// "y" is always a conjonction excepts for the case where it follows an article
+5> conj<lemma:y>, noun<lemma:y> = |?[art:~]|conj.
+
+// The word "sí" is the most of the times an adverb
+
+5> adv<lemma:sí>, pron<lemma:se,ref:+> = |?[prep:~]| adv.
+5> adv<lemma:sí>, pron<lemma:se,ref:+> = | | adv.
+5> adv<lemma:sí> %= |art| noun.
+
+// The word "de" is alomost always a preposition
+5> prep,noun<let:+> = |?[lemma:letra~]| prep.
+// All the indef pronouns such as "algun, ningun, todo..." will be treated as QUANT
+
+5> adj, quant, pron<lemma:alguno> = quant .
+
+// "Todo" needs a special treatment as it doesn't have the tag "quant"
+
+5> predet, adj<lemma:todo,fem:+,pl:+> %= quant[fem=+,pl=+,predet=+].
+5> predet, adj<lemma:todo,fem:+,sg:+> %= quant[fem=+,sg=+,predet=+].
+5> predet, adj<lemma:todo,masc:+,pl:+> %= quant[masc=+,pl=+,predet=+].
+5> predet, adj<lemma:todo,masc:+,sg:+> %= quant[masc=+,sg=+,predet=+].
+
+5> adj, quant, pron = quant.
+
+
+
+// seminario is a noun if it is in cap letters and before another cap letter
+// El Seminário Juventud y Desarollo
+10> adj, noun<maj,toutmaj:~,lemma:"seminario"> = noun | noun[maj:+,toutmaj:~] | .
+
+//"Un" an "uno" ambiguity: when it is followed by a numeral, it will be and article.
+10> pron, art<lemma:un> = art |num|.
+
+//We are going to give the feature "reflex" to the pronoun "se" right before a verb. E.g. "se transforma" and no reflex if it is followed by an accusative pronoun
+
+10> pron[surface:se] = pron[reflex=+] |verb|.
+10> pron[surface:Se] = pron[reflex=+] |verb|.
+10> pron[lemma:se] = pron[reflex=-] |pron[acc:+]|.
+
+//e.g. el pasado abril
+10> verb<pastpart:+, lemma:pasar> %= |art| adj |noun[adj:~]|.
+
+// We want to keep the tag adv for the word "más"
+10> adv,quant<lemma:más> = adv.
+
+//Rule for "resuelto". It is analysed as adj in contexts where it should be a past participle.
+10> adj<lemma:resuelto>, verb = |?[verb:+]| verb.
+
+//Rule for "invitado". It is analysed as noun in contexts where it should be a past participle
+10> noun<lemma:invitado>, verb = |verb[lemma:ser]| verb.
+
+//Reule for "vino"
+10> noun<lemma:vino>, verb = |?[art:~, det:~,adj:~]| verb |?[pastpart:+]|.
+
+// rule for "filial"
+// if filial is not toutmaj and is preceeded by something maj:+, toutmaj:~, then
+// it is a noun and not an adjective
+10> noun, adj<lemma:filial,maj:~> = noun | ?[maj:+] | .
+
+
+//ambiguous noun, verb (infinitif) "al ser", we consider that most of the times will be a verb
+10> noun, verb<inf:+> = |prep[lemma:a, tokenstart:+], art[lemma:el, tokenend:+]| verb.
+
+10> noun, verb<inf:+> = |prep[lemma:para]| verb.
+
+
+
+//rules for "otro"
+30> adj, noun<lemma:otro> = adj |?[pastpart:+]|.
+
+//una is a pronoun and not a numeral when followed by "de +np"
+30> num<surface:una>, pron = pron[indef=+] |prep[lemma:de]|.
+30> num<surface:Una>, pron = pron[indef=+] |prep[lemma:de]|.
+
+
+//Rules for "que"
+//comparatif
+
+40> conj,pron<lemma:que> = |?[lemma:tanto], ?*| conj[subord=+].
+40> conj,pron<lemma:que> = |?[lemma:mÃ¡s], ?*| conj[compar=+].
+40> conj,pron<lemma:que> = |?[lemma:mayor], ?*| conj[compar=+].
+
+//relatif
+50> conj,pron<lemma:que> = |(prep),art| pron[rel=+,subord=+].  //El verdadero enemigo al que hemos de derrotar. La que tú prefieras
+50> conj,pron<lemma:que> = |?[verb:+, noun:~], (adv)| conj[subord=+].    //procurarÃ­amos que nuestro amor funcionara.
+50> conj, pron<lemma:que> = |noun| pron[rel=+, subord=+] |?*[verb:~], verb[ind:+]|.
+
+//completif
+50> conj, pron<lemma:que> = |verb[parole], ?*[verb:~]| conj[subord=+].
+//de que
+55> conj, pron<lemma:que> = |prep[lemma:de]| conj[subord=+].
+
+// Rules for "tanto"
+
+55> adv, quant<lemma:tanto> = |verb| adv.
+55> adv, quant<lemma:tanto> = quant |noun|.
+55> adv, quant<lemma:tanto> = adv |?[noun:~]|.
+
+
+// Rules for "como"
+
+60> adv, conj, prep, pron<lemma:como> = |?[lemma:tanto], ?*| adv.
+60> adv, conj, prep, pron<lemma:como> = |adj| adv[modo:+, compar:+] |~verb|.
+60> adv, conj, prep, pron<lemma:como> = conj |(adv), verb[pastpart:~]|.
+
+
+65> adv, conj, prep, pron<lemma:como> = prep |adj|.
+65> adv, conj, prep, pron<lemma:como> = |verb[hmm_nounsg:~]| adv.
+//65> adv, conj, prep, pron<lemma:como> = |noun| prep. 
+
+
+65> adv, conj, prep, pron<lemma:como> = conj[modo=+] |pron, verb|. 
+65> adv, conj, prep, pron<lemma:como> = ?[pron:~]. 
+
+// Rules for "donde"
+
+60> adv, pron<lemma:donde, rel:+> = pron, verb.
+60> adv, pron<lemma:donde,rel:+> = |?[noun:~]| adv. 
+//60> adv, pron<lemma:donde,rel:+> = | | adv.
+
+
+// Rules for "cuánto". When the pronoun is before a noun, we consider it as a det with the interrogatif feature.
+
+60> pron<lemma:cuánto, interrog:+> %= det[interrog:+]|noun|.
+
+
+//Rule for "pareja"
+60> adj, noun<lemma:pareja> = |verb[lemma:ser]| noun.
+
+//noun, adj ambiguity
+
+60> noun, adj = |?[lemma:suponer,pastpart:+]| noun.
+
+//Ambiguity between "fue, fuera, fuere" : ser vs. ir
+60> verb<lemma:ir, perf:+>, verb<lemma:ser, perf:+> = verb[lemma: ser] |verb[pastpart:+]|.
+60> verb<lemma:ir, pluperf:+>, verb<lemma:ser, pluperf:+> = verb[lemma: ser] |verb[pastpart:+]|.
+60> verb<lemma:ir,Fut=+,Subj=+>, verb<lemma:ser, Fut=+,Subj=+> = verb[lemma: ser] |verb[pastpart:+]|.
+
+
+//Barajas is the name of Madrid's airport and not just a verb
+60> verb<lemma:barajar, pres:+, ind:+, 2p:+, sg:+, maj:+> %= noun[prop=+].
+
+//Ambiguous noun/adv
+//lo bien hecho
+60> noun, adv = |art[neut:+]| adv.
+
+//mal recibida
+60> noun, adv<lemma:mal> = adv |?[pastpart:+]|.
+
+//Rules for "claro que"
+
+//pequeño contingente
+60> noun, adj<lemma:contingente> = |adj| noun.
+
+//cabe destacar
+60> verb, prep<lemma:cabe> = verb |verb|.
+
+//viven cerca
+60> verb, adv<lemma:cerca> = |verb| adv.
+
+//20 personas más
+60> verb, noun<lemma:persona> = |noun[dig:+]| noun.
+
+//no dijo nada
+60> verb, adv<lemma:nada> = |verb| adv.
+
+//la investigaciÃ³n sobre el asesinato
+60> verb, prep<lemma: sobre> = |noun| prep.
+
+//trabaja más que duro
+60> verb, adv = |adv[lemma:mÃ¡s], conj[lemma:que]| adv.
+60> verb, noun = |adv[lemma:mÃ¡s], conj[lemma:que]| noun.
+
+//las pensiones más bajas
+60> verb, adj<lemma:bajo> = |adv[lemma:mÃ¡s]| adj.
+
+//We give the values of masc and sg to percentages
+60> noun<percent:+> = noun[masc=+, sg=+].
+
+//pide calma
+60> verb, noun<lemma:calma> = |verb| noun.
+
+//pequeñas y medianas empresas
+60> adj, noun<lemma:pequeÃ±o> = |art| adj |conj, adj|.
+
+//se trata de
+60> verb<lemma:tratar> = verb[intrans=+, trans=~, double=~] |prep[lemma:de]|.
+
+//la o las personas
+60> pron, art<lemma:el> = art |conj[coord:+], art|.
+
+//cerca
+60> verb, adv<lemma:cerca> = adv |prep[lemma:de]|.
+
+//tener cargas
+60> verb, noun<lemma:carga> = |verb[lemma:tener]| noun.
+
+//son
+60> verb, noun<lemma:son> = |~art, ~quant| verb.
+
+//amenaza de ...
+60> verb, noun<lemma:amenaza> = noun |prep[lemma:~con]|.
+
+//medio millión
+60> adv, adj<lemma:medio> = adv |verb|.
+
+//por otra parte
+60> verb, noun<lemma:parte> = |adj[lemma:otro]| noun.
+
+//escucho la radio
+60> verb, noun<lemma:radio> = |art| noun.
+
+//tamaño
+60> adj, noun<lemma:tamaño> = noun |?[noun:~]|.
+
+//está bajo
+60> adv, adj<lemma:bajo> = |verb[lemma:estar]| adj |punct|.
+
+//guÃ­a
+noun<lemma:guÃ­a>, verb = |art[fem:+]| noun.
+
+//Ejecutivo
+noun<lemma:ejecutivo, maj:+>, adj = |art[lemma:el]| noun.
+
+//dije
+noun<lemma:dije>, verb = verb.
+
+//personas
+noun<lemma:persona>, verb = |?[pron:~]| noun.
+
+//rosa
+adj<lemma:rosa>, verb = |?[sg:+, fem:+]| ?[verb:~].
+
+//crónica
+adj, noun <lemma:crónica>= noun |adj|.
+
+//objetivo
+adj, noun<lemma:objetivo> = |verb[lemma:tener], ?[surface:como]| noun.
+
+//participantes
+noun<lemma:participante> %= |noun| adj.

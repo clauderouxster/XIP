@@ -1,0 +1,102 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : dependency_commemor.xip
+//!   Date       : May 2012
+//!   Author     : Caroline Hagege
+//!   Description: Recognizes sentences introducing a commemoration
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+DependencyRules:
+
+
+// feature form:fago jumps on higher-level adver
+| adv[tempexpr,mwe,t_relat,form=fago]{?*, adv[lemme:ago]} |
+~
+
+// Marking expressions like "end" of <NE<event>> as comemor
+// e.g. end of World War II
+
+| #1[time_anchor, comemor=+] | 
+if ( MOD(#1,#2) & EVENT(#2) )
+~
+
+
+
+// adding feature comemor in "day" for "day of remembrance"
+| NP{?*, noun[last,lemme:day,comemor=+]}, PP{prep[lemme:of],NP{?*, noun[last,lemme:remembrance]}} |
+~
+
+// adding feature comemor:+ on verbal constructions indicating a commemoration
+
+| verb#1[lemme:pay,comemor=+] |
+if ( OBJ-N(#1,#2[lemme:tribute]) | OBJ-N(#1,#2[lemme:homage]) | OBJ-N(#1,#2[lemme:respect]) )
+~
+
+// mark anniversary
+| verb#1[lemme:mark, comemor=+] |
+if ( OBJ-N(#1,#2[lemme:anniversary]) )
+~
+
+// mark + [ADVTEMP ago] + OBJ-N
+| verb#1[lemme:mark, comemor=+] |
+if ( TEMP(#1,?[adv,form:fago]) & OBJ-N(#1,?) )
+~
+
+
+// feature comemor:+ on verbs which have as direct object a comemor:noun
+// e.g. mark the anniversary
+| verb#1[comemor=+] |
+if ( OBJ-N(#1,?[noun,comemor]) )
+~
+
+// adding feature comemor:+ on verb introduction "in NOUN[comemor:+] of"
+// e.g. On March 5th, 1997, the Texas State Legislature passed a resolution in commemoration of the February 28 Incident.
+| verb#1[comemor=+] |
+if ( MOD(#1,?[noun,comemor]) )
+~
+
+// adding feature comemor:+ on verb let|make when it has subject [comemor], with embeded verb "remember"
+// e.g the ceremony lets the people remember that....
+| #1[lemme:let, comemor=+];#1[lemme:make, comemor=+] |
+if ( SUBJ-N(#1,?[comemor:+]) & EMBED(?[lemme:remember],#1) )
+~
+
+
+
+// adding feature comemor:+ on verbs introducing a subclause "to" or "in order to" or "so that" which main verb has feature comemor:+
+// eg. they gather Wednesday [to|as they] mark the anniversary of the Armistice Day.
+| verb#1[comemor=+] |
+if ( EMBED(#2[comemor:+],#1) & ( CONNECTOR(#2,?[form:finfto]) | CONNECTOR(#2,?[lemme:as]) ) )
+~
+
+
+// if verb has subject "ceremony" and verb as an embed sentence 
+// TODO
+
+// percolate feature to sentence for sentence-level post-processing
+
+// main verb is comemor
+| TOP[comemor=+] |
+if ( MAIN(#1[comemor]) )
+~
+
+// main verb is indspeech and subordinates a comemor verb
+| TOP[comemor=+] |
+if ( MAIN(#1[indspeech]) & EMBED(#2[comemor],#1) )
+~
+
+// a temporal expression modifies a verb or noun that is comemor
+| TOP[comemor=+] |
+if ( TIMEX3(#1) & ( TEMP(?[comemor],#1) | ( NMOD(?[comemor],#3) & HEAD(#3,#1) ) ) )
+~

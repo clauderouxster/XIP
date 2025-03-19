@@ -1,0 +1,123 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      basic rules for additional lexicon entries
+# 
+# LANGUAGE:     ITALIAN
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      14-May-2007
+#
+# ============================================================================
+# USAGE:        xfst -e "read lex LEX.lexc"  -l [ThisFile]
+# ============================================================================
+
+
+
+define LEX
+
+# apostrophe
+define APO [
+  "\u0027"	# [']	APOSTROPHE
+| "\u2018"	# [‘]	LEFT SINGLE QUOTATION MARK
+| "\u2019"	# [’]	RIGHT SINGLE QUOTATION MARK
+];
+
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+ ];
+multi char sigma net
+define TAG
+
+define CHAR SIG & ? ;
+
+
+define MARKER 	"[*]" | "[-]"| "(-)" | "(.)" | "[h]" ;
+
+define LBD	[ "^]" ];	# lemma boundary
+define CBD	[ "^=" ];	# token boundary, e.g. alla::a+Prep^=lo+Art+Def+Fem+Sg
+
+define SPEC	[ LBD | MARKER ] ;
+
+define VOWEL	[a|e|i|o|u|é|ì];
+
+
+# ==============================================================================
+read regex [
+	0 <- SPEC
+
+# optional hyphens
+.o.	%- <- [ "[-]" | "(-)" ]
+
+# optional dots
+.o.	%. <- "(.)"
+
+# ------------------------------------------------------------------------------
+.o.	%+Adj | %+Noun <- %+NAdj
+ 
+.o.	LEX 
+
+# introduce lemma boundary for regular nouns/adjectives
+.o.	[..] -> LBD || CHAR _ %+NAdj | %+Adj | %+Noun  
+
+# ------------------------------------------------------------------------------
+# 
+# hyphen or space
+.o.	"[-]" -> [ %  | %- ]
+
+# hyphen or nothing
+.o.	"(-)" -> [ 0 | %- ]
+
+# optional dots
+.o.	"(.)" -> [ 0 | %. ]
+
+# regular adjective/noun inflection
+.o.	a LBD -> PHON i	|| _  $%+Masc $%+Pl	# belga -> belgi
+.o.	a LBD -> PHON e	|| _  $%+Fem $%+Pl	# yemanita -> yemenite
+
+.o.	o LBD -> a	|| _ $%+Fem $%+Sg	# italiano -> italiana
+.o.	(i) o LBD @-> PHON i	|| _ $%+Masc $%+Pl	# italiano -> italiani, vario -> vari
+.o.	o LBD -> PHON e || _ $%+Fem $%+Pl	# italiano -> italiane
+
+.o.	{tore} -> {trice}  || _ LBD $%+Fem	# armatore -> armatrice
+.o.	e LBD -> i	|| _ $%+Pl		# francese -> francesi
+
+# phonological changes
+.o.	PHON -> h	|| [c|g] _ e		# belghe, turche
+.o.	"[h]" PHON -> h	|| [c|g] _ i		# turchi, BUT: belgi, greci
+.o.	PHON -> 0
+
+# ----------------------------------------------------------------------
+# final elision
+.o.	VOWEL -> APO || _ TAG* %+Elided
+
+# ----------------------------------------------------------------------
+# acronyms
+# S.p.A. -> S.p.A. SpA, spa, s.p.a., S.P.A., ....
+
+.o.	%.(->) 0,
+	A (->) a, B (->) b, C (->) c, D (->) d, E (->) e, F (->) f, 
+	G (->) g, H (->) h, I (->) i, J (->) j, K (->) k, L (->) l, 
+	M (->) m, N (->) n, O (->) o, P (->) p, Q (->) q, R (->) r, 
+	S (->) s, T (->) t, U (->) u, V (->) v, W (->) w, X (->) x, 
+	Y (->) y, Z (->) z,
+	À (->) à, È (->) è, É (->) é, Ì (->) ì, Ò (->) ò, Ù (->) ù
+        || _ $%+Acron
+
+
+# ----------------------------------------------------------------------
+# remove tags and markers
+.o.	[SPEC|TAG] -> 0
+
+	
+
+# for place names
+.o. 	{Sant} (->) S t || _ [o|a] [ %- | %  ]
+
+];
+
+
+

@@ -1,0 +1,262 @@
+Variables:
+string _outputfilename;
+string _inputfilename;
+string _sent_id;
+string _definedEntities[];
+
+vindex _extractedEntities;
+
+vindex _occIdsTable;
+int _eSurfaceInd[];
+int _eListIdsInd[];
+vindex _surfaceStrings;
+vindex _listIdsTable;
+
+
+string _strs[];
+int ie; int _first_time = 1; int _id1; int _id2;
+int _offset1; int _offset2; int _listIdsInd; int _ind; int _surfaceInd;
+int _parFontSize=0; int _parNumber=0; int _parTop=0;
+int _titleAlreadyFound = 0;
+
+string _titleString; string _titleListIds;
+int _titleFontSize; int _titleTop; int _titleParNumber=0;
+
+string _PersAffilnum[];
+string _listIds; string _parId; string _oldParId;  string _entityNumber; string _str;
+
+
+string _TOOL = "XIP";
+string _VERSION="9.33";
+
+////////////////////////////////////////////////////////////////////////////
+Procedures:
+
+getOccIdFromNode(#1, String _par_id, String _result) {
+  Offset(#1,_offset1,_offset2);
+  _result = _par_id + "_" + _offset1 + "-" + _offset2;
+  Return(1);
+}
+
+getOccIndFromNode(#1, string _par_id, string res) {
+  Offset(#1,_offset1,_offset2);
+  res = _par_id + "_" + _offset1 + "-" + _offset2;
+  return(search(_occIdsTable,res));
+}
+
+
+getListIdsFromNode(#1, String _par_id, string _result, string strid, int ind) {
+
+  getOccIdFromNode(#1, _par_id, _result);
+  // print("!!NodeAChercher:" + _result + "\n");
+  ind = search(_occIdsTable, _result);
+  // print("!!OCCIndiceTrouve:" + ind + "\n");
+  ind = _eListIdsInd[ind] ;
+  // print("!!LISTIDSIndiceTrouve:" + ind + "\n");
+  iftest (ind >= 0) {
+        _result = _listIdsTable[ind];
+  } else {
+        _result = "";
+  }
+  Return(1);
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+Initial:
+
+_inputfilename = @pathname ; 
+_outputfilename = @pathname + ".xip.xml"; 
+_titleAlreadyFound = 0;
+
+iftest ( _first_time:1 ) {
+
+_first_time = 0;
+
+_definedEntities[0] = "PERSON";
+_definedEntities[1] = "LOCORG";
+_definedEntities[2] = "EMAIL";
+_definedEntities[3] = "ORGANISATION";
+_definedEntities[4] = "URL";
+_definedEntities[5] = "DATE";
+_definedEntities[6] = "EVENT";
+_definedEntities[7] = "LOCATION";
+_definedEntities[8] = "REFNUMBER";
+_definedEntities[9] = "AUTHOR";
+_definedEntities[10] = "ROOM";
+_definedEntities[11] = "POSTALCODE";
+_definedEntities[12] = "TIME";
+
+}
+
+
+
+_parNumber = 0;
+_parFontSize = 0;
+_parTop = 0;
+_parId = "";
+_oldParId = "";
+_titleFontSize = 0;
+_titleTop = 0;
+_titleString = "";
+
+
+Script:
+
+
+// pas de spacename dans l'arg de getAttribute
+//@_current(//E)->GetAttribute(_sent_id,"id");
+
+
+
+_listIds = "";
+
+@_current(PARAGRAPH)->GetAttribute(_parId,"Id");
+@_current(PARAGRAPH)->GetAttribute(_listIds, "EL_list_ids" );
+@_current(PARAGRAPH)->GetAttribute(_parFontSize, "font_size" );
+@_current(PARAGRAPH)->GetAttribute(_parTop, "top" );
+
+ie = search(_listIdsTable,_listIds);
+iftest (ie < 0) {
+       // This is the first occurrence of this listIds
+       // save it
+      _listIdsInd =  addString(_listIdsTable, _listIds);    
+} else {
+        // another occ of the same listIds
+       _listIdsInd = ie;
+} 
+// print("!!!PARAGRAPH:" + ie + ":" + _listIdsInd + ":" + _listIds + "\n");
+
+
+// set the Paragraph Number
+iftest ( ~(_parId:_oldParId) ) {
+  // NEW paragraph
+  _oldParId = _parId;
+  _parNumber = _parNumber + 1;
+}
+
+
+// Check if this is the TITLE
+//////////////////////////////////////////////////////////////////////
+iftest (_parNumber < 4)  {
+  iftest (_titleParNumber:_parNumber) {
+     |#1[cat:0]| {
+       _titleString = _titleString + " " + #1[Surface];
+     }     
+  } else {
+     iftest ( (_parFontSize > _titleFontSize) | (_parTop <= _titleTop )  )  {
+        _titleFontSize = _parFontSize;
+        _titleTop = _parTop;
+        _titleString	= "";
+        _titleParNumber = _parNumber;
+	_titleListIds = _listIds;
+
+        // @_current(PARAGRAPH)->GetText(_titleString);
+        |#1[cat:0]| {
+           _titleString = #1[Surface]; 
+        }
+     }
+  }
+} else {
+
+ if (_titleAlreadyFound:0) {
+  // OK, stop looking for the title and output the one found
+  //  print("TITLE IS(" + _titleString + ")\n");
+   _surfaceInd = addString(_surfaceStrings, _titleString);
+   @np(/LingAnnotations/ExtractedData[@Entry_level_url=_inputfilename & @Entry_level_ids=_titleListIds & @tool=_TOOL & version=_VERSION]/Entity[@data_id=_surfaceInd]/TITLE)->CreateAdd(_titleString,3);
+   _titleAlreadyFound = 1;
+  } 
+}
+
+
+///////////// PRINTING SINGLE ENTITIES
+////////////////////////////////////////////////////////////////////
+
+iftest ( $1(#1) ) {
+
+ ie = search(_definedEntities,$1);
+ iftest (ie >= 0) {
+
+    //Print the entity, cause on Windows XIP does not print by default
+    _print($1+"("+#1[Surface]+")\n") ;
+
+    // save the  (uniqueId <--> listIds) relation (from a node #1, we can get
+    // the unique id of #1 and from that unique id we can get the listIds)
+
+    getOccIdFromNode(#1, _parId, _str);
+    _ind = addString(_occIdsTable, _str);
+    _eListIdsInd[_ind] = _listIdsInd ;
+    // print("!!OCC_LISTIDS:" + _ind + ":" + _eListIdsInd[_ind] + "-->" + #1[Surface] + "\n");
+
+    ie = search(_surfaceStrings,#1[Surface]);
+    iftest (ie < 0) {
+       // This is the first occurrence of an entity
+       // save its surface string
+       _eSurfaceInd[_ind] = addString(_surfaceStrings, #1[Surface]);
+    } else {
+       // This is another occurrence of an already found entity
+       _eSurfaceInd[_ind] = ie;
+    }
+
+   _surfaceInd = _eSurfaceInd[_ind];
+    @np(/LingAnnotations/ExtractedData[@Entry_level_url=_inputfilename & @Entry_level_ids=_listIds & @tool=_TOOL & version=_VERSION]/Entity[@data_id=_surfaceInd]/$1)->CreateAdd(#1[Surface],3);  
+     
+  }
+}
+
+
+
+//////////////////////////////////////////////////////
+// Affiliations
+//////////////////////////////////////////////////////
+
+iftest (PERS-AFFILNUM(#1,#2)) {
+        ie = #2[Surface];
+        _ind = getOccIndFromNode(#1, _parId) ;
+        if (ie < _PersAffilnum) {
+           // this affilnum already exists so concat the new person
+           _PersAffilnum[ie] =  _PersAffilnum[ie] + _ind + "-" ;
+        } else {
+           _PersAffilnum[ie] = _ind + "-" ;
+        }
+}
+
+iftest (ORG-AFFILNUM(#1,#2)) {
+
+   regexpsplit(_PersAffilnum[#2[Surface]],"[%d]+",_strs);
+   for (i=0;i<_strs;i=i+1) {
+       _id1 = _strs[i];
+       _id2 = getOccIndFromNode(#1,_parId);
+       _surfaceInd = _eSurfaceInd[_id1];
+        if (_eListIdsInd[_id1]:_eListIdsInd[_id2]) {
+            _listIds = _listIdsTable[ _eListIdsInd[_id1] ] ;
+        } else {
+             _listIds = _listIdsTable[ _eListIdsInd[_id1] ] +
+                        _listIdsTable[ _eListIdsInd[_id2] ] ;
+        }
+       @np(/LingAnnotations/ExtractedData[@Entry_level_url=_inputfilename & @Entry_level_ids=_listIds & @tool=_TOOL & version=_VERSION]/Relation/MEMBER_OF)->createAdd(3);
+       @_currentXmlNode(//Person/Entity[@data_id=_surfaceInd]/PERSON)->Create(_surfaceStrings[_surfaceInd]);
+       _surfaceInd = _eSurfaceInd[_id2];  
+       @_currentXmlNode(//Organisation/Entity[@data_id=_surfaceInd]/ORGANISATION)->Create(#1[Surface]);
+   } 
+      
+}
+
+
+
+// afficher le TOP
+|#1[cat:0]| {
+   _print("In: {" + #1[Surface] + "}\n\n");
+}
+
+
+final:
+
+
+// @np(/DOCUMENT)->setattribute(file,_outputfilename) ;
+
+@np()->save(_outputfilename,"UTF-8");
+
+@np()->clean();
+
+

@@ -1,0 +1,935 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Maud Ehrmann - June 2008 - Local grammar for temporal expressions.
+//!
+//! This file : hour expressions, with type DATE (or HOUR) or DURATION
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//    DECOUPAGE - REASSEMBLAGE
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+
+
+// Pour des expressions sorties telles quelles par les FST 
+// et pour lesquelles on a besoin d'ajouter de l'information (traits) sur les sous-composants.
+ 
+// ex : 16h30 est un token avec le trait "time" à la sortie des FST
+// on le découpe en trois éléméents: 16, h et 30, auxquels on ajoute des traits
+// puis on réassemble le tout
+
+//-------------------------------
+//****** DECOUPAGE
+//-------------------------------
+
+Fragmenter:
+
+// tout ce qui est découpé/reconstruit a le trait "fstmod"
+// cela permet de traiter cela de manière isolée
+// sinon les règles de reconctruction s'appliquent sur d'autres éléments
+
+
+
+//***** Découpage HEURE
+
+// découpage de la forme collée 16h30 : plus pratique à gérer par la suite pour les heures
+// (désambiguïsé de adv à noun dans desamb_entit)
+// 00h00
+1> "%d%d%1h%2%d%d%3" : num[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+], num%3[fstmod=+,numMinute=+].
+
+// ajout CB pour 16h (pile)
+1> "%d%d%1h%2" : noun[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+].
+
+// idem mais avec un point collé (16h.)
+1> "%d%d%1h%2%p+%3" : noun[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+], punct%3[fstmod=+].
+
+// idem mais avec un seul chiffre : 9h
+1> "%d%1h%2" : noun[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+].
+
+// idem mais avec un seul chiffre + point : 9h.
+1> "%d%1h%2%p+%3" : noun[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+], punct%3[fstmod=+].
+
+// 2h30
+1> "%d%1h%2%d%d%3" : num[heure=+] = num%1[fstmod=+,numHeure=+], noun%2[abr=+,heure=+,periode=+,fstmod=+],num%3[fstmod=+,numMinute=+].
+
+// 16:15:18
+1> "%d%d%1:%2%d%d%3:%4%d%d%5" : num[heure=+] = num%1[fstmod=+,numHeure=+], punct%2[punct=+,fstmod=+], num%3[fstmod=+,numMinute=+], punct%4[punct=+,fstmod=+], num%5[fstmod=+,numSeconde=+].
+
+// 16:15
+1> "%d%d%1:%2%d%d%3" : num[heure=+] = num%1[fstmod=+,numHeure=+], punct%2[punct=+,fstmod=+], num%3[fstmod=+,numMinute=+].
+
+
+
+
+//-------------------------------
+//****** REASSEMBLAGE
+//-------------------------------
+
+
+Séquence:
+
+
+//la forme 00h00 est considérée comme ne pouvant jamais être une durée 
+3> noun[mwe=+,heure=+, tempexpr=+] @= num[fstmod,numHeure], noun[abr:+,heure:+,periode:+,jour:~,mois:~,predate:~,fstmod], num[fstmod,numMinute].	
+
+3> noun[mwe=+,datemod=+,relative=+,tempexpr=+,mois=+] @= prefix[t_mod=mid,fstmod:+],noun[time=+,fstmod:+].
+
+//00:00:00
+3> noun[mwe=+,heure=+, tempexpr=+] @= num[fstmod,numHeure], punct[fstmod], num[fstmod,numMinute],punct[fstmod], num[fstmod,numSeconde].
+
+//00:00
+3> noun[mwe=+,heure=+, tempexpr=+] @= num[fstmod,numHeure], punct[fstmod], num[fstmod,numMinute].
+
+
+
+
+
+//---------------------------------------------------------------		
+//---------------------------------------------------------------	
+//           HEURES
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------	
+
+
+// Graphies différentes pour les heures :
+// classique : 16 heures 30 (minutes) (avec espaces et sans abbréviations)
+// abbrégée  : 16 h 30 
+// abbrégée collée : 16h30
+// abbréviations "h", "min" et "min."
+
+Marqueur:
+
+// milli-secondes
+4> noun[mwe=+,heure=+,tempexpr=+,periode=+]{prefix[lemme="milli"],noun[periode]}.
+
+// midi et minuit seuls (gestion des formes complexes ci dessous)
+
+4> noun[lemme:"minuit",heure=+].
+
+4> noun[lemme:"midi",heure=+]. // on garde la marquage hors-contexte pour tout prendre, y compris les débuts de phrase
+
+// il pleut sur le midi, descendre dans le midi : midi n'est pas une heure
+5> det[def],noun[lemme:"midi",heure=~].
+
+
+Séquence:
+
+// minuit pile
+8> noun[mwe=+,tempexpr=+,heure=+] @=  noun[lemme:"minuit",heure];noun[lemme:"midi",heure], ?[lemme:"pile",heure_extens].
+
+
+
+
+//-------------------------------
+//       DUREES en HEURES 
+//-------------------------------
+
+
+//***** Contexte gauche : pendant, en, plus de, moins de, etc.
+
+
+
+// pendant six heures (moins) dix minutes (et) 7 secondes.
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen];prep[form:fcontre],(det[complx];adv[predate,t_mod];prep[predate,t_mod]) | 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     noun[periode,heure], 
+					     (adv[lemme:"moins"]),  
+					     num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+					     noun[periode,heure], 
+					     (coord), 
+					     num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+					     noun[time, periode,heure],
+					     (adv[duree_extens]).
+
+
+
+// avec la prep "de" devant : uniquement pour les cas ou les secondes sont présentes
+// ex : un chrono de (3 heures) (5 minutes)(et) 45 secondes = DUREE
+// ex : j'ai loupé le rendez-vous de 15 heures = HEURE
+// une course de six heures dix minutes (et) 7 secondes.
+// (voir ci dessous pour gestion de qlqs avec heures seulement)
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |noun,prep[form:fde]| 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     noun[periode,heure], 
+					     num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+					     noun[periode,heure], 
+					     (coord), 
+					     num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+					     noun[time, periode,heure].
+
+// une course de  (dix minute)s (et) 7 secondes.
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |noun,prep[form:fde]|  
+					     (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), 
+					     (noun[periode,heure]), 
+					     (coord), 
+					     num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+					     noun[periode,lemme:"seconde"].
+
+
+// une course de 7 secondes 34 (centièmes) (ici sans contexte)
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+					     noun[periode,lemme:"seconde"], 
+					     num,
+					     (noun[lemme:"centième"]).
+
+
+// pendant six heures (moins) (et) dix (minutes)
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen];prep[form:fcontre],(det[complx];adv[predate,t_mod];prep[predate,t_mod]) | 
+					      num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					      noun[periode,heure], 
+					      (adv[lemme:"moins"];coord[lemme:~"ou"]),  
+					      num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+					      (noun[periode,heure]),
+					     (adv[duree_extens]) .
+
+// pendant six heures moins le quart 
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen];prep[form:fcontre],(det[complx];adv[predate,t_mod];prep[predate,t_mod]) | 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     noun[periode,heure], 
+					     det[def], 
+					     noun[lemme:"quart"],
+					     (adv[duree_extens]).
+
+// pendant six heures et demi/et quart 
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen];prep[form:fcontre],(det[complx];adv[predate,t_mod];prep[predate,t_mod]) | 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     noun[periode,heure],coord[lemme:~"ou"], 
+					     noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"],
+					     (adv[duree_extens]).
+
+// pendant six heures 
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen];prep[form:fcontre],(det[complx];adv[predate,t_mod];prep[predate,t_mod]) | 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     noun[periode,heure],
+					     (adv[duree_extens]).
+
+// pendant les six dernières heures
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree],det| 
+					     num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					     adj[timemod],							 
+					     noun[periode,heure],
+					     (adv[duree_extens]).
+
+// pendant les (six) heures suivantes
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree],det| 
+					     (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), 							 
+					     noun[periode,heure],
+					     adj[timemod].
+
+// pendant plusieurs/quelques heures
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |prep[duree];prep[form:fen]|  	
+					     det[quant],						 
+					     noun[periode,heure].
+
+
+//***** Contexte gauche : (de) plus de, (de) moins de, quelques
+
+// il est parti plus de trois heures
+// contexte gauche : pas de prep ayant le trait 'pointage' pour ne pas prendre 'il part dans un peu plus de trois heures' comme une durée
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=|?[pointage:~,form:~fdepuis],det[complx:+]| 
+					  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~],
+					  noun[periode,heure],
+					  (adv[duree_extens]) .
+
+// une marche de plus de trois heures
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=|adv[lemme:"de\ plus"],det[form:fde]| 
+					  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+					  noun[periode,heure],
+					  (adv[duree_extens]) .
+
+// quelques heures: (attention, pas "quelques heures apres")
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=|?[form:~fdans,predate:~,postdate:~,form:~fdepuis,form:~fa]|  
+					  det[lemme:"quelque"], 
+					  (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), 
+					  noun[periode,heure] 
+					  |?[postdate:~]|.
+
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=det[lemme:"quelque",start:+], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), noun[periode,heure] |?[postdate:~]|.
+
+
+
+
+//***** Contexte droit : durant, par (jour), de (contraint), plus tard
+
+// avec format "num heure (minute)"
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~];det[lemme:"un"], 
+					  noun[periode,heure], 
+					  (coord[lemme:~"ou"]), 
+					  (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), 
+					  (noun[time,periode,heure]) 
+					  |prep[form:fpar];prep[form:fdurant]| .
+
+// avec format "num heure (et demie, mois le quart, etc.)"
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~];det[lemme:"un"], 
+					  noun[periode,heure], 
+					  adv[lemme:"moins"];coord[lemme:~"ou"], 
+					  (det[def]), 
+					  (noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"]) 
+					  |prep[form:fpar];prep[form:fdurant]| .
+
+
+// trois heures de suite/ d'affilée
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~];det[lemme:"un"], 
+					  noun[periode,heure], 
+					  (coord[lemme:~"ou"]), 
+					  (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), 
+					  (noun[time,periode,heure]),
+					   adv[duree_extens].
+
+
+
+// tout ce qui est une heure > 24 et précédé de la prep "de" est une duree (une visite de 48 heures) 
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |noun, prep[form:fde]| num[numjourpot=~,heurepot:~,numHeure=+,shortyear=~,fstmod:~], noun[periode,heure], (num[numMinute=+]).
+
+
+// idem avec prep à droite : tout ce qui est une heure > 24 et suivi de la prep "de" est une duree (ex: 150h de tournage)
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=  num[numjourpot=~,heurepot:~,numHeure=+,shortyear=~,fstmod:~], noun[periode,heure], (num[numMinute=+]) |prep[form:fde],noun|.
+
+				    
+// une heure entre parenthèses est une duree
+// ex: (2h environ)
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |punct[form:fopar]| num[fstmod:+,numheure:+],noun[fstmod:+,periode:+,heure:+],(num[fstmod:+,numMinute:+]),(adv[t_mod:approx]) |punct[form:fcpar]|.
+
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |punct[form:fopar]| num[heurepot:+],noun[periode:+,heure:+],(adv[t_mod:approx]) |punct[form:fcpar]|.
+
+
+//à la dernière minute, un chgment de dernière minute
+8> noun[mwe=+,tempexpr=+,heure=+] @= adj[lemme:"dernier"], noun[periode,lemme:"minute"].
+
+
+// de nombreuses minutes/heures
+8> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |?[form:~fdepuis,form:~fdans],?[form:fde]|adj, noun[periode,heure].
+
+
+//**** " 10 minutes d'avance, de retard"
+
+// une heure d'avance/de retard
+8> noun[mwe=+,heure=+,duree=+,tempexpr=+] @=  num, (adj), noun[periode,heure:+] |prep, noun[lemme:"avance"];noun[lemme:"retard"]|.
+
+// quelques/plusieurs heures d'avance/de retard
+8> NP[mwe=+,heure=+,duree=+,tempexpr=+] @=  det[quant], (adj), noun[periode,heure:+] |prep, noun[lemme:"avance"];noun[lemme:"retard"]|.
+
+
+
+
+//-------------------------------
+//         HEURES BASIQUES 
+//-------------------------------
+
+
+
+// avec demonstratifs : ces dernières (5) heures
+9> noun[tempexpr=+,heure=+,mwe=+] @= |det[dem]| (adj[timemod]), (num), noun[periode,heure:+,duree:~].
+
+
+//*************
+// expressions contenant des "moins le quart" etc.
+//************
+
+//**************
+//***Sans contexte. ie on a suffisamment d'infos dans l'expression pour savoir que c'est une heure.
+
+
+// six heures moins dix du matin/du soir/de l'apres-midi
+9> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				     noun[periode,heure], adv[lemme:"moins"],
+				     num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				     prep[form:fde,surface:~"d'"];det, 
+				     (det[def]), 
+				     noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+].
+
+// six heures moins le quart du matin/du soir/de l'apres-midi
+9> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				     noun[periode,heure], 
+				     adv[lemme:"moins"], 
+				     det[def], noun[lemme:"quart"], 
+				     prep[form:fde,surface:~"d'"], 
+				     (det[def]), 
+				     noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+].
+
+// six heures et demi/et quart du matin/soir/apres-midi
+9> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				     noun[periode,heure],
+				     coord[lemme:~"ou"], 
+				     noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"], 
+				     prep[form:fde,surface:~"d'"], 
+				     (det[def]), 
+				     noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+].
+
+
+
+//**************
+//***Avec contexte gauche:
+
+// six heures moins dix 
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[periode,heure], 
+				  adv[lemme:"moins"],
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~].
+				  
+
+// six heures moins le quart 
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~],
+				  noun[periode,heure], 
+				  adv[lemme:"moins"], 
+				  det[def], 
+				  noun[lemme:"quart"].
+
+// six heures et demi/et quart 
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[periode,heure],
+				  coord[lemme:~"ou"], 
+				  noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"].
+
+
+//*************
+// expressions contenant "heures", etc
+//************
+
+
+//**************
+//***Sans contexte:
+
+// 16 heures/h 30 minutes du matin/du soir/de l'apres-midi
+9> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), 
+				  (noun[time,periode,heure]), prep[form:fde,surface:~"d'"];det, 
+				  (det[def]), 
+				  noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],(punct, ?[heure_extens]).
+
+// 16h30 (tout collé, initiallement en adv) du matin/du soir/de l'apres-midi
+9> noun[tempexpr=+,heure=+,mwe=+] @= noun[heure], prep[form:fde,surface:~"d'"], 
+				  (det[def]), 
+				  noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],(punct, ?[heure_extens]).
+
+// 16 h 30 (séparé) (tout court) du matin/du soir/de l'apres-midi
+9> noun[mwe=+,tempexpr=+,heure=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[lemme="h"], 
+				  (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), 
+				  prep[form:fde,surface:~"d'"], 
+				  (det[def]), 
+				  noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],(punct, ?[heure_extens]).
+
+
+
+//**************
+//***Avec contexte gauche:
+
+// 16 heures/h 30 minutes (et) 20 secondes.
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])|
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord), 
+				  num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+				  noun[time, periode,heure],
+				  (?[heure_extens]).
+
+// NB : heure_extens = local, pile
+
+// 16 heures/h (et) 30 minutes
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], 
+				  noun[time,periode,heure], 
+				  (coord[lemme:"et"]), 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure],
+				  (?[heure_extens]).
+
+// 16 heures/h (et) 30  
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[date:~], 
+				  noun[periode,heure], 
+				  num,
+				  (?[heure_extens])
+				  | (prep),?[nondate:~]|.
+
+// 16 heures/h 
+9> noun[mwe=+,tempexpr=+,heure=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+]),(det)| 
+				  num[date:~], 
+				  noun[periode,heure],
+				  (?*[punct],?[heure_extens])
+				  |?[heure_extens:~],?[nondate:~,heure_extens:~]|.
+
+
+// 16h30 (tout collé, initiallement en adv) 
+9> noun[tempexpr=+,heure=+,mwe=+] @= |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  noun[heure], 
+				  (prep[form:fde,surface:~"d'"]), 
+				  (det[def]),
+				  noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],
+				  (?[heure_extens]).
+
+// 16 h 30 (séparé)
+9> noun[mwe=+,tempexpr=+,heure=+] @=  |prep[duree:~];?[tempexpr];?[date],(punct[punct:+])| 
+				  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], 
+				  noun[lemme="h"], 
+				  (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]),
+				  (?[heure_extens]).
+
+
+//**** Avec contexte droit uniquement : heure extension (heure locale, etc.)
+
+
+// gestion des expressions "heure locale, "temps universel" dans multiwords.xip
+
+
+// six heures moins dix (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"],num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~],(punct),(prep), ?[heure_extens].
+
+// six heures moins le quart (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"], det[def], noun[lemme:"quart"],(punct),(prep), ?[heure_extens].
+
+// six heures et demi/et quart (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure],coord[lemme:~"ou"], noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"],(punct),(prep), ?[heure_extens].
+
+// 16 heures/h 30 minutes (et) 20 secondes.(,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure], (coord), num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], noun[time, periode,heure],(punct),(prep), ?[heure_extens].
+
+// 16 heures/h 30 minutes (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], (coord[lemme:"et"]), num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure],(punct),(prep), ?[heure_extens].
+
+// 16 heures/h (30)  (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]),(punct),(prep), ?[heure_extens].
+
+// 16 heures/h  16 minutes (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure],(punct),(prep), ?[heure_extens].
+
+// 16h30 (tout collé, initiallement en adv)du matin/du soir/de l'apres-midi (,) heure locale
+11>noun[tempexpr=+,heure=+,mwe=+] @=  noun[heure], (prep[form:fde,surface:~"d'"]), (det[def]),noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après-midi",daytime=~,timemod=+],(punct),(prep), ?[heure_extens].
+
+// 16 h 30 (séparé) (,) heure locale
+11>noun[mwe=+,tempexpr=+,heure=+] @=   num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[lemme="h"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]),(punct),(prep), ?[heure_extens].
+
+
+// Contexte droit : il est (exactement) 3 heures
+
+// il est six heures moins dix 
+11>noun[mwe=+,tempexpr=+,heure=+] @=  |pron[p3],verb[form:fetre,surface:"est"],(adv)| num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"],num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~],(?[heure_extens]).
+
+// il est six heures moins le quart 
+11>noun[mwe=+,tempexpr=+,heure=+] @=  |pron[p3],verb[form:fetre,surface:"est"],(adv)| num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"], det[def], noun[lemme:"quart"],(?[heure_extens]).
+
+// il est six heures et demi/et quart
+11>noun[mwe=+,tempexpr=+,heure=+] @= |pron[p3],verb[form:fetre,surface:"est"],(adv)|  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure],coord[lemme:~"ou"], noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"].
+
+// il est 16 heures/h 30 minutes (et) 20 secondes.
+11>noun[mwe=+,tempexpr=+,heure=+] @= |pron[p3],verb[form:fetre,surface:"est"],(adv)| num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure], (coord), num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], noun[time, periode,heure],(?[heure_extens]).
+
+// il est 16 heures/h 30 minutes (à peine)
+11>noun[mwe=+,tempexpr=+,heure=+] @= |pron[p3],verb[form:fetre,surface:"est"],(adv)| num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], (coord[lemme:"et"]), (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), (noun[time,periode,heure]),(?[heure_extens]),(adv[t_mod]).
+
+// il est 16h30 (tout collé, initiallement en adv) 
+11>noun[tempexpr=+,heure=+,mwe=+] @= |pron[p3],verb[form:fetre,surface:"est"],(adv)| noun[heure], (prep[form:fde,surface:~"d'"]), (det[def]),noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],(?[heure_extens]).
+
+// il est 16 h 30 (séparé)
+11>noun[mwe=+,tempexpr=+,heure=+] @= |pron[p3],verb[form:fetre,surface:"est"],(adv)|  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[lemme="h"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]),(?[heure_extens]).
+
+
+
+//****************
+//***Sans contexte : uniquement en début de phrase
+
+// six heures moins dix (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[periode,heure], adv[lemme:"moins"],num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~],(?[heure_extens]).
+
+// six heures moins le quart (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=   num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[periode,heure], adv[lemme:"moins"], det[def], noun[lemme:"quart"],(?[heure_extens]).
+
+// six heures et demi/et quart (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=   num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[periode,heure],coord[lemme:~"ou"], noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"].
+
+// 16 heures/h 30 minutes (et) 20 secondes.(tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[time,periode,heure], num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure], (coord), num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], noun[time, periode,heure],(?[heure_extens]).
+
+// 16 heures/h 30 minutes (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=  num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[time,periode,heure], (coord[lemme:"et"]), (num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]), (noun[time,periode,heure]),(?[heure_extens]).
+
+// 16h30 (tout collé, initiallement en adv) (tout court)
+11>noun[tempexpr=+,heure=+,mwe=+] @=  noun[start:+,heure], (prep[form:fde,surface:~"d'"]), (det[def]),noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+],(?[heure_extens]).
+
+// 16 h 30 (séparé) (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @=   num[start:+,numjourpot=~,heurepot=~,numHeure=+,shortyear=~,date:~], noun[lemme="h"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]),(?[heure_extens]).
+
+
+
+
+// 24 heures sur 24
+11> adv[mwe=+,tempexpr=+,heure=+] @=  num[lemme:"24"],noun[periode],prep[form:fsur],num[lemme:"24"].
+
+
+
+
+
+//*****************
+// MIDI et MINUIT : sont toujours des heures, quoiqu'il arrive.
+
+// midi/minuit moins dix (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @= noun[lemme:"midi"]; noun[lemme:"minuit"], adv[lemme:"moins"],num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~].
+
+// midi/minuit moins le quart (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @= noun[lemme:"midi"]; noun[lemme:"minuit"], adv[lemme:"moins"], det[def], noun[lemme:"quart"].
+
+// midi/minuit et demi/et quart (tout court)
+11>noun[mwe=+,tempexpr=+,heure=+] @= noun[lemme:"midi"]; noun[lemme:"minuit"], coord[lemme:~"ou"], noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"].
+
+//  midi/minuit (et) 30 minutes (et) 20 secondes
+11>noun[mwe=+,tempexpr=+,heure=+] @=  noun[lemme:"midi"]; noun[lemme:"minuit"], (coord), num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure], (coord), num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], noun[time, periode,heure].
+
+//  midi/minuit (et) 30 minutes 
+11>noun[mwe=+,tempexpr=+,heure=+] @=  noun[lemme:"midi"]; noun[lemme:"minuit"], (coord), num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure].
+
+
+
+
+//*****************
+// Dans + quelque chose en heure --> HEURE et non DUREE
+
+// dans de nombreuses minutes
+11> noun[mwe=+,heure=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis],?[form:fde]| (adv)*,(adv,punct)*,(adv)*, (adj), noun[periode,heure:+].
+
+// dans num heures: 
+11> noun[mwe=+,tempexpr=+,heure=+] @=|prep[form:fdans,adv:~];prep[form:fdepuis],(?[t_mod])| num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], (num), (noun[periode,heure]).
+
+// dans quelques (num) heures (NP car déterminant):
+11>NP[mwe=+,tempexpr=+,heure=+] @=|prep[form:fdans,adv:~];prep[form:fdepuis],(?[t_mod])| det[lemme:"quelque"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), noun[periode,heure], (num), (noun[periode,heure]).
+
+// quelques heures après la tempête --> HEURE
+11> noun[mwe=+,tempexpr=+,heure=+] @=det[lemme:"quelque"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), noun[periode,heure] |?[postdate:+]|.
+
+// dans 2 ou 3 heures
+11>NP[mwe=+,tempexpr=+,heure=+] @=|?[form:fdans]| num, coord, num, noun[periode,heure].
+
+// à quelques heures de 
+11> noun[mwe=+,tempexpr=+,heure=+] @= |prep[form:fa] |det[lemme:"quelque"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]), noun[periode,heure] |prep[form:fde]|.
+
+
+
+
+
+
+//******************************
+// Contexte droit
+// Attention : "10 heures après" (+ avant, plus tot, plus tard, auparavant) est une DATE 
+// de même que : "après 10 heures"
+
+
+//***** expressions avec "et demi"
+
+// une heure et demie auparavant
+11> noun[mwe=+,heure=+,tempexpr=+] @= num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"],adv[postdate:+].
+
+// une heure et demie après (fin de phrase) = DATE et on prend tout
+11> noun[mwe=+,heure=+,tempexpr=+] @= num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"],prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+//  une heure et demie après le mariage = DATE et on ne prend pas la prep
+11> noun[!specialester=+,mwe=+,heure=+,tempexpr=+] @= num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"] |prep[postdate:+],?+|.
+
+//  avant/après une heure et demie 
+11> noun[mwe=+,heure=+,tempexpr=+] @= |?[postdate:+,predate:+]| num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"]|?[form:~fde]|.
+
+
+//***** expressions basiques
+
+// [un/deux] [seconde/minute/heure] [auparavant/plus tôt/plus tard] = DATE
+11> noun[mwe=+,heure=+,tempexpr=+] @=  num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],adv[postdate:+];?[heure_extens].
+
+// idem avec ellipse : [un/deux] ou [un/deux] [seconde/minute/heure] [auparavant/plus tôt/plus tard] = DATE
+11> noun[mwe=+,heure=+,tempexpr=+] @=  num, coord, num, (adj), noun[periode,heure:+],adv[postdate:+];?[heure_extens].
+
+// [un/deux] [seconde/minute/heure] [avant/après] (fin de phrase) = DATE et on prend tout
+11> noun[mwe=+,heure=+,tempexpr=+] @=  num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+// idem avec ellipse :[un/deux] ou [un/deux] [seconde/minute/heure] [avant/après] (fin de phrase) = DATE et on prend tout
+11> noun[mwe=+,heure=+,tempexpr=+] @=   num, coord, num, (adj), noun[periode,heure:+],prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+
+// [un/deux] [seconde/minute/heure] [avant/après le mariage = DATE et on ne prend pas la prep
+11> noun[!specialester=+,mwe=+,heure=+,tempexpr=+] @=  num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+]|prep[postdate:+];conj[postdate],?+|.
+
+// après/avant [un/deux] [seconde/minute/heure]
+11> noun[mwe=+,heure=+,tempexpr=+] @= |?[postdate:+,predate:+]| num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+]|?[form:~fde]|.
+
+
+// 2  heures/h 30 minutes (et) 20 secondes plus tard
+11> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord), 
+				  num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+				  noun[time, periode,heure],
+				  adv[postdate];?[heure_extens].
+
+// 2  heures/h 30 minutes (et) 20 secondes avant (fin de phrase)
+11> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord), 
+				  num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+				  noun[time, periode,heure],
+				  prep[postdate:+]
+				  |?[punct];?[end];?[strongbreak]|.
+
+// 2  heures/h 30 minutes (et) 20 secondes avant le départ (on ne prend pas la prep)
+11> noun[!specialester=+,mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord), 
+				  num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], 
+				  noun[time, periode,heure]
+				  |prep[postdate:+];conj[postdate],?+|.
+				  
+
+// il est parti 2  heures/h (et) 30 minutes plus tard
+11> noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord[lemme:"et"]), 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure],
+				  adv[postdate];?[heure_extens].
+
+// il est parti 2  heures/h (et) 30 minutes avant (fin de phrase)
+11>noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord[lemme:"et"]), 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure],
+				  prep[postdate:+]
+				  |?[punct];?[end];?[strongbreak]|.
+
+// il est parti 2  heures/h (et) 30 minutes avant la fin du film (on ne prend pas la prep)
+11>noun[!specialester=+,mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  (coord[lemme:"et"]), 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], 
+				  noun[time,periode,heure]
+				  |prep[postdate:+];conj[postdate],?+|.
+
+//  il est parti 2  heures/h (et) 30  plus tard 
+11>noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~],
+				  adv[postdate];?[heure_extens].
+
+//  il est parti 2  heures/h (et) 30  avant (fin de phrase)
+11>noun[mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~],
+				  prep[postdate:+]
+				  |?[punct];?[end];?[strongbreak]|.
+
+//  il est parti 2  heures/h (et) 30   avant la fin du film (on ne prend pas la prep)
+11>noun[!specialester=+,mwe=+,tempexpr=+,heure=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], 
+				  noun[time,periode,heure], 
+				  num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~]
+				  |prep[postdate:+];conj[postdate],?+|.
+
+
+
+
+//***** avec quelques et plusieurs --> NP
+
+//  quelques heures auparavant
+11>NP[heure=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:+], adv[postdate:+].
+
+// quelques heures avant (fin de phrase) = on prend tout
+11>NP[heure=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:+],prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+// quelques heures avant la fin du mariage = on ne prend pas la prep
+11>NP[!specialester=+,heure=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:+] |prep[postdate:+];conj[postdate],?+|.
+
+// après/avant quelques heures
+11>NP[heure=+,tempexpr=+] @=  |?[postdate:+,predate:+]| det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:+] |?[form:~fde]|.
+
+
+
+
+
+//****************
+//*** Heures dans intervalles
+
+// Sans preposition. Reconnaissance heures séparées + intervalle
+
+// la tranche 17 (heures) - 18 heure : reconnaissance de "18 heures"
+11> noun[mwe=+,tempexpr=+,heure=+] @= |num[heurepot:+];num[fstmod:+],(noun[periode:+,heure:+]),punct[form:fhyph]|    num[heurepot:+],noun[periode:+,heure:+].
+
+// la tranche 17 heures - 18 heure : reconnaissance de "17 (heures)"
+11> noun[mwe=+,tempexpr=+,heure=+] @=   num[heurepot:+];num[fstmod:+], (noun[periode:+,heure:+])     |punct[form:fhyph], num[heurepot:+],noun[periode:+,heure:+]|.
+ 
+// 17h - 19h30 : il faut reconnaitre 17h (jusque là ambigu entre heure et duree)
+11> noun[mwe=+,tempexpr=+,heure=+] @=   num[fstmod:+], noun[periode:+,fstmod:+]     |punct[form:fhyph],noun[heure:+]|.
+
+
+// 9h - 12h : deux chaines issues du découpage réalisé au tout début.
+// La config interval fait que ce n'est pas ambigu.
+
+// reconnaissance de 12h :
+11> noun[mwe=+,tempexpr=+,heure=+] @= |num[fstmod:+],noun[periode:+,fstmod:+],punct[form:fhyph]|    num[fstmod:+],noun[periode:+,fstmod:+].
+// reconnaissance de 9h :
+11> noun[mwe=+,tempexpr=+,heure=+] @= num[fstmod:+],noun[periode:+,fstmod:+]    |punct[form:fhyph],num[fstmod:+],noun[periode:+,fstmod:+]|.
+
+
+Marqueur:
+
+// Avec preposition
+
+// de 3 à 5 heures : marquage de 3 comme heure
+12> prep[form:fde], num[heurepot:+,heure=+,!tempexpr=+],prep[form:fa],noun[heure:+].
+
+
+Séquence:
+
+//****************
+//*** Pour ce qui n'a pas été reconnu avant: 
+
+
+// dans une demi-heure = DATE
+
+13> noun[mwe=+,tempexpr=+,heure=+] @=  |?[form:fdans]| det[lemme:"un"], (adj), noun[lemme:"demi-heure"]; noun[lemme:"demie-heure"].
+
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |?[form:fdans]| det[lemme:"un"], (adj), noun[lemme:"demi"];noun[lemme:"demie"], punct[punct:+], noun[lemme:"heure"].
+
+
+// une demi-heure en durée (par défaut, à raffiner)
+
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |?[form:~fdans]| det[lemme:"un"], (adj), noun[lemme:"demi-heure"]; noun[lemme:"demie-heure"].
+
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |?[form:~fdans]| det[lemme:"un"], (adj), noun[lemme:"demi"];noun[lemme:"demie"], punct[punct:+], noun[lemme:"heure"].
+
+
+// dans trois quarts d'heure = DATE
+
+13> noun[mwe=+,tempexpr=+,heure=+] @=|?[form:fdans]|  num[lemme:"trois"];num[lemme:"3"], (adj), noun[lemme:"quart"], prep, noun[lemme:"heure"].
+
+
+// trois quarts d'heure en durée (par défaut, à raffiner)
+
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= |?[form:~fdans]| num[lemme:"trois"];num[lemme:"3"], (adj), noun[lemme:"quart"], prep, noun[lemme:"heure"].
+
+
+// les trois dernières heures, les cinq dernières minutes
+
+13> noun[mwe=+,tempexpr=+,heure=+] @= |?[duree:~]| num, adj[timemod], noun[periode,heure].
+
+
+
+//****************
+//*** Autres types d'heures
+
+// dizaine de secondes/minutes/heures
+// ces expressions, précédées de la prep "dans" sont des heures
+// sinon ce sont des durées (peut-être à raffiner plus tard)
+
+// "dans une dizaines de minutes" --> heure 
+13> noun[mwe=+,tempexpr=+,heure=+] @= |prep[form:fdans],det| noun[predate,t_mod=approx], prep[form:fde], noun[periode,heure] .
+
+// "dizaine de minutes" --> durée
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @= noun[predate,t_mod=approx], prep[form:fde], noun[periode,heure] .
+
+// dans les prochaines heures
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det;prep| adj[predate], (adj), noun[periode,heure:+,generic:~].
+
+
+// la minute suivante
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det;prep| noun[periode,heure:+,duree:~], adj[timemod].
+
+// contrainte à droite pour éviter de prendre 'il est parti l'heure suivant le spectacle.'
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det;prep| noun[periode,heure:+,duree:~],prep[timemod]|?[end];?[strongbreak];?[punct]|.
+
+// à la minute même
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det| noun[periode,heure:+,duree:~],?[lemme:"même"].
+
+// le soir même
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det| noun[daytime,heure:+,duree:~],?[lemme:"même"].
+
+// à la soixante-quizième minute de jeu
+13> noun[mwe=+,heure=+,tempexpr=+] @=  adj[ord], noun[periode,heure:+].
+
+
+// !!!!! special ESTER "à venir" et "qui viennent" font partie de l'ET pour ESTER decommenter en dessous
+//les (cinq) minutes à venir
+13> noun[tempexpr=+,heure=+,mwe=+] @= |det| (num), noun[periode,heure:+,duree:~], prep[form:fa];?[lemme:"qui"],verb[lemme:"venir"].
+//!!!!!!!!!!!!!!!!!!
+
+
+// !!!!!!! regle commentée pour ESTER
+//les (quinze)minutes à venir/qui viennent --> heure
+//10> noun[tempexpr=+,heure=+,mwe=+] @= |det| (num), noun[periode,heure:+,duree:~] |prep[form:fa];?[lemme:"qui"],verb[lemme:"venir"]|.
+
+
+
+// après/avant num heure de + qlqch = DUREE
+// (après 3 heures de marche, ils étaient fatigués)
+
+13> noun[mwe=+,heure=+,tempexpr=+,duree=+] @= |?[postdate:+,predate:+]| num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"]|prep[form:fde]|.
+
+13> noun[mwe=+,heure=+,tempexpr=+,duree=+] @= |?[postdate:+,predate:+]| num, (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:+]|prep[form:fde]|.
+
+13> NP[heure=+,tempexpr=+,duree=+] @=  |?[postdate:+,predate:+]| det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:+] |prep[form:fde]|.
+
+
+
+//****Pour ce qu'il reste
+
+
+// 1) Solution assez cash, à surveiller :
+// si adv devant -> duree
+// si prep devant -> heure
+
+13> noun[mwe=+,tempexpr=+,heure=+] @=  |prep| num[numjourpot=~,heurepot=~,shortyear=~], noun[periode,heure].
+
+13> noun[mwe=+,tempexpr=+,heure=+,duree=+] @=  |?[form:~fdans],adv| num, noun[periode,heure].
+
+
+// 2) Dernier recours si aucun contexte local :
+
+// num + heure a le trait heureambig
+// on peut choisir entre heure et durée après la syntaxe, en utilisant le verbe
+// ex : Ceux-ci passent en effet 15 heures sur le net dans la semaine.
+// vbs tels que durer, passer, attendre, patienter, etc.
+// --> à gérer en fin de deduction_temp.xip
+
+
+// six heures moins dix (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"],num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~].
+
+// six heures moins le quart (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure], adv[lemme:"moins"], det[def], noun[lemme:"quart"].
+
+// six heures et demi/et quart (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[periode,heure],coord[lemme:~"ou"], noun[lemme:"demie"];noun[lemme:"demi"];noun[lemme:"quart"].
+
+// 16 heures/h 30 minutes (et) 20 secondes.(tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @= num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure], (coord), num[numjourpot=~,heurepot=~,numSeconde=+,shortyear=~], noun[time, periode,heure].
+
+// 16 heures/h 30 minutes (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], (coord[lemme:"et"]), num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~], noun[time,periode,heure].
+
+// 16 heures/h 30  
+14>noun[mwe=+,tempexpr=+,heureambig=+] @=  num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure], num[numjourpot=~,heurepot=~,numMinute=+,shortyear=~].
+
+// 16 heures/h  16 minutes (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @=  num[date:~, numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[time,periode,heure].
+
+// 16h30 (tout collé, initiallement en adv) (tout court)
+14>noun[tempexpr=+,heureambig=+,mwe=+] @=  noun[heure], (prep[form:fde,surface:~"d'"]), (det[def]),noun[lemme:"matin",daytime=~,timemod=+];noun[lemme:"soir",daytime=~,timemod=+];noun[lemme:"après\-midi",daytime=~,timemod=+].
+
+// 16 h 30 (séparé) (tout court)
+14>noun[mwe=+,tempexpr=+,heureambig=+] @=   num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~], noun[lemme="h"], (num[numjourpot=~,heurepot=~,numHeure=+,shortyear=~]).
+
+

@@ -1,0 +1,396 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Fragmenter:
+
+1> "de%1 force%2" : adv = prep%1[form=fde,prepinf=+,sfde=+,prep=+], noun%2[lemme="force",fem=+,sg=+].
+1> "de%1 Force%2" : adv = prep%1[form=fde,prepinf=+,sfde=+,prep=+], noun%2[lemme="Force",fem=+,sg=+].
+
+1> "%d+%1~%2" : noun = num%1[card=+,num=+,chiffres=+], noun%2[measure=+,unit_monnaie=+].
+
+// AB 2011.11.21 split "en quelques jours" built as a single adverb in FSTs
+//1> "en%1 quelques%2 jours%3" : adv = prep%1[en=+,temp_pos="=",mrt=+,sfen=+,form=fen,predate=+,lemme=en], det%2[masc=+,fem=+,pl=+,quant=+,det=+,lemme=quelque], noun%3[val_duree=D,timeduree=+,periode=+,masc=+,pl=+,p3=+,noun=+,closed=+,time=+,lemme=jour].
+
+// AB 2012.01.20 split adv{au début} into prep + noun in "au début septembre"
+1> "au%1 début%2" : adv = prep%1[surface=au,lemme=à,masc=+,prep=+,sg=+,ancrage_heure=+,preheure=+,pointage=+,sfa=+,form=fa,def=+,mrt=+,temp_pos="="], noun%2[t_mod="start",predate=+,desn=+,danssn=+,asn=+,sfde=+,sfdans=+,sfa=+,masc=+,sg=+,p3=+,noun=+] | noun[mois] |.
+
+Séquence:
+
+/ this rule assigns starbis feature to any word after a punctuation at start of sentence\
+/ notice:  ?[punct] covers both PUNCT and SGML categories \
+
+2> ?[startbis=+] @= ?[start,punct], ?*[punct], ?.
+
+2> ?[startbis=+] = ?[start:+].
+
+/ this rule assigns startbis feature to any word after a word marked as strongbreak (typically open parenthesis or ; or :\
+/ notice:  ?[punct] covers both PUNCT and SGML categories \
+2> ? = ?[strongbreak], ?*[punct], ?[startbis=+,coord:~].
+
+// AB 2012.04.11 pro mulger = promulger, pro crastiner = procrastiner, etc.
+//2> verb[lemme=promulger] = prefix[lemme:pro], verb[guessed] .
+
+//Fragmenter:
+
+//2> "%d+\°%1%C%2" : noun = noun%1[estdegre=+],noun%2[lemme="c"].
+
+
+// ESTER 
+
+//2> noun = punct[bidon], noun[!traits:!].
+//2>  noun[traits:!] = punct[lemme:"*"], noun[!traits:!].
+//2>  noun[traits:!]= punct[lemme:"_"], noun[!traits:!].
+//2>  noun[traits:!]= punct[lemme:"^"], noun[!traits:!].
+//2>  prep[traits:!] = punct[lemme:"*"], prep[!traits:!].
+//2>  prep[traits:!]= punct[lemme:"_"], prep[!traits:!].
+//2>  prep[traits:!]= punct[lemme:"^"], prep[!traits:!].
+//2>  adj[traits:!] = punct[lemme:"*"], adj[!traits:!].
+//2>  adj[traits:!]= punct[lemme:"_"], adj[!traits:!].
+//2>  adj[traits:!]= punct[lemme:"^"], adj[!traits:!].
+
+
+2> num = num, noun[lemme:"virgule"], num.
+
+
+// CH case of plus tôt is taken out of general case
+2> adv[postdate=+,time, temp_ref="e", direc=-] = ?[lemme:plus], adv[time,lemme:"tôt"].
+
+// CH
+// aussi tot ou tard
+2> adv[postdate=+,temp_ref="e"] = ?[lemme:"aussi"], adv[!traits:!,time].
+
+2> adv[postdate=+] = ?[lemme:plus];?[lemme:moins];?[lemme:"autant"], adv[!traits:!,time].
+
+// gestion des doublons speech
+2> det = det[lemme:le,masc] , det[lemme:le,masc,!traits:!].
+2> det = det[lemme:le,fem] , det[lemme:le,fem,!traits:!].
+2> det = det[lemme:un,masc] , det[lemme:un,masc,!traits:!].
+2> det = det[lemme:un,fem] , det[lemme:un,fem,!traits:!].
+2> prep[form=fde,lemme="de"] = prep[form:fde], prep[form:fde].
+
+
+Désambiguïsation:
+
+/ these desambiguation rules rewrite terminal nodes (change lexical category) in certain contexts\
+/ correcting input from lexicon:  -le is a determiner if followed by hyphen and not a pronoun in Monsieur-le-Prince \
+
+3> PRON[acc,hyph] %= DET[det=+,def=+,hyph=+]  |punct[Hyph]|.
+
+/Montrevel-en-Bresse \
+3> PRON[gen,hyph] %= PREP[form:fen, sfen=+, hyph=+]  |punct[Hyph]|.
+
+
+/Montlouis-sur-Loire\
+3> PREFIX[lemme:sur] %= |Punct[hyph]| PREP[form:fsur, sfsur=+, hyph=+].
+
+
+
+3> num<lemme:"x"> %= | num[chiffres] |  noun | num[chiffres] |.
+
+// ajout ester
+
+3> noun<lemme:"virgule">, verb = | num | noun | num |.
+
+3>  num[noun,lemme:"cent"] %= | num[chiffres,lettres:~] | noun[unit_monnaie=+,measure=+,cent=+] | ?[num:~;unit:~] |. 
+
+// AB 2012.01.20 "à la fin septembre (2002)" fin=noun
+3> ?<surface:fin> = | ?[surface:la] | noun | noun[mois] | .
+
+
+/ ---   done in desamb.fic ----\
+/---- Proper Names ---\
+/ Évita, Bats, Octavien \
+
+/
+3> (verb)[maj,noun:~,startbis:~] %= |?[maj];prep;?[prepers:+]|  Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+]. 
+
+3> (verb)[maj,noun:~] %= Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+] |?[maj]| .
+
+3> (adj)[maj,noun:~,startbis:~] %= |?[maj:~,det:~]| Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+].
+\
+
+/  ------------------     end desambiguation rules  ---------------- \ 
+
+
+Séquence:
+
+/ le porte à porte\
+6> NOUN[mwe=+]  =  |det;prep;num| noun#1[lemme:~"ville"], prep, noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+
+/ jour après jour is an adverb \
+/ but no prepositive locution to avoid "la faute de la" \
+7> ADV[mwe=+] =  |?[det:~,prep:~,num:~]| noun#1, prep[lemme:"%c+"], noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+/ jour après jour is an adverb \
+7> ADV[mwe=+] =   noun#1[startbis], prep[lemme:"%c+"], noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+
+
+
+
+/---- rules for prefixed items ----\
+
+/ a rule for coordinated prefixes: les pro et anti-Maastricht\
+6> PREFIX = PREFIX, PUNCT[hyph]; COORD, PREFIX .
+
+
+6>  VERB = |PRON[Nom];NEG, PRON*| PREFIX,   VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p1:!,!p2:!,!p3:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+
+7> NOUN[P3=+] = |DET| PREFIX,   NOUN[p3, !masc:!,!fem:!,!sg:!,!pl:!,
+					!subcatfeatures:!,!traits:!] | noun[lemme:~ministre] | .
+
+8>  VERB = |PRON; NOUN| PREFIX,   VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p1:!,!p2:!,!p3:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> VERB[inf=+] = |PREP[prepinf]| PREFIX,   VERB[inf,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> VERB[partpas=+] = |NOUN| PREFIX,   VERB[partpas,!masc:!,!fem:!,!sg:!,!pl:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> NOUN = PREFIX,   NOUN[!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,
+					!subcatfeatures:!,lettres:~,!unit:!,!measure:!].
+
+8> ADJ = |NOUN| PREFIX,   ADJ[!masc:!,!fem:!,!sg:!,!pl:!,
+					!subcatfeatures:!].
+
+8> VERB = |VERB| PREFIX,   VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,
+					!partpas:!,!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+/---- end of rules for prefixed  items ----\
+
+
+
+/---- rules for hyphenated items ----\
+
+/ Haak-sung: en un seul mot \
+
+//7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,subcatfeatures:!,!celeb:!,!proper:!], punct[hyph], ?[subcatfeatures:!, time:!,prep:~,coord:~,!celeb:!,!proper:!].
+
+// AB 2011.03.15 modif de la règle précédente pour bonnne construction du NP intervalle de mois ex. janv-fév
+// Ajout de mois:~ sur le noun pour empêcher la construction d'un mwe pour les intervalles de mois
+// A voir pour jours
+7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,subcatfeatures:!,!celeb:!,!proper:!,mois:~], punct[hyph], ?[subcatfeatures:!, time:!,prep:~,coord:~,!celeb:!,!proper:!].
+
+// Il-sung
+7> Noun[mwe=+,maj=+] = ?[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,subcatfeatures:!,verb:~], punct[hyph], ?[subcatfeatures:!, time:!,guessed].
+
+/Garges-les-Oies\
+7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,subcatfeatures:!], ?[hyph], ?,	punct[hyph], ?[subcatfeatures:!, time:!].
+
+/Bourg-de-Peage, Bourg-d'Oisans	(les villes sont déjà traitées dans localgram_entit1.xip)\
+7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], punct[hyph], prep[sfde], 
+			(punct[hyph]), noun[subcatfeatures:!, time:!].
+
+
+/ FT: regroupe Pierre - Henry dans Pierre - Henry Michaud \
+7> NOUN[proper=+] = NOUN[preN,!maj:!,!preN:!,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!, prenamb2:~,celeb:~],   PUNCT[form:fhyph],  NOUN[maj:+,batimentorg1:~]. 
+
+/AMD-BA\
+9> NOUN[mwe=+,maj=+, toutmajtiret=+] @= NOUN[maj, toutmaj, !maj:!,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!],  PUNCT[hyph],  NOUN[maj, toutmaj], (PUNCT[hyph],  NOUN[toutmaj, maj]).
+
+/Port-Moresby\
+// AB 2012.06.26 ajout de time:~ pour éviter de prendre "JANIVER - Vendredi" comme une entité nommée
+9> NOUN[mwe=+,maj=+] @= NOUN[maj,!maj:!,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,time:~],  PUNCT[hyph],  NOUN[maj,pren:~], (PUNCT[hyph],  NOUN[maj]).
+
+/ ce chien-ci \
+9> NOUN = NOUN[!subcatfeatures:!], PUNCT[hyph],  ADV.
+
+
+/ 35-40, 50 à 56 \
+/9> NUM[mwe=+,num=+, time=-] = NUM, PUNCT[hyph];punct[form:fslash];prep[form:fa],  NUM.\
+9> NUM[mwe=+,num=+] = | ?[hyph:~,form:~fslash] | NUM[lemme:"%d%d"], PUNCT[hyph];punct[form:fslash],  NUM[lemme:"%d%d"].
+
+
+/ son/ses \
+9> det[mwe=+,det=+,masc=+,fem=+,sg=+,pl=+] = det, PUNCT[hyph];punct[form:fslash],  det.
+
+/ il/elle \
+9> pron[mwe=+,pron=+,masc=+,fem=+,sg=+,pl=+] = pron[!poss:!,!dem:!,!nom:!,!acc:!,!p1:!,!p2:!,!p3:!], 
+						PUNCT[hyph];punct[form:fslash], pron.
+
+// modif Caroline : unites
+
+// AB 2012.05.11 added toutmaj:~ condtraint to avoid creating a num with digits + letters (e.g. num{100 DVI} should be two separate expressions)
+//15 cent
+9> num[gdnbre=+] @= num+[lettres:~], num+[noun:+,surface:~"un",pron:~,lettres:~,toutmaj:~]; num+[noun:+,surface:~"une",pron:~,lettres:~,toutmaj:~] | ?[lemme:~ministre] | .
+//9>   Num [gdnbre=+] @= num+, num+.
+
+
+// /corpus oraux : deux virgule trois\
+
+9>  Num [gdnbre=+] @= num+[noun:+], noun[lemme:"virgule"], num[noun:+].
+
+9>  NOUN[measure=+,unit_surf=+] = noun[unit_len], noun[lemme:"carré"].
+
+9>  NOUN[measure=+,unit_vol=+] = noun[unit_len], noun[lemme:"cube"].
+
+
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], (punct[lemme:"/"];prep[lemme:"par"]), noun[lemme:"heure"].
+
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], punct[lemme:"/"], noun[lemme:"h"].
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], (punct[lemme:"/"];prep[lemme:"par"]) , noun[lemme:"minute"].
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], punct[lemme:"/"], noun[lemme:"min"].
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], (punct[lemme:"/"];prep[lemme:"par"]) , noun[lemme:"seconde"].
+9>  NOUN[measure=+,unit_vit=+] = noun[unit_len], punct[lemme:"/"], noun[lemme:"sec"].
+
+// temperatures
+
+9>  NOUN[measure=+,unit_temper=+,mwe=+] = noun[estdegre], 
+					noun[lemme:"c"];
+					noun[lemme:"Celsius"];
+					noun[lemme:"k"];
+					noun[lemme:"f"];
+					noun[lemme:"Fahrenheit"];
+					adj[lemme:"centigrade"];
+					noun[lemme:"kelvin"];
+					noun[lemme:"C"],	
+					noun[lemme:"K"].
+
+// centimes d'euros
+
+9>  NOUN[measure=+,unit_monnaie=+] = noun[cent], prep[form:fde], noun[lemme:"euro"].
+
+/---- end of rules for hyphenated  items ----\
+
+/
+10> NOUN[measure=+, mwe=+, time=-] @= num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+, time=-] = noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+, time=-] = num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+\
+
+
+// avec coordination 3 dollars et 50 cents
+
+marqueur :
+
+
+/************* AJOUT POUR EXTRACTIONS SUR FORUMS*********************\
+
+//12> prep[lemme:"par"], noun[guessed,person=+,pseudo=+], pron[lemme:"il"], pron[lemme:"y"].
+
+Fragmenter:
+
+/// ajout Maud: Découpages divers pour gérer des ET
+
+// gestion de la prep " en fonction d' " à découper dans un contexte tel que :
+// il va entrer en fonction d'ici la fin de la semaine
+16> "en%1 %2fonction%3 %4de%5"  : prep[surface:"en fonction d'"] = prep%1[form=fen,prep=+], noun%3, prep%5[form=fde,prep=+,surface="d'"] |adv[lemme:"ici"]|.
+
+
+// il est parti en début d'après-midi : "d'après" sort en prep
+// il faut : après-midi en noun (suite en règle de séquence)
+// AB 2012.03.28 use t_mod feature instead of lemmas début, milieu, fin etc on noun
+16> "d'%1après%2"  : prep = |prep[form:fen],noun[t_mod]| prep%1[form=fde,lemme="de",surface="d'"], noun%2[lemme="après"] |punct[form:fhyph],noun[lemme:"midi"]|.
+
+
+// AB 2011.11.10 supprimé car on décide des garder "à la veille de" etc. comme une préposition (MRT)
+// "à la veille du" = à découper
+//16> "à%1 %2la%3 %4veille%5 %6du%7" :: prep = prep%1[form=fa,lemme="à"],det%3[det=+,def=+,fem=+,sg=+,lemme="le",surface="la"],noun%5[noun=+,fem=+,tempexpr=+,relative=+,temp_ref=e],prep%7[form=fde,lemme="de",surface="du"].
+
+// AB 2011.11.10 supprimé car on décide des garder "à la veille de" etc. comme une préposition (MRT)
+// idem avec "à la veille de" = à découper
+//16> "à%1 %2la%3 %4veille%5 %6de%7" :: prep = prep%1[form=fa,lemme="à"],det%3[det=+,def=+,fem=+,sg=+,lemme="le",surface="la"],noun%5[noun=+,fem=+,tempexpr=+,relative=+,temp_ref=e],prep%7[form=fde,lemme="de",surface="de"].
+
+// AB 2011.11.10 supprimé car on décide des garder "à la veille de" etc. comme une préposition (MRT)
+// idem avec "à la veille de" = à découper
+//16> "à%1 %2la%3 %4veille%5 %6des%7" :: prep = prep%1[form=fa,lemme="à"],det%3[det=+,def=+,fem=+,sg=+,lemme="le",surface="la"],noun%5[noun=+,fem=+,tempexpr=+,relative=+,temp_ref=e],prep%7[form=fde,lemme="de",surface="des"].
+
+
+// adv "à l'ordre du jour" 
+16> "à%1 %2l'%3ordre%4 %5du%6 %7jour%8" : adv = prep%1[form=fa,prep=+,lemme="à"], det%3[det=+,def=+,lemme="le",surface="l'"], noun%4[noun=+,lemme="ordre",masc=+,sg=+], prep%6[prep=+,form=fde,surface="du",lemme="de"], noun%8[noun=+,masc=+,sg=+,lemme="jour",periode=+,timeduree=+,val_duree=D].
+
+// "en un temps record" 
+16> "en%1 %2un%3 %4temps%5 %6record%7" : adv = prep%1[form=fen,prep=+,lemme="en"], det%3[det=+,indef=+,lemme="un",surface="un"], noun%5[noun=+,lemme="temps",masc=+,sg=+,pl=+], adj%7[adj=+,noun=+,masc=+,sg=+,lemme="record"].
+
+
+Séquence:
+
+// AB 2011.11.07 "après-midi" daytime=AF
+19> noun[daytime=AF,postjour=+,heure=+,timemod=+] @= |prep[form:fen],noun[t_mod],prep[form=fde,lemme="de",surface="d'"]|noun[lemme="après"],punct[form:fhyph],noun[lemme:"midi"].
+
+
+
+// ajout Maud
+// gestion de "au plus tôt/tard" = locution adverbiale 
+
+
+19> adv[adv=+,predate=+,t_mod=equal_or_more,lemme="au plus tôt",surface="au plus tôt"] @= adv[lemme:"au plus"],adv[lemme:"tôt"].
+
+19> adv[adv=+,predate=+,t_mod=equal_or_less,lemme="au plus tard",surface="au plus tard"] @= adv[lemme:"au plus"],adv[lemme:"tard"].
+
+
+// "certain" est un déterminant lorsqu'il est associé avec l'article indéfini "un"
+//19> det[indef=+,lemme="un certain"]@= det[indef,lemme:"un"],adj[adj,masc,lemme:"certain"].
+
+
+// CH juin 2009 
+// Dans le contexte "à l'" ordre du jour est regrouppé
+// (a ete splitté auparavant)
+20> noun[mwe=+] = | prep[lemme:"à"], det[lemme:"le"] | noun[lemme:ordre], prep[lemme:de], noun[lemme:jour] .
+
+// Heure d'hiver/printemps automne regrouppé
+20> noun[mwe=+] @= noun[lemme:heure,sg:+], prep[lemme:"de"], noun[saison] .
+
+/////////////
+// INCISES //
+/////////////
+
+// AB 2011.04.13 gestion des incises avant le chunking pour placer le trait incise=+ sur tous les noeuds
+// lexicaux.
+
+Marqueur:
+
+// Incise en début de phrase qui commence par un nom.
+// Jean, depuis le début de son séjour qui se déroule sans d'autres problèmes, est malade.
+21> noun[start], ?*[verb:~], punct[form:fcm,incise=+], ?+[punct:~,incise=+], punct[form:fcm,incise=+], ?*[verb:~,punct:~], verb.
+
+// Incise en fin de phrase après le dernier verbe.
+// ...vient normalement, comme il se doit dans tous les cas, de la majorité.
+21> verb, ?*[verb:~], punct[form:fcm,incise=+], ?+[punct:~,incise=+], punct[form:fcm,incise=+], ?+[verb:~].
+
+Séquence:
+
+// AB 2011.11.15 bien avant que en conj et bien avant de en prep
+
+// aucun verbe à gauche, e.g. en début de phrase
+// e.g. Bien avant de partir, il a mangé.
+22> conj = | ?*[verb:~] | adv[lemme:bien], conj[lemme:"avant que"].
+22> conj = | ?*[verb:~] | adv[start,lemme:bien], prep[lemme:"avant de"].
+
+// après ponctuation
+// e.g. Il a mangé, bien avant de partir.
+22> conj = | ?[punct] | adv[lemme:bien], conj[lemme:"avant que"].
+22> prep = | ?[punct] | adv[lemme:bien], prep[lemme:"avant de"].
+
+// après conjonction
+// e.g. Il était fatigué et/car bien avant de partir il a dormi.
+22> conj = | conj;coord | adv[lemme:bien], conj[lemme:"avant que"].
+22> prep = | conj;coord | adv[lemme:bien], prep[lemme:"avant de"].
+
+// après participe passé
+// e.g. Il a mangé bien avant de partir.
+22> conj = | verb[partpas] | adv[lemme:bien], conj[lemme:"avant que"].
+22> prep = | verb[partpas] | adv[lemme:bien], prep[lemme:"avant de"].

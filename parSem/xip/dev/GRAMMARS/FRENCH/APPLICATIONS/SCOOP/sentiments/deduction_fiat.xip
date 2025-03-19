@@ -1,0 +1,78 @@
+// deduction_fiat.xip
+// dépendances de FIAT
+// créé: 12.5.2008 (Sigrid Maurel)
+// modifié: 10.7.2008 (Sigrid Maurel)
+
+
+Déduction:
+
+// la disponibilité du chef d'atelier .
+// 1er argument = FIAT
+1> if ( ?[kind:~, positif:~, negatif:~](#1[fiat:+, !kind:!, !subKind:!, aux:~],
+ #2[det:~, conjque:~, prep:~, pron:~, aux:~, fiatadv:~]) )
+FIAT(#1, #2).
+
+// proposer une voiture de courtoisie .
+// 2e argument = FIAT
+2> if ( ?[kind:~, positif:~, negatif:~](#1[aux:~], #2[fiat:+, !kind:!, !subKind:!, fiatadv:~]) )
+FIAT(#2, #1).
+
+2> if ( ?[kind:~, positif:~, negatif:~](#1[aux:+], #2[fiat:+, fiatadv2:+, !kind:!, !subKind:!])
+ & OBJ(#1, #3) )
+FIAT(#2, #3).
+
+// le personnel est disponible et a l'ecoute des clients .
+// 1er argument de la relation SENTIMENT = FIAT
+3> if ( SENTIMENT(#1[fiat:+, !kind:!, !subKind:!], #2[pron:~]) & ~FIAT(#1, #10) & ~FIAT(#11, #1) )
+FIAT(#1, #2).
+
+// l'accueil est super .
+// 2e argument de la relation SENTIMENT = FIAT
+3> if ( SENTIMENT(#2, #1[fiat:+, !kind:!, !subKind:!]) & ~FIAT(#2, #1) )	//& ~FIAT(#11, #1) )
+FIAT(#1, #2).
+
+// chef d'atelier .
+// pas de relation existante avec le mot FIAT
+4> | #1[fiat:+, !kind:!, !subKind:!, adv:~, aux:~] |
+if ( ~FIAT(#1, #10) & ~FIAT(#11, #1))
+FIAT(#1, ##EMPTY).
+
+ 
+
+//----------------------------------------------------------------------------------------------------
+// ajouter la polarité à l'aide de SENTIMENT, si présent
+// vendre les véhicules moins chers .
+6> if ( ^FIAT(#1, #2) &
+ ( SENTIMENT[positif:+](#10, #1) || SENTIMENT[positif:+](#10, #2) || SENTIMENT[positif:+](#1, #2) ) )
+FIAT[pola=positive](#1, #2).
+
+6> if ( ^FIAT(#1, #2) &
+ ( SENTIMENT[negatif:+](#10, #1) || SENTIMENT[negatif:+](#10, #2) || SENTIMENT[negatif:+](#1, #2) ) )
+FIAT[pola=negative](#1, #2).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// ajouter la polarité sans SENTIMENT mais avec un trait positif ou négatif sur le mot FIAT
+// un geste commerciale sur le 4/4 .
+6> if ( ^FIAT(#1[positif:+], #2) & ~SENTIMENT(#10, #11) )
+FIAT[pola=positive](#1, #2).
+
+// trouver la panne .
+6> if ( ^FIAT(#1[negatif:+], #2) & ~SENTIMENT(#10, #11) )
+FIAT[pola=negative](#1, #2).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// ajouter la force (increase, decrease)
+// faire le travail un peu plus soigné
+// avoir moins de problèmes
+8> | #1[force:increase]; #1[force:decrease] |
+if ( ^FIAT(#1[!force:!], #2) )
+FIAT(#1, #2).
+
+// moins de problèmes
+8> | adv#1[start:+, fiat:+, !kind:!, !subKind:!, fiatadv2:+, !force:!], pp{prep, np{?*, #2[last:+]}} |
+if ( PREPOBJ(#2, #3) )
+FIAT(#1, #2).

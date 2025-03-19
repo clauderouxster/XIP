@@ -1,0 +1,139 @@
+file f("./tweets/B1+B2+C+Xip/oct27+daily547","r");
+svector sv=f.read();
+f.close();
+svector token_feature;
+int it;
+string ln;
+
+map m;
+vector sentence;
+
+for(ln in sv){
+     if(ln.trim().size()>0){
+          svector feature=ln.split("\t");
+          string x;
+          svector st;
+          for(x in feature)
+               st.push(x.trim());
+          sentence.push(st);
+
+     }
+     else{
+          vector aux = sentence;
+          m[it]=aux;
+          it+=1;
+          sentence.clear();
+     }
+}
+
+
+//clean the empty keys
+map pm=m;
+for(ln in m)
+     if(m[ln]==[])
+          pm.pop(ln);
+
+// spliting the data set to n folds
+int x;
+map folds;
+int nfolds=_args[0];
+//int nfolds=3;
+int size=pm.size()/nfolds;
+vector myvec;
+
+for(x=0;x<nfolds;x++){
+     map fold;
+     string pln;
+     // float rn=random()*100;
+     // int rand=rn;
+     //if (pm[rand]!=empty){
+     for(pln in pm.keys()){
+          if(fold.size()<size){
+               fold[pln]=pm[pln];
+               pm.pop(pln);
+          }
+          // print(ln+' ');
+          folds[x]=fold;
+     }
+     //println('');
+}
+//println(folds.keys());
+map train;
+map test;
+map dev;
+int i=_args[1];
+//int i=0;
+string foldkey;
+string distination="./tweets/B1+B2+C+Xip/nfolds/";
+file tr(distination+"train.nfoldcv","w");
+file te(distination+"test.nfoldcv","w");
+file de(distination+"dev.nfoldcv","w");
+for(foldkey in folds){
+     println(foldkey);
+     if(foldkey!=i && foldkey!=i+1){
+          println("Train Fold:"+foldkey);
+          train=folds[foldkey];
+          //println(train);
+          string tkey;
+          for(tkey in train){
+               vector traintweets=train[tkey];
+
+               //println(tweet);
+               vector xtrain;
+               int ztrain;
+               for(xtrain in traintweets){
+                    vector tr_tweet=xtrain;
+                    for(ztrain=0;ztrain<tr_tweet.size()-1;ztrain++)
+                         tr.write(tr_tweet[ztrain].trim()+"\t");
+                    tr.writeln(tr_tweet[tr_tweet.size()-1].trim());
+               }
+               tr.write(_endl);
+          }
+     }
+     elif(foldkey==i){
+          println("Test Fold:"+foldkey);
+          test=folds[foldkey];
+          string testkey;
+          for(testkey in test){
+
+               vector testtweets=test[testkey];
+               vector xtest;
+               int ztest;
+
+               for(xtest in testtweets){
+                    // println(foldkey+' '+xtest+' '+testtweet.size());
+                    vector te_tweet=xtest;
+                    // println(te_tweet.size());
+                    for(ztest=0;ztest<te_tweet.size()-1;ztest++)
+                         te.write(te_tweet[ztest].trim()+"\t");
+                    te.writeln(te_tweet[te_tweet.size()-1].trim());
+
+               }
+               te.write(_endl);
+          }
+     }
+     else{
+          println("Dev Fold:"+foldkey);
+          dev=folds[foldkey];
+          //println(train);
+          string devkey;
+          for(devkey in dev){
+               //println(train[tkey].size());
+               vector devtweets=dev[devkey];
+               vector xdev;
+               int zdev;
+               for(xdev in devtweets){
+                    vector de_tweet=xdev;
+                    for(zdev=0;zdev<de_tweet.size()-1;zdev++)
+                         de.write(de_tweet[zdev].trim()+"\t");
+                    de.writeln(de_tweet[de_tweet.size()-1].trim());
+               }
+               de.write(_endl);
+          }
+     }
+
+}
+tr.close();
+te.close();
+de.close();
+

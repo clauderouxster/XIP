@@ -1,0 +1,156 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+/--------------  grammaire de dates ---------------------\
+
+Séquence:
+
+/vingt et un est un nombre\
+5> Num [gdnbre=+] = num[noun:+], coord, num.
+
+/deux noms de nombres font un seul nombre (quatre mille cinq-cent)\
+9> Num [gdnbre=+] @= num[noun:+], num[noun:+], (num[noun:+]), (punct[hyph:+], num[noun:+]), (coord, num).
+
+
+/les mois musulmans composés\
+//9> noun[time=+, mois2:+, sg=+] = ?[lemme:al];?[lemme:Al];?[lemme:at];?[lemme:At];?[lemme:t];?[lemme:el];?[lemme:El];?[lemme:l], (punct[form:fhyph]), (punct[lemme:']), ?[mois2:+].
+
+9> noun[time=+, mwe=+, sg=+, mois=+]= noun[mois1:+], (punct[lemme:']), (punct[form:fhyph]), noun[mois2:+].
+
+
+//10> noun[time=+, mwe=+, sg=+, mois=+] = noun[lemme:rabi];noun[lemme:Rabi];noun[lemme:rabia];noun[lemme:Rabia];noun[lemme:joumada];noun[lemme:Joumada];noun[lemme:djoumada];noun[lemme:Djoumada],(punct[lemme:']), (punct[form:fhyph]), ?[lemme:al];?[lemme:Al];?[lemme:at];?[lemme:At];?[lemme:t];?[lemme:el];?[lemme:El];?[lemme:l], (punct[form:fhyph]), noun[lemme:thani];noun[lemme:awwal];noun[lemme:Thani];noun[lemme:Awwal];noun[lemme:oula];noun[lemme:Oula].
+//10> noun[time=+, mwe=+, sg=+, mois=+]= noun[lemme:rabi];noun[lemme:Rabi];noun[lemme:rabia];noun[lemme:Rabia];noun[lemme:joumada];noun[lemme:Joumada];noun[lemme:djoumada];noun[lemme:Djoumada], (punct[form:fhyph]),(punct[lemme:']), noun[lemme:Ethani];noun[lemme:ethani];noun[lemme:Ethania];noun[lemme:ethania];?[lemme:I];?[lemme:II].
+
+
+/Jésus Christ = Jésus-Christ\
+10> noun[form=fjc, masc=+, sg=+, proper=+,p3=+] = noun[lemme:Jésus], noun[lemme:Christ].
+
+/notre ère\
+//10> noun[form=fjc, fem=+, sg=+, p3=+] = (det[poss:+], noun[lemme:ère])
+
+/du 15 (avril) au 20 mars\
+10> Noun[date=+, time=+, mwe=+, masc=+, sg=+] @= |prep[form:fde, def]| (noun[jour]), num[CR:~], (noun[mois, CR:~]), prep[form:fa, def], (noun[jour]), num[CR:~], noun[mois], (num[CR:~]), (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]), (prep[form:fa,def], noun[postjour]). 
+
+/de décembre 1999 à janvier 2000\
+10> Noun[date=+, time=+, mwe=+, masc=+, sg=+] @= |prep[form:fde]| noun[mois, CR:~], (num), prep[form:fa], noun[mois], num[CR:~], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]), (prep[form:fa,def], noun[postjour]). 
+
+/(lundi 12/fin) mars 1987 (av. JC) (au soir)\
+15> Noun[date=+,time=+,mwe=+,masc=+,sg=+] @= (?[predate]), (noun[jour]), (num;?[premier];adv[date:+], (coord, num;?[premier];adv[date:+])), noun[mois, CR:~], (punct[form:fhyph], noun[mois, CR:~]), num[CR:~], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]), (prep[form:fa,def], noun[postjour]).
+
+/(lundi) 15 mars (au soir)\
+15> Noun[date=+,time=+,mwe=+,masc=+,sg=+] @= (noun[jour]), num;?[premier];adv[date:+], (coord, (noun[jour]), num;?[premier]), noun[mois, CR:~], (prep[form:fa, def, CR:~], noun[postjour]).
+
+/lundi 15 (au soir)\
+15> Noun[date=+,time=+,mwe=+] @= noun[jour], num;?[premier], prep[form:fa,def], noun[postjour].
+15> Noun[date=+,time=+,mwe=+] @= noun[jour], num;?[premier] |?[noun:~+, adj:~+, form:~fde, sfdentre:~+]|.
+
+/300 ap. JC\
+15> noun[mwe=+, date=+] = num[date=+], prep, noun[form:fjc].
+15> noun[mwe=+, date=+] = num[date=+], prep, det[poss:+], noun[lemme:ère].
+
+Marqueur:
+/6-21 n'est pas une date\
+16> adv[lemme:"%d-%d%d", date=~].
+
+
+/en 1989, vers 1989, dès 1989  is a date dans certains contextes droits\
+16> prep[prepannee], num[gdnbre, time=+, date=+], punct[form:~fquotes] ; sent; cm ; det;conj;conjque;verb; coord; prep; pron; ?[CR].
+
+/un nombre de 4 chiffres commençant par 19 ou 20 est sans doute une date\
+16> num[lemme:"19%d%d", 20e=+].
+16> num[lemme:"20%d%d", 21e=+].
+17> num[20e, date=+].
+17> num[lemme:~"2000", 21e, date=+].
+
+
+/date de 1420\
+16> verb [lemme:dater], prep[form:fde], num[gdnbre:+, date=+].
+
+/en 1998 et 1999.\
+17> prep[form:fen], num[gdnbre:+], coord, num[gdnbre:+, time=+, date=+], punct[form:~fquotes] ; sent; cm ; det;conj;verb; coord; prep[form:~fen]; pron; ?[CR].
+
+
+Séquence:
+/les années 1920 et 1921\
+18> noun[mwe=+,time=+, date=+] @= |det[def:+]| noun[lemme:année, pl:+], num, coord, num, prep, noun[form:fjc].
+18> noun[mwe=+,time=+, date=+] @= |det[def:+]| noun[lemme:année, pl:+], num, coord, num, prep, det[poss:+], noun[lemme:ère].
+18> noun[mwe=+,time=+, date=+] @= |det[def:+]| noun[lemme:année, pl:+], num, coord, num |punct[form:~fquotes] ; sent; cm ; det;conj;verb; coord|.
+
+/début 1980; le premier trimestre 1985\
+18> noun[mwe=+,time=+,date=+] @=  (adj[ord:+];adj[lemme:dernier]), noun[predate];adv[predate], (prep[form:fde]), num[date=+,lettres:~];noun[date:+].
+
+/l'an 2000 (après JC)\
+20> noun[mwe=+,time=+, date=+] = |det[def:+]| noun[lemme:an; sg:+];noun[lemme:année; sg:+], (prep[lemme:de], noun[lemme:grâce]), num[date=+];noun[date:+].
+
+/le 9 thermidor an II\
+20> noun[mwe=+,time=+, date=+] = noun[date:+], noun[lemme:an], num.
+
+
+/****************périodes*********************\
+
+Marqueur:
+1> noun[lemme:renaissance, maj:+, sg:+, periode=+].
+1> noun[lemme:antiquité, maj:+, sg:+, periode=+].
+
+/s. n'est l'abréviation de siècle que s'il est en minuscule\
+1> noun[lemme:"s.", maj:+, siecle=~].
+
+
+Séquence:
+
+/les années 50 et (début) 60\
+3> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:année, pl:+], num[rond], coord, (noun[predate:+]), num[rond], prep, noun[form:fjc].
+3> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:année, pl:+], num[rond], coord, (noun[predate:+]), num[rond], prep, det[poss:+], noun[lemme:ère].
+3> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:année, pl:+], num[rond], coord, (det[def:+]), noun[predate:+], num[rond].
+3> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:année, pl:+], num[rond], coord, num[rond] |punct[form:~fquotes] ; sent; cm ; det;conj;verb; coord|.
+
+/les années 50 (av. JC)\
+30> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:année, pl:+], num[rond], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+
+//3> noun[mwe=+,time=+, periode=+] @= adj[ord:+];num[rom:+], (coord, (det[def:+];prep[def:+]), (noun[predate]), (det[def:+];prep[def:+]), adj[ord:+];num[rom:+]), noun[lemme:siècle];noun[lemme:millénaire], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+/le IVe siècle (avant JC) et début IIIe\
+3> noun[mwe=+,time=+, periode=+] @= adj[ord:+];num[rom:+], noun[siecle:+], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]), coord, (det[def:+];prep[def:+]), (noun[predate]), adj[ord:+];num[rom:+], (noun[siecle:+]), (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+/le IVe (et le IIIe) siècle (av. JC)\
+3> noun[mwe=+,time=+, periode=+] @= adj[ord:+];num[rom:+], (coord, (det[def:+];prep[def:+]), (noun[predate]), (det[def:+];prep[def:+]), adj[ord:+];num[rom:+]), noun[siecle:+], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+3> noun[mwe=+,time=+, periode=+] @= num, noun[siecle:+, sg], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+/l'âge du fer\
+3> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:âge], prep[form:fde], (det[def:+]), noun[age:+].
+
+/période néolithique\
+3> noun[mwe=+, time=+, periode=+] = noun[ere], adj[periode:+];adj[periode2:+].
+
+/l'Ancien Empire\
+3> noun[mwe=+, time=+, periode=+] @= ?[empire1, maj], noun[lemme:empire, maj], (adj[empire2]).
+
+/***************expressions temporelles*************\
+
+/ trois jours, deux heures\
+//100> noun[mwe=+,time=+] =  |?[det:~,prep:~]| num[det:~], noun[time].
+
+
+/un jour, un beau jour\
+//100> noun[mwe=+,time=+] =  det[indef, form:~fde], adj*, noun[time].
+
+
+105> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+verb[aux:+,form:favoir], adv[lemme=peu] | ?[form:~fde] |.
+
+105> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+verb[aux:+,form:favoir], adv*, ?*[verb:~,noun:~], noun[time:+].
+
+
+/ il y a maintenant un quart de siècle \
+105> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+verb[aux:+,form:favoir], adv*, det;num, noun[partit:+], prep, noun[time:+].
+

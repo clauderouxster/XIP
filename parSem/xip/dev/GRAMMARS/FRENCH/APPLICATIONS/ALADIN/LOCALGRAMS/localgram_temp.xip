@@ -1,0 +1,1111 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Maud Ehrmann - June 2008 - Local grammar for temporal expressions.
+//! Caroline Hagege - June 2009
+//! 
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//    DECOUPAGE - REASSEMBLAGE
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+
+
+// Pour des expressions analysées telles quelles par les FST 
+// et pour lesquelles on a besoin d'ajouter de l'information (traits) sur les sous-composants.
+ 
+//-------------------------------
+//****** DECOUPAGE
+//-------------------------------
+
+Fragmenter:
+
+// tout ce qui est découpé/reconstruit a le trait "fstmod"
+// cela permet de traiter cela de manière isolée
+// sinon les règles de reconctruction s'appliquent sur d'autres éléments
+
+
+
+//***** Découpage ANNEE
+
+// num(11/09/08) à découper pour affecter traits aux unités inférieures
+1> "%d%d%1/%2%d%d%3/%4%d%d%5" : num[date] = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(11/09/2008) idem
+1> "%d%d%1/%2%d%d%3/%4%d%d%d%d%5" : num[date] = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(11-09-08) idem
+1> "%d%d%1-%2%d%d%3-%4%d%d%5" : num[date] = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(11-09-2008) idem
+1> "%d%d%1-%2%d%d%3-%4%d%d%d%d%5" : num[date] = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(11.09.2008) idem mais avec un point
+1> "%d%d%1.%2%d%d%3.%4%d%d%d%d%5" : num = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(11.9.2008) 
+1> "%d%d%1.%2%d%3.%4%d%d%d%d%5" : num = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+// num(1.10.2008) 
+1> "%d%1.%2%d%d%3.%4%d%d%d%d%5" : num = num%1[numjourpot=+,fstmod=+],punct%2[punct=+,fstmod=+],num%3[mois=+,fstmod=+],punct%4[punct=+,fstmod=+],num%5[annee=+,fstmod=+].
+
+
+// attention : ci-dessous tjrs pb avec accents (xip en latin1 et fst en utf8)
+// expressions telles que "l'année dernière, le mois prochain" analysées telles quelles par les FST
+1> "l[e,a]%1 %c+%2 [derni%c+,pass%c+,proch%c+]%3" : adv = det%1[fstmod=+],noun%2[time=+,fstmod=+],adj%3[timemod=+,fstmod=+].
+
+// même chose avec l apostrophe sans espace derrière
+1> "l%p%1%c+%2 [derni%c+,pass%c+,proch%c+]%3" : adv = det%1[fstmod=+],noun%2[time=+,fstmod=+],adj%3[timemod=+,fstmod=+].
+
+
+
+
+//-------------------------------
+//****** REASSEMBLAGE
+//-------------------------------
+
+
+Séquence:
+ 
+
+// le 00/00/00
+3> noun[mwe=+,date=+,absolue=+,complete=+] @= num[numjourpot,fstmod],punct,num[mois,fstmod],punct,num[annee,fstmod].
+
+
+// CH rajout
+// 2009-01-03
+3> noun[mwe=+,date=+,absolue=+,complete=+] @= num[datepot,21e],punct[hyph],num[lemme:"%d%d"],punct[hyph],num[lemme:"%d%d"].
+
+Marqueur:
+
+
+// ce soir-là
+4> det,noun[date=+,relative=+]{noun[daytime],punct[form:fhyph],adv[lemme:"là"];adv[lemme:"ci"]}.
+
+Séquence:
+
+// l'année dernière
+5> NP[date=+,relative=+,tempexpr=+] @= det[fstmod],noun[time,fstmod],adj[timemod,fstmod].
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      INTERVALLES		
+//---------------------------------------------------------------	
+//---------------------------------------------------------------		    
+
+
+//***************
+//***  Pour les DATES
+
+Marqueur:
+
+// Ci-dessous: traitements intervalles + annotations d'années en date.
+
+// 1989-1990
+18> num[tempexpr=+,interval=+,date=+]{num[datepot,nondate:~,date=+,absolue=+,incomplete=+,annee=+],punct[form:fhyph],num[datepot,date=+,annee=+]}.
+
+// 1989 1990 sans tiret
+18> num[tempexpr=+,interval=+,date=+]{num[datepot,nondate:~,date=+,absolue=+,incomplete=+,annee=+],num[datepot,date=+,annee=+]}.
+
+
+// 1989/1990
+18> num[tempexpr=+,interval=+,date=+]{num[datepot,nondate:~,date=+,absolue=+,incomplete=+,annee=+],punct[form:fslash],num[datepot,date=+,annee=+]}.
+
+// 1989-19
+18> num[tempexpr=+,interval=+,date=+]{num[datepot,date=+],punct[form:fhyph],num[shortyear,date=+,absolue=+,incomplete=+]}.
+
+// 1989 19 (sans tiret)
+18> num[tempexpr=+,interval=+,date=+]{num[datepot,date=+],num[shortyear,date=+,absolue=+,incomplete=+]}.
+
+// 85-86
+18> noun[lemme="période"],num[tempexpr=+,interval=+,date=+]{num[shortyear,date=+,absolue=+,incomplete=+],punct[form:fhyph],num[shortyear,date=+,absolue=+,incomplete=+]}.
+
+// du 3 au 5 janvier
+18> prep[form:fde], num[numjourpot:+,date=+,!tempexpr=+],prep[form:fa],noun[date:+].
+
+
+// du 3 au 5 de ce mois : marquage de 3 et de 5
+18> prep[form:fde], num[numjourpot:+,date=+,!tempexpr=+],prep[form:fa], num[numjourpot:+,date=+,!tempexpr=+], prep[form:fde],(det),noun[periode], (adj[timemod]).
+
+
+
+Séquence:
+
+// du 3 au 5 de ce mois : groupement de "5 de ce mois"
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fde], num[date=+],prep[form:fa]| num[date], prep[form:fde],(det),noun[periode], (adj[timemod]).
+
+// 1989 1990 (sans tiret)
+//10> num[tempexpr=+,interval=+]@= num[datepot,nondate:~,date=+,absolue,incomplete,annee=+],num[datepot,nondate:~,absolue,incomplete,date=+,annee=+].
+
+20> noun[tempexpr=+,!interval=+] @= noun[lemme:"année"],num[tempexpr,interval].
+
+// 14 Septembre - 20 novembre
+20> NP[tempexpr=+,!interval=+,date=+] @= noun[date:+,duree:~], punct[form:fhyph], noun[date:+,duree:~].
+
+
+// les années 2000-2008
+
+
+//***************
+//***  Pour les HEURES
+
+// 9h-18h
+20> NP[tempexpr=+,interval=+] = noun[mwe:+,tempexpr:+,heure:+],punct[form:fhyph],noun[mwe:+,tempexpr:+,heure:+].
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      DATES 
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------
+
+
+
+
+//******************************
+// Expressions avec  après/avant and co
+
+// Attention : "10 mois après" (+ avant, plus tot, plus tard, auparavant) est une DATE 
+// de même que : "après 10 mois"
+
+
+//***** expressions avec "et demi"
+
+// une semaine et demie auparavant
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"],(adv[t_mod]),adv[postdate:+].
+
+
+// une semaine et demie après (fin de phrase) = DATE et on prend tout
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"],(adv[t_mod]),prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+
+//  une semaine et demie après le mariage = DATE et on ne prend pas la prep
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"],(adv[t_mod]) |prep[postdate:+];conj[postdate],?+|.
+
+
+//  avant/après une semaine et demie 
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |?[postdate:+,predate:+]| (adv[t_mod]), num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"].
+
+
+
+
+//***** expressions basiques
+// CH - rajout traits
+
+// [un/deux] [jour/semaine/mois] [auparavant/plus tôt/plus tard] = DATE
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @=  num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],adv[postdate:+].
+
+// [un/deux] [jour/semaine/mois] [avant/après] (fin de phrase) = DATE et on prend tout
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @=  num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],(adv[t_mod]),prep[postdate:+] |?[punct];?[end];?[strongbreak]|.
+
+// [un/deux] [jour/semaine/mois] [avant/après le mariage = DATE et on ne prend pas la prep
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @=  num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],(adv[t_mod]) |prep[postdate:+];conj[postdate],?+|.
+
+// après/avant [un/deux] [jour/semaine/mois]
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |?[postdate:+,predate:+],(?[t_mod])| num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~].
+
+
+
+//**** "d'avance, de retard"
+// CH - ce ne sont pas des durees mais des dates car ancrage. Il est parti avec deux mois d'avance.
+
+// un mois d'avance/de retard
+20> noun[mwe=+,date=+,relative=+,tempexpr=+] @=  num[numDuree=+,numjourpot=~,heurepot=~], (adj), noun[periode,heure:~] , prep, noun[lemme:"avance"];noun[lemme:"retard"].
+
+// quelques/plusieurs mois d'avance/de retard
+20> NP[mwe=+,date=+,relative=+,tempexpr=+] @=  det[quant], (adj), noun[periode,heure:~], prep, noun[lemme:"avance"];noun[lemme:"retard"].
+
+
+
+
+//***** avec quelques et plusieurs --> NP
+
+//  quelques jours auparavant
+20> NP[date=+,relative=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~], adv[postdate:+].
+
+// quelques jours avant (fin de phrase) = on prend tout
+20> NP[date=+,relative=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~],prep[postdate:+]|?[punct];?[end];?[strongbreak]|.
+
+// quelques jours avant la fin du mariage = on ne prend pas la prep
+20> NP[date=+,relative=+,tempexpr=+] @=  det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~],(adv[t_mod]) |prep[postdate:+];conj[postdate],?+|.
+
+// après/avant quelques jours
+20> NP[date=+,relative=+,tempexpr=+] @=  |?[postdate:+,predate:+]| det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~].
+
+
+
+
+
+//************
+//*** ExprTemp avec un num avec un suffixe en "aine" (une dizaine d'années)
+
+// "dans une dizaines d'années" --> date 
+20> noun[mwe=+,tempexpr=+,date=+,relative=+,temp_ref=ST] @= |prep[form:fdans];prep[form:fdepuis],det| noun[predate,t_mod=approx], (prep[form:fde]), noun[periode,heure:~] .
+
+// "dizaine d'années/jours" --> durée
+// CH . Suppression de cette regle car "une dizaine d'annees apres son accident" n'est pas une duree....
+//20> noun[mwe=+,tempexpr=+,date=+,duree=+] @= noun[predate,t_mod:approx], (prep[form:fde]), noun[periode,heure:~] .
+
+
+
+
+Marqueur:
+
+
+// ?????attention : toutes les semaines et toute la semaine traité pareil. Pas bien, à revoir. Regarder FST ou nombre.
+// toute la semaine/mois/année
+24> det[sg,lemme:"tout\ le"], noun[periode,mwe=+,datepot=+,relative=+,tempexpr=+], ?[timemod:~].
+
+
+Séquence:
+
+// toute la semaine/mois/année dernière/passée : ancrable donc DATE
+30> noun[mwe=+,date=+,tempexpr=+] @=  |det[sg,lemme:"tout\ le"]| noun[periode], adj[timemod].
+
+
+
+
+
+//**********************
+//*** Autres
+
+
+//**** Absolues :
+
+// la saison 1990-91, l'hiver 2006-2007
+30> NP[date=+,absolue=+,tempexpr=+] @= det;num, noun[predate], num[tempexpr:+,interval:+].
+
+// la saison 2009
+30> noun[mwe=+, date=+,absolue=+,tempexpr=+] @=  noun[lemme:"saison"], num[date].
+
+//(prochain) printemps 2008 /années 1980/(troisième)trimestre 1988-- etc. 
+30> noun[mwe=+,tempexpr=+,date=+,absolue=+] @= (adj[predate]), noun[periode,timemod:~,heure:~],(prep[form:fde]), num[shortyear,nondate:~];num[date].
+
+
+// premier trimestre de l'année 2008 / dernier we de juillet 2008
+30> noun[tempexpr=+,date=+,absolue=+,mwe=+] @= |det;prep| adj[predate:+];num[lemme:"premier"],(adj), noun[periode:+,heure:~], prep[form:fde],(det),noun[date,absolue].
+
+
+//  mois de mars 2007, journée du 15 avril 2008
+30> noun[mwe=+,date=+,time=+,absolue=+] @= noun[periode], prep[form:fde], noun[date,absolue].
+
+// la date du 6 juin 2009
+30> noun[mwe=+,date=+,time=+,absolue=+] @= noun[lemme:"date"], prep[form:fde], noun[date,absolue].
+
+
+
+//***************************************************************************************************
+// CH - juin 2009
+//**** Relatives :
+//***************************************************************************************************
+
+
+
+Variables:
+
+string _res;
+
+
+Séquence:
+
+// CH - detail pour recuperer les informations plus precises concernant reference et delta_t
+
+
+// Dates relatives a ST avec indication explicite de periode indiquant le delta
+// e.g. la semaine prochaine : date relative ST avec delta = +1W 
+// ajoute le trait delta_t avec valeur calculee par fonction python en fonction de noun#1 (attribut timeduree)
+//30>noun[tempexpr=+, date=+, relative=+, mwe=+,temp_ref:!] = | det;prep | noun#1[periode,timeduree], adj#2[timemod,!temp_ref:!], 
+//	where ( set_attrib_relative_date(#1,#2,_res) & setfeature(#0,"DELTA_T",_res) ).
+
+
+// Dates relatives a TT (inherent a l'ET). On recupere les infos sur temp_ref et delta_t.
+
+
+
+// "Noël prochain"/ "semestre prochain"
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |det;prep| noun[periode,heure:~,duree:~], adj[timemod].
+
+
+
+
+// Samedi prochain/en huit/ d'après, etc. / octobre prochain
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= noun[jour,relative,date];noun[mois,relative,date], adj[timemod].	
+
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= noun[jour,relative,date],prep[timemod] |?[sent,last];?[strongbreak]|.
+
+
+// premier trimestre de l'année / dernier we de juillet
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |det;prep| adj[predate:+];num[lemme:"premier"],(adj), noun[periode:+,heure:~], prep[form:fde], (det), noun[periode:+,heure:~];noun[date].
+
+
+// premier/prochain trimestre
+// on ne prend pas "journée mondiale de qlqch"
+30> noun[tempexpr=+,date=+,relative=+,mwe=+, notester=+] @= |det;prep| adj[predate,ord:~], (adj), noun[periode,heure:~,generic:~].
+
+
+// l'année universitaire
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |?[num:~,prefix:~]|  noun[periode,timemod:~,heure:~] ,adj[anneemod:+] |?*[num:~];?* [timemod:~]|.
+
+
+// Noël : prenom ambigu
+30> noun[tempexpr=+,date=+,relative=+] @= |?[genericsignal:~],?[num:~,verb:~]|  noun[periode,prenamb]|?[num:~,maj:~];?[timemod:~]|.
+
+
+// contrainte à droite pour éviter de prendre 'il est parti le jour suivant le spectacle.'
+30> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |det;prep| noun[periode,heure:~,duree:~],prep[timemod]|?[end];?[strongbreak];?[punct]|.
+
+// le lendemain matin
+30> noun[tempexpr=+,date=+,relative=+] @= noun[tempexpr,relative], noun[heure,daytime].
+
+
+// la veille au soir
+35> noun[tempexpr=+,date=+,relative=+] @= noun[tempexpr,relative],prep[form:fa], noun[heure,daytime].
+
+
+// dans la nuit de dimanche à lundi
+35> noun[mwe=+,date=+,time=+,relative=+] @= noun[periode], prep[form:fde], noun[date,relative],prep[form:fa],noun[date,relative].
+
+
+//  mois de mars, journée du 15 avril
+35> noun[mwe=+,date=+,time=+,relative=+,empty_introd=+] @= noun[periode],(?[surface:"béni"]),prep[form:fde], noun[date,relative].
+
+
+// la date du 6 juin 
+35> noun[mwe=+,date=+,time=+,relative=+,empty_introd=+] @= noun[lemme:"date"], prep[form:fde], noun[date,relative].
+
+
+// le 14 de ce mois
+35> noun[mwe=+,date=+,time=+,relative=+] @= |det| num, prep[form:fde], det, noun[periode,heure:~].
+
+
+// le jour même
+35> noun[mwe=+,date=+,time=+,relative=+] @= noun[periode],?[lemme:"même"].
+
+// ce jour là/ci (sans tiret entre jour et là)
+35> noun[mwe=+,date=+,time=+,relative=+] @= |det| noun[periode],adv[lemme:"là"];adv[lemme:"ci"].
+
+
+Marqueur:
+
+// printemps,pâques,trimestre,année etc. tout seul
+
+// avec un démonstratif "Il est parti cet été"
+38> det[dem:+],noun[periode,timemod:~,heure:~,prenamb:~,tempexpr=+,date=+,relative=+,!nogeneric=+] ,?[num:~,timemod:~].
+
+// Il est parti avant la nuit. L'été arrive après le printemps = DATE
+38> ?[predate], det[dem:~], noun[periode,heure:~,date=+,relative=+].
+
+// un tel jour
+38> ?[lemme:"tel"], noun[periode,heure:~,date=+,relative=+].
+
+// Expressions de type "ce jour-ci, cette nuit-là"
+38> noun[mwe=+,date=+,relative=+,tempexpr=+]{noun[periode:+,heure:~], punct[hyph],adv[lemme:"ci"];adv[lemme:"là"]}.
+
+38> noun[mwe=+,heure=+,tempexpr=+]{noun[periode:+,heure:+], punct[hyph],adv[lemme:"ci"];adv[lemme:"là"]}.
+
+
+
+//  Expressions qui ne sont pas des dates
+
+// voir le jour : jour n'est pas une date dans ce ctxt
+38> verb[lemme:"voir"], det, noun[lemme:"jour",periode,nondate=+].
+
+
+// "jour férié" n'est pas une date
+38> noun[lemme:"jour",nondate=+],adj[lemme:"férié"].
+
+// jour de RTT/ réduction du temps de travail
+// attention  :
+// les syndicats discutent les jours de RTT = pas de ref temporelle
+// il a pris 10 jours de RTT = duree
+//  ---> si num devant alors duree si non marqué comme non date
+38> ?[num:~], noun[lemme:"jour",nondate=+], prep[form:fde], noun[lemme:"réduction"]; noun[lemme:"RTT"].
+
+
+
+
+
+
+// expression figée : un jour ou l'autre
+38> ?[lemme:"un"], noun[periode,lemme:"jour",date=+,relative=+],coord,det,noun[lemme:"autre"].
+
+// il aimerait voir un jour son fils marcher
+38> verb[lemme:"voir"],?[lemme:"un"],noun[periode,lemme:"jour",date=+,relative=+].
+
+
+
+Séquence:
+
+
+// expression figée : du jour au lendemain
+40> ADV[mwe=+,date=+,relative=+,tempexpr=+] @= prep[surface:"du"], noun[lemme:"jour"],prep[form:fa],noun[lemme:"lendemain"].
+
+// Il est parti le jour d'avant.
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= noun[periode,heure:~,date=+,relative=+], prep, ?[postdate].
+
+// le même jour
+40> noun[tempexpr=+,date=+,relative=+,mwe=+]@= |det| adj[lemme:"même"], noun[periode].
+
+// en NP:  avec l'adj certain : il est de mauvaise humeur certains jours
+40> NP[tempexpr=+,date=+,relative=+] @= adj[lemme:"certain"] ,noun[periode,timemod:~,heure:~,prenamb:~,!nogeneric=+] |?[num:~,timemod:~]|.
+
+
+// Dans/depuis/ces + ET --> DATE
+
+
+// dans un an et demi
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis];prep[pointage,form:~fa],(?[t_mod])| num[numjourpot=~,heurepot=~], noun[periode,heure:~],coord,noun[lemme:"demi"];noun[lemme:"demie"].
+
+// dans  une semaine, dans (près de) deux jours (environ) = date relative
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis];prep[pointage,form:~fa],(?[t_mod])| num[numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~],(adv[t_mod]).
+
+// dans les 5 ans
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans],det[def]| num[numjourpot=~,heurepot=~], noun[periode,heure:~].
+
+// depuis de (très) longues années : avec prep
+// pour prendre "depuis de très, très, très longues années" avec ou sans virgule
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis],?[form:fde]| (adv)*,(adv,punct)*,(adv)*, (adj), noun[periode,heure:~].
+
+// ces cinq années
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |det[dem],(adj)| num[numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~].
+
+// dans un ou deux jours
+// d'ici deux à trois jours
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis];prep[pointage]| num[numjourpot=~,heurepot=~], coord;prep[form:fa],  num[numjourpot=~,heurepot=~], noun[periode,heure:~].
+
+// dans cinq dix ou quinze jours
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fdans,adv:~];prep[form:fdepuis];prep[pointage]| num, (punct[form:fcm]), num, coord, num, noun[periode,heure:~].
+
+
+// en NP
+40> NP[date=+,relative=+,tempexpr=+] @= |prep[form:fdans]| det[lemme:"un"];det[lemme:"quelque"];det[lemme:"plusieurs"], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~].
+
+
+// à deux jours de
+// ATTENTION il est condamné à deux mois de prison.
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fa]| num[numjourpot=~,heurepot=~], (adj), noun[periode,heure:~] |prep[form:fde],?[nondate:~]|.
+
+
+// à quelques jours de
+40> noun[mwe=+,date=+,relative=+,tempexpr=+] @= |prep[form:fa]| det[quant],(adj), noun[periode,heure:~] |prep[form:fde],?[lemme:~"prison"]|.
+
+
+// au sixième jour de, au sortir de la vingtième journée, la troisième journée consécutive,
+40>  noun[mwe=+,date=+,relative=+,tempexpr=+] @= |?[duree:~],(det)| adj[ord], noun[periode,heure:~],(adj[lemme:"consécutif"]). // à voir si possible de ne pas préciser le lemme de l'adj (en théorie oui)
+
+// la sixième et dernière journée
+40>  noun[mwe=+,date=+,relative=+,tempexpr=+] @= |?[duree:~],(det)| noun[ord], coord, noun[timemod];adj[timemod], noun[periode,heure:~].
+
+
+// le jour même
+40> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |det| noun[periode,heure:~,duree:~],pron[lemme:"même"].
+
+
+// !!!!! special ESTER "à venir" et "qui viennent" font partie de l'ET pour ESTER
+//les (cinq) années à venir
+40> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |det| (num), noun[periode,heure:~,duree:~], prep[form:fa];?[lemme:"qui"],verb[lemme:"venir"].
+
+// les 6 premiers/derniers mois = DATE
+42> noun[mwe=+,date=+,relative=+,tempexpr=+] @=  num[numDuree=+,numjourpot=~,heurepot=~,lemme:~"premier"], adj[lemme:"prochain"];adj[lemme:"dernier"];adj[lemme:"premier"], noun[periode,heure:~,generic:~] |?[postdate:~,annee:~,duree_extens:~]|.
+
+
+// en début/milieu/fin de semaine     
+40> noun[tempexpr=+,date=+,relative=+,mwe=+] @= |prep[form:fen]|?[lemme:"début"];?[lemme:"milieu"];?[lemme:"fin"], prep[form:fde], noun[periode,heure:~,duree:~].
+
+
+
+// hier matin
+40> ADV[mwe=+,tempexpr=+,date=+,daytime=+,relative=+,temp_ref=ST] @= adv[tempexpr,relative],noun[daytime].
+
+
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      DUREES 
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------
+
+//********** 
+//*** DUREES en éléments supérieurs à des heures
+// (certaines sont déjà traitées au dessus)
+
+
+// en NOUN
+// un jour, trois semaines, etc.
+
+// contexte droit  : pas de preposition "dans" devant sinon c'est une date (cf. géré en dessous), ni d'article demonstratif
+// contexte gauche : pas de "plus tot, plus tard, avant" etc.
+// durées modifiées (précédées de Adv et det complx gérées en dessous
+
+// un/deux jour/semaine/mois et demie
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |?[form:~fdans,form:~fa,form:~fdepuis,dem:~]| num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~],coord[lemme:"et"], noun[lemme:"demi"];noun[lemme:"demie"] |?[postdate:~]|.
+
+// les trois mois : avec un defini = duree
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |?[form:~fdans,form:~fa,coord:~,form:~fdepuis],det[def]| num[numDuree=+,numjourpot=~,heurepot=~,lemme:~"premier"], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~,generic:~] |?[postdate:~,annee:~,duree_extens:~]|.
+
+// un/deux jour/semaine/mois
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |?[form:~fdans,form:~fa,coord:~,form:~fdepuis,det:~],(?[t_mod])| num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~,generic:~,date:~],(adj[lemme:"supplémentaire"])|?[postdate:~,annee:~,duree_extens:~]|.
+
+// deux semaines de qlqch, en début de phrase
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @=  num[start,numDuree=+,numjourpot=~,heurepot=~],  noun[periode,heure:~,generic:~,date:~],(adj[lemme:"supplémentaire"])|?[postdate:~,annee:~,duree_extens:~]|.
+
+// idem avec coordination (sur 3 et/ou 4 mois)
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |?[form:~fdans,form:~fa,coord:~,form:~fdepuis,det:~,form:~fcm],(?[t_mod])| num[numDuree=+,numjourpot=~,heurepot=~], coord, num[numDuree=+,numjourpot=~,heurepot=~], noun[periode,heure:~,generic:~] |?[postdate:~,annee:~]|.
+
+// en (si peu) d'années
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |prep[form:fen],?[t_mod],prep[form:fde]| noun[periode,heure:~,generic:~] |?[postdate:~,annee:~]|.
+
+// en moins de trois jours
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |prep[form:fen],?[t_mod],prep[form:fde]| noun[periode,heure:~,generic:~] |?[postdate:~,annee:~]|.
+
+// plus de 2 jours: reconnaissance de '2 jours' en durée puis ajout du det complx après.
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |det[complx]| num[numDuree=+,numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]),(prep[form:fde]), noun[periode,heure:~,generic:~] |?[postdate:~,annee:~]|.
+
+
+// trois été
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @=  |?[presentatif:~]| num[numDuree=+,numjourpot=~,heurepot=~], (adj), noun[saison] |?[postdate:+]|.
+
+
+// quelques/plusieurs mois
+45> noun[mwe=+,date=+,duree=+,tempexpr=+] @= |?[form:~fdans,form:~fa,form:~fdepuis]| det[lemme:"quelque"];det[lemme:"plusieurs"], (adj), noun[periode,heure:~] |?[postdate:~]|.
+
+
+// en NP : de nombreux mois
+45> NP[date=+,duree=+,tempexpr=+] @= |?*[form:~fdans,form:~fa,form:~fdepuis]| det[lemme:"de"], adj[lemme:"nombreux"], noun[periode,heure:~] |?[postdate:~]|.
+ 
+
+// toute une année, toute une journée = avec tout + indef c'est durée
+45> noun[duree=+,tempexpr=+,date=+,mwe=+] @= |det[lemme:"tout"]| num[surface:"une"];det[indef], noun[periode,heure:~].
+
+
+// trois mois de prison
+45> noun[mwe=+,duree=+,date=+,tempexpr=+] @=  num[numjourpot=~,heurepot=~], (adj), noun[periode,heure:~] |prep[form:fde],?[nondate:+,duree:+]|.
+
+// de longs mois de tractations
+45>noun[mwe=+,duree=+,date=+,tempexpr=+] @= |prep[form:fde], adj| noun[periode,heure:~] |prep[form:fde]|.
+
+// 3 jours de suite/ d'affilée / consécutifs
+// CH ces expressions sont ambigues entre durée et agregats temporels en fonction du proces associé à l'ET
+// il a gagné le prix deux années d'affilées vs, Il a vécu au Chili deux années d'affilée.
+// par defaut on les met en duree a reprendre
+45> noun[mwe=+,dur_ou_freq=+,tempexpr=+, duree=+, date=+] @=  num[numjourpot=~,heurepot=~], (adj), noun[periode,heure:~], ?[duree_extens:+].
+
+// sa peine a été ramenée à 4 ans./ à un jour près
+// prep "à" + ET + pas de prep "de" = duree (contrairement à " à 4 ans de la fin")
+45> noun[mwe=+,duree=+,date=+,tempexpr=+] @= |prep[form:fa]| num, noun[periode,heure:~],(prep[lemme:"près"]) |?[form:~fde]|.
+
+// de longues semaines de négociation
+45> noun[mwe=+,duree=+,date=+,tempexpr=+] @= |?[form:~fdans,form:~fdepuis],?[form:fde]| (adv)*,(adv,punct)*,(adv)*, adj, noun[periode,heure:~].
+
+// un certain nombre d'années == à faire autrement
+45> noun[mwe=+,duree=+,date=+,tempexpr=+] @= |det[indef]|adj[lemme:"certain"],noun[lemme:"nombre"],prep,noun[periode].  
+
+
+//*******
+// !! attention à cette règle, ramasse bcp trop
+//50> noun[tempexpr=+,date=+,relative=+] @= |?[num:~,prefix:~,lemme:~"un",quant:~]| (prefix[lemme:"demi-"]), noun[periode,timemod:~,heure:~,prenamb:~,duree:~,generic:~,date:~,nondate:~] ,(adj[anneemod:+]) |?[num:~,timemod:~]|.
+
+
+
+
+//****************************************	
+//----------------------------------------	
+// PRE-CHUNKING pour certaines expressions
+// 
+// Sinon marquage après le chunk classique
+// dans marqueur_temp.xip
+//----------------------------------------		    
+//****************************************
+
+
+//--------------------------------------------------------------------------
+// Pretraitement de l'expression "il y a"  --> présentatif
+// idée : gérer les date comme "il y a 3 ans", "il y a un peu plus de trois ans", etc.
+// cf. voir ci dessous pour ces traitements
+//---------------------------------------------------------------------------
+
+
+// joue le rôle d'une préposition devant un CC de temps
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir] |noun[mwe,heure:+];noun[mwe,heureambig:+];noun[mwe,date:+];NP[duree,date]|.
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir] |det,noun[date,duree]|.
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir] |det,noun[heure,duree]|.
+
+// il y a 15, 20 ans
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir] |num,(punct[form:fcm]),noun[date,duree]|.
+
+// joue le rôle d'une préposition devant  un adv t_mod puis un determinant complexe 
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir]|adv[t_mod], det[complx:+]|.
+
+// joue le rôle d'une préposition devant  un adv t_mod OU une prep t_mod OU un determinant complexe 
+
+55> prep[predate=+,presentatif=+]@= pron[lemme=il],pron[lemme=y],verb[aux:+,form:favoir]|adv[t_mod];prep[t_mod];det[complx:+]|.
+
+// N.B. : "voici" et "cela fait" traités dans desamb et localgram, à terme voir si nécéssaire de les traiter ici aussi.
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      DATES MODIFIEES
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+
+
+// Soit des expressions temporelles (dates ou autre) incluant un modifieur spécifiant/changeant quelque peu la référence temporelle de l'expression.
+// "début mai, à la fin de l'année, plus de trois jours" etc.
+
+
+//*************************
+//*** Absolues
+
+// NP :début/milieu/fin 1989
+60> NP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= noun[predate,t_mod];adv[predate,t_mod];adj[predate,t_mod], num[date,absolue].
+
+60> NP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= noun[predate,t_mod];adv[predate,t_mod];adj[predate,t_mod], num[datepot].
+
+// NP: fin février 2008
+60> NP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= noun[predate,t_mod];adv[predate,t_mod];adj[predate,t_mod], noun[date,absolue].
+
+
+// NP la/le début/milieu/fin de 1989
+60> NP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= det, noun[predate,t_mod];adv[predate,t_mod], prep[form:fde], num[date,absolue];num[datepot];noun[date,absolue].
+
+// PP: au début/milieu/fin de 1999
+60> PP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= | ?[measure:~] | prep[predate,t_mod], num[date,absolue] | ?[measure:~] |.
+
+// NP: debut/milieu/fin octobre 1989
+60> NP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= noun[predate,t_mod];adv[predate,t_mod], noun[date,absolue].
+
+// PP: au début/milieu/fin d'octobre 1999
+60> PP[mwe=+,tempexpr=+,datemod=+,absolue=+] @= prep[predate,t_mod], (det), noun[date,absolue].
+
+
+//*************************
+//***Relatives
+
+// début octobre,début de printemps
+60> NOUN[mwe=+,tempexpr=+,datemod=+,relative=+] @= noun[predate,t_mod];adv[predate,t_mod];adj[predate,t_mod], (prep[form:fde]), noun[date,relative].
+
+// PP: au debut d'octobre/à la fin de la semaine dernière
+60> PP[mwe=+,tempexpr=+,datemod=+,relative=+] @= (prep),prep[predate,t_mod],  (det), noun[date,relative];NP[date,relative].
+
+// NP la/le début/milieu/fin du mois
+60> NP[mwe=+,tempexpr=+,datemod=+,relative=+] @= det, noun[predate,t_mod];adv[predate,t_mod];adj[predate,t_mod] ,prep[form:fde], (det), noun[date,relative].
+
+// mi-septembre 1987 (miniscule sur septembre)
+//20> Noun[datemod=+,time=+,mwe=+,absolue=+] @=  noun[datemod:+,mois:+], num[gdnbre,datepot=~,annee=+].
+
+// quelques jours à peine après le déluge
+60> NP[mwe=+,tempexpr=+,datemod=+,relative=+] @= NP[duree=~],adv[t_mod] |prep[postdate:+]|.
+
+
+Marqueur:
+
+// mi-Septembre (maj)
+65> noun[mwe=+,datemod=+,relative=+]{prefix[lemme="mi-"],noun[mois]}.
+
+// mi-journée
+65> noun[mwe=+,datemod=+,relative=+]{prefix[lemme="mi-"],noun[periode]}.
+
+// demi-mois ou autre = duree date
+65> noun[mwe=+,date=+,duree=+,tempexpr=+]{prefix[lemme="demi-"],noun[periode]}.
+
+
+Séquence:
+
+// mi-Septembre 1987
+70> noun[mwe=+,datemod=+,absolue=+] @= noun[datemod,relative], num[datepot=~].
+
+
+// Jean partira dans deux jours environ/ vendredi au plus tard
+70> noun[mwe=+,datemod=+,relative=+] @= noun[date,relative],adv[t_mod,lemme:~encore] .
+
+// Jean partira au plus tard vendredi
+70> noun[mwe=+,datemod=+,relative=+] @= adv[t_mod],noun[date,relative].
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      HEURES MODIFIEES
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------	
+
+// dans un peu plus de trois heures --> HEURE et non DUREE
+
+// à peu près/environ + [heure]
+70> NP[mwe=+,heuremod=+] @= |prep[form:fdans]| adv[t_mod],noun[duree:~,heureambig:+].
+
+// [un peu plus/un peu moins]-[plus/moins] de + [heure]
+70> NP[mwe=+,heuremod=+] @= |prep[form:fdans]| det[complx:+], noun[duree:~,heureambig:+].
+
+// adv + detcomplx + [heure] (à peine plus de trois heures)
+70> NP[mwe=+,heuremod=+] @= |prep[form:fdans]| adv[t_mod], det[complx:+], noun[duree:~,heureambig:+].
+
+// dans trois heures à peine
+70> noun[mwe=+,heuremod=+] @= |prep[form:fdans]| noun [heure:+,duree:~], adv[t_mod].
+
+// en début-milieu-fin de matinée-soirée-après midi
+70> noun[mwe=+,heuremod=+,daytime=+] @= noun[predate], prep[form:fde],noun[daytime].
+
+
+
+// Desamb d'heures ambigues
+// trois heures à peine --> passe de HEUREPOT à DUREE
+70> NP[mwe=+,dureemod=+,tempexpr=+,heure=+] @=|?[presentatif:~,form:~fdans,lemme:~"être"]|  noun[heureambig], adv[t_mod] |?[postdate:~]|.
+
+
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      DUREES MODIFIEES
+//---------------------------------------------------------------	
+//---------------------------------------------------------------		    
+
+
+
+//******************
+//*** Pour les DATES
+
+//*** Modifieur à gauche :
+
+//  à peu près/environ/à peine + [durée]
+70> NP[dureemod=+,tempexpr=+,date=+] @= |?[presentatif:~,form:~fdans]| adv[t_mod];prep[t_mod], (det), noun[duree,date].
+
+70> NP[dureemod=+,tempexpr=+,date=+] @= |?[presentatif:~,form:~fdans]| adv[t_mod], NP[duree,date].
+
+// [un peu plus/un peu moins]-[plus/moins] de + [duree date]
+70> NP[dureemod=+,date=+] @= |?[presentatif:~,t_mod:~,form:~fdans]| det[complx:+], noun[duree:+,date:+].
+
+
+//*** Double modifieur à gauche:
+
+// adv + detcomplx + [duree date] (à peine plus de trois ans)
+70> NP[dureemod=+,date=+] @= |?[presentatif:~,form:~fdans]| adv[t_mod], det[complx:+], noun[duree:+,date:+].
+
+
+//*** Modifieur à droite :
+
+//  [durée] + à peine/environ/etc.
+
+70> NP[dureemod=+,tempexpr=+,date=+] @= |?[presentatif:~,form:~fdans]| noun[duree,date], adv[t_mod].
+
+70> NP[dureemod=+,tempexpr=+,date=+] @=  NP[duree,date], adv[t_mod] |?[postdate:~]|.
+
+
+
+//******************
+//*** Pour les HEURES
+
+//*** Modifieur à gauche :
+
+// à peu près/environ + [durée heure]
+70> NP[mwe=+,dureemod=+,tempexpr=+,heure=+] @=|?[presentatif:~,form:~fdans]| adv[t_mod];prep[t_mod],noun[duree,heure].
+
+// [un peu plus/un peu moins]-[plus/moins] de + [duree heure]
+70> NP[dureemod=+,heure=+] @= |?[presentatif:~,form:~fdans]| det[complx:+], noun[duree:+,heure:+].
+
+//*** Double modifieur à gauche:
+
+// adv + detcomplx + [duree heure] (à peine plus de trois heures)
+70> NP[dureemod=+,heure=+] @= adv[t_mod], det[complx:+], noun[duree:+,heure:+].
+
+//*** Modifieur à droite
+
+// trois heures à peine
+70> NP[mwe=+,dureemod=+,tempexpr=+,heure=+] @=|?[presentatif:~,form:~fdans]|  noun[duree,heure], adv[t_mod]. 
+
+
+
+
+//***
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//  Expressions avec IL Y  A
+//  --> DATES ou HEURES
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------	
+
+// ETAPES :
+
+// 1) prétraitement de "il y a " (cf ci-dessus)
+// 2) avec un numérique pour quantifier l'élément temporel (il y a trois jours)
+// 3) avec un déterminant quantifieur pour quantifier l'élément temporel (il y a qlqs jours)
+// 4) avec des modifieurs
+// NB: pour chacune des étapes, considération des heures puis des dates
+ 
+//**************
+// ETAPE 1) Pré-traitement de l'expression "il y a" : ci dessus
+ 
+
+//**************
+// ETAPE 2) Avec un numérique pour quantifier l'élément temporel :
+
+// Pour les HEURES :
+// il y a 3 secondes/minutes/heures (logiquement ctxt non vu précédemment donc on n'agit plus que sur des heureambig)
+75> PP [mwe=+,heure=+,tempexpr=+,temp_ref=ST] @= prep[predate,presentatif], noun[mwe,heureambig=~,heure=+,date:~]|?[adv:~,t_mod:~]|.
+
+// Pour les DATES :
+// il y a 3 jours/mois/ans
+75> PP[mwe=+,date=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], noun[mwe,date,duree=~,tempexpr,relative=+]|?[ t_mod:~]|.
+
+// idem avec une hésitation : il y a 15, 20 ans
+75> PP[mwe=+,date=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif],num,(punct[form:fcm]),noun[mwe,date,duree=~,tempexpr,relative=+]|?[ t_mod:~]|.
+
+
+
+//**************
+// ETAPE 3) Avec un déterminant quantifieur pour quantifier l'élément temporel :
+
+// Pour les HEURES :
+// il y a quelques secondes/minutes/heures 
+75> PP[mwe=+,heure=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], noun[heure,duree=~,tempexpr,relative=+]|?[adv:~,t_mod:~]|.
+
+//il y a une dizaine de minutes
+75> PP[mwe=+,heure=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif],det, noun[heure,duree=~,tempexpr]|?[t_mod:~]|.
+
+
+// Pour les DATES :
+// il y a quelques/plusieurs  jours/mois/ans
+75> PP[mwe=+,date=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], NP[date,duree=~,tempexpr,relative=+]|?[t_mod:~]|.
+
+//il y a une dizaine de jours
+75> PP[mwe=+,date=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif],det, noun[date,duree=~,tempexpr,relative=+]|?[t_mod:~]|.
+
+
+//**************
+// ETAPE 4) Avec des modifieurs
+// il y a + modifieur + periode temporelle = DATEMOD relative
+
+// Pour les DATES :
+
+// Modifieur à droite
+// ex : il est parti il y a un peu plus de trois mois
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif];prep[form:fdans],det[complx:+], noun[mwe,date,duree=~,tempexpr,relative=+]|?[adv:~,t_mod:~]|.
+// ex : il est parti il y a plus de quelques mois
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif],det[complx:+],  NP[date,duree=~,tempexpr,relative=+] |?[adv:~,t_mod:~]|.
+
+
+// ex : il est parti il y a à peine trois mois
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], adv[t_mod];prep[t_mod], noun[mwe,date,duree=~,tempexpr,relative=+].
+// ex : il est parti il y a à peine quelques mois
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], adv[t_mod], NP[date,duree=~,tempexpr,relative=+].
+
+// Double modifieur à droite :
+// ex : il est parti il y a à peine plus de trois mois :
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], adv[t_mod], det[complx:+], noun[mwe,date,duree=~,tempexpr,relative=+].
+// ex : il est parti il y a à peine plus de quelques mois :
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], adv[t_mod], det[complx:+], NP[date,duree=~,tempexpr,relative=+].
+
+// Modifieur à gauche :
+// ex : il est parti il y a trois mois à peine :
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif], noun[mwe,date,duree=~,tempexpr,relative=+],adv[t_mod].
+// ex : il est parti il y a quelques mois à peine :
+75> PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST] @= prep[predate,presentatif],  NP[date,duree=~,tempexpr,relative=+],adv[t_mod].
+
+
+// Pour les HEURES :
+
+// Modifieur à droite
+// ex : il est parti il y a un peu plus de trois heures
+75> PP[mwe=+,heure=+,tempexpr=+,temp_ref=ST] @= prep[predate,presentatif],det[complx:+], noun[mwe,heureambig=~,heure=+,date:~]|?[adv:~,t_mod:~]|.
+
+// ex : il est parti il y a à peine trois heures
+75> PP[mwe=+,heure=+,tempexpr=+,temp_ref=ST] @= prep[predate,presentatif],adv[t_mod], noun[mwe,heureambig=~,heure=+,date:~].
+
+// Dans + modifieur + une semaine/trois jours = DATEMOD relative
+75> noun[mwe=+,datemod=+,relative=+,tempexpr=+] @= |prep[form:fdans]| adv[predate,t_mod];det[complx:+], num[numjourpot=~,heurepot=~], (adj),(prefix[lemme:"demi-"]), noun[periode,heure:~].
+
+
+
+
+
+// !!!!!!!!!!! SPECIAL ESTER !!!!!!!!!!!!!!!!!
+
+// ce matin à l'aube = une seule expression  ("aujourd'hui à midi" ...)
+//25>  noun[mwe=+,date=+,relative=+,tempexpr=+] @= noun[daytime,lemme:"matin"], prep[form:fa], det, noun[lemme:"aube"].
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Il est parti il y a presque 8 ans maintenant
+//26> ADV[mwe=+,date=+,relative=+,tempexpr=+] @= PP[mwe=+,datemod=+,duree=~,tempexpr=+,relative=+,temp_ref=ST],adv[lemme:"maintenant"].
+
+
+
+
+//---------------------------------------------------------------	
+//---------------------------------------------------------------	
+//      DATES COORDONNEES
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------	
+
+
+
+// Certaines Dates coordonnées
+// (la plupart sont traitees dans marqueur_temp car deja prise en compte par le chunker)
+
+// il sera là les lundis 16 et 23 octobre
+27> NOUN[tempexpr=+,datecoord=+,relative=+]@= |det[pl:+]| noun[date,relative,pl], coord[form:fet], noun[date,relative,sg].
+
+
+// il sera là les lundis 16 et 23 octobre 2009
+27> NOUN[tempexpr=+,datecoord=+,absolue=+]@= |det[pl:+]| noun[date,relative,pl], coord[form:fet], noun[date,absolue,sg].
+
+
+// le 19 ou le 20 février = construction NP sur le 19
+27> NP[date=+,relative=+] @= det, num |coord, det,noun[date,relative]|.
+
+// le 19 ou le 20 février = construction NP sur le 20 février
+28> NP[date=+,relative=+] @=| NP[date,relative],coord| det,noun[date,relative].
+
+// le 19 ou le 20 février = construction NP sur tout
+29> NP[date=+,relative=+] @= NP[date,relative],coord , NP[date,relative].
+
+
+
+
+
+//*************************
+
+// intervalles
+
+// du 3 janvier au 5 janvier (2009) 
+// du 3 au 5 janvier (2009)
+// + même patron pour les heures
+// en ADV car en PP on n'a pas de VMOD
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fde],num[absolue],prep[form:fa],num[absolue].
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fde],noun[date,relative];num,prep[form:fa],noun[date,relative].
+
+29> ADV[tempexpr=+,interval=+,date=+,absolue=+] = prep[form:fde],noun[date];num,prep[form:fa],noun[date,absolue].
+
+29> ADV[tempexpr=+,interval=+,heure=+] =  prep[form:fde],noun[heure,duree:~];num,prep[form:fa],noun[heure,duree:~].
+
+
+//des....à
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fdesaccent],num[absolue],prep[form:fa],num[absolue].
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fdesaccent],noun[date,relative];num,prep[form:fa],noun[date,relative].
+
+29> ADV[tempexpr=+,interval=+,date=+,absolue=+] = prep[form:fdesaccent],noun[date];num,prep[form:fa],noun[date,absolue].
+
+29> ADV[tempexpr=+,interval=+,heure=+] =  prep[form:fdesaccent],noun[heure,duree:~];num,prep[form:fa],noun[heure,duree:~].
+
+
+
+//entre...et
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fentre],num[absolue],COORD[form:fet],num[absolue].
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fentre],noun[date,relative];num,COORD[form:fet],noun[date,relative].
+
+29> ADV [tempexpr=+,interval=+,date=+,absolue=+] = prep[form:fentre],noun[date];num,COORD[form:fet],noun[date,absolue].
+
+29> ADV[tempexpr=+,interval=+,heure=+] =  prep[form:fentre],noun[heure,duree:~];num,COORD[form:fet],noun[heure,duree:~].
+
+
+//depuis...jusque
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fdepuis],num[absolue],prep[form:fjusque],num[absolue].
+
+29> ADV[tempexpr=+,interval=+,date=+,relative=+] = prep[form:fdepuis],noun[date,relative];num,prep[form:fjusque],noun[date,relative].
+
+29> ADV[tempexpr=+,interval=+,date=+,absolue=+] = prep[form:fdepuis],noun[date];num,prep[form:fjusque],noun[date,absolue].
+
+29> ADV[tempexpr=+,interval=+,heure=+] =  prep[form:fentre],noun[heure,duree:~];num,prep[form:fjusque],noun[heure,duree:~].
+ 
+
+
+//******A REVOIR
+// expressions complexes
+
+// le courant du mois de juillet
+29> noun[tempexpr=+,date=+,relative=+] @= noun[lemme:"courant"],prep,noun[date,relative].
+
+// en septembre de l'an dernier : géré avant ou après le chunker suivant que c'est dans un SC ou non
+
+29> ADV[tempexpr=+,date=+,relative=+] @= prep[form:fen],noun[date,relative],prep,(det),noun[date,relative].
+
+
+// il partira dans le courant du mois de juillet (2008)
+
+//28> ADV[tempexpr=+,date=+,absolue=+] @= prep[form:fdans],det,noun[lemme:"courant"],prep,noun[date,absolue].
+
+//28> ADV[tempexpr=+,date=+,relative=+] @= prep[form:fdans],det,noun[lemme:"courant"],prep,noun[date,relative].
+
+
+// les 30 et 31 mai (2008): 30 est une date  
+//22> noun[date=+,relative=+,numJour=+] @= num[numjourpot:+]|coord[lemme:"et"],noun[date:+,duree:~]|.
+
+// pour le lundi 18 et le mardi 19 avril : le lundi 18 = NP
+//22> NP[date=+,relative=+] @= |prep| (det), noun[date:+] |coord[lemme:"et"], (det), noun[date:+]|.
+
+// pour le lundi 18 et le mardi 19 avril : le mardi 19 avril = NP
+//23> NP[date=+] @= |prep, NP[date:+],coord[lemme:"et"]| (det), noun[date:+].
+
+// les 30 et 31 mai (2008): Noun
+//23> noun[date=+,relative=+,numJour=+,mwe=+,datecoord=+] @= noun[numJour],coord[lemme:"et"],noun[date:+,relative:+].
+
+//23> noun[date=+,absolue=+,numJour=+,mwe=+,datecoord=+] @=  noun[numJour],coord[lemme:"et"],noun[date:+,absolue:+].
+
+// le lundi 18 et le mardi 19 avril : NP+NP
+//75> NP[date=+,datecoord=+] @= NP[date:+],coord[lemme:"et"],NP[date:+].
+
+
+
+
+// pour demain, à partir de demain [prep+adv]
+
+//29> PP[tempexpr=+,date=+,relative=+]@= prep,adv[tempexpr, relative].
+
+
+// jusqu'à 18 heures par jour
+//28> NP[tempexpr=+,duree=+]@= PP[duree],NP[tempexpr,set].
+
+// CH - expressions particulieres dates relatives avec huitaine et quinzaine
+// sous huitaine, dans une quinzaine (non suivi de prep)
+80> PP[tempexpr=+, date=+, relative=+, temp_ref="ST"] @= prep[lemme:"sous"], noun[lemme:huitaine]; noun[lemme:quinzaine] .
+80> PP[tempexpr=+, date=+, relative=+, temp_ref="ST"] @= prep[lemme:"dans"], det[lemme:"un", fem], (adj), noun[lemme:huitaine]; noun[lemme:quinzaine] | ?[prep:~] | .
+
+
+// CH - juin 2009
+// REGLES DE CORRECTION 
+
+
+// AGES pris pour durees
+// L'equipe jeunes (13 ans)
+90> ? @= | ?[lemme:jeune], ? | noun[mwe:+, duree=~, date=~, tempexpr=~, lemme:"%d%d an"] .
+
+
+
+// a longueur de journée/d'année
+90> noun[mwe=+,duree=+,tempexpr=+,date=+] @= prep[lemme:"à"], ?[lemme:longueur], prep[lemme:"de"], noun[timeduree:+,val_duree] .
+
+
+// CH - correction
+// avec un P/F autour de 100 (-> 100 n'est pas une annee)
+90> ? @= | ?[measure] | prep[t_mod], num[tempexpr=~, date=~, nondate=+] | .

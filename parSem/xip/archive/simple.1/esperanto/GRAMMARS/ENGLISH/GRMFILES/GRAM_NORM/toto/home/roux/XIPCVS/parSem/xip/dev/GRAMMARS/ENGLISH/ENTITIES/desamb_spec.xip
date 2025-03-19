@@ -1,0 +1,580 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : desamb_spec.xip
+//!   Date       : 10/02/2003
+//!   Author     : Francois Trouilleux - Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Sequence:
+
+
+
+/ this rule assigns startbis feature to any word after a punctuation at start of sentence\
+1> ?[startbis=+] @= ?[start,punct], ?*[punct], ?.
+
+1> ?[startbis=+] = ?[start:+].
+
+
+/------------ IDENTIFY HEADERS ------------------\
+
+
+// sequence of at least two ALLCAP words
+1> ?[header=+] @= ?+[toutmaj],punct*,?[toutmaj].
+
+// a single ALLCAP word at beginning of sentence
+1> ?[header=+] @= ?[toutmaj,startbis,toolword:~,let:~].
+
+// a sentence with all words but tool words starting with UPPERCASE
+1> ?[header=+] @= punct*, 
+                   ?[maj,startbis],
+                   ?*[maj],punct*,?*[toolword],
+                   ?*[maj],punct*,?*[toolword],
+                   ?*[maj],punct*,?*[toolword],
+                   ?[toolword];punct[sent:~];?[maj]
+                   | punct[sent] |.
+
+
+/------------ SPECIFIC DISAMB RULES -------------\
+
+
+
+Tagging:
+
+
+// Taking away the noun reading for digit and numerals
+2> num<card>, noun = num .
+ 
+// "1980" feet -> "1980" is not a year and "feet" is a measure
+2> dig %= dig[dig:+,card:+,date=~] | noun[countable:+] |.
+
+
+// foreign name parts such as "van", "am", "ten", "den" (tagged as +Prop +Prep) 
+// keep this reading only if not in header and followed by maj:+
+2> prep<proper>[header] = ?<proper:~>  .
+
+2> prep<proper> = ?[proper:~]  | ?[maj:~,proper:~];pron |.
+
+
+// ambiguity on the lemma second[noun, num]
+// if followed by of <month> it is a numeral
+2> num, noun<lemme:second> = num | prep[lemme:of], noun[month] | .
+
+// if followed by lemma "side" is a numeral
+2> num, noun<lemme:second> = num | ?[lemme:side] | .
+2> noun<lemme:side> , verb = | num[lemme:two] | noun .
+
+
+
+2> num, adv = num | prep[lemme:of], noun[month] | .
+
+// XT the fiscal first quarter, the 1987 first quarter
+2> num, adv = | adj;dig[year] | num | noun | .
+
+
+// ambiguity noun/verb for the word "QUARTER"
+// if preceeded by an ordinal, it is a noun
+2> verb, noun<lemme:quarter> = | num[ord:+] | noun[tempexpr=+,period=+,t_relat=+] .
+
+
+
+// // // // //   POWER
+// in the expression "come to power" power is a noun and not an infinitive verb
+5> noun, verb<lemme:power> = | ?[lemme:come], ?[lemme:to] | noun .
+
+
+
+////////////////////////////////////// Marking some specific lexical nodes ////////////////////////////////////////////
+
+// Marking with feature nfin:+ a verbal form that follows a TO
+// Adding a right context in order to avoid a bad disambiguation e.g. to better understand the situation ...
+// From white to black(verb*)
+
+5> verb<verb:+,pres:+,sg:~> = | ?*[form:~ffrom], prep[form:finfto] | verb[nfin=+,maj:~] | ?[verb:~] | .
+
+
+////////// Tagging rule for prefix //////
+// if something is tagged as noun and something else and is a prefix, then we choose the noun tag
+// e.g. French post-Prince ...
+5> verb<prefix:+>, noun = noun | punct[form:fhyph,left:+,right:+] | .
+
+5> prep<prefix:+>, noun = noun | punct[form:fhyph,left:+,right:+] | .
+
+
+
+
+
+////////////////////////////////////// Tagging rules for specific forms ////////////////////////////////////////////
+
+
+// // // // // TIME
+// Word time starting with capital letter and followed by AND followed by TIME or AGAIN is not the proper name time but the common name
+5> noun<proper:+>, noun<proper:~,lemme:time> = noun<proper:~> | conj[lemme:and], (noun[lemme:time]), adv[lemme:again] | .
+
+// // // // //	MARCH
+// if "March" is with an uppercase, followed by comma and dig then it is a month name
+// e.g. March, 30
+5> verb<lemme:march,maj:+> %= noun[month,proper:+,period,time:+] | punct[comma:+], dig[day] | .
+
+
+// // // // //	US
+// Ambiguity US and pronoun "us"
+5> pron, noun<lemme:US> = | ?[toutmaj:~] | noun | ?[toutmaj:~] | .
+
+
+
+
+// // // // //	"NE" (North-East or Nebraska ????)
+// If NE is preceeded by a noun having feature [address:+] (e.g. Avenue, Street, etc.) followed possibly by a comma, then it is the adverb (north-east) and not the state.
+// e.g. 111, Wisconsin Avenue NE
+5> adv<lemme:NE>, ?<place:+> = | ?[address:+], (punct[comma:+]) | adv .
+
+
+// // // // //	LONG on the left of "ago"
+// "long" on the left of "ago" is an adverb
+5> verb, adv<form:flong>, nadj = adv | ?[form:fago] | .
+
+// // // // //	Thursday in plural before a date and after a quant
+5> noun<proper:+,guess:+,maj:+> %= | quant | noun[time:+,period,day,pl:+] | prep[lemme:in], dig[year:+] | .
+
+
+// // // // //	July with first capital letter is guessed as an averb we will give it the tag noun[period, month:7, time:+]
+5> adv<guess:+,lemme:July> %= | prep[lemme:in] | noun[time:+,period:mo,month:7] .
+5> adv<guess:+,lemme:July> %= | prep[lemme:on] | noun[time:+,period:mo,month:7] .
+5> adv<guess:+,lemme:July> %= | prep[lemme:of] | noun[time:+,period:mo,month:7] .
+5> adv<guess:+,lemme:July> %= noun[time:+,period:mo,month:7] | dig | .
+
+
+// // // // //	May followed by a digit day is a month name
+5>  noun<proper:+,lemme:May> %= noun[time:+,period:mo,month:5] | dig[day:+,ord:+] | .
+5> noun<proper:+,surface:May>,aux  = | ?[Maj:~] | noun . 
+
+
+
+// // // // //	Overnight
+// when not on the left of a noun, is considered as an adverb
+5> adv<lemme:overnight>, nadj = nadj | ?[noun:+] | .
+5> adv<lemme:overnight>, nadj = adv | ?[noun:~] | .
+
+
+// // // // // 11.00 AM
+// XT
+5> dig<dec, surface:"%d%d.%d%d"> %= dig<time:+> | adv[posthour];?[timezone] |.
+
+// // // // // 1100 GMT
+// found several times in the corpus (each time with a timezone after), so not a spelling mistake
+5> dig<surface:"%d%d%d%d"> %= dig<time:+> | ?[timezone] |.
+
+
+
+// // // // //	AM (posthour)
+5> adv<lemme:AM>, verb, noun = | dig[card:+,time:+] | adv[posthour=am] .
+
+// // // // //	'S 
+// 's before a vprog is a verb be and not have
+5> verb<lemme:be>, verb<lemme:have> = verb<lemme:be> | (adv), ?[vprog:+] | .
+
+
+
+// // // // //	NOW at the beginning of a sentence
+// NOW at the beginning of a sentence is tagged as a proper noun and not as an adverb
+// correction
+// e.g. Now the museum says it has received a letter
+5> adv<lemme:now>, noun<proper:+> = adv | ?[fin:~] | .
+
+
+// // // // //	FOR conj/prep
+// FOR when preceeds THEM is a preposition and not an conjunction
+5> conj<lemme:for>,prep = prep | ?[lemme:they,obl:+] |.
+
+// FOR when preceeds THEY is a conjunction and not a preposition
+5> conj<lemme:for>,prep = conj | ?[lemme:they,nom:+] | .
+
+// // // // //	EARLY adv/adj
+5> adv, adj<lemme:early> = | prep | adv | (?), ?[period] | .
+
+// // // // //	ABOUT adv/prep
+// ABOUT when followed by a quantifier followed by of is an adverb and not a Preposition
+// e.g. About half of the acetone is produced in the XXXX
+5> adv<lemme:about>, prep = adv | ?[predet:+, quant:+], ?[lemme:of] | .
+
+// about 75% of X
+5> adv<lemme:about>, prep = adv | dig, ?[lemme:of] | .
+
+// // // // //	'S
+// If we have a "'S" between two proper nouns, then it is a Part
+5> verb<form:fhave>, verb<form:fbe>, part<gen:+> = | noun[proper:+] | part | noun[proper:+] | .
+
+// If we have a "'S" after a pronpers and before a non ambiguous adjective then it si be-form
+5> verb<form:fhave>, verb<form:fbe>, part<gen:+> = | pron[pronpers:+] | verb[form:fbe] | ?[adj:+, noun:~,verb:~] | .
+
+
+// // // // //  BETWEEN
+// if between is preceeded by a unique word that is not a verb which is followed by and it is a prep
+5> adv<lemme:between>, prep = prep | ?[verb:~], ?[lemme:and] | .
+
+// // // // //  BEFORE and AFTER 
+// They are ambiguous prep/conj/adv. When they follow something that has feature period, then it is an adverb e.g. five days before
+5> prep, conj, adv<lemme:before> = | ?[period] | adv | ?[det:~,period:~,month:~,day:~,proper:~,pronpers:~] | .
+5> prep, conj, adv<lemme:after> = | ?[period] | adv  | ?[det:~,period:~,month:~,day:~,proper:~,pronpers:~] | .
+
+// If before/after preceedes a "that" which precedes a punctuation mark (comma or period) or a nominative personal pronoun, it is a prep and not a conj
+5> prep, conj, adv<lemme:before> = prep | pron[lemme:that], ?[punct];pron[personal,nom] | .
+5> prep, conj, adv<lemme:after> = prep | pron[lemme:that], ?[punct];pron[personal,nom] | .
+
+// before/after preceedes a "that" followed by a period/temporal noun not followed by a verb
+5> prep, conj, adv<lemme:before> = prep | ?[lemme:that];det, ?[period], ?[verb:~] | .
+5> prep, conj, adv<lemme:after> = prep | ?[lemme:that];det, ?[period], ?[verb:~] | .
+
+// before/after preceedes a NP just followed by a comma then PREP and not conj
+5> prep, conj, adv<lemme:after> = prep | ?[det:+], (?[adj:+]), ?[noun:+], punct | .
+5> prep, conj, adv<lemme:before> = prep | ?[det:+], (?[adj:+]), ?[noun:+], punct | .
+
+// before/after following a duration and followed by a proposition
+// e g 4 days after the general/John Smith  came.
+5> prep, conj, adv<lemme:after> = | num[startbis];dig[startbis], noun[period] | adv | det, (adj)*, ?[noun:+], verb[noun:~], punct[sent:+];conj[coord:+] | .
+5> prep, conj, adv<lemme:before> = | num[startbis];dig[startbis], noun[period] | adv | det, (adj)*, ?[noun:+], verb[noun:~], punct[sent:+];conj[coord:+] | .
+5> prep, conj, adv<lemme:after> = | num[startbis];dig[startbis], noun[period] | adv | ?+[noun:+,proper:+], verb[noun:~], punct[sent:+];conj[coord:+] | .
+5> prep, conj, adv<lemme:before> = | num[startbis];dig[startbis], noun[period] | adv | ?+[noun:+,proper:+], verb[noun:~], punct[sent:+];conj[coord:+] | .
+
+// before/after preceeds a NP just followed by unambiguous verb followed by punctuation mark is conj not prep
+// They moved after the general came.
+5> prep, conj, adv<lemme:after> = conj | ?[det:+], (?[adj]), ?[noun:+], verb[noun:~], punct | .
+5> prep, conj, adv<lemme:before> = conj | ?[det:+], (?[adj]), ?[noun:+], verb[noun:~], punct | .
+5> prep, conj, adv<lemme:after> = conj | ?+[noun:+,proper:+], verb[noun:~], punct | .
+5> prep, conj, adv<lemme:before> = conj | ?+[noun:+,proper:+], verb[noun:~], punct | .
+
+
+
+// // // // //  SINCE
+// see before and after
+5> prep, conj<lemme:since> = prep | ?[lemme:that], ?[punct:+];pron[personal:+,nom:+];noun[proper:+,maj:+] | .
+
+5> prep, conj<lemme:since> = prep | ?[lemme:that];det, ?[period], ?[verb:~] | .
+
+// // // // //  FAILING
+// failing has also a tag as preposition.
+// We take it away if it follows a preposition
+5> prep, ?<lemme:fail> = | prep | ?<lemme:fail> .
+
+
+// // // // //  PETER
+// Peter is never a verb unless it is followed by particle out
+5> noun, verb<lemme:peter> = verb | ?[lemme:out] | .
+5> noun, verb<lemme:peter> = noun .
+
+
+
+
+
+// // // // //  THAT
+// that after a time preposition and followed by a punctuation mark or personal pronoun in nominative or proper noun is a pronoun and not a conjunction
+pron, conj, det<lemme:that> = | prep[time:+] | pron[rel:~] | pron[personal:+,nom:+];noun[proper:+];punct | .
+// That after the lemma "half" and before something that is not a verb nor a noun is a pronoun
+pron, conj, det<lemme:that> = | ?[lemme:half] | pron[rel:~] | ?[verb:~, noun:~] | .
+// that which follows a noun with feature indspeech and just before a proper noun, or pronoun followed by verb is a conj
+// eg Stories/Rumours that Ford will launch a new model
+pron, conj, det<lemme:that> = | noun[indspeech:+] | conj | pron[pronpers:+];noun[proper], ?[verb:+] | .
+
+
+// // // // //  HER
+// Oblique pronoun VS. Possessive determiner
+// If Her is preceeded by something which can be a verb and just followed by a quantifier (which is not a digit, card or ord), then it is a pronoun and not a determiner
+5> pron<lemme:she> %= | ?[verb:+] | pron[pron:+,p3:+,sg:+,obl:+] | quant[dig:~,card:~,ord:~] | .
+
+
+// // // // //  THESE
+// If the form "these" is not preceeded by any verb and followed by an ambiguous Verb[pl:+]/Noun[Sg]
+// Then THESE is a pronoun and not a determiner
+// e.g. These result from alternative splicing of mRNA
+5> pron<lemme:these>, det = pron | noun[sg:+,pl:~,adj:~] | .
+
+
+// // // // // DON'T and DO
+// the surface form don't is never a noun (taken as a noun by the FST)
+// ATTENTION DO -> "biche"
+5> noun, verb<lemme:do>  = verb[aux=+].
+ 
+
+// // // // //  CAN
+// If we have a WH just followed by a form of CAN (VAUX, Verb, Noun)
+// If the CAN is not followed by a verb
+// THEN CAN is an auxiliary
+5> noun, aux<form:fcan>, verb<aux:~,form:fcan> = | ?[wh:+], ?*[verb:~] | verb | ?[verb:~,aux:~] |.
+
+5> noun<sg:+>, aux<form:fcan>, verb<form:fcan> = | ?[wh:+], ?*[verb:~] | aux | verb |.
+// // // // //  
+
+
+// // // // //   WILL
+// Disamb of WILL in interrogative sentences when it just follows a WH and is not followed by a verb
+// In this case it is an auxiliary
+// When will Nixon visit China ?
+// What day of the week will John arrive ?
+5> noun, aux<form:fwill> = | ?[wh:+], ?*[verb:~] | aux | ?[verb:~,aux:~] |.
+
+// Will at the beginning of a sentence when the sentence ends by a question mark is an auxiliary
+5> noun, aux<form:fwill> = | | aux | ?+, ?[endbis:+,form:fquest] | .
+
+// ADDED CB KOSOVO
+//(Tunjic) Will Montenegro become independent?
+5> noun, aux<form:fwill> = | punct[form:fcpar] | aux | ?+, ?[endbis:+,form:fquest] | .
+
+// Will at the beginning of the sentence and followed by a verb is a proper noun
+5> noun<proper:+>, aux<form:fwill>, noun<sg:+,countable:+> = | | noun[proper:+] | ?[verb:+] |.
+
+// Will(sing noun or aux) just after "this" and before something which can be verb (non flexioned) 
+// e.g. This will give you ...
+5> noun<sg:+>, aux<form:fwill> = | pron[lemme:this] | aux | verb[p3:~], pron[pronpers:+] | .  
+
+
+// will in the middle of a sentence nor preceeded by a a determiner followed by proper noun and by a verb is an auxilliary
+// nor will Pakistan do so.
+5> noun<sg:+,maj:~>, aux<form:fwill> = | ?[det:~] | aux | (det), noun, verb[noun:~] | .
+
+
+// // // // //  
+
+
+
+// // // // //   INTER
+// inter is coded as a verb only. However it is found very often in expression inter-parlementary
+// we tagged it as adjective when preceeded by an article
+5> verb[lemme:inter] %= | det[def:+];det[indef:+] | adj .
+
+
+
+// // // // //  
+
+
+// // // // //   WHILE
+// Disamb of while (conj subord or noun)
+5> noun, conj<lemme:while> = | det[lemme:a] | noun .
+5> noun, conj<lemme:while> = | ?[det:~] | conj .
+5> noun, conj<lemme:while> = | | conj . 
+
+
+// // // // //   SAY 
+
+// Disamb of the surface form "says" which we consider as a verb.
+5> noun<pl:+,lemme:say>, verb = verb[changed=+] .
+
+
+
+// // // // //  
+
+
+// // // // //   NEED
+// Destroy the tag aux in "need"
+5> verb<lemme:need>, aux, noun = noun, verb .
+
+// If "need" is verb-pl/noun-sg just after a relative pronoun and just before a noun, then it is a verb. e.g. I have friends who need help.
+5> verb<lemme:need>,noun<sg:+> = | ?[noun:+], pron[wh:+] | verb | noun | .
+5> verb<lemme:need>,noun<sg:+> = | ?[noun:+], pron[lemme:that] | verb | noun | . 
+// // // // // // LINE 
+
+// if line is on the right of the verb cross and there is a "the" inbetween, line is a noun and not a verb
+
+5> noun, verb<lemme:line> = | ?[verb:+,lemme:cross], (adv), det[lemme:the], (adj;noun) | noun[changed=+]  .
+
+// // // // // // GET
+// Ambiguity between Noun and Verb for the form "get" 
+// Get is a verb if it is followed on the right by a Past Part (can have some adverbs inbetween)
+5> verb<form:fget>, noun = | ?[noun:+] | verb | adv*, verb[partpas:+] | .
+
+// get is a verb if followed by a pronoun or determiner
+5> verb<lemme:get>, noun = verb | pron; det | .
+
+// get if followed by rid and of (get rid of)
+5> verb<lemme:get>,noun =  verb | verb[lemme:rid], prep[lemme:of] | .
+ 
+
+
+
+// // // // // //  BEING
+// being is always a verb when he does not end a sentence (note that human being and well being are coded as such in the dictionary
+5> noun, verb<form:fbe,prog:+> = verb | ?<sent:~> |.
+// // // // //  
+
+
+// // // // // //  FIRST -
+// if "FIRST" is just after an NP and just before a finite verb, then it is an adverb
+// if FIRST is just after a determiner then it is a numeral
+5> num[form:fone] %= | ?[noun:+,verb:~] | adv[adv=+] | ?[verb:+,noun:~] | .
+// if FIRST is just after a determiner and just before an adverb, it is a numeral
+5> adv, num<lemme:one>  = | ?[det:+] | num | adv | .
+
+// // // // // //  BUT - Destroying the adv lecture
+// if just before a finite verb, this is a conj coord
+5> adv[form:fbut] %= conj[conj=+, coord=+] | ?[verb:+] | . 
+// // // // //  
+
+
+// // // // // //  EVEN 
+// If "even" is on the left of a comparative then it is an adverb
+// even bigger
+5> adj, verb, adv<form:feven> = adv | adj[compar:+] | .
+// even more complex
+5> adj, verb, adv<form:feven> = adv | quant[compar:+] | .
+// // // // //  
+
+// // // // // //  EVENING
+// If "evening" is on the right of a temporal noun, then it is neither a verb, nor a adj,
+5> noun<lemme:evening>, verb, adj = | noun[tempexpr:+] | noun .
+// // // // //  
+
+// // // // // //  JUST
+// Just is an adverb and anything else when followed by a determiner|numeral and then by a noun bearing feature period
+// e.g. in just one minute
+adv<lemme:just>,noun = adv | det;num;dig, noun[period] |.
+
+
+// // // // // //  STILL
+// ambiguity NADJ/ADV/VERB
+// if still is just on the left of a form of "BE" it is an adverb
+// still being loyal to the Shah
+adv,nadj,verb<lemme:still> = adv | ?[lemme:be] | .
+
+
+// // // // // //  THIS
+// if "this" precedes a temporal expression (noun), then this is a determiner and not a pronoun.
+// e.g this evening
+5> pron, adv, det<lemme:this> = det | noun[tempexpr:+] | .
+
+// // // // // //  ST. 
+// St. Street versus Saint
+//
+// If St. starts the sentence it is Saint. If St. ends the sentence it is Street
+// If St. precedes a Proper noun it is Saint, if St. follows a proper noun it is Street
+
+5> ?<abr,title>, ?<locpost> = || ?[abr:+,title:+] .
+
+5> ?<abr,title>, ?<locpost> = ?[locpost=+] || .
+
+5> ?<abr,title>, ?<locpost> = | ?[proper:~] |  ?[abr:+,title:+] | noun[proper:+] | .
+
+5> ?<abr,title>, ?<locpost> = | noun[proper:+] | ?[locpost=+] | ?[proper:~] | .
+
+
+
+// // // // // //  V
+// roman number versus capital letter
+// if "V" is after a firstname and just before "of" followed by name[place:+] then it is the roman number
+// e.g. Henry V of England
+5> ?<noun:+,let:+>, ?<rom:+> = | ?[firstname:+] | dig[rom:+] | prep, noun[place:+] | .
+
+// // // // // // AS - Ambiguity conjunction-preposition
+
+// Destroying the lecture ADV (as as comparative is dealt by local grammar rules)
+5> ?<lemme:as,prep:+>, adv = prep[prep:+],conj | ?[pron:~,verb:~] | .
+
+// problem of the surface form US which is ambiguous with the pronoun "us" so the previous rule cannot apply
+5> ?<lemme:as,prep:+>, adv = prep[prep:+] | ?[surface:US] | .
+
+// Before a non-ambiguous verb, as is a conjunction
+5> prep[lemme:as] %= conj[conj:+,form:fas] | (adv), verb[noun:~] | .
+
+// Before a personal pronoun, AS is a conjunction
+// e.g. She acted as she really knew the problem.
+5> prep[lemme:as] %= conj[conj:+,sub:+,form:fas] | pron[personal,nom] | .
+
+// When it follows a verb/noun that subcategorizes PP[as]
+//5> ?[lemme:as] %= | ?[sc_pas:+] | prep[prep:+,form:fas] .
+5> ?<lemme:as> = | ?[sc_pas:+] | prep | ?*[verb:~], ?[last] | .
+
+
+
+
+// // // // //  
+
+// // // // //  TILL
+5> verb, prep<lemme:till> = | ?[tempexpr:+] | prep | ?[tempexpr:+] | .
+// // // // //  
+
+// // // // //  "from time to time" disambiguation of "time"
+
+// From time to time Here time are not verbs but nouns
+5> noun<sg:+,lemme:time>, verb = | ?[lemme:from] | noun | ?[form:finfto], ?[lemme:time] | .
+
+5> noun<sg:+,lemme:time>, verb = | ?[lemme:from], noun[lemme:time], ?[form:finfto] | noun .
+
+
+// // // // //  
+
+
+
+
+
+
+
+// // // // //  "Applied (with uppercase)
+
+// When the form "Applied" is followed by something starting by an uppercase it is not a verb but an adjective
+
+5> verb, adj<lemme:applied,maj:+,toutmaj:~> = adj | ?[maj:+,toutmaj:~] | .
+
+
+// // // // //  
+
+
+// // // // //  "Limited (with uppercase)
+
+// When the form "Limited" is not followed by anything and is preceeded by something which has the feature proper:+ then it is not a verb but it is a noun (orgend)
+
+5> verb, noun<lemme:Limited,toutmaj:~>, adj = | ?[proper:+] | noun ||.
+
+// // // // //  
+
+// // // // //  "am" when it is just preceeded by a digit that is not roman (ambiguity I )
+
+5> verb[surface:am] %= | dig[card:+] | adv[adv:+,posthour:am] .
+
+
+// // // // //  
+
+// // // // //  GONE in the context "has" or "is"
+// after "is" gone has to be tagged as an adjective
+
+5> adj<lemme:gone>, verb = | verb[lemme:be], adv* | adj .
+
+
+// // // // Form of "GO" 
+// if followed by a preposition, then we take away the feature cop:+
+5> verb<lemme:go> = verb[cop=~] | ?[adj:~] | .
+
+
+// // // // //  
+
+// a loud sound --> soud is noun and not nadj
+
+5> nadj[lemme:"sound"] %= | adj | noun .
+
+
+// // // // //  meeting
+//
+// When "meeting" just followed a local name which just follows a definite article, then it is a noun and not a verb
+// e.g. the Paris meeting
+
+5> noun, verb<vprog:+,lemme:meet> = | det[def:+], ?[location:+] | noun .
+
+
+// // // // //  coming 
+// 
+// When coming preceeds a period name and follows the preposition in/during then it is an ajdective
+// e.g. in coming months
+5> noun, verb<vprog:+,lemme:come>, adj = | prep[lemme:in];prep[lemme:during], (det) |  adj | noun[period] | .
+
+
+
+// // // // //   FREE
+// after a form of "be" free is adjective
+5> noun, verb, adj<lemme:free> = | verb[cop:+] | adj .
+
+
+

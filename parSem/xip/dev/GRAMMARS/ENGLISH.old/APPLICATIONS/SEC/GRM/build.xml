@@ -1,0 +1,48 @@
+<project name="sec" default="all" basedir=".">
+
+    <target name="all" depends="propSetting0, propSetting1, propSetting2" description="grammar crypting for the SEC project" >
+        <delete file="${gram.file.jar}" failonerror="true" />
+        <delete dir="${cryptedGramDir}" failonerror="true"/>
+        <mkdir dir="${cryptedGramDir}" />
+        <delete dir="${delivery.dir}/grammar" />
+        <!-- grammar crypting -->
+        <exec executable="${xipExe}" failonerror="true"  >
+            <arg line= " -crypteduplique ${cryptedGramDir} -grm ${secGrmFilePath}" />
+        </exec>
+        <copy todir="${cryptedGramDir}" >
+            <fileset dir="${cryptedGramOutputDir}" />
+        </copy>
+        <copy todir="${cryptedGramDir}/ENGLISH/APPLICATIONS/SEC/GRM" >
+            <fileset dir="${secGramDir}" includes="xmlguide.xip" />
+        </copy>
+        <delete dir="build/GRAMMARSCRYPTED/opt" />
+        <echo message="test like this:  " />
+        <echo message="       echo 'This is a test.' |xip -grm  ${cryptedGramDir}/ENGLISH/APPLICATIONS/SEC/GRM/${secGrmFileName}" />
+        <!-- create build/grammar.jar -->
+        <jar destfile="${gram.file.jar}" >
+            <zipfileset dir="${cryptedGramDir}" prefix="grammars" />
+        </jar>
+    </target>
+    
+    <target name="propSetting0" >
+        <property name="delivery.dir" value="build/delivery" />
+        <property name="gram.file.jar" value="build/grammars.jar" />
+        <property name="xipExe" location="/opt/ParSem/bin/linux/xip" />
+        <property name="cryptedGramDir" location="build/GRAMMARSCRYPTED" />
+        <!-- sec grammar -->
+        <property name="secGramDir" location="." />
+        <property name="secGrmFileName" value="gram_sec-xml.grm" />
+        <property name="secGrmFilePath" location="${secGramDir}/${secGrmFileName}" />
+        <condition property="gramInUserHome" value="true" >
+            <equals arg1="${user.name}" arg2="sandor"/>
+        </condition>
+    </target>
+    
+    <target name="propSetting1" if="gramInUserHome" >
+        <property name="cryptedGramOutputDir" location="${cryptedGramDir}/home/${user.name}/parSem/xip/dev/GRAMMARS" />
+    </target>
+    
+    <target name="propSetting2" unless="gramInUserHome" >
+        <property name="cryptedGramOutputDir" location="${cryptedGramDir}/opt/ParSem/users/${user.name}/parSem/xip/dev/GRAMMARS" />
+    </target>
+</project>

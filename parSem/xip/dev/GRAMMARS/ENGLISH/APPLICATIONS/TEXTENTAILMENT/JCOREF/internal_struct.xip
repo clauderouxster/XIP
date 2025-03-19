@@ -1,0 +1,568 @@
+
+
+Reshuffling:
+
+// 1> NP{NOUN#1[last]},NP#2{NOUN#3} = #2{#1,#3}. 
+
+//1> PP#4{NP{NOUN#1[last]}},NP#2{NOUN#3,?*#5,#6[last]} = #4{#2{#1,#3,#5,#6}}. 
+
+
+
+Marker:
+3> AP[quant=+]{?*,?[last,quant]}.
+3> NOUN[maj,org,proper=+].
+3> NOUN[tempexpr,pl:~,sg=+].
+3> TOP[guille=+]{?*[guille],?[last,guille]}.
+3> NP[anaphoric=+]{pron[last,anaphoric]}.
+3> NP[pron=+]{pron[last]}.
+3> NP[def=+]{?*,?[def,last:~]}.
+// 3> NOUN[proper=~]{?*,NOUN[last,maj:~]}.
+3> ?[proper=+]{?*,NOUN[proper,last]}.
+3> ?[proper=+]{?*,NOUN[proper],NOUN[maj,abr,last]}.
+3> ?[person=+]{?*,NOUN[firstname,last]}.
+3> ?[person=+]{?*,NOUN[person,last]}.
+3> ?[person=+]{?*,NOUN[c_person,ambig:~,org:~,loc:~,last]}.
+3> ?[person=+]{?*,NOUN[person],NOUN[maj,abr,last]}.
+// 3> NP[c_person=+]{?*,NOUN[c_person,last]}.
+3> NP[title=+]{?*,NOUN[title,last]}.
+3> NOUN[title=~]{?*,NOUN[title:~,prof:~,last]}.
+3> NP[title=~]{?*,NOUN[title:~,prof:~,last]}.
+3> NP[prof=+,person=+]{?*,NOUN[prof,last]}.
+3> NP[org=+]{?*,NOUN[org,last]}.
+3> NP[adj=+]{AP[last]}.
+3> NP[adj=+]{?*,?[last,adj]}.
+3> NP[vprog=+]{?*,?[last,vprog]}.
+3> NP[adj=~]{?*,NOUN[last]}.
+3> SC[indspeech=+]{?*,FV[indspeech]}.
+
+
+DependencyRules: // For marking 
+
+// mark org=+
+if (ORGANISATION(#1) & #1[org:~] & #1[org=+] ) ~.
+
+
+
+
+
+DependencyRules: 
+
+
+// Possessive NPs: "The president's choice", etc.
+// Copy DETD on the head
+5> if ( NUCL(#1,#2) & DETD(#1,#3) & MOD(#4,#1) & (#1<#4) )
+   DETD(#4,#3).
+
+
+// CHANGE DIRECTION OF relation HEAD
+5> if ( ^HEAD(#1, #2) ) HEAD(#2,#1) .
+
+
+// TRANSFER dependencies of NOUN nodes to the upper NP
+
+
+// one-arg deps
+5> |NP#1{?*,NOUN#2[last]}|
+if ( ^$1(#2) )
+$1(#1).
+
+// one-arg deps NP with abr suffix (Jr, etc.)
+5> |NP#1{?*,NOUN#2,NOUN[last,abr]}|
+if ( $1(#2) )
+$1(#1), ~$1.
+
+
+// 2-args deps : depth=3
+5> |NP#1{?*,NOUN{?*,NOUN[last]{?*,#2[last,noun]}}}|
+if ( $1(#3,#2) & ~(#1:#3) )
+$1(#3,#1), ~$1.
+
+// 2-args deps : depth=2
+5> |NP#1{?*,NOUN[last]{?*,#2[last,noun]}}|
+if ( $1(#3,#2) & ~(#1:#3) )
+$1(#3,#1), ~$1.
+
+// 2-args deps, depth=1
+5> |NP#1{?*,#2[last,noun]}|
+if ( $1(#3,#2) & ~(#1:#3) )
+$1(#3,#1), ~$1.
+
+
+// Now do the same but when the NOUN is the head of a dep
+
+// 2-args deps : depth=3
+5> |NP#1{?*,NOUN{?*,NOUN[last]{?*,#2[last,noun]}}}|
+if ( $1(#2,#3) & (#3>#1) )
+$1(#1,#3), ~$1.
+
+// 2-args deps : depth=2
+5> |NP#1{?*,NOUN[last]{?*,#2[last,noun]}}|
+if ( $1(#2,#3) & (#3>#1) )
+$1(#1,#3), ~$1.
+
+
+// 2-args deps, depth=1
+5> |NP#1{?*,#2[last,noun]}|
+if ( $1(#2,#3) & (#3>#1) )
+$1(#1,#3), ~$1.
+
+// Now when head is the current NP
+// 2-args deps : depth=2 (but when head is the NP)
+//warning : GJ modification
+//5> |NP#1{?*,NOUN#2[last]{?*,#3[last,noun]}}|
+//if ( $1(#1,#2) )
+//$1(#1,#3), ~$1.
+
+// 2-args deps, depth=1 (but when head is the NP)
+5> |NP#1{?*,#2[last,noun]}|
+if ( $1(#2,#3) & ~(#1:#3) )
+$1(#1,#3), ~$1.
+
+
+
+// inter dep MOD
+5> |NP#1[c_person],NP#2[person]|
+ if ( ^MOD(#1,#2) )
+   MOD(#2,#1)
+
+
+// Deps of NP1 : transfer from NP1 to its HEAD  
+5> |NP#1[c_person],NP#2[person]|
+ if ( ^$1(#1,#3) & HEAD(#1,#4) )
+   $1(#4,#3)
+
+5> |NP#1[c_person],NP#2[person]|
+ if ( ^$1(#3,#1) & HEAD(#1,#4) )
+   $1(#3,#4)
+   
+   
+// extra deps of HEAD of NP1: transfer to NP2
+5> |NP#1[c_person],NP#2[person]|
+ if ( HEAD(#1,#3) & ^$1(#3,#4) & ( (#4<#1) | (#4>#2) ) )
+$1(#2,#4).
+
+5> |NP#1[c_person],NP#2[person]|
+ if ( HEAD(#1,#3) & ^$1(#4,#3) & ( (#4<#1) | (#4>#2) ) )
+$1(#4,#2).
+
+5> |NP#1[c_person],NP#2[person]|
+ if ( ^HEAD(#1,#3) ) ~.
+
+
+ 
+ 
+ 
+ 
+Reshuffling:
+
+// Rules to unify 2 contiguous NP when NP1 is title and NP2 is Person name
+
+// if:   NP1[c_person] NP2[person] then transfer dependencies of NP1 to NP2
+// because later we will merge the two NPs
+// ex: "{Liberal Democrat leader} {Charles Kennedy}"
+
+// merge NP1(c_person) NP2(person)
+9> NP[c_person]{?*#1,?#2[last]},NP#3[person]{?*#4,?#5[last]} = NP#3{#1,#2,#4,#5}.
+
+
+// merge NP{NADJ} NP
+9> NP{NADJ#1},NP#5{NADJ#2,?*#3,#4[last]} = #5{#1,#2,#3,#4}.
+
+
+
+
+// Rules to flaten NPs to only one depth NP->NOUNs
+
+10> NP#1{AP[last]{?*#2,?#3[last]}} = NP#1{#2,#3}.
+
+
+10> ?#6[person]{?*#1,NOUN[last,title:~,prof:~]{?*#2,NOUN#3[last]}} = #6{#1,#2,#3}.
+
+
+10> ?#6[person]{?*#1,NOUN[org:~,location:~]{?*#2,NOUN#3[last]},?*#4[poss:~],#5[last]} = #6{#1,#2,#3,#4,#5}.
+
+
+11> ?#6[person]{?*#1,NOUN[last,title:~,prof:~]{?*#2,NOUN#3[last]}} = #6{#1,#2,#3}.
+
+11> ?#6[person]{?*#1,NOUN[org:~,location:~]{?*#2,NOUN#3[last]},?*#4[poss:~],#5[last]} = #6{#1,#2,#3,#4,#5}.
+
+11> ?#6[org]{?*#1,NOUN[org]{?*#2,NOUN#3[last]},?*#4,#5[last]} = #6{#1,#2,#3,#4,#5}.
+
+11> ?#6[org]{?*#1,NOUN[last]{?*#2,NOUN#3[last]}} = #6{#1,#2,#3}.
+
+12> NP#6{NOUN[last,title:~,prof:~]{?*#1,NOUN#2[last]}} = #6{#1,#2}.
+
+// remove AP[quant] from NP: ex: " [only Labour] can...
+12> NP#1{AP#2[quant],?*#3,#4[last]} = #2,#1{#3,#4}.
+
+
+
+
+
+////////////
+// REshuf to build internal structure for NEs
+
+// rules for internal structure of ORGs
+
+
+15> NP#1[org]{?+#2[location:~,place:~,maj],(prep#3[form:fof]),?#4[place],?*#5,?#6[last]} = #1{NOUN[org=+]{#2},#3,#4,#5,#6}.
+
+
+
+
+// Rules to correct some SC boundaries
+// if NP or PP and a PRON then the PRON is the beginning of th SC
+18> SC#6{?*#1,NP#2;PP#2,NP#3{pron#7[nom]},?*#4,#5[last]} = #1,#2,#6{#3{#7},#4,#5}.
+
+// if CONJ (ADV) FV then the CONJ is the beginning of the SC
+18> SC#6[start:~]{?#1,?*#2,CONJ#3,ADV*#4,FV#5[last]} = #1,#2,#6{#3,#4,#5}.
+
+
+
+
+
+Marker:
+
+// After reshuffling, SC[guile] might not be correct, so remove it if incorrect
+19> SC[guille=~]{?*[guille:~],?[last,guille:~]}.
+
+
+
+
+
+DependencyRules:
+
+
+// SOME RULES TO CAPTURE THE INTERNAL STRUCTURE OF NAMED ENTITIES
+
+// TITLE of a PERSON
+20> |?#1[proper,person]{NOUN#2[first,terminal,title]}|
+INTERNALS_title(#1,#2)
+
+// LASTNAME depth 1
+20> |?#1[proper,person]{?*,NOUN#2[last,terminal,proper,abr:~,firstname:~]}|
+if (PERSON(#1))
+INTERNALS_lastname(#1,#2)
+
+// LASTNAME depth 1
+20> |?#1[proper,person]{?*,?[maj],?*,NOUN#2[last,terminal,proper,abr:~]}|
+if (PERSON(#1) & ~INTERNALS_lastname(#1,#2))
+INTERNALS_lastname(#1,#2).
+
+
+// LASTNAME depth 1 + proper-suffix (Jr, Sr, II, etc.)
+20> |?#1[proper,person]{?*,NOUN#2[terminal,proper],NOUN[abr]}|
+if (PERSON(#1))
+INTERNALS_lastname(#1,#2)
+
+
+// XIP BUG BUG BUG: does not work if we write: ?#1[person] 
+// LASTNAME when the PERSON name contains only the lastname
+20> |?#1{NOUN#2[last,terminal,proper,firstname:~,abr:~]}|
+if (PERSON(#1))
+INTERNALS_lastname(#1,#2).
+
+
+// FIRSTNAME1, when first element
+20> |?#1[proper,person]{?*[det:~,prep:~],NOUN#2[maj,terminal,last:~,title:~,occup:~,prof:~],?*[title:~,occup:~,prof:~],?#4}|
+if (INTERNALS_lastname(#1,#4) & (#2<#4) & ~INTERNALS_firstname1(#1,?)) 
+INTERNALS_firstname1(#1,#2)
+
+
+// FIRSTNAME2
+20> |?#1[proper,person]{?*,NOUN#3,?*[maj],NOUN#2[maj,last:~]}|
+if ( INTERNALS_lastname(#1,#4) & (#2<#4) & INTERNALS_firstname1(#1,#3) )
+INTERNALS_firstname2(#1,#2)
+
+
+// Proper suffix
+20> |?#1[proper,person]{?*,NOUN#3,NOUN#2[abr]}|
+if (INTERNALS_lastname(#1,#3))
+INTERNALS_propsuffix(#1,#2)
+
+// Remaining TITLE
+20> if ( MOD(#1,#2) & #2[title] & INTERNALS_lastname(#3,#1) & ~INTERNALS_title(#3,#2) )
+INTERNALS_title(#3,#2)
+
+
+
+//////////////////////////////////////////////////////////////////////
+// rules for internal structure of ORGs
+
+20> |NP#1[org]{?[maj,location:~],?*[location:~],?#2[place,misc:~]}|
+    LOCATION_OF(#1,#2).
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// CORRECTIONS AND ADDITIONS
+
+// If V1 NP V2, then NP is not the SUBJ of V2 but the OBJ of V1
+25> |?{?*,verb#1[last]},NP#2|
+  if ( ^?(#3,#2) & (#3 > #2) )
+  OBJ(#1,#2).
+
+// Same as above, but V1 is in an SC (If V1 NP V2, then NP is not the SUBJ of V2) but the OBJ of V1
+25> |SC{?*,?[last]{?*,verb#1[last]}},NP#2|
+  if ( ^?(#3,#2) & (#3 > #2) )
+  OBJ(#1,#2).
+  
+
+25> |?{?*,verb[last]},NP#2|
+  if ( ^$1(#3,#2) & (#3 > #2) )
+  ~$1.
+
+// If NP is SUBJ of an IV (infitive), then remove SUBJ
+25> if ( ^SUBJ(#1[nfin],#2) ) ~.
+
+// If NOUN the SUBJ of an ING or IV, then remove the SUBJ relation
+25> if ( ^SUBJ(#1[prog],#2) ) ~.
+
+
+// marking gender for PERSON names from their firstname
+25> if ( INTERNALS_FIRSTNAME1(#1,?[fem]) & #1[fem=+] ) ~ . 
+25> if ( INTERNALS_FIRSTNAME1(#1,?[masc]) & #1[masc=+] ) ~ . 
+
+
+
+// ADDITIONAL DEP RULES TO CAPTURE MISSING SYNTACTIC RELATIONS
+
+
+
+// SUBJ OF ING-VERBS
+
+// Topicalized ING : "Coming after the nominations, this is....
+25> |GV[start]{?*,#1[last]},(ADV;NP;PP;AP;SC;NFV;IV;CONJ)*, punct[comma],SC{NP#2{?*,#3[last]}}|
+ if ( ( SUBJ(#4,#2) | SUBJ(#4,#3) ) & (#4 > #2) )
+ INGSUBJ(#1,#2).
+
+// Topicalized ING: "By sending a letter to...., Paul thinks....
+25> |PREP[start],(ADV)*,GV{?*,#1[last]},(ADV;NP;PP;AP;SC;NFV;IV;CONJ)*,      punct[comma],SC{NP#2{?*,#3[last]}}|
+ if ( ( SUBJ(#4,#2) | SUBJ(#4,#3) ) & (#4 > #2) )
+ INGSUBJ(#1,#2). 
+ 
+// With NP - GV : "With Paul working on his thesis, John did not..."
+25> |PP[start]{prep[form:fwith],NP#1[last]},GV{?*,#2[last]}|
+ INGSUBJ(#2,#1).  
+ 
+// With NP - GV : ", with Paul working on his thesis."
+25> |punct,PP{prep[form:fwith],NP#1[last]},GV{?*,#2[last]}|
+ INGSUBJ(#2,#1).
+
+ 
+// Verb NP of GV : "accused the Tories of planning..."
+25> |FV{?*,?[last,sc_pof,form:~fmake]},NP#1,PREP[form:fof],GV{?*,#2[last]}|
+ if ( ~S0(#1,?) )
+ INGSUBJ(#2,#1).
+
+// Verb NP of GV : same as above but the verb is within an SC
+// "accused the Tories of planning..."
+25> |SC{?*,FV{?*,?[last,sc_pof,form:~fmake]}},NP#1,PREP[form:fof],GV{?*,#2[last]}|
+ if ( ~S0(#1,?) )
+ INGSUBJ(#2,#1).
+ 
+ 
+
+// APPOSITIONS
+
+25> if ( ATTRIB(#1,#2) & ( ~SUBJ(?,#1) | (SUBJ(#3, #1) & (#3 > #2) ) ) )
+ APPOS(#1,#2)
+ 
+// missing APPOS : "El Zarqawi, a Jordanian who ... , was ...."
+25>|NP#1[dig:~,time:~,tempexpr:~,adj:~,vprog:~],punct[comma],NP#2[tempexpr:~],
+    (ADV;AP;PP;GV;IV;SC)*,punct[comma],FV{?*,?[last,sg,pl:~]}|
+ if (~APPOS(#1,#2) & (~DETD(#1,?[pron]) | ~DETD(#2,?[pron]) )  )
+ APPOS(#1,#2).
+
+// missing APPOS : "He met El Zarqawi, a Jordanian who came yesterday."
+25>|NP#1[dig:~,time:~,tempexpr:~,adj:~,vprog:~],punct[comma],NP#2[tempexpr:~],
+    (ADV;AP;PP;GV;IV;SC)*,punct[sent]|
+ if (~APPOS(#1,#2) (~DETD(#1,?[pron]) | ~DETD(#2,?[pron]) )  )
+ APPOS(#1,#2).
+
+// missing APPOS : "El Zarqawi, 35 ... , and ...."
+25>|NP#1[dig:~,time:~,tempexpr:~,adj:~,vprog:~],punct[comma],NP#2[dig,tempexpr:~],
+   (ADV;AP;PP;GV;IV;SC)*,punct[comma],CONJ[coord]|
+ if (~APPOS(#1,#2) (~DETD(#1,?[pron]) | ~DETD(#2,?[pron]) )  )
+ APPOS(#1,#2).
+ 
+// missing APPOS : "El Zarqawi, 35 ... , decided to ...."
+25>|NP#1[dig:~,time:~,tempexpr:~,adj:~,vprog:~],punct[comma],NP#2[dig,tempexpr:~],
+   (ADV;AP;PP;GV;IV;SC)*,punct[comma],FV|
+ if (~APPOS(#1,#2) (~DETD(#1,?[pron]) | ~DETD(#2,?[pron]) )  )
+ APPOS(#1,#2). 
+
+
+// SUBJ missing when the subject NP has an apposition following it
+25> |NP#1,punct[comma],NP#2,(ADV;AP;PP;IV;GV;SC;NP)*,punct[comma],FV{?*,#3[last]}|
+ if (APPOS(#1,#2) & ~SUBJ(#3,?) )
+ SUBJ(#3,#1).
+
+
+ 
+// SUBJ missing when the NP subject is preceeded by "as" or "but" (in which case the NP is incorrectly enclosed in a PP)
+25> |PP{prep[form:fbut];prep[form:fas],?*,NP#1[last]},(ADV;AP;PP;IV;GV;SC;NP)*,FV{?*,#2[last]}|
+  if (~SUBJ(#2,?))
+  SUBJ(#2,#1).
+  
+  
+  
+
+// SUBJ missing when the NP subject is followed by a (long) relative clause
+25>|NP#1[dig:~,tempexpr:~],SC{BG{pron[nom]}},(ADV;AP;PP;IV;GV;NFV;NP)*,punct[comma],FV{?*,#2[last]}|
+ if ( (~?(?,#1) | ( ?(#3,#1) & (#3>#1) ) ) & ~SUBJ(#2,?) )
+ SUBJ(#2,#1).
+  
+ 
+ 
+ 
+// COORDINATIONS
+
+25> |NP#1,CONJ#2,NP#3|
+ if ( ~ COORD(#2,#1) & ~COORD(#2,#3) )
+  COORD(#2,#1), COORD(#2,#3).
+
+
+
+
+// EXTENSION of SUBJ to SUBJ-N if non passive
+25> if (  ( SUBJ(#1,#2) | INGSUBJ(#1,#2) ) & ~SUBJ-N(#1,#2) & #1[cop:~,auxbh:~,aux:~] )
+   SUBJ-N(#1,#2).
+
+25> if (  ( SUBJ(#1,#2) | INGSUBJ(#1,#2) ) & VDOMAIN(#3,#1) & ~SUBJ-N(#3,#2) & #3[cop:~,auxbh:~,aux:~] & ~NUCL(?[cop],#3) )
+   SUBJ-N(#3,#2).
+
+  
+// QUOTED/CITATIONS
+
+// OBJ rel between a speech verb (said, stated, etc.) and the head of an expresssion between quotes
+// Speech verb before quotation, no SC
+25> |?{?*,verb#1[last,guille:~,indspeech]},(?[indspeech:~];?[guille])*,?#2[guille]|
+   if (SUBJ-N(#1,#3))
+   SAY(#3,#2).
+
+// Speech verb before quotation, SC
+25> |SC{?*,?[last]{?*,verb#1[last,guille:~,indspeech]}},(?[indspeech:~];?[guille])*,?#2[guille]|
+   if (SUBJ-N(#1,#3))
+   SAY(#3,#2).
+
+
+// Speech verb after quotation, no SC
+25> |?#2[guille],(?[indspeech:~];?[guille])*,?{?*,verb#1[last,guille:~,indspeech]}|
+   if (SUBJ-N(#1,#3) & (#3 > #2) )
+   SAY(#3,#2).
+
+   
+// Speech verb after quotation, SC
+
+// BUG BUG BUG:
+// Text: "His term as ambassador to Indonesia taught him a lot about development," said Peter Timmer.
+// Problem: DOES NOT catch the FV in "said Peter Timmer" when the name
+// of the rule (#MA_REGLE) is moved to after this comment or simply removed.
+// BUT it works if "Timmer" is removed
+
+25> |?#2[guille],(?[indspeech:~];?[guille])*,SC{?*,FV{?*,verb#1[last,guille:~,indspeech]}}|
+   if (SUBJ-N(#1,#3) & (#3 > #2) )
+   SAY(#3,#2).   
+   
+   
+
+// Mark with dep rules
+
+29> if (PERSON(#1) & #1[person:~] & #1[person=+] ) ~ .
+29> if (ORGANISATION(#1) & #1[org:~] & #1[org=+] ) ~ .
+29> if (LOCATION(#1) & #1[person:~] & #1[location=+] ) ~ .
+
+Marker:
+
+// ??? 30> NP[adj=~]{?*,NADJ[adj,nadj,last]}.
+30> NP[masc=+]{?*,NOUN[masc,last]}.
+30> NP[fem=+]{?*,NOUN[fem,last]}.
+30> NP[sg=+]{?*,NOUN[sg,last]}.
+30> NP[sg=+]{?*,NUM[sg,last]}.
+30> NP[pl=+]{?*,NOUN[pl,last]}.
+30> NP[proper]{?*,NOUN[last,maj,proper=+]}.
+30> NP[person,proper,pl:~,sg=+].
+30> NP[org=+]{?*,NOUN[org,last]}.
+30> NP[bus=+]{?*,NOUN[bus,last]}.
+30> NP[location=+]{?*,NOUN[location,last]}.
+30> NP[acron=+]{?*,NOUN[abr,last]}.
+30> NP[acron=+]{?*,NOUN[acron,last]}.
+
+
+
+DependencyRules:
+// RULES FOR POTENTIAL CATAPHORA
+
+// PP, NPsubj : "Soon after his reelection, Bush has..."
+50> |PP{?*,NP#3{pron#1[gen,last:~]}},(ADV;AP;PP;GV;IV;SC)*,punct[comma],NP#2|
+ if (  ( ~MOD(?,#3) | ( MOD(#4,#3) & (#4>#3) )  ) & SUBJ(?,#2) )
+ CATAPHOR(#2,#1).
+
+// 
+50> | GV{?*,#1[last]},?*,
+      NP{?*,pron#2};PP{?*,NP{?*,pron#2}} |
+ if ( INGSUBJ(#1,#3) & (#3 > #2) )
+ CATAPHOR(#3,#2).
+ 
+50> | GV{?*,#1[last]},?*,
+      SC{?*, NP{?*,pron#2};PP{?*,NP{?*,pron#2}} }|
+ if ( INGSUBJ(#1,#3) & (#3 > #2) )
+ CATAPHOR(#3,#2). 
+ 
+ 
+////////////////// 
+// Rules for MOD_OF
+// MOD_OF is a kind of normalization of NOUN pre-modifiers and of-post-mod 
+// e.g. "US president", "George's car", "Paris mayor", "mayor of Lyon" etc.
+
+if (MOD(#1[noun],#2[noun]) & Mother(#2,#1) )
+   MOD_OF(#1,#2).
+
+
+////////////////////////////////////////////////////////////////////////////
+// COREF-BASED TYPING OF NP and NOUN nodes that are relevant to coreference
+
+// 
+
+|NP#1[proper,pron:~,adj:~,tempexpr:~]|
+if (~ATTRIB(?,#1))
+COREF_PROPER(#1).
+
+//
+|NP#1[proper:~,def,pron:~,noun,tempexpr:~]|
+if (~ATTRIB(?,#1) )
+COREF_ANAPHORIC_NOMINAL(#1).
+
+//if ( ^COREF_ANAPHORIC_NOMINAL(#1) && ?(#1,?[proper]) )
+//    COREF_PROPER(#1).
+
+//
+|NP#1[def:~,pron:~,proper:~,noun,tempexpr:~,dig:~]|
+if ( ~ATTRIB(?,#1) |
+     ( ATTRIB(#2,#1) & #2[pron,hmm_det] ) )
+COREF_NEW_REFERENT(#1).
+
+
+|NOUN#1[proper,last:~,title:~,adj:~,tempexpr:~,sg,org:~,location:~,person:~]|
+if (~ATTRIB(?,#1) & ~INTERNALS_FIRSTNAME1(?,#1) & ~INTERNALS_FIRSTNAME2(?,#1))
+COREF_NONE(#1).
+
+|NOUN#1[proper,last:~,title:~,adj:~,tempexpr:~]|
+if (~COREF_NONE(#1) & ~ATTRIB(?,#1) &
+    ~INTERNALS_FIRSTNAME1(?,#1) & ~INTERNALS_FIRSTNAME2(?,#1))
+COREF_PROPER(#1).
+
+|NOUN#1[proper:~,last:~,title:~,adj:~,tempexpr:~]|
+if (~COREF_NONE(#1) & ~ATTRIB(?,#1) &
+    ~INTERNALS_FIRSTNAME1(?,#1) & ~INTERNALS_FIRSTNAME2(?,#1))
+COREF_NONE(#1).
+
+|PRON#1[P2:~,rel:~,numer:~,form:~fthis,form:~fthat,form:~fwho,form:~fwhat,lemme:~"these"]|
+COREF_ANAPHORIC_PRONOMINAL(#1).
+
+
+
+
+

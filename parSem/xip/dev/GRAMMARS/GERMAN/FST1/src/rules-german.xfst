@@ -1,0 +1,689 @@
+# ============================================================================
+# CONTENT:	German morphology : morphophonological rules
+# ============================================================================
+
+# --------------------------------------------------------------
+echo >>> define special function characters
+
+define MBD	"^+" ;	 # morpheme boundary
+
+define UML	"^$" ;	 # umlaut trigger
+
+define CBD1	"^#" ;	 # compound boundary 
+			 # Schiff^#Fahrt -> Schiffahrt^Old, Schifffahrt^New
+
+define CBD2	"^-" ;	 # hyphen boundary 
+			 ## Schiff^-Fahrt -> Schiff-Fahrt
+
+define FBD	"^/" ;	 # separator for "Fuge" (linking element)
+			 ## Kind^/s^#Kopf -> Kindskopf
+
+define DRS	"^}" ;	 # derivational affix
+			 # trink^}bar 
+
+define DRP	"^{" ;	 # derivational prefix
+			 ## un^{treu
+
+define CONV	"^]" ;	 # conversion marker
+			 ## trinken+Verb+Inf^]+Noun+Neut
+
+define SEP	"^=" ;	 # (lexical) marker for separable prefix
+			 ## an^=kommen
+
+define TBD	"^&" ;	 # (lexical) marker for contarcted tokens
+			 ## zum => zu+Adpos+Prop^&dem+Det+Def...
+			 ## geht's => gehen+Verb...^&es+Pron+Pers...
+
+define DBL	"^~" ;	 # marker for doubling s or n 
+			 ## Bus~^+e -> Busse; Freundin~^+e -> Freundinnen
+
+define BAR	"^|" ;	 # marker for segment/word boundary 
+			 ## Miss|erfolg -> Mißerfolg^Old; NOT: Misserfolg"^Old
+			 ## Aus|stieg -> NOT: Außtieg^Old !
+
+define DOT	"^." ;	 # marker for numeral coimpound
+			 ## ein^.und^.zwanzig
+
+define ACC	"^*" ;	 # word (accent) marker, to "block" some rules
+			 ## penible^+e -> penible, finster^+e -> finstre
+			 ## BUT: fidel*^+e -> fidele; schwer*^+e -> schwere
+
+define SPACE	"^_" ;	 # white space
+			 ## open_air
+ 
+define DEL	[%^1|%^2|%^3] ;
+
+define SPELL	"^Old" | "^New" | "^Err" ;
+
+define CBD	CBD1 | CBD2 ;		# compound boundary
+define BD	CBD | MBD | DRS ;
+define EOW	(%-) .#. ;		# end of word
+
+define LowVow	a | e | i | o | u | ä | ü | ö ;
+define UppVow	A | E | I | O | U | Ä | Ü | Ö ; 
+define Vowel	LowVow | UppVow ;
+define LowCons	b|c|d|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z|ß ;
+define UppCons	B|C|D|F|G|H|J|K|L|M|N|P|Q|R|S|T|V|W|X|Y|Z ;
+define Cons	LowCons | UppCons ;
+
+define NCons1	[ b | c h | c k | f f | g | d | m m | p | t ] ;
+define NCons	NCons1 [m|n] ;
+
+
+set flag-is-epsilon on
+
+#########################################################################
+set quit-on-fail off
+
+# --------------------------------------------------------------
+echo >>> upper/lower case control for lexicalised compounds
+## Baden[=]Württemberg		-> Baden-Württemberg
+## Baden[=]Württember^}isch	-> baden-württembergisch
+
+define LDASH	%- [ "@U.frm.upp@" 0:%^Upp | "@U.frm.low@" 0:%^Low ];
+substitute defined LDASH for "[=]"
+
+# --------------------------------------------------------------
+echo >>> spelling flag diacritics
+define OLD	  "@U.lem.old@" "@U.srf.old@" ;
+define NEW	  "@U.lem.new@" "@U.srf.new@" ;
+define ERR	  "@U.lem.err@" "@U.srf.err@" ;
+substitute defined OLD for "[old]"
+substitute defined NEW for "[new]"
+substitute defined ERR for "[err]"
+
+# --------------------------------------------------------------
+echo >>> flag diacritics for compounds
+# [*]	 ==> no compound
+## Aber	 -> Aber, *-aber
+
+# [&]	 ==> no single word, only compound head
+## äugig -> (blau)-äugig, *äugig
+
+# [-]	 ==> if compound, then only hyphenated
+## Los_Angeles -> ?Nord-Los Angeles, *-Nordlos Angeles
+
+# [^]	 ==> only hyphenated compound; no case change in derivations
+## PC	 -> Standard-PC, PC-basiert, *pC-basiert
+
+define CHEAD   "@R.cpd@" "@C.cpd@" ;
+define CDASH   "@U.cpd.dsh@" "@C.cpd@" ;
+define CDASH2  CDASH "^*" ;	       # no case change in derivations or compounds
+define NOCP    "@U.cpd.no@" ;
+
+substitute defined NOCP	 for "[*]"
+substitute defined CHEAD for "[&]"
+substitute defined CDASH for "[-]"
+substitute defined CDASH2 for "[^]"
+set quit-on-fail on
+
+define LEX
+
+# --------------------------------------------------------------
+echo >>> flag diacritics for verb control
+# [P]	 marker for attached separable prefix	
+#	 (enables all verb forms and derivations, except imperative)
+##	 nach[P]ahmen -> nachahmen, nachgehamt, nachahmst, *nachahm!
+# [S]	 marker for detached separable prefix
+#	 (enables only finite verb forms and imperative)
+##	 [S]ahmen -> ahme (nach)! 
+# [G]	 "ge" infix for past particple
+# [Z]	 "zu" unfix for infinitive and prsent participle
+
+set flag-is-epsilon off
+
+read regex [
+	SEP  <- [ "[P]" | "[S]" ]
+.o.	0   <- [ "[G]" | "[Z]" ]
+
+.o.	LEX
+
+.o.	"[S]" -> [ "@U.cpd.no@" "@U.sep.off@" "@P.ge.off@" SEP ]
+.o.	"[P]" -> [ "@U.sep.on@" SEP ]
+.o.	"[G]" -> [ "@P.ge.on@" g e | "@P.ge.off@" ] 
+.o.	"[Z]" -> "@D.zu.on@" [ "@P.zu.on@" z u | "@P.zu.off@" ]
+];
+
+twosided flag-diacritics
+
+set flag-is-epsilon on
+
+echo >> map optional Vowels "e" and "a"
+## d^arauf	 -> darauf :: darauf, drauf
+## los^e	 -> lose   :: lose, los
+## Asiat^E	 -> Asiat  :: Asiat, Asiate
+define LEX 
+
+read regex [
+	0 <- %^E
+.o.	e <- %^e
+.o.	a <- %^a
+.o.	0 <- "[_]"
+.o.	LEX
+.o.	[%^E|%^e] -> [0|e]
+.o.	%^a -> [0|a]
+.o.	"[_]" -> [" "|0]
+];
+
+define LEX 
+
+#########################################################################
+echo >>> identify tags and single characters
+read regex LEX ;
+single char sigma net
+define SIG ;
+
+read regex [ SIG .o. %+ ?+ ];
+multi char sigma net 
+define TAG 
+
+read regex [ SIG .o. %^ ?+ ];
+multi char sigma net 
+define DIAC
+
+read regex [SIG .o. "@" ?+ "@" ];
+multi char sigma net 
+define FLAG
+
+define CHAR	SIG & ? ;
+
+# --------------------------------------------------------------
+echo >>> basic clean up of upper side
+read regex [
+## Affe+Noun+Masc^}in -> Affe+Noun+Masc}in
+## Wales+Prop+Country+Neut^2is^}er+Noun+Masc -> Wales+Prop+Country+Neut^}er+...
+## Epos+Noun+Neut^2en+Pl..		     -> Epos+Noun+Neut+Pl...
+	0 <- [ BAR | CHAR ]* || TAG _ [ TAG | DRS ]
+.o.	0 <- [ DEL | UML | DBL | %^V ]
+.o.	LEX 
+];
+
+# --------------------------------------------------------------
+echo >>> basic clean up of lower side
+define LEX
+
+read regex [
+	LEX
+# remove tags 
+.o.	[ TAG | CONV ] -> 0
+
+# cut infinitive endings
+## knien^V...	-> knie...
+## sammeln^V...	-> sammel...
+## sichern^V...	-> sicher...
+## spielen^V...	-> spiel...
+.o.    (e) n @-> 0 || _ %^V
+.o.    [..] -> e   || k n i _ %^V
+
+# remove stem characters
+.o.	CHAR   (DBL) %^1 @-> 0
+.o.	CHAR^2 (DBL) %^2 @-> 0
+.o.	CHAR^3 (DBL) %^3 @-> 0
+];
+
+# --------------------------------------------------------------------
+echo >>> umlaut rule
+define LEX
+# Apfel^$		-> Äpfel
+# kalt^$er		-> kälter
+# Affe^$^}chen		-> Äffe^}chen
+# Saal^$e		-> Säle
+# Floß^$e		-> Flöße
+# Ofen^$^}chen		-> Öfen^}chen
+# Moor^$^}chen		-> ?Mör^}chen
+# Fluss^$e		-> Flüsse
+# Haus^$er		-> Häuser
+# Bild^$er		-> Bilder
+
+read regex	[
+	LEX
+
+.o.	A (a) @-> Ä, a (a) @-> ä	|| _ (u) Cons* (e (Cons)) UML
+.o.	O (o) @-> Ö, o (o) @-> ö	|| _ Cons* (e (Cons)) UML
+.o.	U -> Ü, u -> ü		|| [ \[e|a|ä|E|A|Ä] | .#. ] _ Cons* (e (Cons)) UML
+.o.	UML -> 0
+];
+
+# --------------------------------------------------------------
+echo >>> derivational changes
+define LEX
+
+read regex [
+	LEX 
+
+# Technik^}isch	 -> technisch
+# Magie^}isch -> magisch
+.o.	i [e|k] -> 0 || _ DRS i s c h
+
+# weise^}heit -> Weisheit
+# müde^}igkeit -> Müdigkeit
+
+# Biologie^}isch -> biologisch
+# Bretone^}isch -> bretonisch
+# Bote^}in -> Botin
+# Karlsruhe^}Er -> Karlsruher
+.o.	e -> 0 || _ DRS [ h e i t | Vowel ]
+
+
+# sammel^V^}ung	 -> ?Sammelung, Sammlung
+# sicher^V^}ung	 -> Sicherung, ?Sichrung
+# Basel^}er -> Basler, Baseler
+# wander^}er^}in -> Wandererin, Wanderin
+# fummeln^}erei	 -> ?Fummelerei, Fummlerei, Fummelei
+# klettern^}erei -> ?Klettererei, Klettrerei, Kletterei
+.o.    e (->) 0 ||  Cons _ [l|r] %^V DRS Vowel
+.o.    (DRS) e r (@->) 0 || \[i] e r _ DRS [i|I] n 
+.o.    e r (->) 0 || \[i] e [l|r] DRS _ e i
+.o.    e (->) 0 || \[i] _ [l|r] DRS e r
+
+# Hase^$^}chen -> Häschen
+# Faden^$^}chen -> Fädchen
+.o.	e (n) @-> 0	|| _ DRS [(e l) {chen}|{lein}]
+
+# Engel^}lein -> Engelein, Englein
+# Schnabel^$^}lein -> Schnäbelein, Schnäblein
+.o.	e l (->) 0	|| \[i] _ DRS {lein}
+.o.	l -> 0		|| _ DRS {lein}
+
+];
+
+
+# ============================================================================
+# rules-phon
+# ============================================================================
+
+
+# --------------------------------------------------------------
+echo >>> verbs ...
+define LEX
+read regex [
+	LEX
+
+# berechnen^V^}bar -> berechenbar
+# berechnen^V^}ung -> Berechnung
+# rechn^V^#Weg	   -> Rechen^#weg
+# trockn^V^#	   -> trocken-
+.o.    [..] -> e || NCons1 _  [m|n] %^V [DRS Cons | %^CpdE [ CBD | %- ] ]
+
+# "e"in compound verb stems
+## polier^V^CpdE	-> polier-
+## bind^V^CpdE		-> binde-
+## folg^V^CpdE		-> folge-, folg- 
+## werb^V^CpdE		-> werbe-
+## lös^V^CpdE		-> löse-
+.o.	%^CpdE (->) e	|| [b|g|d|t| Vowel s ] %^V _
+.o.	%^CpdE -> 0
+
+
+# verbs in -el, -er
+## sammel^V^+e		-> ?sammele, sammle
+## sicher^V^+e		-> sichere, sichre
+## sammel^V^+est	-> *sammelest, sammelst
+## sicher^V^+est	-> *sicherest, sicherst
+## BUT: teer^V^+e	-> teere, *tere
+## BUT: spiel^V+e	-> spiele, *spile
+.o.    e (->) 0 ||  \[i|e] _ [l|r] %^V MBD e (%^ElV) .#. 
+.o.    e -> 0	|| \[i|e] e [l|r] %^V MBD _ (s) t 
+.o.    [%^V] -> 0 
+
+# e insertion
+## find^+^InsEt		-> findet
+## find^+^InsEst	-> findest, ?findst
+## arbeit^+^InsEt	-> arbeitet
+## arbeit^+^InsEst	-> arbeitest, *arbeitst
+## atm^+^InsEt		-> atmet, *atmt
+## fand^+^InsE2t	-> fandet
+## fand^+^InsE2st	-> fandest, ?fandst
+## fuhr^+^InsE2t	-> fuhrt, fuhret
+## fuhr^+^InsE2st	-> fuhrst, fuhrest
+.o.	[ %^InsE | %^InsE2 ] -> e || [ NCons | t ] MBD _
+.o.	[ %^InsE | %^InsE2 ] -> e || d MBD _ t
+.o.	%^InsE (->) e || d MBD _ s t
+.o.	%^InsE -> 0
+.o.	%^InsE2 -> [e|0] 
+
+# imperative "e"
+## atm^+^ImpE		-> atme
+## arbeit^+^ImpE	-> arbeite, *arbeit
+## komm^+^ImpE		-> komm, komme
+## schrei^+ImpE		-> schrei, ?schreie
+.o.	%^ImpE -> e	|| [ NCons | d | t ] MBD _
+.o.	%^ImpE -> [e|0]	
+
+# 2nd person singular after "s"
+## (du) läss^+st	-> lasst
+## (du) weiß^+st	-> weißt 
+## (du) sitz^+st	 -> sitzt
+.o.	s -> 0	|| [ s | ß | x | z ] MBD _ t
+
+## hält^+t -> hält
+.o.	t -> 0		|| _ MBD t
+];
+
+echo >>> adjectives ...
+define LEX
+read regex [
+	LEX
+# adjectives in -el, -er
+## teuer^+^AdjE		-> teure, ?teuere
+## sauer^+^AdjE		-> saure, ?sauere
+## finster^+^AdjE	-> finstere, finstre
+## penibel^+^AdjE	-> penible, *penibele
+## dunkel^+^AdjEn	-> dunklen, ?dunkeln
+## dunkel^+^AdjEm	-> dunklem, *dunkelm
+## inner^+^AdjEn	-> inneren, innern, ?innren
+## unser^+AdjEtwillen	-> unseretwillen, unsertwillen, unsretwillen
+## BUT: leer^+^AdjE	-> leere, *lere
+## BUT: stier^+^AdjE	-> stiere, *stire
+.o.	%^AdjE (->) 0	|| [%^AdjE|e] l MBD _ n
+.o.	e -> 0		|| \[i|e] _ l MBD %^AdjE 
+.o.	[ %^AdjE|e] (->) 0	|| \[i|e] _ r MBD %^AdjE
+.o.	%^AdjE (->) 0	|| [%^AdjE|e] r MBD _ [n|m|t]
+.o.	%^AdjE -> e
+
+# superlative -(e)st
+## klein^+^SupEste	-> kleinste
+## heiß^+^SupEste	-> heißeste
+## kalt^$^+SupEste	-> kälteste, ?kältste
+## wild^+SupEste	-> wildeste, wildste
+## neu^+SupEste		-> neueste, neuste
+## roh^+SupEste		-> roheste, rohste
+## reich^+SupEste	-> reichste, ?reicheste
+## informativ^+SupEste	-> informativste, ?informativeste
+## hydrophob^+SupEste	-> hydrophobste, ?hydrophobeste
+.o.	%^SupE -> e   || [ s (DBL) | ß | x | z ] MBD _	
+.o.	%^SupE -> 0   || e MBD _	
+.o.	%^SupE (->) e || [ d | t | Vowel [Vowel|h] | c h 
+			 | i v | o b ] MBD _ 
+.o.	%^SupE -> 0 
+];
+
+echo >>> nouns, function words, ...
+define LEX
+
+read regex [
+	LEX
+# genitive or compound
+# Mann^+^OptEs		-> Mannes, Manns
+# Mann^/^OptEs		-> Mannes-, Manns-
+# Haus^+^OptEs		-> Hauses, *Hauss
+.o.	%^OptE -> e	|| [ s (DBL) | ß | x | z ] [MBD|FBD] _ s
+.o.	%^OptE -> 0	|| e [MBD|FBD] _ s
+.o.	%^OptE -> [e|0]	 
+
+## Bus^~^+e		-> Busse
+.o.	DBL -> s	|| s _ [MBD|FBD] Vowel
+
+## Freundin^~^+en	-> Freundinnen
+.o.	DBL -> n	|| n _ MBD Vowel
+
+## an^+m       -> am
+## vieles^+m   -> vielem
+.o. [s|n] -> 0 || _ MBD m
+];
+
+
+set quit-on-fail off
+substitute label e for %^OptE:e 
+substitute label 0 for %^OptE:0
+substitute label 0 for %^CpdE:0 
+set quit-on-fail on
+
+
+echo >>> clean up ...
+define LEX
+read regex [
+	"^/" e <- %^CpdE 
+.o.	LEX 
+
+# dusselig -> dusselig-, dusslig
+# 3-gliederig^}keit -> 3-gliederigkeit, 3-gliedrigkeit
+# BUT: red|selig -> *redslig
+.o.	e (->) 0 || Vowel [Cons]+ _ [l|r] i g [ BD | EOW ]
+
+# euer+ig -> eurig
+# unser+ig -> unsrig
+.o.	e (->) 0 || _ r MBD i g 
+
+# removal of final "e"
+## müde^+er	-> müder
+.o.	e -> 0	|| \[i|e] _ MBD Vowel	###????
+.o.	e -> 0	||  _ MBD e
+
+.o.	[DRS|DBL|MBD] -> 0
+.o.	DRP -> %^Low
+
+];
+
+# --------------------------------------------------------------
+echo >>> genitive and plural of proper names
+# Goethe^PGen -> Goethes
+# Müller^PPl -> Müllers
+# Lenz^PGen -> Lenz', ?Lenzens
+# Lenz^PPl  -> Lenzens
+# Strauss^PGen -> Strauss', Straussens
+define LEX
+
+define SNAME	[ s (DBL) | ß | x | z ] ("^*") ;
+
+read regex [
+	LEX
+.o.	%^PGen (->) %' || SNAME _
+.o.	[ %^PGen | %^PPl ] -> {ens} || SNAME _
+.o.	[ %^PGen | %^PPl ] -> s
+];
+
+# --------------------------------------------------------------
+# added 05-Nov-2003
+echo >>> restrict dative -e
+define LEX
+
+read regex [
+     	~$[ e %+Noun [%+Masc|%+Neut] %+Sg %+Dat2 ]
+.o.    	LEX
+];
+ 
+# --------------------------------------------------------------
+echo >>> restrict compound "-s-"
+define LEX
+
+read regex [
+	LEX
+
+# Haus^/s   -> *Hauss-
+# Haus^s/es -> Hauses
+.o.	~$[ [s|ß|x|z] FBD s ]
+
+# Pfau^/s   -> *Pfaus-
+# Pfau^/es  -> *Pfaues-
+.o.	~$[ Vowel (h) FBD (e) s ]
+
+
+.o.	FBD -> 0
+];
+
+
+
+# --------------------------------------------------------------
+echo >>> upper/lower case (for derivations)
+define LEX
+read regex [
+	LEX
+
+.o.	%^Upp -> 0  || CBD1 _ 
+
+.o.	a->A, ä->Ä, b->B, c->C, d->D, e->E, f->F, g->G, h->H, 
+	i->I, j->J, k->K, l->L, m->M, n->N, o->O, ö->Ö, p->P,
+	q->Q, r->R, s->S, t->T, u->U, ü->Ü, v->V, w->W, x->X, 
+	y->Y, z->Z || %^Upp _
+
+.o.	A->a, Ä->ä, B->b, C->c, D->d, E->e, F->f, G->g, H->h, 
+	I->i, J->j, K->k, L->l, M->m, N->n, O->o, Ö->ö, P->p,
+	Q->q, R->r, S->s, T->t, U->u, Ü->ü, V->v, W->w, X->x, 
+	Y->y, Z->z || [%^Low|CBD1|SEP]  _
+
+.o.	[%^Low|%^Upp] -> 0
+] ;
+
+
+# --------------------------------------------------------------
+echo >>> "e" elision 
+define LEX
+read regex [
+     LEX
+# finde's	-> find's
+# finde		-> finde, find ('s)
+.o.  e -> "*DEL*" || _ %^ElV TBD
+.o.  e (->) "*DEL*" || _ %^ElV
+.o. %^ElV -> 0 || "*DEL*" _
+.o. "*DEL*" -> 0
+
+#.o.  [ e %^ElV ] -> 0 || _ TBD
+#.o.  [ e %^ElV ] (->) 0
+#.o. ~$[ \[e] %^Elv ]
+
+# gehen^ELID	-> gehn, geh'n
+# schauen^ELID	-> schaun, schau'n
+# Darlehen^ELID -> Darlehn, Darleh'n
+# Frauen^ELID	-> Fraun, Frau'n
+# wollen^ELID	-> *wolln, woll'n,
+# finde^ELID	-> find'
+# Auge^ELID	-> Aug'
+
+.o.   e -> [%^Eps|%^Apo]  || Vowel [Vowel|h] _ n (%^ElV) %^ELID
+.o.   e -> [%^Apo]	  || _ (n) (%^ElV) %^ELID 
+.o.   %^ELID -> 0	  || $[%^Eps|%^Apo] _
+.o.   %^Eps -> 0
+.o.   %^Apo -> %'
+] ;
+
+set quit-on-fail off
+substitute label 0 for %^ElV
+substitute label 0 for %^ELID
+set quit-on-fail on
+
+define LEX
+
+# corrected 05-Nov-2003
+read regex [
+	0 <- %^ElV
+#.o.	%+ElidS <- %^ElV	|| _ (SPELL) .#.
+.o.	%+ElidS <- %^ElV	# 08/08/2006
+.o.	%+Elid <- %^ELID
+.o.	LEX 
+];
+
+
+# --------------------------------------------------------------
+echo >>> "ss" -> "ß" 
+define LEX
+
+define BOUND	BAR | EOW | CBD | %- ;
+
+
+###### Begin of change
+###	set flag-is-epsilon off
+###	define SSMAP	[
+###	       [..] -> [%^NS|%^OS] || s s _ FLAG* [ Cons | TAG | BOUND ] 
+###	.o.	s s -> ß || _ %^OS  
+###	];
+###	
+###	
+###	read regex [ SSMAP.i .o. LEX .o. SSMAP ];
+###	
+###	set quit-on-fail off
+###	#substitute label "@U.lem.old@" for %^OS:0
+###	#substitute label "@U.lem.new@" for %^NS:0
+###	
+###	substitute label 0:"^OS" for %^OS:0
+###	substitute label 0:"^NS" for %^NS:0
+###	
+###	substitute label "@U.spell.old@" for 0:%^OS
+###	substitute label "@U.spell.new@" for 0:%^NS
+###	set quit-on-fail on
+###	
+###	set flag-is-epsilon on
+###### End of old
+
+set flag-is-epsilon off
+read regex [
+	ß <- s s || _ "@U.lem.old@"
+.o.	[ "@U.lem.new@" | "@U.lem.old@" ] <- [..]  || s s _ FLAG* [ Cons | TAG | BOUND ] 
+.o.	LEX 
+.o.	[..] -> [ "@U.srf.new@" | "@U.srf.old@" ]  || s s _ FLAG* [ Cons | TAG | BOUND ] 
+.o.	s s -> ß || _ "@U.srf.old@"
+];
+twosided flag-diacritics
+set flag-is-epsilon on
+
+#### End of new
+
+# --------------------------------------------------------------
+echo >>> triple consonants in compounds (old spelling rules)
+## Schiff^#Fahrt	   -> Schiffahrt
+## Schiff^#Fracht	   -> Schifffracht
+## voll^=laufen		   -> vollaufen
+## Fett^#triefend	   -> fetttriefend
+## Fett^#topf		   -> Fettopf
+## schwimm^#meister	   -> Schwimmeister
+## BUT: Schloss^#sänger	   -> Schloßsänger
+
+define LEX
+
+define ELIM	 [ [%^OS %^REM] | %^NS ] ;	
+
+define BDX	 CBD1 | SEP ;
+
+read regex [
+	LEX 
+.o.	[..] -> ELIM ||
+		       f f BDX _ f Vowel
+		     , l l BDX _ l Vowel
+		     , m m BDX _ m Vowel
+		     , n n BDX _ n Vowel
+		     , p p BDX _ p Vowel
+		     , r r BDX _ r Vowel
+		     , t t BDX _ t Vowel
+		     
+.o.	[f|l|m|n|p|r|t] -> "*EPS*" || %^REM _
+.o.	%^REM -> 0
+
+];
+
+set quit-on-fail off
+
+substitute label "@U.srf.old@" for 0:%^OS
+substitute label "@U.srf.new@" for 0:%^NS
+
+
+set quit-on-fail on
+
+
+# ============================================================================
+echo >>> final cleanup
+
+define LEX
+read regex [
+	0 <- [ BAR | ACC ]
+.o.	LEX
+.o.	SPACE -> " "
+.o.	[ BAR | ACC | DOT | SEP ] -> 0
+.o.	CBD2 -> %- 
+.o.	CBD1 -> %- || .#.  _
+.o.	CBD1 -> 0
+] ;
+
+echo >>> shorten spelling tags
+set flag-is-epsilon on
+
+define LEX 
+
+read regex [ 
+	%^New <- %^NewLem %^NewSrf 
+.o.	%^Old <- %^OldLem %^OldSrf
+.o.	%^Err <- %^ErrLem %^ErrSrf
+] .o. LEX ;
+
+
+set quit-on-fail off
+substitute symbol 0 for "*EPS*"

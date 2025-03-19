@@ -1,0 +1,533 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb.xip
+//! Content:	rules for POS disambiguation
+//!
+//! Language:	ITALIAN
+//! ENCODING:	UTF-8	[€àâáäã]
+//!
+//! Author:	Anne Schiller
+//!
+//! Date: 	17-Jan-2006	:: initial version
+//! Update:	08-Apr-2008	:: changed to UTF-8
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging:
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1> noun<sg>,noun<pl> = |(det<sg>), (adj<sg>), (adj<sg>)| noun<sg> .
+
+1> noun,verb,adj = noun[prop] |noun[postmod:+,featprop]|.
+
+1> noun, symbol = |num[dig:+]| symbol | num[dig:+]|.
+
+1> verb<form:favere>, symbol<lemma:ha> = | noun | verb<form:favere> .
+1> verb<form:favere>, symbol<lemma:ha> = | adv | verb<form:favere> .
+1> verb<form:favere>, symbol<lemma:ha> = | num+ | symbol<lemma:ha> .
+
+1> ?<surface:deriva> = | noun | verb .
+1> ?<surface:deriva> = verb | ~verb[fin] | .
+1> ?<surface:deriva> = | det | noun .
+1> ?<surface:deriva> = | det | noun .
+
+1> noun,adj = | noun[title,people] | noun[maj] .
+
+// Prep ~ Adj
+1> prep;adj = |verb[form:fessere]| adj.
+
+
+
+1> adj<lemma:pronto>;interj<lemma:pronto> = |punct[quote]| interj |punct[quote] |.
+1> adj<lemma:pronto>;interj<lemma:pronto> = |verb[form:fessere]| adj .
+
+
+
+
+//Disambiguation of "gli" pron / det[art]. "Gli stessi giudici"; "Gli stessi dicendo".
+1> det[art],pron = det[art] | (adj), (adv), (adj), noun, prep~| .
+1> det[art],pron = det[art] | pron[dem:+,poss:+] |.
+
+1> det[art],pron = det[art] | noun| .		// ex: " Le case"
+1> det[art],pron = det[art] | adj | .		// ex: "La bella statuina."; ex: "Gli stessi giudici"---Ca marche !!!! 
+1> det[art],pron = det[art] | adv | .		// ex: "la sempre maggiore diffidenza."
+1> det[art],pron = det[art] | pron[dat:~,acc:~]|. 	// "Le stesse"
+1> det[art],pron = det[art] | num | .		// "Verso le 10.15"
+1> det[poss],pron = det[art] | num | .		// "Verso le 10.15"
+
+1> det[art],pron<acc> = |conjche| pron[acc:+,aton:+] | verb[ind:+]|.
+1> det[art],pron<acc> = |pron, pron<dat,preclit>| pron<acc> .
+1> det[art],pron<acc> = |pron<dat,preclit>| pron<acc> | verb<ind>|.
+1> det[art],pron<acc> = |pron<dat,preclit>| pron<acc> | verb<subj>|.
+1> det[art],pron<acc> = |pron<dat,preclit>| pron<acc> | verb<impv>|.
+1> det[art],pron = pron | verb<prespart:~;pastpart:~;inf:~,gerund:~,impv:~> | .  / ex: "Gli stessi parlando.  nfv~;gv~\
+
+
+
+
+// Prep ~ Verb (namely, "Dai, Dallo, Dalla, Dagli, Dalle"):
+
+1> prep;verb<impv> = verb[impv:+]   | pron*[nom:+,dem:+], det[art:+], ~noun |.
+1> prep;verb<impv> = verb[impv:+]   | prep |.
+1> prep;verb<impv> = | verb[pastpart:+] |   prep   | adj[poss:+]|.
+1> prep;verb<impv> = | adj |  prep  | adj[poss:+]|.
+1> prep;verb<impv> = prep   | adj[poss:+]|.
+1> prep;verb<impv> = prep   | det, noun |.
+1> prep;verb<impv> = prep   | (adv), (adj), noun|.
+
+
+
+1> adj,pron,verb<form:fstare> = |pron| verb<form:fstare> |verb[gerund:+,prespart:~,pastpart:~,fin:~,inf:~], punct~, conj~|.
+1> adj,pron,verb<form:fstare> = |det[art:+]| adj | (adj), (det[poss:+]), (num), noun|. 
+1> adj,pron,verb<form:fstare> = |det[art:+]| pron |verb[pastpart:+,fin:+,inf:+], punct, conj|.
+
+
+
+
+//"Un altro" un=det[art].
+1> det[art,indef],num = det[art,indef] |pron|.
+1> det[art,indef],num = det[art,indef] |adj*, noun|.
+
+//"Uno dei miei cani; uno dei migliori; una delle componenti fondamentali.
+1> det[art,indef];pron<indef> = pron<indef> | prep|.
+
+1> ?[form:fora] = | det[art], num*| noun |prep*|.
+1> ?[form:fora] = | num, ~punct| noun |prep*|.
+1> ?[form:fora] = |prep, adj | noun.
+1> ?[form:fora] = adv | det[art]|.
+1> ?[form:fora] = |prep | adv.
+1> ?[form:fora] = |pron, (punct[comma:+]) | adv.
+1> ?[form:fora] = | punct[comma:+] | adv.
+
+
+
+// upper case words (other than at the beginning of a sentence) must be a  proper name
+1> ?[maj:+,first:~] = noun[prop:+].
+
+// a guessed noun with a capital is a proper noun "Giovanni Depau"
+1> noun[maj:+] = noun[prop=+,masc=+,fem=+,sg=+,pl=+,maj=+, src:guess].
+//1> ?<maj:+,start:~> = ?<prop:+> .
+
+//Addio : interj ~ noun
+1> noun<lemma:addio>,interj<lemma:addio> = |det[art] | noun<lemma:addio>.
+1> noun<lemma:addio>,interj<lemma:addio> = |?[poss:+] | noun<lemma:addio>.
+1> noun<lemma:addio>,interj<lemma:addio> = | ?[dem:+] | noun<lemma:addio>.
+
+
+
+//Punta :{noun:already done}; FV [presind/ impv Puntare] ~ NFV[pastpartPungere]
+
+1> verb<ind>,verb<pastpart> = | verb[form:fessere,ind:+], adv*, verb[form:fessere,pastpart:+], (adv) | verb<pastpart>. //"Era (già) stata punta" ; Era stata già punta.
+1> verb<ind>,verb<pastpart> = | prep, noun, adj* | verb<pastpart> |prep, noun|.
+1> verb<ind>,verb<pastpart> = | prep, noun[pl:+], adj* | verb<pastpart,pl> |prep, noun|.
+1> verb<ind>,verb<pastpart> = |pron[refl:+], verb[form:fessere,ind:+], adv*| verb<pastpart>. //"Si è (Era) (già) punta" .
+1> verb<ind>,verb<pastpart> = |pron[dat:+,acc:+], verb[form:favere,ind:+], adv*| verb<pastpart>. //"L'aveva (già) punta".
+1> verb<ind>,verb<pastpart> = |noun*, (pron[nom:+]), (pron[dat:+,acc:+]) | verb<ind> | adv*, det[art] | . //Lui gli puntò la pistola sul petto.
+1> verb<ind>,verb<pastpart> = |det[art:+,tokenend:~], noun, (pron[nom:+]), (pron[dat:+,acc:+]) | verb<ind> | adv*, prep | . //La Juve punta allo scudetto.
+1> verb<ind>,verb<pastpart> = | noun[prop:+], (pron[nom:+]), (pron[dat:+,acc:+]) | verb<ind> | adv*, prep | . //La Juve punta allo scuadjto.
+
+
+
+// I legami commerciali diretti[noun:~]. La maggiore[adj] competitivitï¿½[noun] dei mercati. Il Dip. di Stato consiglia di seguire le notizie dei media[noun].
+//Warning: I consigli commerciali diretti[pastpart] ai consumatori...;
+
+1> noun;adj = | prep, det[art], punct*[quote] | adj | punct*[quote], noun |.
+1> noun;adj = | adv[form:fpiù]| adj .
+1> noun;adj = | noun, adj | adj .
+1> noun;adj = | noun | adj .
+1> noun;adj = | noun, adj, conj<coord> | adj .
+1> noun;adj = | (verb[pastpart:+]), prep | adj | noun |.
+1> noun;adj = | prep[lemma:per] | adj .
+1> noun;adj = | (prep), det[art], (adv) | adj | noun |.
+1> noun;adj = | ~adv[lemma:ci], verb[form:fessere] | adj .
+1> noun;adj = | noun, adj, conj<coord> | adj | ~adj|.
+1> noun;adj = | (prep), det[art], (adv) | adj | num |.
+1> noun;adj = | (prep), det[art] | noun | ~noun|.
+1> noun;adj = | (prep), quant | noun | ~noun|.
+1> noun;adj = | adj*| noun | ?*[det:~, noun:~] |.
+1> noun;adj = | num | noun | ~noun |.
+1> noun;adj = | ~noun, adj, ~conj[coord]| noun | ~noun |.
+1> noun[maj:+,prop:+,firstname:+],verb<pastpart>,adj = | noun[lemma:papa] | noun[maj,prop,firstname] | num[dig:+,rom:+]|.
+
+
+1> noun<lemma:cosa>,pron<lemma:cosa> = | ?[dem:+] | noun.
+1> noun<lemma:cosa>,pron<lemma:cosa> = | ?[det:+] | noun.
+1> noun<lemma:cosa>,pron<lemma:cosa> = | ?[conjche:+] | pron.
+1> noun<lemma:cosa>,pron<lemma:cosa> = pron | verb | .
+
+
+
+1> verb<ind>;adj = |pron*<nom,dat,acc,refl> | verb | ~noun|. // questa me la paghi! Questa politica SI INTEGRA in un'ideologia generale.
+1> verb<ind>;adj = |pron<refl> | verb. 
+
+1> verb<pastpart>;adj = |verb[form:favere], (adv)|  verb.   		//(mi) ha seguito)
+1> verb<pastpart>;adj = |verb+<form:fessere>, (adv)|  verb<pastpart>.	// sono (stato)  (spesso) seguito
+1> verb<pastpart>;adj = |adj | adj | noun|.			
+1> verb<pastpart>;adj = |verb, det[art:+,def:+] | adj | noun|.
+1> verb<pastpart>;adj = |det[art], noun| adj.
+1> verb<pastpart>;adj = |det[art], noun| adj | ~prep<lemma:da>|.
+1> verb<pastpart>;adj = verb<pastpart> | prep<lemma:da> |.
+1> verb<pastpart>;adj = |verb[form:favere], verb[pastpart:+], conj[coord]|  verb[pastpart].   		//ha organizzato e eseguito la rapina
+
+1> verb<subj>;adj = |pron[nom:+,dat:+,acc:+,refl:+] | verb. //Voglio che tu paghi il giusto prezzo.
+1> verb;adj = |noun[prop:+]| verb.  //WARNING: Ho visto le piante di Maria VIVE (ADJ)  e rigogliose.
+1> verb;adj = |noun[masc:+,pl:+]| adj[masc:+,pl:+].
+1> verb;adj = |noun[masc:+,pl:+]| adj[masc:+,pl:+] |(conj), prep, (det[art])|.
+1> verb;adj = |noun[masc:+,sg:+]| adj[masc:+,sg:+] |(conj), prep, (det[art])|.
+1> verb;adj = |noun[masc:+,sg:+]| adj[masc:+,sg:+] .
+1> verb<inf>;adj = |adj| verb<inf> .
+1> verb<inf>;adj = |adv| verb<inf> .
+1> verb<inf>;adj = |noun| adj |adj|.
+1> verb<impv>;adj = |prep, (det[art]), noun| adj .  // La lingua UFFICIALE della Repubblica è l'italiano.
+1> verb;adj = |noun[prop:+,first:+]| verb .
+1> verb<prespart>;adj = |det*[art], noun| adj |?*[noun:~]| .
+
+
+1> verb;adj = |verb, (pron[indef:+]) | adj . 
+
+//"La porta aperta" : det[art] noun adj ~ pron[dat] fv[portare presind] adj ~  det[art] nfv[porgere Pastpart] adj.
+//"In questo posto": posto=noun ~posto nfv[porre Pastpart]
+1> noun;verb<pastpart> = | det[art], (adj), (num) | noun.
+1> noun;verb<pastpart> = | (det[art]), adj, (num) | noun.
+1> noun;verb<pastpart> = | (det[art]), ~noun, adj | noun.
+1> noun;verb<pastpart> = | noun, (adj), verb[ind:+,subj:+,pastpart:~], adv*, (verb<pastpart>), (adj;adj;quant) | noun .
+1> noun;verb<pastpart> = | noun, (adj), verb[ind:+,subj:+,pastpart:~], adv*, (verb<pastpart>), adv[form:fpiù]  | noun[sg:~].	//il Governo fascista è già intervenuto più volte
+1> noun;verb<pastpart> = | quant | noun.
+1> noun;verb<pastpart> = | prep | noun.
+1> noun;verb<pastpart> = | noun, (neg), verb[form:fessere], adv* | verb<pastpart> | prep*|.  //la mela è mangiata da Piero
+1> noun;verb<pastpart> = | noun, (neg), verb<form:fessere>, adv*, verb<form:fessere,pastpart>, adv* | verb<pastpart> | prep*|.  //Michele è stato ACCUSATO 
+1> noun;verb<pastpart> = | (neg), verb[form:fessere,aux:+], adv* | verb[pastpart:+,lemma:fare]. //E' gia stato fatto; non è mai più stato fatto.
+1> noun;verb<pastpart> = | verb[pastpart:+], adv*[form:fpiù~] | verb[pastpart:+]. //E' stato gia fatto; non è stato mai più fatto.
+1> noun;verb<pastpart> = | (neg), verb[form:fessere,gerund:+], adv* | verb[pastpart:+].  // essendo arrivato..., avendo già fatto..., non avendo mai (più) fatto...
+1> noun;verb<pastpart> = | (neg), verb[form:favere,gerund:+], adv* | verb[pastpart:+].  // essendo arrivato..., avendo già fatto..., non avendo mai (più) fatto...
+1> noun;verb<pastpart> = | verb[form:favere] | verb[pastpart:+].
+1> noun;verb<pastpart> = |  noun | verb[pastpart:+].
+1> noun;verb<pastpart> = |  punct[comma:+] | verb[pastpart:+] | det, adj*, noun | .
+
+
+//PP{per NP{ragioni}} SC{BG{che} FV{abbiamo}} ADVP{già} NFV{espresso} ~NFV{ più volte}  NP { più volte}
+1> noun[pl:+];verb<pastpart> = | (verb<pastpart>), adv| noun[pl:+].
+
+
+1> noun;verb<prespart> = | det[art], (adj), (num) | noun.
+1> noun;verb<prespart> = | det*[art], adj, (num) | noun.
+1> noun;verb<prespart> = | (det[art]), ~noun, adj | noun.
+1> noun;verb<prespart> = | quant | noun.
+1> noun;verb<prespart> = | prep | noun.
+1> noun;verb<prespart> = noun | prep<lemma:di> | .
+
+
+
+1> noun;verb<ind> = | noun, adj*,verb*<prespart>, conj[coord:+]| noun |verb<pastpart> |.	// Rumore stridente o sibilo emesso dopo lo spegnimento
+1> noun;verb<ind> = | noun, nfv*[prespart:+], conj[coord:+]| noun |verb[pastpart:+] |.	// Rumore stridente o sibilo emesso dopo lo spegnimento
+
+1> noun;verb<ind> = |(noun,pron,adj), verb[form:favere,prespart:+] | noun .	// "Le persone / coloro aventi titolo"
+1> noun;verb<ind> = noun |verb[prespart:+] |.	// con leggi e decreti miranti a preservarne la purezza.
+1> noun;verb<ind> = |verb[form:favere], quant | noun .
+1> noun;verb<ind> = |verb[form:favere,gerund:+] | noun .
+1> noun;verb<ind> = | verb[form:favere,ind:+], adv*, verb[form:favere,pastpart:+] | noun . //Da quando questo ha avuto inizio
+1> noun;verb<ind> = | det[art] |  noun  | (neg), verb | .
+1> noun;verb<ind> = | det[art] |   noun  .
+1> noun;verb<ind> = |prep| noun.
+1> noun;verb<ind> = | ~noun, adj | noun.
+1> noun;verb<ind> = |num| noun.
+1> noun;verb<ind> = |prep| noun.
+1> noun;verb<ind> = |(prep), adj| noun.
+1> noun;verb<ind> = |prep, (adj,det[art]), ~noun, adj | noun.
+1> noun;verb<ind> = noun | adj| .
+1> noun;verb<ind> = |adv| noun | (adv), adj*, prep| .  // Promuoviamo l'uso della lingua come strumento di insegnamento...-(privilegiato) di comunicazione-.
+1> noun;verb<ind> = |prep, verb[inf:+]| noun | (adv), adj*, prep| .
+1> noun;verb<ind> = |(det[art];adj), noun, adj* | verb<ind> | ?*, verb<pastpart>| .
+1> noun;verb<ind> = |pron[nom:+]| verb<ind> .
+1> noun;verb<ind> = verb<ind> |(det), noun| .
+
+1> noun;verb<ind> = | verb[inf], (det)| noun .
+
+//1> noun;verb<impv> = verb |(det), noun| .
+//1> noun;verb<ind> = | verb[form:favere,ind:+], adv*, verb[form:favere,pastpart:+] | noun . //Da quando questo ha preso forma
+//1> noun;verb<ind> = verb<inf> |(det), noun| . 
+
+1> noun;verb<subj> = noun | adj|.
+1> verb<subj>;noun = | verb<aux>, ~punct | noun | ~adj, ~pron, ~det[art] |. //Non ci saranno tagli
+1> verb<subj>;noun = | verb<modal>, ~punct | noun | ~adj, ~pron, ~det[art]| . //Non ci saranno tagli
+
+//dalle stelle alle stalle DALLE: preart ~ impv[Dare]; STALLE: noun ~ impv[Stare]; i LEGAMI commerciali;
+1> verb<impv>;noun = | det[art] | noun.
+1> verb<impv>;noun = | pp | noun.
+1> verb<impv>;noun = | det*[art], num| noun.
+
+
+1> verb<perf>,verb<pastpart> = | verb[form:fessere,pastpart:+] | verb<pastpart>.
+1> verb<perf>,verb<pastpart> = |noun | verb<perf> .
+1> verb<perf>,verb<pastpart> = | ~noun | verb<pastpart>.
+
+
+//Siamo impegnati da SEI mesi.
+1> num<lemma:sei>;verb<form:fessere> = |prep| num<lemma:sei> |noun|.
+1> num<lemma:sei>;verb<form:fessere> = |pron| verb<form:fessere> | verb<pastpart> |.
+1> num<lemma:sei>;verb<form:fessere> = |pron| verb<form:fessere> | adj |.
+
+
+
+//{Fin da} SUBITO
+1> ?[form:fsubito] = |prep | adv.
+
+
+
+//"Fa" verb (Fare)~ adv.
+//1> adv;verb<ind> = |(prep), num, noun[period:+] | adv[lemma:fa] |~adj, noun<prop>, verb[inf:~]|.	//Tre mesi fa.
+//1> adv;verb<ind> = |(prep), quant, noun[period:+] | adv[lemma:fa]|~adj, noun<prop>, verb[inf:~]|.	//Alcuni mesi fa.
+//1> adv;verb<ind> = |noun |verb |(det[art]), (quant), (adj), noun[prop:~], verb[gerund:~,prespart:~,pastpart:~,ind:~,impv:~]|.
+//1> adv;verb<ind,impv,modal> = |~prep, quant, noun[period:+] | adv[lemma:fa].
+//1> adv[lemma:fa];verb<ind> = |~prep, num, ~det[art], noun[period:+,prop:~] | adv[lemma:fa].
+
+
+//SOLO
+1> ?[form:fsolo] = |?*| conj |?*[fv:~]|.
+
+
+1> det,pron =  pron | prep|.
+1> det,pron = pron | conjche |.
+1> det,pron = det | det[art], noun |.
+
+
+1> adj,pron = adj | (adv), (det), noun |.
+1> adj,pron = adj | det[art,indef:~] |. 
+1> adj,pron = adj | det[dem:+],adj[poss:+]| .
+1> adj,pron = adj | verb<inf>| .
+1> adj,pron = adj | (det[art]), (det[dem:+]), (adj[poss:+]), pron[nom:~] |. //tutto questo.
+1> adj,pron = adj | num|.
+1> adj,pron = |det[art]| adj | adj|.
+1> adj,pron = |(det[art];det[dem:+])| adj |(num), verb[prespart:+]|.  //Gli stessi (due) duellanti, questi (stessi) duellanti.
+//1> adj,pron = | noun, verb[form:fessere] |  adj . 	//"questo telefono è mio".
+
+1> det<dem>,pron<dem> =  pron | punct[comma]|. //dopo la figuraccia di ieri e QUELLA, mai dimenticata di martedi'...
+// "in questo posto" ~ "voglio questo", "(Tutti) I nostri piÃ¹ bei momenti."
+1> det<dem>,pron<dem> =  det | ~prep|. //L'atmosfera è quella(PRON) di due anni fa.
+//1> det,pron =  pron | prep|.
+1> det,pron = |verb| pron<dem> | ?*[noun:~,det:~]|.
+1> det,pron = |prep| pron<dem> | ?*[noun:~,det:~]|.
+1> det<dem>,pron<dem> = |verb[form:fessere] | pron<dem> | det[art]|. //E' questo il posto di cui ti parlavo.
+1> det<dem>,pron<dem> = pron<dem> | prep|. //L'atmosfera è quella di due anni fa.
+1> det,pron = pron | (neg), pron[dat:+,acc:+,refl:+],pron*[acc:+,refl:+]|. //Questo l'ho fatto io!; Questo mi piace; questa me la paghi!, tutto si aggiusterà, Questa non è una difesa di C.B.
+1> det,pron = pron | (neg), pron*, verb|. //Questo l'ho fatto io!; Questo mi piace; questa me la paghi!, tutto si aggiusterà, Questa non è una difesa di C.B.
+1> adj,pron = |verb| pron | prep | . //Vanno tutti a casa.
+1> adj,pron = pron | verb[inf:~] |  . // tutti andarono a casa. Voglio che tutti vadano  a casa.
+1> det,pron = pron | adv*[end:+]|.	//Questo (poi) mai!
+1> det,pron = | verb| pron | det[art,indef:+]| .
+1> det[rel:+],pron = |prep| pron | ~det[art], pron[dem:~] |. //La fine di tutto si avvicina.
+1> det[rel:+],pron = |prep| pron | ~det[art], (pron[dem:~]), verb |. //La fine di tutto è vicina. 
+1> det,pron = |prep| pron | punct |. //Questa è la scuola di TUTTI. 
+1> det,pron = |det[art]| pron | punct |. //Ognuno rispetti l'ALTRO.
+1> det,pron = |prep| pron | conj |. //Questa è la scuola di TUTTI ma...
+1> det,pron = |det[art]| pron | conj |. //Ognuno rispetti l'ALTRO e ...
+
+
+//Disambiguation of "stessi" adj / verb [subj]. "Prendo le stesse che hai preso tu" I comuni stessi.
+1> pron,verb<subj> = verb | ~noun, (adv), verb<gerund> | .
+1> adj,verb<subj> = verb | ~noun, (adv), verb<gerund> | .
+1> pron,verb = | det[art], (noun[pl:+]) |	pron[pl:+] 	| (adv), ~verb | .
+1> adj,verb =  | det[art] |			adj[pl:+] 	| ~verb, noun[pl:+]| .
+
+
+
+// gli stessi giudici
+//1> ?[form:fstesso] = adj | noun | .
+
+
+
+//QUANTO Conj ~ Pron ~ Quant
+1> ?<lemma:quanto> = |prep, (det[art,tokenend:+])| pron |pron*[acc:+,dat:+], verb |. // Concordo con QUANTO adjto. ------------------------------------------------------------------------------------------------------------------------
+
+
+
+//1> ?[form:fc] = adv | ?[form:fessere] | .
+
+1> verb;prep = prep | ?[lemma:lui], noun |.
+
+1> verb;prep = prep | ?[lemma:loro], noun |.
+
+1> verb;prep = prep | ?[lemma:lo], noun |.
+
+1> verb<lemma:partire>;noun<lemma:parte> = | prep, det[art], ?+<lemma:altro> | noun .
+1> verb<lemma:partire>;noun<lemma:parte> = | verb[form:favere], verb<lemma:fare>| noun .
+1> verb<lemma:partire>;noun<lemma:parte> = | verb<lemma:fare>| noun | prep<lemma:di>| .
+
+
+1> verb<lemma:leggere>,noun<lemma:legge> = | pron[refl:+] | verb<lemma:leggere> . 
+
+
+//fra prep~noun(frate)
+1> noun;prep = | prep | noun |noun[prop:+]|.	// fra Martino. ATTENTION :Anna si trova fra Lucia e Agnese
+1> noun;prep = | verb[stay_place:+],prep | noun | prep*, (det[art]), noun[prop:+, firstname:+]| .
+1> noun;prep = | prep | noun | noun[prop:+], prep, noun[prop:+]|.		// fra Nicola da Laconi.
+1> noun;prep = prep |noun[prop:+], (punct[comma:+]), (conj), noun[prop:+]|.	//Anna si trova fra Lucia e Agnese
+1> noun;prep = prep |det[art]|.		// fra i fiancheggiatori.
+1> noun;prep = prep |quant|.		// arriverà fra qualche giorno.
+1> noun;prep = prep |det |.		//sono rinchiuso fra queste quattro mura domestiche.
+1> noun;prep = prep |pron|.		//fra questo e quello.
+1> noun;prep = prep | num |.		//fra due anni. Fra 2 anni.
+1> noun;prep = prep | noun |.		//fra moglie e marito non mettere il dito.
+
+
+
+// dei + noun[pl] -> prep
+1> ?[prepnoun] = |num, ~det[art] | prep .
+1> ?[prepnoun] = |noun, ~det[art] | prep | det*[art], ~neg, adj[poss:+,pl:+], adj*, noun[pl:+] | .
+1> ?[prepnoun] = |num, ~det[art] | prep | det*[art], ~neg, adj[poss:+,pl:+], adj*, noun[pl:+] | .
+1> ?[prepnoun] = |adj, ~det[art] | prep | det*[art], pron[poss:+,pl:+] | .
+1> ?[prepnoun] = |pron| prep | det*[art], pron[poss:+,pl:+] | .
+1> ?[prepnoun] = |quant| prep | det*[art], pron[poss:+,pl:+] | .
+
+1> ?[prepnoun] = |det[art,pl:+]| noun .
+1> ?[prepnoun] = |quant[pl:+]| noun | adj*, (neg), verb[inf:~,pastpart:~]| .
+1> ?[prepnoun] = |pron[dem:+,poss:+,pl:+]| noun | adj*, (neg), verb[inf:~,pastpart:~]| .
+1> ?[prepnoun] = |det[pl:+]| noun | adj*, (neg), verb[inf:~,pastpart:~]| .
+
+
+1> ?*[num:+] = num.
+
+1> ?<lemma:convincere> = | verb<form:fessere> | adj.
+
+
+
+//Faccia Verb~ Noun
+1> verb<lemma:fare,subj>;noun<lemma:faccia> = | det[art]| noun.
+1> verb<lemma:fare,subj>;noun<lemma:faccia> = | prep| noun.
+
+
+//TENERE : adj ~ verb
+1> adj<lemma:tenero>;verb<inf,lemma:tenere> = verb<inf,lemma:tenere> | det*, noun | .
+1> adj<lemma:tenero>;verb<inf,lemma:tenere> = verb<inf,lemma:tenere> | pron | .
+
+// ERA Noun~Verb     Nell'era glaciale ~ Nella mela c'era un verme 
+1> verb<form:fessere>;noun = | adv<lemma:ci>| verb.
+1> verb<form:fessere>;noun = | pron[dat:+,acc:+] | verb.
+1> verb<form:fessere>;noun = verb | verb<pastpart>|.
+1> verb<form:fessere>;noun = |noun[prop]| verb .
+
+//STATO Stare ~ Essere
+1> verb<form:fessere,pastpart>;verb<form:fstare,pastpart> = verb<form:fessere,pastpart> | adv*,verb<pastpart>|.
+
+1> det,pron =  pron | prep|.
+
+//CENTRO adj ~noun 
+1> noun<lemma:centro>;adj<lemma:centro> = adj[locadj =+] | punct*[hyphen:+], adj[locadj:+] | .
+
+1> noun;verb<pastpart> = | noun, (adj), verb[ind:+,subj:+,pastpart:~], adv*, (verb<pastpart>), (adj;adj;quant,adv[form:fpiù])  | noun.
+// spirale[adj=~] salari-prezzi
+1> adj[postnom] = | ?[noun:~] | noun .
+
+
+
+//SIA conj ~ verb[form:fessere] Voglio sia questo sia quello; voglio sia questo che quello; voglio bene sia a Mimma sia (che) a Bebba.
+//Voglio che sia 		...REGLE TRES TRES TRES LIMITEE POUR L'INSTANT...
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb*, ?*[conjche:~]| conj<lemma:sia> | pron, ?*, conjche, pron|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb*, ?*[conjche:~]| conj<lemma:sia> | det*, ?*, noun, conjche, ?*[verb:~]|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb*, ?*[conjche:~]| conj<lemma:sia> | det*, ?*, noun, conjche|.
+
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb, ?*, conjche| verb<form:fessere,subj> | adj|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb, ?*, conjche,?*[art:+,pron:+,noun:+]| verb<form:fessere,subj> | det*[art], noun|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | verb, ?*, conjche,?*[art:+,pron:+,noun:+]| verb<form:fessere,subj> | verb<pastpart>|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | noun| verb<form:fessere,subj> | prep, ?*[conjche:~]|.
+1> conj<lemma:sia>;verb<form:fessere,subj> = | conjche, det*,noun| verb<form:fessere,subj,impv> | prep, ?*[conjche:~]|.
+
+
+1>noun<lemma:accetta>;verb<lemma:accettare> = | ?*[art:~;det:~;prep:~;adv:+,neg:+] | verb<lemma:accettare>.
+
+
+// disambiguation of "se": if it's followed by another pronoun, except "ne", it's a conjunction
+1> ?[form:fse] = conj | pron[ne:~] | .
+
+
+//Anche
+1> ?[form:fanche] = |?*[prep:~;art:~]| conj.
+
+
+//Sfuggita noun ~ nfv
+1> noun[lemma:sfuggita];verb<pastpart,lemma:sfuggire> = | prep[lemma:di] | noun.
+
+// secondo
+1> ?[form:fsecondo] = prep | pron | .
+1> ?[form:fsecondo] = prep | det[art] | .
+1> ?[form:fsecondo] = prep | noun[pl] | .
+1> ?[form:fsecondo] = | prep | num .
+1> ?[form:fsecondo] = | det[art] | num .
+1> ?[form:fsecondo] = prep | ?[prop] | .
+
+// Ancora adv ~noun(àncora) ~verb(egli àncora) :"à" is often written without accent, this creates ambiguity.
+1> ?[form:fancora] = |?*[art:~, adj:~, noun:~, verb:+] | adv | (det[art]), (adj), noun|.
+1> ?[form:fancora] = | ?*[art:~, noun:~, verb:+]| adv | (det[art]), adj| .
+1> ?[form:fancora] = |?*[art:~, noun:~, verb:+] | adv | (det[art]), adv| .
+1> ?[form:fancora] = | ?*[noun:~, verb:~] | noun.
+1> ?[form:fancora] = | ?*[art:~,  verb:~, adj:~] | verb.
+
+//Noun ~ conj (namely, "E", which is considered "noun(EST,cardinal point)" in the beginning of the sentence).
+1> noun[lemma:est,maj:+,first],conj<coord> = |?*[prep:~,art:~]| conj<coord>.
+
+
+//Lungo Adj(il fiume più LUNGO del mondo il Flumendosa...) ~ Prep(quanta occupazione sarà persa LUNGO la strada della ripresa?
+1> ?<lemma:lungo> = |verb | prep | det[art]|.
+1> ?<lemma:lungo> = |verb | prep | adj|.
+1> ?<lemma:lungo> = |noun*,adv* | adj | ~det[art] |.
+
+
+//Molto ADV~QUANT
+1> ?<lemma:molto> = |verb | adv | det[art]|.
+1> ?<lemma:molto> = |verb | adv | pron|.
+1> ?<lemma:molto> = |verb | quant | ~pron|.
+1> ?<lemma:molto> = |verb | quant | ~det[art]|.
+1> ?<lemma:molto> = |verb | quant | (adj), noun|.
+1> ?<lemma:molto> = |verb | quant | noun|.
+
+
+//DOPO Adv ~ Conj ~ Prep
+1> ?*<lemma:dopo> = conj | verb<inf> |.
+1> ?*<lemma:dopo> = conj | verb<pastpart> |.
+1> ?*<lemma:dopo> = prep | (det[art]), noun |.
+1> ?*<lemma:dopo> = adv | ?[art:~, noun:~]|.
+
+
+//Punto FV ~ Noun
+1> noun<lemma:punto>;verb<lemma:puntare,ind:+> = | det[art] | noun.
+1> noun<lemma:punto>;verb<lemma:puntare,ind:+> = | num | noun.
+1> noun<lemma:punto>;verb<lemma:puntare,ind:+> = | prep | noun.
+1> noun<lemma:punto>;verb<lemma:puntare,ind:+> = | adj | noun.
+
+
+//Sinistra Adj ~Noun
+1> ?<lemma:sinistro> = | prep | noun.
+
+
+//Essere: potrebbe essere Rijkaard ~ l'essere umano/gli esseri umani.
+1> noun;verb<form:fessere> = |det[art]| noun | adj<lemma:umano>|.
+1> noun<form:fessere>;verb<form:fessere> = | ?*[prep:+,det:~,adj:~,num:~]| verb[form:fessere,pl:~] | ?*<lemma:umano~> |.
+
+
+//Ispirato Pastpart ~ adj
+1> adj<lemma:ispirato>;verb<lemma:ispirare,pastpart:+> = verb | prep, det*[art], noun |.
+
+
+//"Attraverso" verb~prep; verso "verb,prep"
+1> verb;prep = |verb | prep.
+//1> verb<lemma:versare>;prep<lemma:verso> = |verb| prep | det, num[dig] | .
+//1> verb<lemma:versare> = ?[lemma:~versare]| det[art:+,def:+,pl:+,fem:+], num[dig] | .
+
+
+//Via = adv
+1> ?*<lemma:via> = | verb | adv.
+
+//Bene: adv ~noun
+1> ?*<lemma:bene> = | verb | adv.
+
+
+//La Confederazione Nazionale dei Camionisti ha fatto sciopero
+1> noun<lemma:sciopero>,verb<surface:sciopero> = | verb<lemma:fare> | noun.
+
+1> ?[maj:+, first:~] = noun[prop:+] .
+
+

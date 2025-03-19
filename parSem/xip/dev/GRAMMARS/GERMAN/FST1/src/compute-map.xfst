@@ -1,0 +1,68 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:         (x)fst
+# CONTENT:      mappings of features for XIP 
+# AUTHOR:       Anne Schiller
+# DATE:         30-Jul-2010
+# -------------------------------------------------------------------------
+# USAGE:        fst -s lexicon.fst -l [ThisFile]
+# -------------------------------------------------------------------------
+
+# compound markers:
+define CPD	"^#" ;
+define HYP	"^-" ;
+
+# auxiliary symbols
+define SEG "*SEG*" ;
+define EPS "*EPS*" ;
+
+
+# load lexicon first
+unoptimize net
+
+define LEX
+# insert segmant marker
+read regex [ "*AUX*" <- [..]  || [CPD | HYP ] _ ] .o. LEX ;
+
+
+set quit-on-fail off
+substitute label "*SEG*" for "*AUX*":0 ;
+substitute symbol "*EPS*" for 0 ;
+set quit-on-fail on
+
+define LEX
+
+# identify single characters
+read regex LEX ;
+
+single char sigma net
+define SIG
+regex ? & SIG ;
+
+print words | gawk -f def-map.awk > tmp1.xfst
+
+pop 
+
+set minimal off
+
+source tmp1.xfst
+
+read regex LEX .o. MAP ;
+
+echo >>> print labels
+
+print labels | gawk -f def-subst.awk > tmp2.xfst
+
+set quit-on-fail off
+source tmp2.xfst
+
+echo >>> restitute epsilons
+substitute label %#:0 for "*SEG*"
+substitute symbol 0 for "*EPS*"
+substitute symbol 0 for "EPS"
+
+

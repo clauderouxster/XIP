@@ -1,0 +1,67 @@
+variables:
+int i1;
+int i2;
+xml courant;
+xml parent;
+dictionary attributes;
+
+string id;
+string task;
+string ent;
+string tag;
+string typeannot;
+string idconcat;
+string idconcatbis;
+string idroot;
+
+Script:
+
+@_current()->set(courant);
+xmlparent(courant,parent);
+attributes="";
+xmldata(parent,attributes);
+
+xmltag(courant,tag);
+typeannot=tag+"Annotation";
+
+ent=attributes["entailment"];
+id=attributes["id"];
+task=attributes["task"];
+
+print ("ID="+id+"  ENT="+ent+"  "+task+"\n");
+
+Script:
+
+
+
+|TOP#1| {	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/text)->Create(#1[surface]);
+	i1=nodenumber(#1);
+    idroot=i1;
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idroot]/word[@id=idroot])->Create();
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idroot]/word[@id=idroot]/attribute[@name="lemma"])->Create("ROOT");
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idroot]/word[@id=idroot]/attribute[@name="token"])->Create("ROOT");
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idroot]/word[@id=idroot]/attribute[@name="pos"])->Create(#1);
+}
+
+|#1[isindependency,cat:~0]| {
+	i1=nodenumber(#1);
+    idconcat=i1;
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idconcat]/word[@id=idconcat])->Create();
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idconcat]/word[@id=idconcat]/attribute[@name="lemma"])->Create(#1[lemme]);
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idconcat]/word[@id=idconcat]/attribute[@name="token"])->Create(#1[surface]);
+	@mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/node[@id=idconcat]/word[@id=idconcat]/attribute[@name="pos"])->Create(#1);
+}
+
+if ($1(#1,#2)) {
+    i1=nodenumber(#1);
+    idconcat=i1;
+    i2=nodenumber(#2);
+    idconcatbis=i2;
+   @mydb(/entailment-corpus/pair[@task=task][@id=id][@entailment=ent]/typeannot[@id=@sentencenumber]/tree[@root=idroot]/edge[@to=idconcatbis][@name=$1][@from=idconcat])->Create();
+}
+
+
+final:
+id=@pathname+".xip";
+@mydb()->save(id);
+

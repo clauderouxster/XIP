@@ -1,0 +1,277 @@
+# ============================================================================
+# TYPE:		fst script
+# CONTENT:      modifying morph. lexicon (for NTM and POS tagger)
+#
+# LANGUAGE:     DUTCH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      04-May-2007     
+# ============================================================================
+# USAGE:        xfst -s <LexFST> -l [ThisFile]
+# ============================================================================
+
+
+echo >>> boundary definitions
+define DBD	"^|" ;	 # derivation boundary
+define CBD	"^#" ;	 # compound boundary
+define GBD	%^%\ ;	 # "glue" boundary
+define SPC	"^_" ;	 # white space
+
+define DOT	%. ;
+define DIG	[%0|1|2|3|4|5|6|7|8|9] ;
+
+
+# ------------------------------------------------------------------------------
+# remove compounds with spaces or periods
+# e.g. admiraal+NC^#Goede^_Vrijdag+Noun+M+Sg
+
+define LEX ;
+read regex [ ~$[ CBD ?* [ SPC | DOT ] ] .o. LEX ];
+
+# ------------------------------------------------------------------------------
+# simplify multi-words (for NTM)
+
+define LEX 
+read regex [ ~$[%+Price|%+Percent|%+Postal] .o. LEX ];
+
+
+# ----------------------------------------------------------------
+echo >>> tag name changes 
+
+define PRESIND	[ %+Ind %+Pres];
+define PASTIND	[ %+Ind %+Past];
+
+substitute defined PRESIND for %+PresInd
+substitute defined PASTIND for %+PastInd
+
+# redundant tag name
+substitute symbol %+MN for %+NM 
+
+define LEX 
+
+# add missing category
+read regex [
+	%+Noun <- [..] || \[%+Prop|%+Prep|%+Adj|%+Adv] _ %+Abbr 
+.o.	LEX 
+] ;
+
+# ------------------------------------------------------------------------------
+# remove all words of some categories
+
+define REMCAT [
+	%+WordPart	# handle multi-words (NTM, tokenizer)
+|	%+For		# ignore Foreign Words (too much noise!)
+|	%+Punc		# punctuations are redefined in "punct.xfst"
+|	%+Pron		# pronouns are redefined in "pronouns.xfst"
+
+|	%+Country	# re-defined in lex-countries.lexc
+];
+
+define LEX
+read regex ~$[REMCAT] .o. LEX ;
+
+# ------------------------------------------------------------------------------
+# remove pronouns 
+
+define LEX
+read regex ~$[%+Pron] .o. LEX ;
+
+# ------------------------------------------------------------------------------
+# remove special words
+define LEX
+
+define REMOVE [
+  {allerhande}	%+Adj
+| {allerlei}	%+Adj
+| {ander} (s)	%+Adj
+| {dergelijks}	%+Noun
+| {dusdanig}	%+Adj
+| {eenzelfde}   %+Adj
+| {enkel}   	%+Adj
+| {genoeg}  	%+Adj
+| {ginds}   	%+Adj
+| {soortgelijk}	%+Adj
+| {velerlei}	%+Adj
+| {zodanig}	%+Adj
+
+# quantifiers
+| {beide} 	%+Num
+| {hoveel} 	%+Num
+| {meer}	%+Adj
+| {minder}	%+Adj
+| {veel}	%+Num
+| {weinig}	%+Num
+| {zoveelste}   %+Num
+| {zoveel}	%+Num
+
+| {geen} 	[ %+Num | %+Adv ]
+
+# from tagger files
+|	{alvorens} %+SubConj	# only "+Prep"	(-> +INFCON)
+|	{na} %+SubConj		# only "+Prep"	(-> +INFCON)
+|	{om} %+SubConj		# only "+Prep"	(-> +INFCON)
+
+|	{eens} %+Adj (%+Neg) (DBD %+Noun %+Sg)	# only Adv ??
+|	{natuurlijk} %+Adj DBD	%+Adv		# only Adv, see below
+
+|	{gratis} %+Adj DBD %+Noun %+N %+Sg
+|	{broos} %+Adj DBD %+Noun %+N %+Sg
+|	{e.o.} %+Abbr %+Sg
+|	{e.a.} %+Prep %+Abbr
+|	{o.a.} %+Adv
+|	{a.u.b.} %+Abbr %+Sg
+|	{c.q.} %+Prep %+Abbr
+
+|	{zelden} %+Adj		# only Adv ??
+|	{aan} %+Adj		# only Adv ??
+|	{op} %+Adj 		# only Adv ??
+|	{een} %+Art %+Indef %+Gen %+MN %+Sg
+#|	{dan} %+Adv
+|	{dan} %+SubConj
+
+|	{te} %+Adv		# redefined below !
+] ?* ;
+
+
+read regex ~REMOVE .o. LEX ;
+
+
+# -----------------------------------------------------------------
+echo >>> add missing +Neg feature for nouns !!!
+# ongezegde       zeggen  +Verb^|+Adj+Decl+Neg
+# ongezegde       zeggen  +Verb^|+Adj+Decl^|+Noun+MFCon+Sg
+
+define  LEX
+
+define NEGADJ	$[%+Adj (?) (?) %+Neg] .o. ~$[CBD] .o. LEX ;
+define NADJ	$[%+Adj (?) (?) DBD %+Noun ] .o. ~$[CBD] .o. LEX ;
+
+define NADJNEG	NADJ .o. [ NEGADJ.l (n) ];
+
+define NADJNEG2	[ %+Neg <- [..] || _ DBD %+Noun ] .o. NADJNEG ;
+
+read regex [ [ LEX - NADJNEG ] | NADJNEG2 ];
+
+
+# -----------------------------------------------------------------
+echo >>> add +PresPart, +Pastpart features to derived adjectives
+
+define LEX
+
+define PPRES $%+PresPart .o. LEX ;
+define PPAST $%+PastPart .o. LEX ;
+
+define DVERB	 $[%+Verb DBD] .o. LEX ;
+define DVERBNEG  $[%+Neg] .o. DVERB ;
+define DVERBPOS  ~$[%+Neg] .o. DVERB ;
+
+
+define DVERB	[ DVERBPOS - [ NEGNOUN ] ] | NEGNOUN2 ;
+
+define VPRES  [ DVERBPOS .o. [ PPRES.l (n)] ] | [ DVERBNEG .o. [ o n PPRES.l (n)] ];
+define VPAST  [ DVERBPOS .o. [ PPAST.l (n)] ] | [ DVERBNEG .o. [ o n PPAST.l (n)] ];
+
+define VPRES2	[ %+PresPart <- [..] || %+Verb _ DBD ] .o. VPRES ;
+define VPAST2	[ %+PastPart <- [..] || %+Verb _ DBD ] .o. VPAST ;
+
+
+read regex [ LEX - [VPRES|VPAST]] | VPRES2 | VPAST2 ;
+
+size
+
+# -----------------------------------------------------------------------------
+echo >>> more mappings
+
+define LEX
+
+read regex [
+# boundary symbols
+	%  <- SPC
+.o.	%# <- CBD
+.o.	%\ <- GBD
+
+# compound features
+.o.	0 <- [ %+AC | %+NC | %+VC | %+CmpdPart ]
+.o.	0 <- %+CmpdPart || _ $[CBD]
+
+# derivational features
+.o.	0 <- DBD
+
+.o.	0 <- [ %+DAdj | %+DVerb ] || _ $[%+PastPart|%+PresPart]
+.o.	%+DAdj  <- %+Adj || _ $DBD
+.o.	%+DVerb <- %+Verb || _ $DBD
+
+.o.	0 <- %+Decl || _ (%+Neg) DBD
+
+# map gender
+.o.	%+MF <- %+MFCon
+
+# add catgeroy adjective
+.o.	[ %+Basic | %+Decl ] <- [..] || %+Adj ~$[DBD|%+Basic|%+Decl] _ .#. 
+.o.	%+Adj (<-) %+Verb  || _ [%+PresPart|%+PastPart]
+
+# add feature +Pos (positive)
+.o.	%+Pos <- [..] || %+Adj _ [%+Decl|%+Basic|DBD|.#.]
+.o.	LEX
+];
+
+
+define LEX
+
+
+echo >>> additions
+define ADDLEX [
+# infinitive conjunctions
+ 	[ {alvorens} | {door} | {middels} | {om} | {zonder} 
+	| {door middel van} | {in plaats van} ] %+InfConj:0
+
+# post-positions
+ 
+|	[ {langs} | {door} | {in} | {uit} | {rond} (o m) | {over}
+	| {op} | {onder} ({langs}) | {om} | {na} | {binnen} 
+	| {bij} | {achter} | {aan} | {voorbij} ] %+Postp:0
+
+# separated parts of prepositions, e.g. "tot Arnhem toe"
+| 	[ {mee} | {toe} | {af} | {heen} | {aan} | {langs} | {na}
+	| {door} | {uit} ]  %+Circp:0
+
+# Separated parts of verb or adverb, e.g. "[hij belde er veel] op"
+| 	[ {aan} | {af} | {bovenop} | {heen} | {langs} | {mee} 
+	| {na} | {neer} |  {om} | {tegen} | {toe} 
+	| {voor} | {weg} 
+	| {achter} | {bij} | {binnen} | {buiten} | {door} | {in}
+	| {naar} | {naast} | {op} | {ober} | {over} | {rond}  
+	| {uit} | {van} | {voorbiij} ] %+Ptcl:0 %+Sep:0
+
+# particle "te" 
+|	{te}  %+Ptcl:0 %+Inf:0		# infinitoive marker: te lopen
+|	{te}  %+Ptcl:0 %+AMod:0		# adjective modifier: te groot
+
+
+|	{e.o.} 		%+Adj:0 %+Abbr:0
+|	{a.u.b.}	%+Interj:0 %+Abbr:0
+|	{a.g.v.}	%+Prep:0 %+Abbr:0
+|	{e.a.}		%+Adv:0 %+Abbr:0
+|	{o.a.}		%+Adv:0 %+Abbr:0
+|	{c.q.}		%+Conj:0 %+Abbr:0
+|	{zg.}		%+Adj:0 %+Abbr:0
+
+|	{eens}		%+Adv:0
+|	{even}		%+Adv:0
+|	{op}		%+Adv:0
+|	{weg}		%+Adv:0
+
+|	n u (u (u))		%+Interj:0
+|	n e e (e (e))		%+Interj:0
+|	j a (a (a)) (h)		%+Interj:0
+|	[h|H] a [h a]*		%+Interj:0
+
+# "het [meest]"
+|	{het}		%+Ptcl:0 %+Sup:0 
+
+];
+
+
+read regex LEX | ADDLEX ;
+

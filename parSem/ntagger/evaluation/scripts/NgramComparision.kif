@@ -1,0 +1,304 @@
+function compare(string i,string j) {
+     if (i<j)
+          return(true);
+     return(false);
+}
+
+function first_remove(self s,svector v){
+     if (s.regexip("?*`?*")) v.push(s.split("`").join(""));
+     else if (s.regexip("?*'?*")) v.push(s.split("'").join(""));
+     else v.push(s);
+          }
+
+function second_remove(self s,svector v){
+     if (s.regexip('?*"?*')) v.push(s.split('"').join(""));
+     else v.push(s);
+          }
+
+function remove_slash(self s, svector v){
+     if (s!='/') v.push(s.trim());
+}
+
+function remove_space(self s,svector v){
+     if('\/' in s) s=s[:'\/'][:-2]+'\'+s['\/':][2:];
+     if(s!='' && '/' in s && s[:'/'].size()>0 && ~('--' in s) && ~('--' in s) ) {
+          v.push(s[:'/'][:-1]);
+          v.push(s['/':][1:]);
+     }
+}
+
+function erase_spaces(string s) {
+     return (s.split(" ").join(""));
+}
+
+
+//*******************************
+
+svector  tableA, tableB,tableAA,tableBB;
+list s1;
+list s2;
+int i, j;
+
+function  concat( vector T,  list pos) {
+     string ret = "";
+     for(i=0 ; i<pos.size() ; i++) ret += T[pos[i]];
+     return(ret);
+}
+
+function is_prefixes_match(string A, string B) {
+
+     int mn = min(erase_spaces(A).size(), erase_spaces(B).size());
+     boolean b = (A[:mn] == B[:mn]);
+     return (b);
+}
+
+function bt(list pa, list pb, int ca, int cb) {
+
+     string A = concat(tableA, pa);
+     string B = concat(tableB, pb);
+
+//     println( A + " / " + B + " " + pa + " " + pb + " " + ca + " " + cb);
+
+     if( erase_spaces(A).size() == erase_spaces(B).size() ) {
+          list auxa = pa;
+          list auxb = pb;
+          s1.pushlast(auxa);
+          s2.pushlast(auxb);
+
+          return(1);
+     }
+
+     int found =0;
+
+     // |A| > |B|
+     if( erase_spaces(A).size() > erase_spaces(B).size() ) {
+
+          string C = A[B.size():];
+
+          for( i=cb ; i<min(cb+5, tableB.size()) && (found==0); i++) {
+		
+               if( is_prefixes_match(C, tableB[i]) ) {
+
+                    pb.pushlast(i);
+                    if( bt(pa, pb, ca, i+1) == 1) found=1;
+                  
+                    pb.poplast();
+               }
+          }
+
+     } else {
+
+     string C = B[A.size():];
+
+     for( i=ca ; i<min(ca+5, tableA.size()) && (found==0); i++) {
+	
+          if( is_prefixes_match(C, tableA[i]) ) {
+               pa.pushlast(i);
+
+               if (bt(pa, pb, i+1, cb) == 1)  found=1 ;
+            
+               pa.poplast();
+          }
+     }
+
+}
+
+return(found);
+}
+
+//**********************************************************
+function compare(string wsjfile,string xipfile,string folder) {
+//fill tableA, fill tableB
+//fill tableA, fill tableB
+//string wsjfile='wsj_0048.pos.txt';
+//string xipfile='wsj_0048.hmm.map';
+
+s1.clear();
+     s2.clear();
+     tableA.clear();
+     tableAA.clear();
+     tableB.clear();
+     tableBB.clear();
+//***tableA
+file f1(wsjfile,'r');
+svector vect=f1.read();
+f1.close();
+svector wsj1;
+vect.apply(first_remove,wsj1);
+
+vect.clear();
+wsj1.apply(second_remove,vect);
+
+wsj1.clear();
+vect.apply(remove_slash,wsj1);
+
+svector wsj;
+wsj1.apply(remove_space,wsj);
+
+for(i=0;i<wsj.size();i+=2){
+     tableA.push(erase_spaces(wsj[i]));
+     tableAA.push(wsj[i+1].trim());
+}
+
+//***tableB
+
+file f2(xipfile,'r');
+svector vect2=f2.read();
+f2.close();
+
+svector xip1;
+vect2.apply(first_remove,xip1);
+
+vect2.clear();
+xip1.apply(second_remove,vect2);
+
+xip1.clear();
+vect2.apply(remove_slash,xip1);
+
+svector xip;
+xip1.apply(remove_space,xip);
+
+for(i=0;i<xip.size();i+=2){
+     tableB.push(erase_spaces(xip[i]));
+     tableBB.push(xip[i+1].trim());
+}
+
+//***start comparision
+list pa;
+list pb;
+list final;
+int x1,x2;
+while( x1 < tableA.size() && x2< tableB.size() ) {
+     
+     pa.clear();
+     pb.clear();
+     pa.pushlast(x1);
+
+     
+     int ret = bt(pa,pb, x1+1, x2);
+   
+     if(ret == 0)      x1++;
+     else {
+              
+         int k;
+          string wsj11='';
+          string wsjtag='';
+          for(k in s1.last()){
+               wsj11=wsj11.trim()+" "+tableA[k];
+               wsjtag=wsjtag.trim()+" "+tableAA[k];
+          }
+
+          string xip11='';
+          string xiptag='';
+          for(k in s2.last()){
+               xip11=xip11.trim()+" "+tableB[k];
+               xiptag=xiptag.trim()+" "+tableBB[k];
+          }
+
+
+          final.pushlast(wsj11.trim()+"/"+wsjtag.trim()+'/'+xip11.trim()+'/'+xiptag.trim());
+          //println(wsj11.trim()+"/"+wsjtag.trim()+'/'+xip11.trim()+'/'+xiptag.trim());
+
+
+          x1 = s1.last().last()+1;
+          x2 = s2.last().last()+1;
+ 	     }
+   	
+}
+
+	file ff(folder+_sep+wsjfile[-12:][:-8]+".comp",'w');
+     //file ff('out.txt','w');
+     string word;
+     for(word in final)
+          ff.writeln(word.trim());
+     ff.close();
+}
+//*****************Call function to create related files in specific folders**************
+
+
+string wsjfolderName='/home/fnoorala/Desktop/hmmComparison/wsj';
+string xipfolderName='/opt/ParSem_db/Corpora/MapHMM2treebank2/wsj';
+
+svector wsjv=kifsys.listdirectory(wsjfolderName);
+svector xipv=kifsys.listdirectory(xipfolderName);
+
+svector xipfilepath;
+svector wsjfilepath;
+
+string y;
+for (y in wsjv) {
+     if(y.regexip("%d%d")) {
+
+          //create compare directory in each wsj directory
+          string path=wsjfolderName+_sep+y+_sep+'kifcompare1';
+          kifsys.createdirectory(path);
+          //vector of path for wsj files
+          wsjfilepath.push(y+_sep+'std');
+     }
+}
+
+string x;
+for (x in xipv){
+     if(x.regexip("%d%d")){
+          //vector of path for xip files
+          xipfilepath.push(x+_sep+'mapping2');
+     }
+}
+//println(xipfilepath);
+//full path
+
+svector xipfiles_fullpath;
+svector wsjfiles_fullpath;
+int ii;
+for(ii=0;ii<wsjfilepath.size();ii++){
+     xipfiles_fullpath.push(xipfolderName+_sep+xipfilepath[ii]);
+     wsjfiles_fullpath.push(wsjfolderName+_sep+wsjfilepath[ii]);
+}
+
+//println(xipfiles_fullpath);
+//becareful if you changed the folder names
+string a;
+string b;
+svector mypath;
+for (a in xipfiles_fullpath) {
+     for (b in wsjfiles_fullpath) {
+          //println(a.split("/").join("")[-10:-8]);
+          if (a.split("/").join("")[-10:-8]==b.split("/").join("")[-5:-3]) {
+               mypath.push(a+"|"+b);
+
+          }
+     }
+}
+
+//println(mypath);
+
+int  iii=1; //identify the id for directory which one to apply 00-->0 01-->1
+//for (i=0;i<=mypath.size();i++){
+string wsjpath=mypath[iii]["|":][1:];
+string xippath=mypath[iii][:"|"][:-1];
+svector filespath;
+svector xipfiles=kifsys.listdirectory(mypath[iii][:"|"][:-1]);
+svector wsjfiles=kifsys.listdirectory(mypath[iii]["|":][1:]);
+for (a in xipfiles.sort(compare))
+     if (".hmm.map" in a && ~".hmm.map~" in a)
+          for (b in wsjfiles.sort(compare))
+               if(".pos.txt" in b && ~".pos.txt~" in b)
+                    if (a[:8][-4:]==b[:8][-4:])
+                         filespath.push(xippath+_sep+a+"|"+wsjpath+_sep+b);
+
+
+
+
+//}
+
+svector pairs;
+int kk;
+int N=filespath.size();
+for(kk=0;kk<N;kk++){
+     string file1=filespath[kk]["|":][1:];
+     string file2=filespath[kk][:"|"][:-1];
+     println(kk);
+     //println(file1);
+     compare(file1,file2,wsjpath[:-4]+_sep+"kifcompare1");
+
+}

@@ -1,0 +1,1122 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Center Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 -2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP portuguese grammar
+//!   filename   : entit_dependency.xip
+//!   author	  : C. Hagege
+//!   Date       : 20/11/2007
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Added CH March, 4th 08
+// Problem for HAREM when quantity are included within a flat PP
+// e.g. (dos 90 por cento)
+// The structure is flat in the PP and we need to have a node around "90 por cento" that
+// builds a NE of type quantity.
+// So, for those special cases, we have to rebuild it
+
+Reshuffling:
+// e.g. mais de 39,2 por cento dos votos
+200> PP{prep#1, (art#2), num#3, #4[meas:+,time_meas:~]} = PP{#1, #2, NP[quant=+]{#3, #4}} .
+// VERIFICAR (Nuno comentou esta regra, mas se eu a comentar, deixa de me apanhar 29,2 por cento com um todo.
+
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PERSON
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+// MEMBRO
+| ?{?*,noun#1[last,member:+,people:+,sg:+] } |
+	if  ( ~NE[people](#1) )
+	NE[people=+,member=+](#1)
+
+
+
+// CARGO
+// mwe tagged as a title, that has been left alone
+//
+// Example: Capitao de Terra e Mar
+// Example: Ministro dos Negocios Estrangeiros
+//
+| ?[np]{?*,noun#1[title,mwe,last]}; PP{?*,noun#1[title,mwe,last]} |
+if ( ~NE[people](#1) )
+	NE[people=+, cargo=+](#1).
+
+// noun corresponding to a cargo alone
+// e.g. Primeiro-Ministro
+| ?[np]{?*,noun#1[cargo,last]}; PP{?*,noun#1[cargo,last]} |
+if ( ~NE[people](#1) )
+	NE[people=+, cargo=+](#1).
+
+| ?[np]{?*,noun#1[people:+,postpeople:+]};?[pp]{?*,noun#1[people:+,postpeople]};noun[proper,mwe,untyped]{?*,noun#1[people,postpeople]} |
+if ( ~$1(#1) )
+	NE[people=+,cargo=+](#1)
+
+| ?[np]{?*,noun#1[people:+,cargo:+]};?[pp]{?*,noun#1[people:+,cargo]};noun[proper,mwe,untyped]{?*,noun#1[people,cargo]} |
+if ( ~$1(#1) )
+	NE[people=+,cargo=+](#1)
+
+// postgroup
+| ?[np]{?*,noun#1[people:+,postgroup:+]};?[pp]{?*,noun#1[people:+,postgroup:+]};noun[proper,mwe,untyped]{?*,noun#1[people,postgroup]} |
+if ( ~$1(#1) )
+	NE[people=+,postgroup=+](#1)
+
+
+// if a cargo, pessoa has been typed as NE, if it is in a plural form, then transform cargo to
+// postgroup
+// not a mwe
+if ( ^NE[people,cargo](#1[pl:+,sg:~,mwe:~]) )
+	NE[cargo=~,postgroup=+](#1).
+
+// case of mwe
+| #1[mwe]{?[pl:+,sg:~]} |
+if ( ^NE[people,cargo](#1) )
+	NE[cargo=~,postgroup=+](#1).
+
+// indgroup
+| ?[np]{?*,noun#1[people:+,indgroup:+]};?[pp]{?*,noun#1[people:+,indgroup:+]};noun[proper,mwe,untyped]{?*,noun#1[people,indgroup]} |
+if ( ~$1(#1) )
+	NE[people=+,indgroup=+](#1)
+
+
+// INDIVIDUAL
+// Lonely proper noun at higher level
+| ?[np]{?*,noun#1[proper,fam,indgroup:~]};?[pp]{?*,noun#1[proper,fam,indgroup:~]};noun[proper,mwe,untyped]{?*,noun#1[proper,fam,indgroup:~]} |
+if ( ~$1(#1) )
+	NE[people=+,individual=+](#1)
+
+// complex proper noun at higher level
+| ?[np]{?*,noun#1[people:+,individual:+,location:~]};?[pp]{?*,noun#1[people:+,individual:+,location:~]};noun[proper,mwe,untyped]{?*,noun#1[people,individual,location:~]} |
+if ( ~$1(#1) )
+	NE[people=+,individual=+](#1)
+
+// rainha Isabel II
+| ?[np]{?*,noun#1[mwe,proper,people]}; PP{?*,noun#1[mwe,proper,people]} |
+if ( ~NE[people](#1) )
+	NE[people=+, individual=+](#1).
+
+
+// guessed upper case nouns that are just before comma then followed by relative link of another person name
+// e.g: Xywsdfs, o filho de Clara Rojas
+| ?[np]{?*,noun#1[proper,last,src:guess]}; PP{?*,noun#1[proper,last,src:guess]}, punct[comma], NP{?*,?[last,relative]}, PP#3{prep[lemma:de]} |
+if ( ~NE[people](#1) )
+	NE[people=+,individual=+](#1)
+
+// idem as above but with complex untyped mwe proper nouns.
+| ?[np]{?*,noun#1[proper,last,mwe,untyped]}; PP{?*,noun#1[proper,last,mwe,untyped]}, punct[comma], NP{?*,?[last,relative]}, PP#3{prep[lemma:de]} |
+if ( ~NE[people](#1) )
+	NE[people=+,individual=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// LOCALIZATION
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+// Locais virtuais
+| ?[np]{?*,noun#1[virtual,site]};?[pp]{?*,noun#1[virtual,site]};noun[mwe,proper,untyped]{?*,noun#1[virtual,site]} |
+if ( ~NE[local](#1) )
+	NE[local=+,virtual=+,site=+](#1)
+
+
+| ?[np]{?*,noun#1[virtual,site:~]};?[pp]{?*,noun#1[virtual,site:~]};noun[mwe,proper,untyped]{?*,noun#1[virtual,site:~]} |
+if ( ~NE[local](#1) )
+	NE[local=+,virtual=+](#1)
+
+
+// locais humanos
+| ?[np]{?*,noun#1[city:+,time:~]};?[pp]{?*,noun#1[city:+,time:~]};noun[proper,mwe,untyped]{?*,noun#1[city,time:~]} |
+if ( ~$1(#1) )
+	NE[local=+,admin_area=+,city=+](#1)
+
+| ?[np]{?*,noun#1[country:+]};?[pp]{?*,noun#1[country:+]};noun[proper,mwe,untyped]{?*,noun#1[country]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,country=+](#1)
+
+| ?[np]{?*,noun#1[continent]};?[pp]{?*,noun#1[continent]};noun[proper,mwe,untyped]{?*,noun#1[continent]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,continent=+](#1)
+
+| ?[np]{?*,noun#1[street]};?[pp]{?*,noun#1[street]};noun[proper,mwe,untyped]{?*,noun#1[street]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,street=+](#1)
+
+| ?[np]{?*,noun#1[building]};?[pp]{?*,noun#1[building]};noun[proper,mwe,untyped]{?*,noun#1[building]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,building=+](#1)
+
+| ?[np]{?*,noun#1[region]};?[pp]{?*,noun#1[region]};noun[proper,mwe,untyped]{?*,noun#1[region]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,region=+](#1)
+
+
+| ?[np]{?*,noun#1[division]};?[pp]{?*,noun#1[division]};noun[proper,mwe,untyped]{?*,noun#1[division]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,division=+](#1)
+
+| ?[np]{?*,noun#1[state:+]};?[pp]{?*,noun#1[state:+]};noun[proper,mwe,untyped]{?*,noun#1[state]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+,division=+](#1)
+
+| ?[np]{?*,noun#1[admin_area:+]};?[pp]{?*,noun#1[admin_area:+]};noun[proper,mwe,untyped]{?*,noun#1[admin_area]} |
+if ( ~NE[local](#1) )
+	NE[local=+,admin_area=+](#1)
+
+| ?[np]{?*,noun#1[water-mass:+]};?[pp]{?*,noun#1[water-mass:+]};noun[proper,mwe,untyped]{?*,noun#1[water-mass]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+,water-mass=+](#1)
+
+| ?[np]{?*,noun#1[water-go:+]};?[pp]{?*,noun#1[water-go:+]};noun[proper,mwe,untyped]{?*,noun#1[water-go]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+,water-go=+](#1)
+
+| ?[np]{?*,noun#1[mountain:+]};?[pp]{?*,noun#1[mountain:+]};noun[proper,mwe,untyped]{?*,noun#1[mountain]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+,mountain:+](#1)
+
+| ?[np]{?*,noun#1[island:+]};?[pp]{?*,noun#1[island:+]};noun[proper,mwe,untyped]{?*,noun#1[island]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+,island:+](#1)
+
+| ?[np]{?*,noun#1[geographic,region:+]};?[pp]{?*,noun#1[geographic,region]};noun[proper,mwe,untyped]{?*,noun#1[geographic,region]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+,region:+](#1)
+
+| ?[np]{?*,noun#1[geographic:+]};?[pp]{?*,noun#1[geographic]};noun[proper,mwe,untyped]{?*,noun#1[geographic]} |
+if ( ~NE[local](#1) )
+	NE[local=+,geographic=+](#1)
+
+| ?[np]{?*,noun#1[correio:+]};?[pp]{?*,noun#1[correio]};noun[proper,mwe,untyped]{?*,noun#1[correio]} |
+if ( ~NE[local](#1) )
+	NE[local=+,correio=+](#1)
+
+
+// default
+| ?[np]{?*,noun#1[location:+]};?[pp]{?*,noun#1[location]};noun[mwe,proper,untyped]{?*,noun#1[location]} |
+if ( ~NE[local](#1) )
+	NE[local=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ORGANIZATION
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// INSTITUTION
+| ?[np]{?*,noun#1[partido]};?[pp]{?*,noun#1[partido]};noun[mwe,proper,untyped]{?*,noun#1[partido]} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+,partido=+](#1)
+
+| ?[np]{?*,noun#1[university]};?[pp]{?*,noun#1[university]};noun[mwe,proper,untyped]{?*,noun#1[university]} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+,university=+](#1)
+
+| ?[np]{?*,noun#1[org,school]};?[pp]{?*,noun#1[org,school]};noun[mwe,proper,untyped]{?*,noun#1[org,school]} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+,school=+](#1)
+
+| ?[np]{?*,noun#1[org,institution,partido:~,university:~]};?[pp]{?*,noun#1[org,institution,partido:~,university:~]};noun[mwe,proper,untyped]{?*,noun#1[org,institution,partido:~,university:~]} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+](#1)
+
+// Igreja Catolica, Protesta etc. sao organizacoes de tipo instituicao
+// problem because have been considered as CULTURE in LGCulture.xip
+// We correct this problem here
+| ?[np]{?*,noun#1[monument,culture]{?[lemma:igreja],?[maj,last]}};?[pp]{?*,noun#1[monument,culture]{?[lemma:igreja],?[maj,last]}} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+](#1)
+
+
+
+| ?[np]{?*,noun#1[administration]};?[pp]{?*,noun#1[administration]};noun[mwe,proper,untyped]{?*,noun#1[administration]} |
+	if ( ~$1(#1) )
+	NE[org=+,administration=+](#1)
+
+| ?[np]{?*,noun#1[org,suborg]};?[pp]{?*,noun#1[org,suborg]};noun[mwe,proper,untyped]{?*,noun#1[org,suborg]} |
+	if ( ~$1(#1) )
+	NE[org=+,institution=+](#1)
+
+
+// COMPANY
+| ?[np]{?*,noun#1[org,jornal]};?[pp]{?*,noun#1[org,jornal]};noun[mwe,proper,untyped]{?*,noun#1[org,jornal]} |
+	if ( ~$1(#1) )
+	NE[org=+,company=+,jornal=+](#1)
+
+
+| ?[np]{?*,noun#1[org,company]};?[pp]{?*,noun#1[org,company]};noun[mwe,proper,untyped]{?*,noun#1[org,company]} |
+	if ( ~$1(#1) )
+	NE[org=+,company=+](#1)
+
+| ?[np]{?*,noun#1[org,soc]};?[pp]{?*,noun#1[org,soc]};noun[mwe,proper,untyped]{?*,noun#1[org,soc]} |
+	if ( ~$1(#1) )
+	NE[org=+,company=+](#1)
+
+// default for org
+| ?[np]{?*,noun#1[org]};?[pp]{?*,noun#1[org]} |
+  if ( ~NE(#1) )
+  NE[org=+,institution=+](#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+// TIME                                                                       //
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//=======================================
+// FREQUENCIES
+//=======================================
+
+// Example: Todos os anos
+| #1[np]{?*,noun#2[last,time,frequency]}; #1[pp,time,frequency] |
+	if ( ~$1(#1) )
+	NE[tempo=+,frequency=+](#1)
+
+// Example: Todos os anos
+// Example: so;unicamente por esta vez
+| advp{?*, adv#1[frequency,time,NE_forbiden:~]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,frequency=+](#1)
+
+// Permanentemente (aspectual)
+| advp{adv#1[advtimefreq];adv#1[advtimeasp,advtimedur:~]} |
+   if (~$1(#1))
+	NE[tempo=+,frequency=+](#1).
+
+| advp{?*[NE_forbiden], adv#1[frequency,time,NE_forbiden:~]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,frequency=+](#1)
+
+
+//=======================================
+// DURATIONS
+//=======================================
+
+// Example: durante 3 dias
+// Example: durante todo o ano/dia
+| PP#1[duration,time:+]; advp{adv#1[duration,time:+,NE_forbiden:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+// Example: 
+| advp{adv#1[advtimeasp,advtimedur,NE_forbiden:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+// Example: Todo o dia
+| advp{adv#1[duration,time:+]{?[lemma:todo,sg:+]}} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+// Example: Todos os anos
+| advp{adv#1[duration,time:+]{?[lemma:todo,pl:+]}} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,frequency=+](#1)
+
+// CH added - Durante a nossa era
+| PP#1[duration=+,time=+]{prep[lemma:durante], ?*, ?[lemma:era]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+// CH added - Por 5 anos
+// vai por 5 anos
+| PP#1[time,time_meas,duration=+]{prep[lemma:por], noun{num, ?*,?[time_meas]}} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+// CH added - Por muitos anos
+// vai por muitos anos
+| PP#1[time,time_meas,duration=+]{prep[lemma:por], ?[indef];?[q3];?[dem];num, ?*, ?[time_meas]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,duration=+](#1)
+
+
+//=======================================
+// INTERVALS
+//=======================================
+
+// Example: de Outubro a Dezembro de 2007
+| PP#1[interval,time:+]; advp{adv#1[interval,time:+,NE_forbiden:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,interval=+](#1)
+
+
+//=======================================
+// DATAS ABSOLUTAS
+//=======================================
+
+// Example: Em Janeiro
+// CHECK...
+| #1[pp]{?*,noun#2[last,time,date,uncertain:~,tipo_tempref:absolut]}; #1[np]{?*,noun#2[last,time,date,uncertain:~,tipo_tempref:absolut]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+
+// Example: Em Janeiro
+| #1[pp]{?*,noun#2[last,time,uncertain:~,month,tipo_tempref=absolut]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+
+// Example: desde o inÌcio da manh„ de 25 de Abril de 2008
+| #1[pp]{?*, pp#3{?*, noun#2[last,time,date,uncertain:~,tipo_tempref:absolut]}} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+// Example: (Em) 2003
+// CH - Added restriction to avoid to take as date
+// em dois anos which is a duration
+| #1[pp]{prep[lemma:em];prep[lemma:desde];prep[lemma:atÈ];prep[lemma:"depois_de"];prep[lemma:"antes_de"];prep[lemma:"ao_longo_de"], ?*, ?[year,date];?[monthday,date]} | 
+	if ( ~NE[date](#1) &   ~NE[duration](#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+// Example: 
+//2001-2003
+| NP#2{#1[num,first,last,year:+,lemma:"%d%d%d%d-%d%d%d%d"]} |
+	if ( ~NE(#1) & ~NE(#2) )
+	NE[tempo=+,interval=+](#1)
+
+// 2003
+| NP#2{#1[num,first,last,year:+]} |
+	if ( ~NE(#1) & ~NE(#2) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+
+
+// complex dates in a single token
+// Example: Em 12/03/2004
+| #1[pp]{?*,?[last,data_complex:+]}; #1[np]{?[first,last,data_complex:+]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+// CH - Nao percebeo esta ???? o exemplo de esta e da outra acima e identico...
+// complex dates in a single token
+// Example: Em 12/03/2004
+| TOP{?*,PP#1[tipo_tempref:absolut,time]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+
+//============================================
+// DATAS RELATIVAS AO MOMENTO DA ENUNCIACAO
+//============================================
+
+// Example: na Primavera
+| #1[pp,tipo_tempref:~absolut,tipo_tempref:~disc]{?*,noun[last,time,season]}; #1[pp]{?*,noun[last,time,season]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+// Example: Nesta altura do Natal
+| PP#1{prep[lemma:em],?*, noun{?[tipo_tempref:enun], ?[date]}} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// Example: Nesta quarta-feira, esta quarta-feira
+| PP#1{prep, ?[dem], noun[date]};NP#1{?[dem], noun[date]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// de amanha a tarde
+| PP#1[time,tipo_tempref:enun,ref-after,ref-simult]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+,ref-simult=+](#1)
+
+| PP#1[time,tipo_tempref:enun,ref-after]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+| PP#1[time,tipo_tempref:enun,ref-before,ref-simult]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+,ref-simult=+](#1)
+
+| PP#1[time,tipo_tempref:enun,ref-before]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+| PP#1[time,tipo_tempref:enun,ref-simult]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1)
+
+| PP#1[time,tipo_tempref:enun]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// CH - useless comented treated by the rule  
+        // | PP#1[time,tipo_tempref:enun,ref-before]|
+        //if ( ~$1(#1) )
+        //NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+// Example: (de) ontem, (de) antes de ontem + part_of_day
+//| ?#1{ ?{(prep), ?[tipo_tempref:enun,timeref:-,last,not_alone:~]}, ?[part_of_day]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+//| ?#1{ ?{?[tipo_tempref:enun,timeref:-,last,not_alone:~]}, ?[part_of_day]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+
+// CH Treated by other rules
+// Example: amanh„, depois de amanh„ + part_of_day
+//| ?#1{ ?{(prep), ?[tipo_tempref:enun,timeref:+,first,last,timeval:~0,not_alone:~]}, ?[part_of_day]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+// CH treated by other rules
+// Example: amanh„, depois de amanh„
+| ?{#1[tipo_tempref:enun,timeref:+,first,last,timeval:~0,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+
+
+
+
+// No dia followed by relative
+// no dia em que ficou em casa
+| #1{?*,noun[last,part_of_day]}, (prep), SC |
+ if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+](#1)
+	
+
+// No dia 20
+| #1[pp]{?*,noun[last,weekday]}; #1[pp]{?*,noun[last,part_of_day]}; #1[np]{?*,noun[last,part_of_day]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+| #1[pp]{?*,noun[last,monthday]};  #1[np]{?*,noun[last,monthday]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+// No Natal
+| #1[pp]{?*,noun[last,time,feast_event]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// CH - these two examples are treated by other rules.
+// I keep it however...
+// Nesta semana CH Treated by rule line 433 
+// em pleno dia ˙til CH Treated by rule line 437
+| PP#1[time,tipo_tempref:enun]|
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+// CH - these examples runs and are covered by other rules
+// (de) ontem, (de) antes de ontem + part_of_day
+//| ?#1{ ?{(prep), ?[tipo_tempref:enun,timeref:-,last,not_alone:~]}, ?[part_of_day]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+// Example: hoje + part_of_day
+//| ?#1{ ?{?[tipo_tempref:enun,timeref:-,last,not_alone:~]}, ?[part_of_day]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+// (de) ontem, (de) antes de ontem
+| ?#1{(prep), ?[tipo_tempref:enun,timeref:-,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+// Example: amanh„, depois de amanh„ + part_of_day
+| ?#1{ ?{(prep), ?[tipo_tempref:enun,timeref:+,first,last,timeval:~0,not_alone:~]}, ?[part_of_day]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+// Example: amanh„, depois de amanh„
+| ?{#1[tipo_tempref:enun,timeref:+,first,last,timeval:~0,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+// CH Already treated by other rules
+// Example: no dia X deste mÍs/semana
+//| #1[pp]{(prep), (art), noun[tipo_tempref:enun,last,not_alone:~]} |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// Example: esta semana
+| ?{#1[tipo_tempref:enun,ref-after,ref-simult,first,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+,ref-after=+](#1)
+
+| ?{#1[tipo_tempref:enun,ref-before,ref-simult,first,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+,ref-before=+](#1)
+
+| ?{#1[tipo_tempref:enun,ref-after,ref-simult:~,first,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+| ?{#1[tipo_tempref:enun,ref-before,ref-simult:~,first,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+| ?{#1[tipo_tempref:enun,ref-simult,first,last,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1)
+
+
+// hoje + part_of_day
+//| ?#1{ ?{(prep), ?[tipo_tempref:enun,timeref:+,first,last,timeval:0,not_alone:~]}, ?[part_of_day]}  |
+//	if ( ~NE[tempo](#1) )
+//	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1)
+
+// hoje
+| ?{#1[tipo_tempref:enun,timeref:+,first,last,timeval:0,not_alone:~]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1)
+
+// CH - this rule treats depois de amanha a tarde
+// de hoje a 3 semanas
+| ?{adv#1[first,last,time, tipo_tempref:enun, ref-after, ref-simult]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+,ref-simult=+](#1)
+
+| ?{adv#1[first,last,time, tipo_tempref:enun, ref-after]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1)
+
+// h· 2 dias (atr·s)
+| ?{adv#1[first,last,time, tipo_tempref:enun, ref-before, ref-simult]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+, ref-simult=+](#1)
+
+| ?{adv#1[first,last,time, tipo_tempref:enun, ref-before]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1)
+
+
+// ADVERBIOS DE TEMPO QUE NAO VAO SER NORMALIZADOS CAROLINE
+
+
+// Example: atÈ ‡ data
+| advp{adv#1[advtimetemp,tipo_tempref:~disc,ref-before,ref-simult]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc,ref-before,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+,ref-simult=+](#1).
+
+// Example: 
+| advp{adv#1[advtimetemp,tipo_tempref:~disc,ref-after,ref-simult]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc,ref-after,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+,ref-simult=+](#1).
+
+// Example: 
+| advp{adv#1[advtimetemp,tipo_tempref:~disc,ref-before]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc,ref-before]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1).
+
+// Example: 
+| advp{adv#1[advtimetemp,tipo_tempref:~disc,ref-after]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc,ref-after]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1).
+
+// Example: no presente
+| advp{adv#1[advtimetemp,tipo_tempref:~disc,ref-simult]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1).
+
+// Example: certo dia
+| advp{adv#1[advtimetemp,tipo_tempref:~disc]};AP{?*,adv#1[advtimetemp,tipo_tempref:~disc]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+
+
+// To complete
+| advp{adv#1[advtimetemp,ref-before]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1).
+
+// Example: 
+| advp{adv#1[advtimetemp,ref-after]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1).
+
+// e.g "de noite", "de tarde" etc.
+// CH - I do not understand the next three rules (what expressions do they cover ????)
+// Example: no presente
+| advp{adv#1[advtimetemp,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1).
+
+// Example: certo dia
+| advp{adv#1[advtimetemp,ref-before,tref-text]} |
+if ( ~NE(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-before=+](#1) 
+
+
+| advp{adv#1[advtimetemp,ref-after,tref-text]} |
+if ( ~NE(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1) 
+
+
+| advp{adv#1[advtimetemp,ref-before,tref-text]} |
+if ( ~NE(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-before=+](#1) 
+
+
+| advp{adv#1[advtimetemp,ref-after,tref-text]} |
+if ( ~NE(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1) 
+
+
+
+| advp{adv#1[advtimetemp]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+
+// CH comment following rule after feature NE_forbiden is added
+| advp{ (adv[lemma:agora];adv[lemma:j·];adv[lemma:ainda];adv[lemma:sempre];adv[lemma:logo]), adv#1[advtimetemp]}  |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+| advp{adv#1[advtimetemp,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+
+| advp{?*, adv#1[advtimetemp,ref-before,ref-simult,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+,ref-simult=+](#1).
+
+| advp{?*, adv#1[advtimetemp,ref-before,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-before=+](#1).
+
+| advp{?*, adv#1[advtimetemp,ref-after,ref-simult,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+,ref-simult=+](#1).
+
+| advp{?*, adv#1[advtimetemp,ref-after,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-after=+](#1).
+
+| advp{?*, adv#1[advtimetemp,ref-simult,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+,ref-simult=+](#1).
+
+| advp{?*, adv#1[advtimetemp,NE_forbiden:~]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+
+// Pela tarde de sexta-feira
+| pp#1[tipo_tempref:enun]{advp[advtimetemp], pp[weekday]} |
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+// Ao final da tarde
+//| pp#1[tipo_tempref:enun]{PP[time_focus], pp} |
+| advp{adv#1[tipo_tempref:enun]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+//NJM: desdobrei estaregra para funcionar. INVESTIGAR
+| advp{adv#1[tipo_tempref:enun]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1).
+
+
+//=======================================
+// DATAS RELATIVAS COM REF TEXTUAL (Retiradaspela Caroline, mas fazem faalta)
+//=======================================
+
+// Example: depois de trÅÍs dias
+| PP#1{prep[lemma:"depois_de"], noun[time]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1)
+
+// Dois dias depois do Natal
+| ?[np]{?*,noun#1[last,time, tipo_tempref:disc, ref-after]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1)
+
+// Dois dias antes do Natal
+| ?[np]{?*,noun#1[last,time, tipo_tempref:disc, ref-before]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-before=+](#1)
+
+// Na altura do Natal
+| ?[np]{?*,noun#1[last,time, tipo_tempref:disc, ref-simult]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-simult=+](#1)
+
+
+// no ano seguinte
+| PP#1[time, tipo_tempref:disc, ref-after] |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1)
+
+// no ano anterior
+| PP#1[time, tipo_tempref:disc, ref-before] |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-text=+,ref-before=+](#1)
+
+
+| advp{adv#1[tipo_tempref:disc,ref-before,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+,ref-before=+,ref-simult=+](#1).
+
+// Example: 
+| advp{adv#1[tipo_tempref:disc,ref-after,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+,ref-after=+,ref-simult=+](#1).
+
+// Example: 
+| advp{adv#1[tipo_tempref:disc,ref-before]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+,ref-before=+](#1).
+
+// Example: faz na quinta-feira quinze dias
+| advp{adv#1[tipo_tempref:disc,ref-after]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1).
+
+// Example: 
+| advp{adv#1[tipo_tempref:disc,ref-simult]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+,ref-simult=+](#1).
+
+// Example: de inÌcio
+| advp{adv#1[tipo_tempref:disc]} |
+   if (~NE(#1))
+	NE[tempo=+,date=+,tref-text=+](#1).
+
+
+
+//=======================================
+// QUANTIDADE
+//=======================================
+
+// Example: 18 anos de idade
+| #1[np]{?*, noun#2[last,time,quant]{?*,?[lemma:ano,pl]}}, PP{prep[lemma:de], noun[lemma:idade]} |
+	if ( ~$1(#1) & ~$1(#2) )
+	NE[quant=+](#2)
+
+// Example: a idade bem bonita de 99 anos
+| np{?*, noun[lemma:idade,last]}, (AP), #1[pp]{prep[lemma:de], noun#2[last,time,quant]{?*[advnum],num,?[lemma:ano]}} |
+	if ( ~$1(#1) & ~$1(#2) )
+	NE[quant=+](#2)
+
+
+//Example: tem cerca de 5 anos
+| ?*{verb[lemma:ter]},  #1[np]{noun#2[last,time,quant]{?*[advnum],num,?[lemma:ano]}} |
+	if ( ~$1(#1) & ~$1(#2) )
+	NE[quant=+](#2)
+
+//Example: Jo„o, (de) cerca de 5 anos,
+| np{?*, noun#3},  punct[comma], #1[pp]{prep[lemma:de], noun#2[last,time,quant]{?*[advnum],num,?[lemma:ano]}}, punct[comma] |
+	if ( NE[people](#3) & ~$1(#1) & ~$1(#2) )
+	NE[quant=+](#2)
+
+
+//=======================================
+// HORAS
+// horas que vem num so token 8:12:13
+| #1[pp]{?*,?[last,hora_complex:+]}; #1[np]{?[first,last,hora_complex:+]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,hora=+](#1)
+
+// horas precedidas por advÈrbio
+| advp#1[hora] |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,hora=+](#1)
+
+// horas em varios tokens mas sem calculo necessario
+| #1[pp]{?*,?[last,hora:+]}; #1[np]{?[first,last,hora:+]}; #1[advp]{?[first,last,hora:+]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,hora=+](#1)
+
+
+// antes de 2003
+| #1[pp]{?*,?[last,year:+]}; #1[np]{?[first,last,year:+]}; #1[advp]{?[first,last,year:+]} |
+	if ( ~NE[tempo](#1) )
+	NE[tempo=+,date=+,t-absolut=+](#1)
+
+
+// Correcting DATES taken as HORAS
+| #1[lemma:"%+ 19%d%d"] |
+if ( ^NE[tempo,hora](#1) )
+NE[features=~,tempo=+,date=+,t-absolut=+](#1)
+
+
+| #1[lemma:"%+ 20%d%d"] |
+if ( ^NE[tempo,hora](#1) )
+NE[features=~,tempo=+,date=+,t-absolut=+](#1)
+
+
+
+
+// NJM RETIRADA PELA CAROLINE, MAS PARECE FAZER FALTA
+// Example: 5 minutos depois
+| #1[np]{?*,noun#2[last,time]{?*,?[time_meas]}}, PP{prep[lemma:"depois de"]} |
+	if ( ~$1(#1) & ~$1(#2) )
+	NE[tempo=+,date=+,tref-text=+,ref-after=+](#1)
+
+// Example: isso aconteceu sexta-feira
+| #1[np]{?*,?[weekday]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,date=+,tref-enunc=+](#1)
+
+
+// Example: durante duas horas e quinze minutos
+| #1[pp]{?*,?[last,hora,quant]}; #1[np]{?[first,last,hora,quant]}; #1[advp]{?[first,last,hora,quant]} |
+	if ( ~$1(#1) )
+	NE[tempo=+,duration=+](#1)
+
+
+
+//=======================================
+// GenÈrico
+//=======================================
+
+// TEMPO GENERICO
+// a festivity which is within a NP (not a PP) and determined by definite article is an
+// tempo generico
+// e.g. Nunca comemorou o Natal
+| ?[np]{art[def,sg], noun#1[feast_event,last]} |
+	if ( ~NE(#1) )
+	NE[tempo=+,generico=+](#1)
+
+// Example: o belo futuro
+// Example: o belo tempo
+//| #1[np]{?*,adj,noun#2[last,time];noun#2[last,timeref];noun#2[last,denot_time];noun#2[last,time_meas]} |
+//	if ( ~$1(#1) & ~$1(#2) )
+//	NE[tempo=+,generico=+](#2)
+
+// Example: o futuro
+// Example: o tempo
+//| #1[np]{?*,noun#2[last,time];noun#2[last,timeref];noun#2[last,denot_time];noun#2[last,time_meas]} |
+//	if ( ~$1(#1) & ~$1(#2) )
+//	NE[tempo=+,generico=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CULTURE
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// obras reproduzidas
+| ?[pp]{prep, ?*, noun#1[culture,inquote]}; ?[np]{?*,noun#1[culture,inquote]};noun[mwe,proper,untyped]{?*,noun#1[culture,inquote]} | 
+	if ( ~NE(#1) )
+	NE[obra=+,reproduzida=+](#1)
+
+| ?[np]{?*,noun#1[culture,monument]};?[pp]{?*,noun#1[culture,monument]};noun[mwe,proper,untyped]{?*,noun#1[culture,monument]} |
+	if ( ~NE(#1) )
+	NE[culture=+,monument=+](#1)
+
+| ?[np]{?*,noun#1[culture]};?[pp]{?*,noun#1[culture]};noun[mwe,proper,untyped]{?*,noun#1[culture]} |
+	if ( ~NE(#1) )
+	NE[culture=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// EVENTS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+| ?[np]{?*,noun#1[event,ephem]};?[pp]{?*,noun#1[event,ephem]};noun[mwe,proper,untyped]{?*,noun#1[event,ephem]} |
+	if ( ~$1(#1) )
+	NE[event=+,ephem=+](#1)
+
+| ?[np]{?*,noun#1[event,organized]};?[pp]{?*,noun#1[event,organized]};noun[mwe,proper,untyped]{?*,noun#1[event,organized]} |
+	if ( ~$1(#1) )
+	NE[event=+,organized=+](#1)
+
+| ?[np]{?*,noun#1[event,eventac]};?[pp]{?*,noun#1[event,eventac]};noun[mwe,proper,untyped]{?*,noun#1[event,eventac]} |
+	if ( ~NE[event](#1) )
+	NE[event=+,eventac=+](#1)
+
+| ?[np]{?*,noun#1[event]};?[pp]{?*,noun#1[event]};noun[mwe,proper,untyped]{?*,noun#1[event]} |
+	if ( ~NE[event](#1) )
+	NE[event=+](#1)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// VALOR
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+// For HAREM, the whole expression "<num> <measure_unit>" is considered as the NE
+// e.g. <EM>19 metros</EM> and NOT *<EM>19</EM> metros 
+// e.g. 19 por cento
+| NP#1[quant]{num, ?[meas, time_meas:~, curr:~]} |
+	if (~NE(#1) )
+	NE[quant=+,num=+](#1) 
+
+
+| #1[quant,classific] |
+	if ( ~NE(#1) )
+	NE[quant=+,classific=+](#1)
+
+| #1[quant,meastype,!meastype:!,curr:~] |
+	if ( ~NE(#1) )
+	NE[quant=+](#1)
+
+// Restriction to avoid to take II in rainha Isabel II
+| #2[time:~,people:~]{?*, #1[num,ord:~,time:~,time_meas:~, curr:~], ?*} |
+	if ( ~NE(#1) & ~NE[quant](#2) )
+	NE[quant=+,num=+](#1)
+
+| #2[time:~,num:~, curr:~]{?*, #1[num,ord], ?*} |
+	if ( ~NE(#1) & ~NE[quant](#2) )
+	NE[quant=+,classific=+](#1)
+
+
+// CURRENCY
+// e.g. 19 euros
+| NP#1[quant]{num, ?[meas,curr, time_meas:~]} |
+	if (~NE(#1) )
+	NE[quant=+,curr=+](#1)
+
+| #1[quant,curr,meastype,!meastype:!] |
+	if ( ~NE(#1) )
+	NE[quant=+,curr=+](#1)
+
+| #2[time:~]{?*, #1[num,curr,ord:~,time:~,time_meas:~], ?*} |
+	if ( ~NE(#1) & ~NE[quant](#2) )
+	NE[quant=+,curr=+](#1)
+
+
+
+if ( ^NE[num, curr:~, quantity:~, classific:~, quant:~](#1) )
+	NE[quant=+](#1)
+
+
+
+// if a NE_NUM(#1) is included in a NE_QUANT(#2), the NE_NUM(#1) is erased
+| #2{?*,#1,?*} |
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?*{?*,#1,?*}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?*, ?*{?*,#1,?*}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+ 
+| #2{?*, ?*{?*, ?*{?*,#1,?*}}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+ 
+| #2{?*, ?*{?*, ?*{?*, ?*{?*, ?*,#1,?*}}}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+ 
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// COISA, ABSTRACCAO, ...
+// (Other kinds of NE (HAREM specific))
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+// PLANO (ABSTRACCAO)
+| ?[pp]{prep, ?*, noun#1[plano,last]}; ?[np]{?*,noun#1[plano,last]}; noun[mwe,proper,untyped]{?*,noun#1[plano,last]} |
+	if ( ~NE(#1) )
+	NE[abstraccao=+,plano=+](#1)
+
+
+// Guessing some proper nouns that have not been typed
+// if guessed proper noun with brackets and "filme", "livro" before in the same sentence
+// then it is a OBRA REPRODUZIDA
+| ?*, ?{?*,?[last,lemma:filme]}, ?*, ?{?*,noun#1[proper,src:guess]} |
+	if ( ~NE(#1) )
+	NE[obra=+,reproduzida=+](#1)
+
+
+// if we want to have embedded NE following rules is necessary
+// 
+// Example: A escola de Bolega de Baixo
+// 
+//| noun{?*,noun#1[location,!geo:!,general:~]} |
+//if ( ~$1(#1) )
+//	NE(#1)
+
+// Do not make a named entity from the second part of a decontraction
+| ?#1{?[tokenend]} |
+if ( ^NE(#1) )
+ ~ 
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Clitics and Contractions
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Do not make a named entity from the second part of a decontraction
+| ?#1{?[tokenend,start];?[cli,start]} |
+if ( ^NE(#1) )
+ ~
+
+// Do not make a named entity that ends on a verb with a clitic
+// where the clitic stays out of that entity
+| ?#1{?*, ?[verb,last]}; ?{prep, noun#1{?*, verb[last]}}, ?{?[cli]} |
+if ( ^NE(#1) )
+ ~
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// cleaning rules...
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if a NE within a NE take the most embedded out
+| #1{?*,#2} |
+if ( $1(#1) & ^$1(#2) )
+ ~
+
+// if a NE within a NE take the most embedded out
+| #1{?*,?{?*,#2}} |
+if ( $1(#1) & ^$1(#2) )
+ ~
+
+// if a NE within a NE take the most embedded out
+| #1{?*,?{?*{?*,#2}}} |
+if ( $1(#1) & ^$1(#2) )
+ ~
+
+// If a simple noun in lower case is marked as NE (trigger words), then delete the NE dep.
+| noun#1[mwe:~,surface:"%c%+",site:~,time:~] |
+if ( ^NE(#1) )
+ ~
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// HAREM NORMALIZATION
+//
+////////////////////////////////////////////////////////////////////////////////
+

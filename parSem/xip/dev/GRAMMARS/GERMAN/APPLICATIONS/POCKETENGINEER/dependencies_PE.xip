@@ -1,0 +1,370 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	dependencies_PE.xip
+//! Content:	Dependency rules of the German XIP grammar for the application Pocket Engineer
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Sigrid Maurel
+//!
+//! Created: 	17 May 2006		:: initial version
+//! Updated:	25 September 2006	:: version based on german grammar v2
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// heads, for pp-extraction with ELENAs script)
+/
+DependencyRules:
+//NP
+|np#1[num:~,rel:~]{?*, #2[last, ap:~]}| 
+	HEAD(#2, #1).
+
+//PP
+|pp#1{prep, ?*, #2[last]}| 
+	if(head(#20, #2)) 
+	HEADP(#20, #1).
+\
+
+
+// the genitif objects are to strange and untrustable for the moment, so they are deleted:
+DependencyRules:
+if (^OBJ[gen:+](#1, #2)) ~.
+
+
+// (english) messagetext, before or after the keyword "Meldung"
+// "Beim Versuch, EFI ColorWise ProTools innerhalb der Anwendung Command Workstation (CWS) zu öffnen, wird eine der folgenden <i>Meldungen</i> angezeigt: "Need to Update FCAL" (FCAL muss aktualisiert werden), "Need to Update Edit" (Bearbeiten muss aktualisiert werden), "Need to Update ICCM" (ICCM muss aktualisiert werden) oder "'Need to Update CSET" (CSET muss aktualisiert werden) ."
+5> | np{?*, noun[surface: Meldungen], ?*}, ?*[quote:~], (punct[lemma:\:]), punct[quote], ?#1, (?+#1[quote:~])*, punct[quote], ?*, punct[quote], np+#1, (?+#1[quote:~])*, punct[quote] |
+	MLD(#1).
+
+// "Bei Verwendung von Fiery EX12 Version 2.0 wird die Meldung "A Graphic Arts Package is Needed to Print Spot Color Separations" (Zum Drucken der Spot-Farben-Separationen ist ein Grafikverarbeitungsprogramm erforderlich) auf der Xerox DC12 in gedruckter Form ausgegeben ."
+5> | np{?*, noun[lemma: Meldung], ?*}, ?*[quote:~, coord:~], (punct[lemma:\:]), punct[quote], ?#1, (?+#1[quote:~])*, punct[quote] |
+	MLD(#1).
+
+// "Beim Versuch, sich bei einem EFI Fiery Color Server über CWS anzumelden, wird die Meldung "Unable to Open Communication to the Specified Server. Verify the Connection and the Protocol Selected." (Kommunikation mit dem ausgewählten Server kann nicht eröffnet werden. Ausgewählte Verbindung und Protokoll überprüfen) angezeigt ."
+// PROBLEM: a second english sentence which is analyzed seperately will not be catched with these rules!
+5> | np{?*, noun[lemma: Meldung], ?*}, ?*[quote:~], (punct[lemma:\:]), punct[quote], ?#1, (?+#1[quote:~])*, punct[sent] |
+	MLD(#1).
+
+// ""Unknown Network Error" (Unbekannter Netzwerkfehler) Meldung wird beim Versuch angezeigt, mit EFI Fiery Remote Scan von einem EFI Fiery EX12 2.0 Color Server aus zu scannen ."
+5> | punct[quote], ?#1, (?+#1[quote:~])*, punct[quote], ?*[punct:~], np{?*, noun[lemma: Meldung], ?*}  |
+	MLD(#1).
+
+// without the keyword "Meldung"
+// feature "guess" on english words, but not percolated on categories
+// PB: some english words don't have the feature "guess" but "lex" if they are used in german too
+5> | punct[quote], (?#1{?[guessed:+]}; ?#1{?{?[guessed:+]}})+ |		//, punct[quote] 
+	MLD(#1).
+
+Reshuffling:
+6> #1 = MLD{#1}, where (MLD(#1)).
+7> MLD#1{?-#2}, MLD+#3{?-#4}, punct#5 = #1{#2, #4}, #5.
+
+// for the messages in italic
+// "Druckeinheit deaktiviert <I>Meldung</I> ."
+DependencyRules:
+10> | np#1{noun[lemma: Meldung, italic]} |
+	MLD[italic=+](#1).
+
+
+Sequence:
+
+// messages
+// "Fehleinzug im Großraumbehälter beseitigen <I>Meldung</I> ."
+//20> PEU @= ?[start], ?*[symbol:~] | np[symbol:+], ?[end] |.
+//20> PEU @= ?[start], ?*[symbol:~] | np[mld:+], ?[end] |.
+// "Fehlgeschlagen: Status unbekannt ( <i> Meldung </i> auf dem Fehlerbericht für Scan-Ausgabe: E-Mail) ."
+20> PEU @= ?[start], ?*[pleft:~] | (punct), np[italic:+] |.
+
+// questions
+// must not be necessarily ONE Peunit! (19.7.)
+// "Wie groß ist der maximal bedruckbare Bereich?"
+//20> PEU = conj[start], ?*, punct[end, question].
+
+
+Reshuffling:
+// A top-level AP, NP, PP, or ?[verb] is a PEU.
+50> AP#1 = PEU{#1}, where (~mother(#1,#2)).
+50> NP#1 = PEU{#1}, where (~mother(#1,#2)).
+50> PP#1 = PEU{#1}, where (~mother(#1,#2)).
+50> #1[verb] = PEU[verb=+]{#1}, where (~mother(#1,#2)).
+
+
+DependencyRules:
+// attachment of the PEU "Anweisung", "Störung", etc. (with the special feature peuplus) to the following PEU
+// is it really a good idea to do it with "Störung"?
+// ok: "Störung: CopyBox <I>Meldung</I> ."
+// ??: "Störung: Zubehör oder Zugriffssteuerung nicht verfügbar ." "Störung: Abdeckung des Vorlageneinzugs wurde während der Dokumentzufuhr angehoben ."
+// "ANWEISUNGEN zum Ändern der automatischen Behälterumschaltung ."
+55> | PEU#1{np{noun[peuplus:+]}}, (punct[lemma:\:]), PEU#2[symbol:~] |
+	COMBINE(#1, #2).
+
+Reshuffling:
+56> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2, #4}, where( COMBINE ( #1, #3 )).
+
+
+
+DependencyRules:
+// genitive NP after a nominalized verb
+// "Hinzufügen EINES lokalen Druckers auf einer Workstation mit Microsoft Windows-Betriebssystem."
+70> | PEU#1{np{?*, noun#3[last, inf:+]}}, PEU#2{np[gen:+, symbol:~, italic:~]} |
+//	if ( ~COORD(#4, #3) )
+	COMBINE(#1, #2).
+
+// "Anweisungen zum Anhalten EINES Druckauftrags in der Warteschlange (Novell 4.1x)."
+70> | PEU#1{?*, pp{?*, np{?*, noun[inf:+]}}}, PEU#2{np[gen:+]} |
+	COMBINE(#1, #2).
+
+// "Einlegen VON Druckmaterial im Format A4 bzw. 8,5 x 11 Zoll in Behälter 1 und ggf. Ändern der Behälterattribute ."
+70> | PEU#1{np{?*, noun[inf:+]}}, PEU#2{pp{prep[lemma:von], np}} |
+	COMBINE(#1, #2).
+
+// "Anweisungen zum Ändern VON Internet-Services unter Verwendung des Hauptbedienerkennworts ohne #-Zeichen ."
+// solution with surface:von (to avoid combination of "Kopieren vom Vorlagenglas") is risky!!!
+70> | PEU#1{?*, pp{?*, np{?*, noun[inf:+]}}}, PEU#2{pp{prep[surface:von], np}} |
+	COMBINE(#1, #2).
+
+// (abbreviations in) brackets, one or more
+// "Kodak Polychrome Graphics (KPG) Matchprint Professional Server (MPS)"
+// "NetBEUI (Microsoft Networking)"
+70> | PEU#1, punct[pleft], PEU+#2{np[italic:~]}, punct[pright] |
+	COMBINE(#1, #2).
+
+// special signs in quotes
+// "Eingeben des Hauptbedienerkennworts ohne das Zeichen "#" ."
+70> | PEU#1, punct[quote], symbol#2, punct[quote] |
+	COMBINE(#1, #2).
+
+// genitive NP after a NP or PP
+// this seems quite dangerous to me!!! many NPs have the gen-feature without beeing genitiv, they are not enough disambiguated...
+// luckily it seems to work...
+// "Die Auftragseinstellungen werden nach Fertigstellung DES Auftrags gelöscht ."
+// "Rote Taste an der Innenseite DER Vordertür drücken ."
+// PB: "PostScript ist eine Programmier- und Seitenbeschreibungssprache, die von Adobe Systems entwickelt wurde und mit deren Hilfe SEITEN mit druckbaren Informationen dargestellt werden können."
+// PB: "Kann am Xerox WorkCentre Pro 416Pi/Pro 416Si SNMP deaktiviert oder geändert werden?" -> guessed words (like SNMP), productnames, etc. often have the feature GEN, without beeing genitiv in this context...
+70> | PEU#1[verb:~]{?*, np{?*, noun#3[last, inf:~, peuplus:~]}}; PEU#1[verb:~]{?*, pp{?*, np{?*, noun#3[last, inf:~]}}}, PEU#2{np[gen:+, symbol:~, italic:~]} |
+	if ( ~COORD(#4, #3) )
+	COMBINE(#1, #2).
+
+// a pp after an np
+// "Fehleinzug IM Großraumbehälter beseitigen <I>Meldung</I> ."
+// ?? "Einlegen von Druckmaterial im Format A4 bzw. 8,5 x 11 Zoll IN Behälter 1"
+// "die Grafik IN der Anwendung öffnen"
+// in a first time only with the preposition IN
+70> | PEU#1{np{?*, noun[last, italic:~]}}, PEU#2{pp{prep[lemma:in], np}} |
+	COMBINE(#1, #2).
+
+// truncated/compound words
+// "Kopier-/Fax- und Systemgeräte"
+//70> | PEU#1[trunc], conj[coord], PEU#2{np{?*, noun}} |
+//	COMBINE(#1, #2).
+
+
+// object and verb
+// "Vorlageneinzug ZIEHT die VORLAGE schräg ein ."
+70> | PEU#1{vfin{?*, #4[last]}}, ?*, PEU#2{np{?*, #3[noun], ?*}} |
+	if ( OBJ(#4, #3) )
+	COMBINE(#1, #2).
+
+// predicates
+// "Vorlageneinzug zieht die VORLAGE SCHRÄG ein ."
+70> | PEU#1{np{?*, #3}}, ?*, ADJP#2 |
+	if ( PRED(#3, #2) )
+	COMBINE(#1, #2).
+
+
+// verb and auxiliar, evtl with adj or negation
+// "... wird fehlerfrei gedruckt."
+// "... wenn ... verwendet wird."
+70> | PEU#1{vfin{?*, #3[last]}}, (ptcl), (?[adj]), (peu{np}; peu{pp}), PEU#2{#4[verb]} |
+	if ( AUXIL(#3, #4) )
+	COMBINE(#1, #2).
+
+70> | PEU#2{#4[verb]}, PEU#1{vfin{?*, #3[last]}} |
+	if ( AUXIL(#3, #4) )
+	COMBINE(#2, #1).
+
+// verb and prefix
+// "Materialbehälter 1, 2, 3 oder 4 führt kein Papier ZU ."
+// combination is also done with normalization, all verbs are normalized with their prefix, even when the prefix is very far from the verb and therefore not in the same PEU
+70> | PEU#1{vfin{?*, #2[last, req_pref:+]}}, ?*[verb:~], PTCL#3[pref:+, vpref:sep] |
+	if ( VPREF(#2, #3) )
+	COMBINE(#1, #3).
+
+
+// noun and adj
+// "Kopien BESCHÄDIGT ."
+// "Fixieröl fast LEER."
+70> | PEU#1{np{?*[det:~], #3[noun]}}, (adv), ADJP#2, ~?[verb] |
+	COMBINE(#1, #2).
+
+// noun and infinitif
+// "Vordertür ÖFFNEN und richtig schließen ."
+70> | PEU#1{np{?*, #3[noun, acc]}}, (peu; punct[spec]), PEU#2{verb[inf, aux:~]} |
+	COMBINE(#1, #2).
+
+// adj and verb
+// "Vordertür öffnen und RICHTIG schließen ."
+70> | ADJP#1, PEU#2{verb[aux:~]}; PEU#2{infzu} |
+	COMBINE(#1, #2).
+
+
+// reflexif verbs
+// "Finisher-Behälter lässt SICH nicht anheben ."
+70> | PEU#1{vfin{?*, #2[last]}}, PEU#3{np#4{pron[refl:+]}} |
+	if ( REFLEX(#2, #4) )
+	COMBINE(#1, #3).
+
+// negation
+// "Vorlageneinzug erkennt das Materialformat NICHT richtig ."
+70> | PTCL#1[neg], ADJP#2 |
+	COMBINE(#1, #2).
+
+// "Zusatzzufuhr erkennt das Materialformat NICHT ."
+70> | PEU#1{vfin{?*, #2[last, aux:~]}}, ?*[verb:~], PTCL#3[neg] |
+	if ( NEGAT(#2) )
+	COMBINE(#1, #3).
+
+// "Vorlagen werden vom Vorlageneinzug NICHT eingezogen ."
+// "Diese Fehlermeldung weist darauf hin, dass eine Ausgabefunktion eingestellt oder angefordert wurde, die nicht vorhanden ist, da sie NICHT im Gerät implementiert ist."
+70> | PTCL#1[neg], (peu{pp}), PEU#2{verb[ppast]}; PEU#2{verb[inf]} |
+	if ( ~COMBINE(#10, #1) )
+	COMBINE(#1, #2).
+
+
+// modal verbs
+// "CopyBox KANN nicht entfernt werden ."
+70> | PEU{vfin{?*, #1[last, modal]}}, ?*[verb:~], PEU#2{verb#5[ppast]}, PEU#3{verb#4[inf, aux]} |
+	if ( MODAL(#1, #4) )
+	COMBINE(#2, #3).
+
+// "Die Heftklammerspule MUSS locker gewickelt im Magazin sitzen ."
+70> | PEU#1{vfin{?*, #2[last, modal]}}, ?*[verb:~], ADJP#3, ?*[verb:~], PEU{verb#4[inf]} |
+	if ( MODAL(#2, #4) )
+	COMBINE(#1, #3).
+
+// coordination, only if the elements are not yet combined with other elements
+// "Schwarze Linien UND Streifen beim Kopieren"
+70> | PEU#1{np{?*, #2[last]}}, CONJ#3[coord], PEU#4{np{?*, #5[last]}} |
+	if ( ~COMBINE(#1, #6) & ~COMBINE(#6, #1) & ~COMBINE(#4, #7) & COORD(#3, #2) & COORD(#3, #5) )
+	COMBINE(#1, #4).
+
+
+// subject and verb
+// "ROLLEN des Vorlageneinzugs BLOCKIEREN ."
+70> | PEU#1{np#7{?*, #3[noun], ?*}}, ?*, PEU#2{vfin{?*, #4[last]}}; PEU#2{#4[verb]} |
+	if ( SUBJ(#4, #3) & ~OBJ(#4, #5) & ~PRED(#3, #6) & ~NEGAT(#4) & #4[modal:~, aux:~] & ~MLD(#7) & ~COORD(#8, #3) )
+	COMBINE(#1, #2).
+
+// "Liegt ein fünfstelliger Code vor, ERSCHEINT der BINDESTRICH hinter der zweiten Ziffer, Beispiel 10-102."
+70> | PEU#2{vfin{?*, #4[last]}}, ?*, PEU#1{np{?*, #3[noun], ?*}} |
+	if ( SUBJ(#4, #3) & ~OBJ(#4, #5) & ~PRED(#3, #6) & ~NEGAT(#4) & #4[modal:~] & ~COORD(#8, #3) )
+	COMBINE(#2, #1).
+
+
+// unpersonal sentences
+// "ES WIRD eine Seite ausgegeben, auf der der Erfolg bzw. das Scheitern notiert ist."
+70> | PEU#1{np{pron[lemma:es]}}, PEU#2{vfin{verb[p3, aux]}} |
+	COMBINE(#1, #2).
+
+// subclauses introduced by "wenn"
+// "Druckmaterial nachlegen <I>Meldung</I> erscheint, WENN die Zusatzzufuhr leer ist ."
+//70> | CONJ[subord, lemma: wenn], ?+#1[finite:~], PEU#2{vfin{?*, #3[last]}} |
+//	COMBINE(#1, #2).
+
+
+
+
+Reshuffling:
+// all units that are related by COMBINE are reduced to only one PEUnit
+
+// negation
+// Hefter (heftet nicht richtig)
+80> PEU#1{?-#2}, PTCL#3, ?#4[adj] = #1{#2, #3,#4}, where( COMBINE ( #1, #3 ) & COMBINE ( #3, #4 )).
+// Vorlageneinzug erkennt das Materialformat (nicht richtig)
+80> PTCL#1, ?#2[adj]  = PEU{#1, #2}, where( COMBINE ( #1, #2 )).
+// Behälter 1 lässt sich (nicht schließen)
+80> PTCL#1, PEU#2{?-#3}  = #2{#1, #3}, where( COMBINE ( #1, #2 )).
+// "Diese Fehlermeldung weist darauf hin, dass eine Ausgabefunktion eingestellt oder angefordert wurde, die nicht vorhanden ist, da sie (nicht im Gerät implementiert ist)."
+80> PTCL#1, PEU#2{?-#3}, PEU#4{?-#5}  = #2{#1, #3, #5}, where( COMBINE ( #1, #4 )).
+// Vorlageneinzug (erkennt das Materialformat nicht)
+80> PEU#1{?-#2}, PEU#3{?-#4}, PTCL#5 = #1{#2, #4, #5}, where( COMBINE ( #1, #5 )).
+// Touchscreen ist leer und Energiespar-LED (leuchtet nicht)
+80> PEU#1{?-#2}, PTCL#3 = #1{#2, #3}, where( COMBINE ( #1, #3 )).
+
+// adjectifs / predicates / prefixes
+// Die Heftklammerspule (muss locker gewickelt) im Magazin sitzen
+80> PEU#1{?-#2}, ?#3[adj], ?#4[adj] = #1{#2, #3, #4}, where( COMBINE ( #1, #3 ) & COMBINE ( #1, #4 )).
+// (Kopien beschädigt)
+80> PEU#1{?-#2}, ?#3[adj] = #1{#2, #3}, where( COMBINE ( #1, #3 )).
+// (Fixieröl fast leer)
+80> PEU#1{?-#2}, ADV#4, ?#3[adj] = #1{#2, #4, #3}, where( COMBINE ( #1, #3 )).
+// Die Fiery-Testseite wird (fehlerfrei gedruckt)
+80> ?#3[adj], PEU#1{?-#2} = #1{#3, #2}, where( COMBINE ( #3, #1 )).
+// (Touchscreen ist leer)
+80> PEU#1{?-#2}, PEU#3{?-#4}, ?#5[adj] = #1{#2, #4, #5}, where( COMBINE ( #1, #5 )).
+// Materialbehälter 1, 2, 3 oder 4 (führt kein Papier zu)
+80> PEU#1{?-#2}, PEU#3{?-#4}, PTCL#5 = #1{#2, #4, #5}, where( COMBINE ( #1, #3 ) & COMBINE ( #1, #5 )).
+
+
+// special signs
+// Anweisungen zum Anhalten eines Druckauftrags (in der Warteschlange (Novell 4.1x))
+80> PEU#1{?-#2}, punct#5[pleft], PEU+#3{?-#4}, punct#6[pright] = #1{#2, #5, #4, #6}, where( COMBINE ( #1, #3 )).
+// Eingeben des Hauptbedienerkennworts (ohne das Zeichen "#")
+80> PEU#1{?-#2}, punct#5[quote], symbol#3, punct#6[quote] = #1{#2, #5, #3, #6}, where( COMBINE ( #1, #3 )).
+// (Störung: BTR-Kontakt ausgefallen)
+80> PEU#1{?-#2}, punct#5[lemma:\:], PEU#3{?-#4} = #1{#2, #5, #4}, where( COMBINE ( #1, #3 )).
+// (Kopier-/Fax- und Systemgeräte)
+//80> PEU#1{?-#2}, conj#5, PEU#3{?-#4} = #1{#2, #5, #4}, where( COMBINE ( #1, #3 )).
+// Auf dem Touchscreen ("Störungen" antippen).
+80> punct#5[quote], PEU#1{?-#2}, punct#6[quote], PEU#3{?-#4} = #1{#5, #2, #6, #4}, where( COMBINE ( #1, #3 )).
+
+
+// coordination
+// (Schwarze Linien und Streifen) beim Kopieren
+80> PEU#1{?-#2}, conj#5[coord:+], PEU#3{?-#4} = #1{#2, #5, #4}, where( COMBINE ( #1, #3 )).
+
+
+// default case:
+80> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5{?-#6} = #1{#2, #4, #6}, where( COMBINE ( #3, #5 ) & COMBINE ( #1, #5 )).
+80> PEU#1{?-#2}, PEU#5{?-#6}, PEU#3{?-#4} = #1{#2, #6, #4}, where( COMBINE ( #1, #3 )).
+80> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2, #4}, where( COMBINE ( #1, #3 )).
+
+
+
+Reshuffling:
+//100> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2, #4}, where( COMBINE ( #1, #3 )).
+
+// adjectifs / particles / modals
+100> ?#1[adj], ?#2[adj] = PEU{#1, #2}, where (~mother(#1,#3) & ~mother(#2,#3)).
+100> ?#1[adj] = PEU{#1}, where (~mother(#1,#2)).
+//100> PTCL#1 = PEU{#1}, where (~mother(#1,#2)).
+
+
+
+// variables for the normalization
+Variables:
+string _norm;
+string _surf;
+
+
+DependencyRules:
+// PEUnits
+120> | peu#1 |
+	PEU(#1).
+
+// messages
+//120> | mld#1 |
+//	PEU(#1).
+//
+
+
+// Mark PEUNITs and compute their normalized forms.
+150> |PEU#1|	
+	if (normalize(#1, _norm) & _surf = #1[surface])
+	PEUNIT(#1,##PENORM[lemma=_norm],##PESURF[lemma=_surf]).
+
+150> | MLD#1 |	
+	if (normalize(#1, _norm) & _surf = #1[surface])
+	PEUNIT(#1,##PENORM[lemma=_norm],##PESURF[lemma=_surf]).

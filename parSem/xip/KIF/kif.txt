@@ -1,0 +1,125 @@
+#Kif Formalism 
+
+*1 = Wrong index format
+*2 = Wrong expression after an operator
+*3 = Wrong list of parameters
+*4 = Wrong expressions in parentheses
+*5 = Wrong FRAME declaration
+*6 = Wrong argument declaration
+*7 = Wrong FUNCTION declaration
+*8 = Wrong BOOLEAN EXPRESSION
+*9 = Wrong BOOLEAN expression
+*10 = Wrong IF declaration
+*11 = Wrong WHILE declaration
+*12 = Wrong FOR declaration
+*13 = Wrong FUNCTION CALL
+*14 = Wrong XPATH
+*15 = Wrong Instruction
+*16 = Wrong SWITCH
+*17 = Wrong test in a SWITCH
+*18 = Wrong IN expression
+*19 = Wrong WITH expression
+*20 = Wrong RULE declaration
+*21 = Wrong PATTERN in A RULE
+*22 = Wrong TRY-CATCH expression
+*23 = Wrong INTERVAL
+
++analyse
+!space,commentaires
+
+rc := [\10|\13]
+
+space := [\32^\9^rc]+
+
+char := [A-Z|a-z|%é|%à|%è|%ç|%ê|%î|%ô|%â|%û|%ù|%Ç|%À|%É|%È|%Ë|%Ê|%Ï|%Î|%Û|%Ü|%ä|%ë|%ï|%ö|%ü|%_]
+
+word := char [char^0-9]*
+
+type := char [char^0-9]*
+
+anydouble := [%\ .]^[~%"]
+anysimple := [%\ .]^[~%']
+
+anycolon := [%% .]^[~%;]
+
+operator := [%< %<]^[%> %>]^%+^%-^%*^%/^%^^%%
+
+operatoraffectation := %=^[%< %< %=]^[%> %> %=]^[%+ %=]^[%- %=]^[%* %=]^[%/ %=]^[%^ %=]^[%% %=]
+
+orand := %|^%&
+comparator := [%! %=]^[%~ %:]^[%< %>]^[%= %=]^[%< %=]^[%> %=]^%<^%>^%:
+
+declaration := type (space) word (%( parameters %)) (space) (%= [bodyrule^expressions])
+
+treepattern := %|;21.+ %|  
+
+xipblocend := %} {%;}
+
+xipbloc := %{;20.+ xipblocend
+
+bodyrule := (space) [[treepattern (space) ($if)]^[$if]]  [xipbloc^anycolon+]
+
+frame := (space) $frame;5(space) type (space) instruction (space)
+
+instruction := %{;15(space) blocs (space) %}
+
+arguments := (space) declaration (%,;6arguments)
+
+function := (space) $function;7(space) word %( (arguments) %) (space) instruction (space)
+
+commentaires := (space) %/ %/ .* rc (space)
+
+bloc := (space) [declaration^affectation^expressions] (space) %;
+blocs := [commentaires^frame^switch^trycatch^loop^test^for^function^bloc]+
+
+analyse := (space) (commentaires) $kif %: (space) blocs (space)
+
+regularcall := word %(;13(parameters) %)
+
+returncall := $return
+breakpointcall := $breakpoint
+breakcall := $break
+continuecall := $continue
+
+call :=  breakpointcall^breakcall^continuecall^regularcall^returncall
+
+sep := (space) %: (space)
+
+indexes := %[;1expressions %] (%. regularcall)
+interval := %[ (space) (numbers) sep;23(numbers) (space) %]
+variable := word (interval^indexes^[%. [regularcall^variable]])
+
+affectation := variable (space) operatoraffectation;14(space) [bodyrule^expressions]
+
+operationin := $in;18expression ($with;19(space) word) (space)
+operation := operator;2(space) expressions
+comparison := comparator (space) expressions
+
+negation := %~
+parameters := expressions (%,;3parameters)
+optional := %(;4expressions %)
+expression := (space) (negation) (space) [xpathexpression^abool^astring^anumber^call^optional^variable] (space)
+expressions := expression (operationin^operation^comparison)
+numbers := expression (operation)
+
+astringdouble := %" anydouble* %"
+astringsimple := %' anysimple* %'
+astring := astringdouble^astringsimple
+
+anumber := (%-) [0-9]+ (%. [0-9]+)
+abool := $true^$false
+optionalboolean := %(;9booleanexpression %)
+booleanexpression := expressions (space) (orand;8(space) optionalboolean^booleanexpression)
+test := (space) $if;10(space) %( booleanexpression %) (space) [instruction^bloc] (space) (testelif) (space) ($else (space) [instruction^bloc]) (space)
+testelif := (space) $elif;10(space) %( booleanexpression %) (space) [instruction^bloc] (space) (testelif) (space) ($else (space) [instruction^bloc]) (space)
+loop := (space) $while;11(space) %( booleanexpression %) (space) [instruction^bloc] (space)
+for := (space) $for;12(space) %( [affectation^expression] %; booleanexpression %; [affectation^expression] %) (space) [instruction^bloc] (space)
+switch := (space) $switch;16(space) %( expression %) (space) %{ (space) testswitch+ (space) %} (space)
+trycatch := (space) $try (space) %{;22(space) blocs (space) %} (space) $catch (space) %( (space) (word) (space) %) (space) %; (space)
+testswitch := [default^astring^anumber^abool] (space) %:;17(space) [instruction^bloc] (space)
+default := $default 
+
+xpathexpression := %@ word (space) %(;14 .* %) %- %> word %( .* %)
+
+
+

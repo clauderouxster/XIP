@@ -1,0 +1,726 @@
+tagging: 
+
+1> ?[mark:+] = ?[allmark=+].
+1> ?[plmark:+] = ?[allmark=+].
+1> ?[form:fgene] = ?[allmark=+].
+1> ?[protein] = ?[allmark=+].
+1> ?[rnaform:+] = ?[allmark=+].
+1> ?[nodetmark:+] = ?[allmark=+].
+
+
+1> ?[proper:+,maj:~] = ?[proper=~].
+
+1> ?[guessgeneprot:+] = ?[gene=~,symbol=~].
+
+// In the comments X denotes the token that will get the feature "generul:+"
+
+// In the comments marked_words denote types of genes, they have the feature "mark:+"
+
+
+// *********Preliminary rules:************
+
+/Marking hyphens and parentheses that glue tokens together\
+
+1> ?[both:+,hyphen:+] = ?[comphyph=+].
+1> ?[comphyph:+] = ?[both=~,hyphen=~].
+
+1> ?[both:+,paren:+] = ?[compparen=+].
+1> ?[compparen:+] = ?[both=~,paren=~].
+
+1> ?[comphyph:+] += ?[compend=~].
+1> ?[punct:+] += ?[compend=~].
+
+//The indefinite article shouldn't have the feature let:+
+
+1> ?[det:+] = ?[let=~].
+
+
+
+/If a part of gene name is followed by a separator, it is not part of a gene name any more\
+
+1> ?[partof:+,gene:+] = ?[partof=~,gene=~] | ?[separ:+] |.
+
+/The lexicon guess-biotip attributes the tag +Gene, however these words shouldn't get the feature gene:+ in the same way as words from the lexicon lex-biotip. 
+
+1> ?[guessgeneprot:+] = ?[gene=~].
+
+
+/The tag +Symbol is translated as the feature symbol:+ A type of gene name is also called +Symbol, but it is not the same thing as the other symbols. These gene names get the feature gsb\
+
+1> ?[gene:+,symbol:+] = ?[gsb=+].
+1> ?[prot:+,symbol:+] = ?[psb=+].
+
+1> ?[gene:+] = ?[symbol=~].
+1> ?[prot:+] = ?[symbol=~].
+
+/Gene synonym and fill names get the feature gsy:+ and gdv:+ resp., and protein synonym and full names get the feature psy:+ and pdv:+ resp. We don't need the features synonym:+ and full:+ any more\
+
+1> ?[gene:+,synonym:+] = ?[gsy=+].
+1> ?[prot:+,synonym:+] = ?[psy=+].
+
+1> ?[gene:+,full:+] = ?[gdv=+].
+1> ?[prot:+,full:+] = ?[pdv=+].
+
+1> ? = ?[synonym=~].
+1> ? = ?[full=~].
+
+/Species names that are ambiguous with gene/protein names get the feature speciamb:+ and lose the feature species:+ so that the rules form fining entity names can apply to them\
+
+1> ?[dicoamb:+,species:+,gene:+] = ?[speciamb=+,species=~].
+1> ?[dicoamb:+,species:+,prot:+] = ?[speciamb=+,species=~].
+
+// *********Potential gene and protein names:************
+
+// Potential gene and protein names get the feature guessgeneprot:+. The following lexical entries get this feauture:
+
+// 1. unknown from the following transducers: guess-biotip, guess-open, guess-english
+
+// 2. words consisting of just capital letters with the exception of the indefinite article, Roman numbers, genetic terminology, species and parts of words
+
+
+1> ?[toutmaj:+,det:~,rom:~,genterm:~,species:~,wordpart:~,gene:~,let:~] = ?[guessgeneprot=+].
+
+//2a. words beginning with a capital letter preceded and followed by words not beginning with a capital letter\
+
+1> ?[toutmaj:~,maj:+,species:~,genterm:~] = | ?[maj:~,card:~,punct:~,det:~] | ?[guessgeneprot=+] .
+
+/3. gene and protein names that come from the ambiguous dictionary shouldn't necessarily have the features gene:+ or prot:+. They are, however potential gene or protein names (guessgeneprot:+) except for those that are discovered by hand and are listed. They will need a special treatment\
+
+1> ?[dicoamb:+,gene:+,prot:+] = ?[dicoambgenprot=+].
+1> ?[dicoamb:+,gene:+,prot:~] = ?[dicoambgene=+].
+1> ?[dicoamb:+,gene:~,prot:+] = ?[dicoambprot=+].
+
+1> ? = ?[dicoamb=~].
+
+1> ?[dicoambgenprot:+] = ?[gene=~].
+1> ?[dicoambgenprot:+] = ?[prot=~].
+1> ?[dicoambprot:+] = ?[prot=~].
+1> ?[dicoambgene:+] = ?[gene=~].
+
+1> ?[dicoambgenprot:+,det:~,prep:~,pron:~,coord:~,aux:~,let:~,card:~,form:~fbe,nogene:~,form:~fnot] = ?[guessgeneprot=+].
+
+1> ?[dicoambgene:+,det:~,prep:~,pron:~,coord:~,aux:~,let:~,card:~,form:~fbe,nogene:~,form:~fnot,infto:~,conj:~] = ?[guessgeneprot=+].
+
+1> ?[dicoambprot:+,det:~,prep:~,pron:~,coord:~,aux:~,let:~,card:~,form:~fbe,nogene:~,form:~fnot] = ?[guessgeneprot=+].
+
+1> ?[dicoambgene:+,det:+] = ?[generul=+,det=~,noun=+,indef=~] | ?[verb:+,noun:~,partpas:~,prog:~,vprog:~] |.
+1> ?[dicoambgene:+,det:+] = | ?[det:+] | ?[generul=+,det=~,noun=+,indef=~,pron=~] .
+1> ?[dicoambgene:+,prep:+,infto:~] = ?[generul=+,prep=~,noun=+] | ?[verb:+,noun:~,partpas:~,prog:~,vprog:~] |.
+1> ?[dicoambgene:+,prep:+,infto:~] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,prep=~,noun=+] | ?[comppart:~] |.
+1> ?[dicoambgene:+,pron:+,poss:+] = ?[generul=+,noun=+,pron=~,poss=~] | ?[verb:+,noun:~,partpas:~,prog:~,vprog:~] |.
+1> ?[dicoambgene:+,pron:+] = | ?[det:+,form:~fthat] | ?[generul=+,noun=+,pron=~].
+1> ?[dicoambgene:+,coord:+] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,noun=+,coord=~].
+1> ?[dicoambgene:+,aux:+] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,noun=+,aux=~].
+1> ?[dicoambgene:+,conj:+] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,noun=+,conj=~].
+1> ?[dicoambgene:+,form:fbe] = ?[generul=+,form=~fbe] | ?[verb:+,noun:~,partpas:~,prog:~,vprog:~] |.
+1> ?[dicoambgene:+,form:fbe] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,noun=+,form=~fbe].
+1> ?[dicoambgene:+,infto:+] = | ?[det:+,form:~fthat,sg:+] | ?[generul=+,noun=+,infto=~].
+1> ?[dicoambgene:+,per:+] = ?[guessgeneprot=+].
+
+/ambiguity btw gene/protein name\
+
+
+///4. I haven't found in the training corpus gene or protein names that consist of only one letter, but single letters are often used for other meanings. So one-letter gene names from the lex-biotip won't get the feature gene:+ or protein:+, just guessgeneprot:+.\
+
+1> ?[gene:+,let:+] = ?[gene=~].
+1> ?[prot:+,let:+] = ?[prot=~].
+1> ?[let:+] = ?[guessgeneprot=+].
+
+/5. Certain parts of speech like interjections are unlikely to occur in genetical texts. So we say that interjections get the feature guessgeneprot:+\
+
+1> ?[interj:+] = ?[guessgeneprot=+].
+
+/6. gene or protein names coming from the dictionaries get the feature guessgeneprot so that the rules can apply to them, too.\
+
+1> ?[partof:+] = ?[gene=~].
+1> ?[partof:+] = ?[prot=~].
+
+1> ?[gene:+,partof:~] = ?[guessgeneprot=+].
+1> ?[prot:+,partof:~] = ?[guessgeneprot=+].
+
+/7. Entries constructed by regular expressions for the lex-spec lexicon that are chemical symbols.\
+
+1> ?[lexspec:+,chem:+] = ?[guessgeneprot=+].
+
+/8. Any entry that begins a sentence and that begins with a small letter is a gene name\
+
+//51> ?[maj:~,start:+,punct:~,card:~,let:~] = ?[geneprotrul=+].
+//51> ?[maj:~,start:+,punct:~,card:~,let:~,compbeg:+] = ?[geneprotcompbeg=+,geneprotrul=~].
+
+
+//// *********Exceptions of the potential gene or protein names:************
+
+// Exclude guesses words that contain a "+" or a "=". They are in the lex-spec lexicon and have the feature spec
+
+1> ?[lexspec:+,spec:+] = ?[nogene=+,toutmaj=~].
+1> ?[nogene:+] = ?[guessgeneprot=~] .
+
+//To exclude persons names, guessed words followed by an initial will not be potential gene names
+
+1> ? = ?[guessgeneprot=~] | (punct[comma:+]), ?[initial:+] |.
+
+1> ?[initial:+] = | ?, (punct[comma:+]) | ?[guessgeneprot=~] .
+
+1> ? =  | ?[initial:+] | ?[guessgeneprot=~] .
+
+1> ?[initial:+] =  ?[guessgeneprot=~] | ? | .
+
+
+/ The punct:+ feature comes from the English guesser. All the tokens that are tagged by the guesser get the feature guessgeneprot:+. The semicolon is not a potential gene name. Other pnctuation and symbol names coming from the guesser are not potential gene names\
+
+1> punct = punct[guessgeneprot=~].
+1> noun[coord:+,symbol:+] = ?[guessgeneprot=~].
+1> noun[symbol:+,guessgeneprot:+] = ?[guessgeneprot=~].
+
+/"did" is a potential gene name. If it is followed by "not" it is surely not a gene name\
+
+1> ?[form:fdo] = verb[dicoambgene=~,guessgeneprot=~,noun=~,hmm_noun=~,proper=~] | ?[form:fnot] |.
+
+/units that are ambiguous with entity names are not entity names when they are preceded by a number\
+
+1> ?[meas:+] = | ?[dig:+], (?[comphyph:+]) | ?[dicoambgene=~,guessgeneprot=~].
+
+// *********Exceptions of the gene or protein names:************
+
+/Words having the feature capamb:+, i.e. words that are in the genetics lexicon beginning with a capital letter, and in this form they are ambiguous with a word of the general dictionary will loose their feature "gene" at the beginning of a sentence. In the lexicon they get their general part of speech as a feature\
+
+1> ?[capamb:+,start:+] = ?[gene=~].
+1> ?[capamb:+,start:+] = ?[prot=~].
+1> ?[capamb:+,start:+] = ?[guessgeneprot=~].
+1> ?[capamb:+,form:fbe] = ?[gene=~].
+1> ?[capamb:+,form:fbe] = ?[prot=~].
+
+
+/when "pre" is a prefix, it is not a potential gene name\
+
+1> ?[prefix:+,gene:+] = ?[gene=~,gsb=~,guessgeneprot=~].
+
+//If a word having the feature prefix comes in front of a hyphen, it is not a gene name but a prefix
+
+1> ?[prefix:+] = ?[gsy=~,proper=~,noun=~].
+
+
+// *********Features for compound words:************
+
+
+// assigning th features compbeg and compend to words seperated by a hyphen\\
+
+1> ? = | ?[comphyph:~] | ?[compbeg=+] | ?[comphyph:+] |.
+1> ?[start:+] = ?[compbeg=+] | ?[comphyph:+] |.
+
+1> ? = | ?[comphyph:+] | ?[compend=+] | ?[comphyph:~] |.
+1> ?[end:+] = | ?[comphyph:+] | ?[compend=+].
+
+//1> ?[compbeg:+] = ?[compbeg=~] | ?[comphyph:+], ?[compend:~] |.
+
+1> ?[compbeg:+] = ?[mark=+] | ?[comphyph:+], ?[compend:+,mark:+] |.
+1> ?[compbeg:+] = ?[genterm=+] | ?[comphyph:+], ?[compend:+,genterm:+] |.
+1> ?[compbeg:+] = ?[xofgene=+] | ?[comphyph:+], ?[compend:+,xofgene:+] |.
+1> ?[compbeg:+] = ?[xingene=+] | ?[comphyph:+], ?[compend:+,xingene:+] |.
+1> ?[compbeg:+] = ?[nodetmark=+] | ?[comphyph:+], ?[compend:+,nodetmark:+] |.
+1> ?[compbeg:+] = ?[form=fgene] | ?[comphyph:+], ?[compend:+,form:fgene] |.
+1> ?[compbeg:+] = ?[protein=+] | ?[comphyph:+], ?[compend:+,protein] |.
+1> ?[compbeg:+] = ?[rnaform=+] | ?[comphyph:+], ?[compend:+,rnaform:+] |.
+
+
+/gene or protein names that are present in the genetic dictionary lex-biotip as last parts of a compou<nd word (=.*) shouldn't be considered as gene or protein names for the time being.\
+
+1> ?[compend:+,gene:+] = ?[gene=~,guessgeneprot=+].
+1> ?[compend:+,prot:+] = ?[prot=~,guessgeneprot=+].
+
+//context free rules to assign entity features to words.\
+
+//// *********Small letter in sentence beginning position************
+//
+////Since gene and protein names are not written in capital letters in sentence initial position, when we find potential gene names in sentence initial position beginning with a small letter, we say that it is a gene or protein\
+
+
+1> ?[guessgeneprot:+,maj:~,start:+] =  ?[geneprotrul=+] .
+
+
+/Composition of potential multi-word gene/protein names\
+
+Marker:
+
+2> ?[guessgeneprot:+,compbeg=~], ?[comphyph:+];?[separ:+], ?[guessgeneprot:+,compend=~], ?[interact:+,pair:+].
+
+
+Sequence:
+
+3> noun[features:!]  = ?[compound:+,!features:!].
+
+//a chain of hyphened potential gene names is a potential gene name entity
+
+4> entity[guessgeneprot=+] = ?[compbeg:+,guessgeneprot:+], ?[comphyph:+], (?[guessgeneprot:+], ?[comphyph:+]), ?[guessgeneprot:+].
+
+//strings containing parentheses without spaces should be one token. e.g.:I(Ca)
+
+4> entity[guessgeneprot=+] = ?, ?[compparen:+], ?+[form:~fcpar], ?[form:fcpar] . 
+4> entity[guessgeneprot=+] = ?, ?[compparen:+], ?, ?[compparen:+], ? .
+
+// (X)-mediated
+
+4> entity[geneprotrul=+] = | ?[form:fopar] | ?[guessgeneprot:+] | ?[form:fcpar] , ?[hyphen:+], ?[hyphmark:+] |.
+
+
+/MARKER X Y Z (entity)\
+
+4> entity[guessgeneprot=+] @= | ?[form:fgene,pl:~] | noun, noun[allmark:~] | ?[form:fopar], ?[guessgeneprot:+] |.
+4> entity[guessgeneprot=+] @= | ?[protein,pl:~] | noun, noun[allmark:~] | ?[form:fopar], ?[guessgeneprot:+] |.
+4> entity[guessgeneprot=+] @= | ?[rnaform:+,pl:~] | noun, noun[allmark:~] | ?[form:fopar], ?[guessgeneprot:+] |.
+4> entity[guessgeneprot=+] @= | ?[mark,nopremark:~,pl:~] | noun, noun[allmark:~] | ?[form:fopar], ?[guessgeneprot:+] |.
+
+/A sequence of words beginning with a capital letter is an entity\
+
+4> entity[guessgeneprot=+] @= ?[let:+], (?[comphyph:+]), ?[toutmaj:~,maj:+,species:~,genterm:~], (?[comphyph:+]), ?[toutmaj:~,maj:+,species:~,genterm:~] .
+
+4> entity[guessgeneprot=+] @= ?+[toutmaj:~,maj:+,species:~,genterm:~,start:~], ?[toutmaj:~,maj:+,species:~,genterm:~,start:~], (?[comphyph]), ?[let:+];?[card:+,dig:+].
+
+4> entity[guessgeneprot=+] @= ?+[toutmaj:~,maj:+,species:~,genterm:~,start:~], ?[toutmaj:~,maj:+,species:~,genterm:~], ?[toutmaj:~,maj:+,species:~,genterm:~,rnaform:~].
+
+//X of X (entity) - this rule doesn't work well\
+
+//53> entity[guessgeneprot=+]  = ?[maj:~], ?[maj:+,start:~], ?[form:fof], ? | ?[form:fopar], ?[guessgeneprot:+] | .
+//53> entity[guessgeneprot=+]  = ?[start:+], ?[form:fof], ? | ?[form:fopar], ?[guessgeneprot:+] | .
+
+/A string of words consisting of just capital letters is a potential entity name\
+
+4> entity[guessgeneprot=+] @= ?+[toutmaj:+,det:~], ?[toutmaj:+], (?[comphyph]), ?[let:+];?[card:+,dig:+].
+4> entity[guessgeneprot=+] @= ?+[toutmaj:+,det:~], ?[toutmaj:+,rnaform:~].
+
+4> entity[geneprotrul=+] = ?[geneprotrul:+].
+
+/If the second part of a compound word is a potential entity name, the first part should also be be a potential entity name.\
+
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot=+,compbeg:+],?[comphyph:+],?[guessgeneprot:+,compend:+,dicoambgene:+].
+4> entity[guessgeneprot=+,dicoambprot=+]  = ?[guessgeneprot=+,compbeg:+],?[comphyph:+],?[guessgeneprot:+,compend:+,dicoambprot:+].
+4> entity[guessgeneprot=+]  = ?[guessgeneprot=+,compbeg:+],?[comphyph:+],?[guessgeneprot:+,compend:+].
+
+/A word followed by a number or a (Greek) letter is a potential entity name\
+
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot:+,dicoambgene:+], (?[comphyph:+]), ?[card:+,dig:+,guessgeneprot=+].
+
+4> entity[generul=+] = ?[gene:+], (?[comphyph:+]), ?[card:+,dig:+,generul=+].
+4> entity[protrul=+] = ?[prot:+], (?[comphyph:+]), ?[card:+,dig:+,protrul=+].
+
+4> entity[guessgeneprot=+]  = ?[guessgeneprot:+],  (?[comphyph:+]), ?[card:+,dig:+,guessgeneprot=+].
+
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot:+,dicoambgene:+], (?[comphyph:+]), ?[let:+,maj:+,guessgeneprot=+].
+4> entity[guessgeneprot=+,dicoambprot=+]  = ?[guessgeneprot:+,dicoambprot:+], (?[comphyph:+]), ?[let:+,maj:+,guessgeneprot=+].
+4> entity[generul=+] = ?[gene:+], (?[comphyph:+]), ?[let:+,generul=+].
+4> entity[protrul=+] = ?[prot:+], (?[comphyph:+]), ?[let:+,protrul=+].
+4> entity[guessgeneprot=+]  = ?[guessgeneprot:+], (?[comphyph:+]), ?[let:+,maj:+,guessgeneprot=+].
+
+//53> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot:+,dicoambgene:+], (?[comphyph:+]), ?[initial:+,guessgeneprot=+].
+//53> entity[guessgeneprot=+,dicoambprot=+]  = ?[guessgeneprot:+,dicoambprot:+], (?[comphyph:+]), ?[initial:+,guessgeneprot=+].
+//53> entity[generul=+] = ?[gene:+], (?[comphyph:+]), ?[initial:+,generul=+].
+//53> entity[protrul=+] = ?[prot:+], (?[comphyph:+]), ?[initial:+,protrul=+].
+//53> entity[guessgeneprot=+]  = ?[guessgeneprot:+], (?[comphyph:+]), ?[initial:+,guessgeneprot=+].
+
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot:+,dicoambgene:+], (?[comphyph:+]), ?[greeklet:+,guessgeneprot=+].
+4> entity[guessgeneprot=+,dicoambprot=+]  = ?[guessgeneprot:+,dicoambprot:+], (?[comphyph:+]), ?[greeklet:+,guessgeneprot=+].
+4> entity[generul=+] = ?[gene:+], (?[comphyph:+]), ?[greeklet:+,generul=+].
+4> entity[protrul=+] = ?[prot:+], (?[comphyph:+]), ?[greeklet:+,protrul=+].
+4> entity[guessgeneprot=+]  = ?[guessgeneprot:+], (?[comphyph:+]), ?[greeklet:+,guessgeneprot=+].
+
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[greeklet:+,guessgeneprot=+], ?[guessgeneprot:+,dicoambgene:+].
+4> entity[guessgeneprot=+,dicoambprot=+]  = ?[greeklet:+,guessgeneprot=+], ?[guessgeneprot:+,dicoambprot:+].
+4> entity[generul=+] = ?[greeklet:+,guessgeneprot=+], ?[gene:+].
+4> entity[protrul=+] = ?[greeklet:+,guessgeneprot=+], ?[prot:+].
+4> entity[guessgeneprot=+]  = ?[greeklet:+,guessgeneprot=+], ?[guessgeneprot:+].
+
+/Potential entity names and entity names coming from the dictionary should be entities.\
+
+4> entity[guessgeneprot=+,gene=+]  = ?[guessgeneprot:+,gene:+].
+4> entity[guessgeneprot=+,prot=+]  = ?[guessgeneprot:+,prot:+].
+4> entity[guessgeneprot=+,dicoambgene=+]  = ?[guessgeneprot:+,dicoambgene:+].
+4> entity[guessgeneprot=+,dicoambprot=+]  = ?[guessgeneprot:+,dicoambprot:+].
+4> entity[guessgeneprot=+]  = ?[guessgeneprot:+].
+
+//1-letter names are excluded from the possibility of being entities. However, when they occur in very restricted contexts like "the X gene", they should be entities
+
+4> entity[generul=+] = | det[def:+] | ?#1[let:+] | ?[form:fgene] |.
+4> entity[protrul=+] = | det[def:+] | ?#1[let:+] | ?[protein] |.
+
+4> speci[noun=+] = ?[species:+,noun:+,nadj:~,adj:~].
+4> speci[adj=+] = ?[species:+,adj:+,nadj:~,noun:~].
+4> speci[nadj=+] = ?[species:+,nadj:+].
+
+Marker:
+
+
+// *********Rules with keywords:************
+
+///number entites names defined until now\
+
+//54> entity#1, where ( #1[rule=94,geneprotrul:+] | #1[rulebis=94,geneprotrul:+] ).
+//54> entity#1, where ( #1[rule=95,generul:+] | #1[rulebis=95,generul:+] ).
+//54> entity#1, where ( #1[rule=96,protrul:+] | #1[rulebis=96,protrul:+] ).
+//54> entity#1, where ( #1[rule=97,rnarul:+] | #1[rulebis=97,rnarul:+] ).
+
+/The first part of hyphened words whose last component has the feature hyphmark are entities\
+
+5> entity#1, ?[comphyph:+], ?[hyphmark:+], where (#1[rule=86,geneprotrul=+] | #1[rulebis=86,geneprotrul=+]) .
+
+//negatively marked words: certain words having the trait negmark:+ are sure not to be markers of gene names, they are markers of gene families or other bigger units. When they follow or precede gene names coming form the dictionary, we don't accept them as entity names
+
+5> entity#1, (?[form:fcpar]), ?[negmark:+] , where ( #1[rule=77,prot=~,guessgeneprot=~] | #1[rulebis=77,prot=~,guessgeneprot=~] ) .
+5> entity#1, (?[form:fcpar]), ?[negmark:+] , where ( #1[rule=78,gene=~,guessgeneprot=~] | #1[rulebis=78,gene=~,guessgeneprot=~] ) .
+
+5> entity#1, (?[form:fcpar]), entity{?[negmark:+]} , where ( #1[rule=87,gene=~] | #1[rulebis=87,gene=~,guessgeneprot=~] ).
+5> entity#1, (?[form:fcpar]), entity{?[negmark:+]} , where ( #1[rule=88,prot=~] | #1[rulebis=88,prot=~,guessgeneprot=~] ).
+
+5> ?[indef:+], entity#1, (?[comphyph:+], ?), ?[mark:+];?[form:fgene];?[protein], ?[separ:~] , where ( #1[rule=89,gene=~] | #1[rulebis=89,gene=~] ).
+5> ?[indef:+], entity#1, (?[comphyph:+], ?), ?[mark:+];?[form:fgene];?[protein], ?[separ:~] , where ( #1[rule=90,prot=~] | #1[rulebis=90,prot=~] ).
+
+5> ?[separ:~] , ?[indef:+], entity#1, (?[comphyph:+], ?), ?[mark:+];?[form:fgene];?[protein], where ( #1[rule=89,gene=~] | #1[rulebis=89,gene=~] ).
+5> ?[separ:~] , ?[indef:+], entity#1, (?[comphyph:+], ?), ?[mark:+];?[form:fgene];?[protein], where ( #1[rule=90,prot=~] | #1[rulebis=90,prot=~] ).
+
+5> ?[separ:~], entity#1, (?[comphyph:+], ?), ?[form:fgene,pl:+];?[protein,pl:+], where ( #1[rule=91,gene=~] | #1[rulebis=91,gene=~] ).
+5> ?[separ:~], entity#1, (?[comphyph:+], ?), ?[form:fgene,pl:+];?[protein,pl:+], where ( #1[rule=92,prot=~] | #1[rulebis=92,prot=~] ).
+
+// X + marked_words
+
+5> ?[indef:~], entity#1, (?[form:fcpar];?[genattr:+]), ?[mark:+,pl:~];?[plmark:+] , where ( #1[rule=0,geneprotrul=+] | #1[rulebis=0,geneprotrul=+] ) .
+5> entity#1, (?[form:fcpar] );(?[genattr:+] ), ?[mark:+,pl:~];?[plmark:+] , where ( #1[rule=75,geneprotrul=+] | #1[rulebis=75,geneprotrul=+] ) .
+5> entity#1, ?[separ:+], entity#2, (?[form:fcpar];?[genattr:+] ), ?[mark:+,pl:+], where (( #1[rule=76,geneprotrul=+] | #1[rulebis=76,geneprotrul=+] ) & ( #2[rule=79,geneprotrul=+] | #2[rulebis=79,geneprotrul=+] ) ).
+
+
+5> ?[det:~], entity#1, (?[form:fcpar] );(?[genattr:+] ), ?[nodetmark:+], where ( #1[rule=1,geneprotrul=+] | #1[rulebis=1,geneprotrul=+] ) .
+
+5> entity#1{?[start:+]}, (?[form:fcpar] );(?[genattr:+] ), ?[nodetmark:+], where ( #1[rule=2,geneprotrul=+] | #1[rulebis=2,geneprotrul=+] ) .
+
+5> entity#1, (?[separ:+];?[comphyph:+]), entity#2, ?[interact:+,pair:+], where (( #1[rule=3,geneprotrul=+] | #1[rulebis=3,geneprotrul=+] ) & ( #2[rule=3,geneprotrul=+] | #2[rulebis=3,geneprotrul=+] )).
+
+5> ?[indef:~], entity#1, (?[form:fcpar];?[genattr:+] ), ?[form:fgene,pl:~], where ( #1[rule=4,geneprotrul=+] | #1[rulebis=4,geneprotrul=+]) .
+
+5> entity#1{?[start:+]}, (?[form:fcpar];?[genattr:+] ), ?[form:fgene,pl:~], where ( #1[rule=5,generul=+] | #1[rulebis=5,generul=+] ) .
+
+5> entity#1, ?[separ:+], entity#2, (?[form:fcpar];?[genattr:+] ), ?[form:fgene,pl:+], where (( #1[rule=6,generul=+] | #1[rulebis=6,generul=+] ) & ( #2[rule=6,generul=+] | #2[rulebis=6,generul=+] )) .
+
+
+5> ?[indef:~], entity#1, (?[form:fcpar];?[genattr:+] ), ?[protein,pl:~], where ( #1[rule=7,protrul=+] | #1[rulebis=7,protrul=+] ) .
+5> entity#1{?[start:+]}, (?[form:fcpar];?[genattr:+] ), ?[protein,pl:~], where ( #1[rule=8,protrul=+] | #1[rulebis=8,protrul=+] ) .
+5> entity#1, ?[separ:+], entity#2, (?[form:fcpar];?[genattr:+] ), ?[protein,pl:+], where (( #1[rule=9,protrul=+] | #1[rulebis=9,protrul=+] ) & ( #2[rule=9,protrul=+] | #2[rulebis=9,protrul=+] )) .
+
+5> ?[indef:~], entity#1, (?[form:fcpar];?[genattr:+] ), ?[rnaform:+,pl:~], where ( #1[rule=10,rnarul=+] | #1[rulebis=10,rnarul=+] ) .
+5> entity#1{?[start:+]}, (?[form:fcpar];?[genattr:+] ), ?[rnaform:+,pl:~], where ( #1[rule=11,rnarul=+] | #1[rulebis=11,rnarul=+] ) .
+5> entity#1, ?[separ:+], entity#2, (?[form:fcpar];?[genattr:+] ), ?[rnaform:+,pl:+], where (( #1[rule=12,rnarul=+] | #1[rulebis=12,rnarul=+] ) & ( #2[rule=12,rnarul=+] | #2[rulebis=12,rnarul=+] )) .
+
+
+5> entity[generul=+], ?[comphyph:+], ?[form:flike], ?[form:fgene].
+5> entity[protrul=+], ?[comphyph:+], ?[form:flike], ?[protein].
+5> entity[rnarul=+], ?[comphyph:+], ?[form:flike], ?[rnaform:+].
+
+
+//appositions: ex, where ( #1[rule= ) .: LEUNIG, a putative transcriptional corepressor
+
+5> entity#1, punct[comma:+], det[indef:+,sg:+], (?), (?), (?), ?[mark:+], where ( #1[rule=14,geneprotrul=+] | #1[rulebis=14,geneprotrul=+] ) .
+
+5> entity#1, punct[comma:+], det[indef:+,sg:+], (?), (?), (?), ?[form:fgene], where ( #1[rule=15,generul=+] | #1[rulebis=15,generul=+] ) .
+
+5> entity#1, punct[comma:+], det[indef:+,sg:+], (?), (?), (?), ?[protein], where ( #1[rule=16,protrul=+] | #1[rulebis=16,protrul=+] ) .
+
+5> entity#1, punct[comma:+], det[indef:+,sg:+], (?), (?), (?), ?[rnaform:+], where ( #1[rule=17,rnarul=+] | #1[rulebis=17,rnarul=+] ) .
+
+
+//marked_words LIKE/SUCH_AS/INCLUDING X\
+
+5> ?[mark:+] , (punct[comma:+] ), ?[like:+], (?[form:fas] ), entity#1, where ( #1[rule=18,geneprotrul=+] | #1[rulebis=18,geneprotrul=+] ) .
+
+5> ?[form:fgene] , (punct[comma:+] ), ?[like:+], (?[form:fas] ), entity#1, where ( #1[rule=19,generul=+] | #1[rulebis=19,generul=+] ) .
+
+5> ?[protein] , (punct[comma:+] ), ?[like:+],  (?[form:fas] ), entity#1, where ( #1[rule=20,protrul=+] | #1[rulebis=20,protrul=+] ) .
+
+5> ?[rnaform:+] , (punct[comma:+] ), ?[like:+],  (?[form:fas] ), entity#1, where ( #1[rule=21,rnarul=+] | #1[rulebis=21,rnarul=+] ) .
+
+// marked words + comma + X + comma
+
+5> ?[mark:+] , punct[comma:+], entity[geneprotrul=+], punct[comma:+] .
+
+5> ?[form:fgene] , punct[comma:+], entity[generul=+], punct[comma:+] .
+
+5> ?[protein] , punct[comma:+],  entity[protrul=+], punct[comma:+] .
+
+5> ?[rnaform:+] , punct[comma:+], entity[rnarul=+], punct[comma:+] .
+
+// marked words + comma + X + comma
+
+
+
+//gene name called/designated X\\
+
+5> ?[generul:+], (punct[comma:+] ), ?[name:+], entity#1, where ( #1[rule=98,geneprotrul=+] | #1[rulebis=98,geneprotrul=+] ) .
+
+5> ?[protrul:+], (punct[comma:+] ), ?[name:+], entity#1, where ( #1[rule=99,geneprotrul=+] | #1[rulebis=99,geneprotrul=+] ) .
+
+5> ?[rnarul:+], (punct[comma:+] ), ?[name:+], entity#1, where ( #1[rule=100,geneprotrul=+] | #1[rulebis=100,geneprotrul=+] ) .
+
+5> ?[gene:+], (punct[comma:+] ), ?[name:+], entity#1, where ( #1[rule=101,geneprotrul=+] | #1[rulebis=101,generul=+] ) .
+
+5> ?[prot:+], (punct[comma:+] ), ?[name:+], entity#1, where ( #1[rule=102,geneprotrul=+] | #1[rulebis=102,protrul=+] ) .
+
+
+/X IS_EXPRESSED\
+
+5> ?[prep:~], entity#1, (?[form:fbe]), ?[form:fexpress], where ( #1[rule=22,geneprotrul=+] | #1[rulebis=22,geneprotrul=+] ) .
+5> entity#1{?[start:+]}, (?[form:fbe]), ?[form:fexpress], where ( #1[rule=85,geneprotrul=+] | #1[rulebis=85,geneprotrul=+] ) .
+
+5> entity#1, (?[comma:+]), ?[form:fwhich], (?[form:fbe]), ?[form:fexpress], where ( #1[rule=93,geneprotrul=+] | #1[rulebis=93,geneprotrul=+] ) .
+
+/EXPRESS/REPRESS/ENCODE X\
+
+5> ?[form:~fhyph], ?[form:fexpress], entity#1, where ( #1[rule=23,geneprotrul=+] | #1[rulebis=23,geneprotrul=+] ) .
+5> ?[form:fexpress,start:+], entity#1, where ( #1[rule=23,geneprotrul=+] | #1[rulebis=23,geneprotrul=+] ) .
+5> ?[form:~fhyph], ?[encode:+], entity#1, where ( #1[rule=24,geneprotrul=+] | #1[rulebis=24,geneprotrul=+] ) .
+5> ?[encode:+,start:+], entity#1, where ( #1[rule=24,geneprotrul=+] | #1[rulebis=24,geneprotrul=+] ) .
+
+/ENCODED BY X\
+
+5> ?[encode:+], ?[form:fby], entity#1, where ( #1[rule=25,geneprotrul=+] | #1[rulebis=25,geneprotrul=+] ) .
+
+5> ?[form:fexpress], ?[form:fby], entity[geneprotrul=+].
+
+5> ?[dion:+], ?[form:fby], entity[geneprotrul=+].
+
+/X, encoding Y, X-encoding\
+
+5> entity[geneprotrul=+], (?[comma:+]), ?[encode:+,prog:+];?[encode:+,adj:+];?[encode:+,vprog:+] .
+
+//5> entity[geneprotrul=+], ?[comphyph:+], ?[encode:+,prog:+];?[encode:+,adj:+];?[encode:+,vprog:+] .
+
+//5> entity[geneprotrul=+]{?+,?[form:fcpar]}, ?[hyphen:+], ?[encode:+,prog:+];?[encode:+,adj:+];?[encode:+,vprog:+] .
+
+5> entity[geneprotrul=+], ?[comphyph:+], ?[ia:+];?[iving:+] .
+
+5> entity[geneprotrul=+]{?+,?[form:fcpar]}, ?[hyphen:+], ?[ia:+];?[iving:+] .
+
+// X-acivated Y
+
+5> ?[form:fhyph], ?[ia:+];?[iv:+], entity[geneprotrul=+] .
+
+/ ier X \
+
+5> ?[ier:+], (?[allmark:+]), (punct), entity[guessgeneprot:+,geneprotrul=+] .
+
+/genattr X\
+
+5> ?[genattr:+], entity#1, where ( #1[rule=26,geneprotrul=+] | #1[rulebis=26,geneprotrul=+] ) .
+
+/xofgene OF X\
+
+5> ?[xofgene:+], (?) ,  ?[form:fof], entity#1, where ( #1[rule=27,geneprotrul=+] | #1[rulebis=27,geneprotrul=+] ) .
+5> ?[interact:+],  ?[form:fof], entity[geneprotrul:+], ?[form:fwith];?[comphyph:+], entity#1, where ( #1[rule=84,geneprotrul=+] | #1[rulebis=84,geneprotrul=+] ) .
+
+/interaction noun of GENE by X\
+5> ?[in:+], (?) ,  ?[form:fof], entity[geneprotrul:+], ?[form:fby], entity[geneprotrul=+].
+
+/xingene IN X\
+
+5> ?[xingene:+], (?) ,  ?[form:fin], entity#1, where ( #1[rule=28,geneprotrul=+] | #1[rulebis=28,geneprotrul=+] ) .
+
+/xingene FROM X\
+
+5> ?[xfromgene:+], (?) ,  ?[form:ffrom], entity#1, where ( #1[rule=29,geneprotrul=+] | #1[rulebis=29,geneprotrul=+] ) .
+
+/xforgene FOR X\
+
+5> ?[xforgene:+], (?) ,  ?[form:ffor], entity#1, where ( #1[rule=30,geneprotrul=+] | #1[rulebis=30,geneprotrul=+] ) .
+
+/xtogene TO X\
+
+5> ?[xtogene:+], (?) ,  ?[p_to], entity#1, where ( #1[rule=31,geneprotrul=+] | #1[rulebis=31,geneprotrul=+] ) .
+
+/interact(ion) with gene\
+
+5> ?[interact:+], ?[form:fwith], entity#1, where ( #1[rule=32,geneprotrul=+] | #1[rulebis=32,geneprotrul=+] ) .
+
+/interaction between X and Y\
+
+5> ?[interact:+], (?+[verb]), ?[sc_pbetween:+], entity[geneprotrul=+], conj[coord:+], ? .
+
+5> ?[interact:+], (?+[verb]), ?[sc_pbetween:+], ? , conj[coord:+], entity[geneprotrul=+].
+
+/X IS A marked_word\
+
+5> entity#1, ?[form:fbe], (det[indef:+] ), (?), (?), ?[mark:+], where ( #1[rule=33,geneprotrul=+] | #1[rulebis=33,geneprotrul=+] ) .
+
+5> entity#1, ?[form:fbe], (det[indef:+] ), (?), (?), ?[form:fgene], where ( #1[rule=34,generul=+] | #1[rulebis=34,generul=+] ) .
+
+5> entity#1, ?[form:fbe], (det[indef:+] ), (?), (?), ?[protein], where ( #1[rule=35,protrul=+] | #1[rulebis=35,protrul=+] ) .
+
+5> entity#1, ?[form:fbe], (det[indef:+] ), (?), (?), ?[rnaform:+], where ( #1[rule=36,rnarul=+] | #1[rulebis=36,rnarul=+] ) .
+
+/GENE/PROTEIN (,) X\
+
+5> ?[generul:~,gene:~], ?[form:fgene,maj:~,pl:~], (?[separ:+] ),  entity#1, where ( #1[rule=37,generul=+] | #1[rulebis=37,generul=+] ) .
+5> ?[generul:~,gene:~], ?[form:fgene,maj:~,pl:+], (?[separ:+] ),  entity#1, ?[separ:+], entity#2, where (( #1[rule=80,generul=+] | #1[rulebis=80,generul=+]) & ( #2[rule=80,generul=+] | #2[rulebis=80,generul=+] )) .
+
+5> ?[protrul:~,prot:~], ?[protein,maj:~,pl:~], (?[separ:+] ),  entity#1, where ( #1[rule=38,protrul=+] | #1[rulebis=38,protrul=+] ) .
+5> ?[protrul:~,prot:~], ?[protein,maj:~,pl:+], (?[separ:+] ),  entity#1, ?[separ:+], entity#2, where (( #1[rule=81,protrul=+] | #1[rulebis=81,protrul=+]) & ( #2[rule=81,protrul=+] | #2[rulebis=81,protrul=+] )) .
+
+5> ?[rnarul:~], ?[rnaform:+,maj:~,pl:~], (?[separ:+] ),  entity#1, where ( #1[rule=39,rnarul=+] | #1[rulebis=39,rnarul=+] ) .
+5> ?[rnarul:~], ?[rnaform:+,maj:~,pl:+], (?[separ:+] ),  entity#1, ?[separ:+], entity#2, where (( #1[rule=82,rnarul=+] | #1[rulebis=82,rnarul=+]) & ( #2[rule=82,rnarul=+] | #2[rulebis=82,rnarul=+] )) .
+
+5> ?[geneprotrul:~,gene:~,prot:~], ?[mark:+,pl:~,nopremark:~];?[plmark:+], (?[comma:+];?[form:fopar] ),  entity#1, where ( #1[rule=40,geneprotrul=+] | #1[rulebis=40,geneprotrul=+] ) .
+5> ?[geneprotrul:~,gene:~,prot:~], ?[mark:+,pl:+,nopremark:~], (?[comma:+];?[form:fopar] ),  entity#1, ?[separ:+], entity#2, where (( #1[rule=83,geneprotrul=+] | #1[rulebis=83,geneprotrul=+]) & ( #2[rule=83,geneprotrul=+] | #2[rulebis=83,geneprotrul=+] )) .
+
+/X :: \
+
+5> entity#1, ?[twocol:+], where ( #1[rule=41,generul=+] | #1[rulebis=41,generul=+] ) .
+
+/species name X\
+
+//54> ?speci[speci:+]{?[species:+,compbeg:~,compend:~]}, entity#1{?[let:~,pl:~]}, ?[form:fgene~,rnaform:~,protein:~] , where ( #1[rule=42,geneprotrul=+] | #1[rulebis=42,geneprotrul=+] ) .
+
+//54> ?[speciamb:+,generul:~,protrul:~,rnarul:~,geneprotrul:~,guessgeneprot:~,compbeg:~,compend:~], entity#1{?[let:~,pl:~]}, where ( #1[rule=43,geneprotrul=+] | #1[rulebis=43,geneprotrul=+] ) .
+
+5> ?speci[speci:+]{?[species:+,compbeg:~,compend:~]}, entity#1{?[let:~,pl:~]}, ?[form:fgene~,rnaform:~,protein:~,mark:~] , where ( #1[rule=42,geneprotrul=+] | #1[rulebis=42,geneprotrul=+] ) .
+
+5> ?[speciamb:+,generul:~,protrul:~,rnarul:~,geneprotrul:~,guessgeneprot:~,compbeg:~,compend:~], entity#1{?[let:~,pl:~]}, ?[form:fgene~,rnaform:~,protein:~,mark:~] , where ( #1[rule=43,geneprotrul=+] | #1[rulebis=43,geneprotrul=+] ) .
+
+
+Marker:
+
+/list of gene or protein names: gene/protein_name separator (paren,comma,coord) X)\
+
+6> entity[gene:+], ?+[separmin:+], entity#1, where ( #1[rule=44,geneprotrul=+] | #1[rulebis=44,geneprotrul=+] ) .
+6> entity[prot:+], ?+[separmin:+], entity#1, where ( #1[rule=45,geneprotrul=+] | #1[rulebis=45,geneprotrul=+] ) .
+6> entity[rna:+], ?+[separmin:+], entity#1, where ( #1[rule=46,geneprotrul=+] | #1[rulebis=46,geneprotrul=+] ) .
+6> entity[generul:+], ?+[separmin:+], entity#1, where ( #1[rule=47,geneprotrul=+] | #1[rulebis=47,geneprotrul=+] ) .
+6> entity[geneprotrul:+], ?+[separmin:+], entity#1, where ( #1[rule=48,geneprotrul=+] | #1[rulebis=48,geneprotrul=+] ) .
+6> entity[protrul:+], ?+[separmin:+], entity#1, where ( #1[rule=49,geneprotrul=+] | #1[rulebis=49,geneprotrul=+] ) .
+6> entity[rnarul:+], ?+[separmin:+], entity#1, where ( #1[rule=50,geneprotrul=+] | #1[rulebis=50,geneprotrul=+] ) .
+
+6> entity[gene:+], ?+[separmin:+], entity#1, where ( #1[rule=51,geneprotrul=+] | #1[rulebis=51,geneprotrul=+] ) .
+6> entity[prot:+], ?+[separmin:+], entity#1, where ( #1[rule=52,geneprotrul=+] | #1[rulebis=52,geneprotrul=+] ) .
+6> entity[rna:+], ?+[separmin:+], entity#1, where ( #1[rule=53,geneprotrul=+] | #1[rulebis=53,geneprotrul=+] ) .
+6> entity[generul:+], ?+[separmin:+], entity#1, where ( #1[rule=54,geneprotrul=+] | #1[rulebis=54,geneprotrul=+] ) .
+6> entity[geneprotrul:+], ?+[separmin:+], entity#1, where ( #1[rule=55,geneprotrul=+] | #1[rulebis=55,geneprotrul=+] ) .
+6> entity[protrul:+], ?+[separmin:+], entity#1, where ( #1[rule=56,geneprotrul=+] | #1[rulebis=56,geneprotrul=+] ) .
+6> entity[rnarul:+], ?+[separmin:+], entity#1, where ( #1[rule=57,geneprotrul=+] | #1[rulebis=57,geneprotrul=+] ) .
+
+
+/list of entity names: X separator entity_name\
+
+6> entity#1, ?+[separ:+], entity[gene:+], where ( #1[rule=58,geneprotrul=+] | #1[rulebis=58,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[prot:+], where ( #1[rule=59,geneprotrul=+] | #1[rulebis=59,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[rna:+], where ( #1[rule=60,geneprotrul=+] | #1[rulebis=60,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[generul:+], where ( #1[rule=61,geneprotrul=+] | #1[rulebis=61,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[geneprotrul:+], where ( #1[rule=62,geneprotrul=+] | #1[rulebis=62,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[protrul:+], where ( #1[rule=63,geneprotrul=+] | #1[rulebis=63,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[rnarul:+], where ( #1[rule=64,geneprotrul=+] | #1[rulebis=64,geneprotrul=+] ) .
+
+6> entity#1, ?+[separ:+], entity[gene:+], where ( #1[rule=65,geneprotrul=+] | #1[rulebis=65,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[prot:+], where ( #1[rule=66,geneprotrul=+] | #1[rulebis=66,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[rna:+], where ( #1[rule=67,geneprotrul=+] | #1[rulebis=67,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[generul:+], where ( #1[rule=68,geneprotrul=+] | #1[rulebis=68,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[geneprotrul:+], where ( #1[rule=69,geneprotrul=+] | #1[rulebis=69,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[protrul:+], where ( #1[rule=70,geneprotrul=+] | #1[rulebis=70,geneprotrul=+] ) .
+6> entity#1, ?+[separ:+], entity[rnarul:+], where ( #1[rule=71,geneprotrul=+] | #1[rulebis=71,geneprotrul=+] ) .
+
+
+/*******final operations*********\
+
+/In the ambiguous dictionary there are ambiguities between some genes and proteins, but not all. All of them get the feature guessgeneprot so that the rules can apply, where #1[rule= . We want words that are ambiguous between gene name and general word to get the feature generul and not genprotrul. The same is true for the proteins.\
+
+7> entity[dicoambgene:+,geneprotrul:+,generul:~,generul=+].
+
+7> entity[dicoambprot:+,geneprotrul:+,protrul=+].
+
+
+/If a word gets both the feature geneprotrul and generul or protrul, it will be considered as generul and protrul resp.\
+
+7> entity[generul:+,geneprotrul=~].
+
+7> entity[protrul:+,geneprotrul=~].
+
+7> entity[rnarul:+,geneprotrul=~].
+
+/*******features for the annotation format*********\
+
+7> entity[rule=72,gene:+,genannot=+].
+7> entity[rule=73,prot:+,protannot=+].
+7> entity[rule=74,rna:+,rnaannot=+].
+7> entity[generul:+,genannot=+].
+7> entity[protrul:+,protannot=+].
+7> entity[rnarul:+,rnaannot=+].
+7> entity[geneprotrul:+,protannot=+,genannot=+].
+
+7> entity[gene=~] .
+7> entity[prot=~] .
+7> entity[generul=~] .
+7> entity[protrul=~] .
+7> entity[rnarul=~] .
+7> entity[geneprotrul=~] .
+7> entity[dicoambgene=~] .
+7> entity[dicoambprot=~] .
+
+
+8> entity#1{?[w:~]}, where ( #1[genannot:+] & mentity##1 = mentity##1+1).
+8> entity#1{?[w:~]}, where ( #1[protannot:+] & mentity##1 = mentity##1+1).
+8> entity#1{?[w:~]}, where ( #1[rnaannot:+] & mentity##1 = mentity##1+1).
+
+8> entity#1[guessgeneprot:+,genannot:~,protannot:~,rnaannot:~,genannot=+,protannot=+], where (mentity##1 > 0).
+
+
+//7> entity[guessgeneprot=~] .
+
+Marker:
+
+9> entity[genannot:+,annot=+].
+9> entity[protannot:+,annot=+].
+9> entity[rnaannot:+,annot=+].
+
+Reshuffling:
+
+10> entity[annot:~]{?#1[first:+], ?#2, ?#3, ?#4, ?#5[last:+]} =  noun[guessgeneprot=+]{#1, #2, #3, #4, #5}.
+10> entity[annot:~]{?#1[first:+], ?#2, ?#3, ?#4[last:+]} =  noun[guessgeneprot=+]{#1, #2, #3, #4}.
+10> entity[annot:~]{?#1[first:+], ?#2, ?#3[last:+]} =  noun[guessgeneprot=+]{#1, #2, #3}.
+10> entity[annot:~]{?#1[first:+], ?#2[last:+]} =  noun[guessgeneprot=+]{#1, #2}.
+
+10> entity[annot:~]{?#1[first:+,last:+]} = #1[guessgeneprot=+].
+
+
+
+
+
+11> entity[annot:+,genannot:+]{?#1[first:+], ?#2, ?#3, ?#4, ?#5[last:+]} = noun[proper=+,genannot=+,annot=+]{?#1, ?#2, ?#3, ?#4, ?#5}.
+11> entity[annot:+,protannot:+]{?#1[first:+], ?#2, ?#3, ?#4, ?#5[last:+]} = noun[proper=+,protannot=+,annot=+]{?#1, ?#2, ?#3, ?#4, ?#5}.
+11> entity[annot:+,rnaannot:+]{?#1[first:+], ?#2, ?#3, ?#4, ?#5[last:+]} = noun[proper=+,rnaannot=+,annot=+]{?#1, ?#2, ?#3, ?#4, ?#5}.
+
+
+11> entity[annot:+,genannot:+]{?#1[first:+], ?#2, ?#3, ?#4[last:+]} = noun[proper=+,genannot=+,annot=+]{?#1, ?#2, ?#3, ?#4}.
+11> entity[annot:+,protannot:+]{?#1[first:+], ?#2, ?#3, ?#4[last:+]} = noun[proper=+,protannot=+,annot=+]{?#1, ?#2, ?#3, ?#4}.
+11> entity[annot:+,rnaannot:+]{?#1[first:+], ?#2, ?#3, ?#4[last:+]} = noun[proper=+,rnaannot=+,annot=+]{?#1, ?#2, ?#3, ?#4}.
+
+
+11> entity[annot:+,genannot:+]{?#1[first:+], ?#2, ?#3[last:+]} = noun[proper=+,genannot=+,annot=+]{?#1, ?#2, ?#3}.
+11> entity[annot:+,protannot:+]{?#1[first:+], ?#2, ?#3[last:+]} = noun[proper=+,protannot=+,annot=+]{?#1, ?#2, ?#3}.
+11> entity[annot:+,rnaannot:+]{?#1[first:+], ?#2, ?#3[last:+]} = noun[proper=+,rnaannot=+,annot=+]{?#1, ?#2, ?#3}.
+
+11> entity[annot:+,genannot:+]{?#1[first:+], ?#2[last:+]} = noun[proper=+,genannot=+,annot=+]{#1, #2}.
+11> entity[annot:+,protannot:+]{?#1[first:+], ?#2[last:+]} = noun[proper=+,protannot=+,annot=+]{?#1, ?#2}.
+11> entity[annot:+,rnaannot:+]{?#1[first:+], ?#2[last:+]} = noun[proper=+,rnaannot=+,annot=+]{?#1, ?#2}.
+
+///////////////////////////////////////////////
+
+11> entity[annot:+,genannot:+]{#1[first:+,last:+]} = noun#1[annot=+,genannot=+] .
+11> entity[annot:+,protannot:+]{?#1[first:+,last:+]} = noun#1[annot=+,protannot=+] .
+11> entity[annot:+,rnaannot:+]{?#1[first:+,last:+]} = noun#1[annot=+,rnaannot=+] .
+
+
+11> speci{noun#1} = noun#1[speci=+] .
+11> speci{nadj#1} = nadj#1[speci=+] .
+11> speci{adj#1} = adj#1[speci=+] .
+
+
+
+
+
+
+//97 az utolsó szabály
+
+
+
+

@@ -1,0 +1,1067 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Extraction:
+
+<zones: *>
+
+/*** REGLE EXTRACT 0 ***\
+1> precomma(#1) = Punct[form:fcm], 
+			NP{?*,#1[last]};
+			AP{?*,#1[last]};
+			PP{?*,?[last]{?*,#1[last]}};
+			FV{?*,#1[last]};
+			GV{?*,#1[last]};
+                        verb#1[partpas];
+			IV{?*,#1[last]};
+			SC{?*,FV[last]{?*,#1[last]}}.
+
+
+/*** REGLE EXTRACT 1 ***\
+/ candidate for reflexive construction: il se lave\
+1> reflex(#2_verb,#1_pron) = pron#1[refl:+,acc:+],pron*,?*[form:~favoir],verb#2[reflextype].
+
+/*** REGLE EXTRACT 2 ***\
+/auxiliary verbs\
+/ covers also: a été vu\
+1> auxil(#2_verb,#1_aux) =  FV[!passive:!]{?*,verb#1[aux],?*[verb:~],verb#2};
+			GV[!passive:!]{?*,verb#1[aux],?*[verb:~],verb#2};
+			IV[!passive:!]{?*,verb#1[aux],?*[verb:~],verb#2}.
+
+
+
+/auxiliary verbs\
+/ same as previous but deals with interrogative finite forms: a-t-il vu ? \
+//1> auxil(#2_verb,#1_aux) = 
+//              FV[!passive:!]{?*,verb#1[aux],?*[verb:~],verb#2}.
+
+
+
+/*** REGLE EXTRACT 3 ***\
+/ candidate for reflexive construction: je me lave\
+/still uncertain: cf. je me lave vs. tu me laves \
+1> if (#1[pers]:#2[pers])
+reflex(#2_verb,#1_pron) = pron#1[acc:+,dat:+],pron*,?*[form:~favoir],verb#2[reflextype].
+
+
+
+Déduction:
+
+/*** REGLE EXTRACT 4 ***\
+/ Determination \
+/ cas des determinants \
+1>  | det#1[!def:!,!quant:!,!poss:!,!dem:!,!num:!,!int:!],?*,noun#2| determ[det=+](#1_DETER,#2_NOUN) . 
+
+Extraction:
+
+/*** REGLE EXTRACT 5 ***\
+/  Determination  \
+/cas des numeraux\
+1> determ[num=+](#1_NUMERAL,#2_NOUN) != num#1,?*,noun#2. 
+
+ 
+/  preposition  \
+/*** REGLE EXTRACT 6 ***\
+/  PREPOBJ     \
+/ PREP NP ou PREP  AP \
+1> PREPOBJ(#1_PREP,#2_PPOBJ) = PP[!closed:!,np-changed:~]{?*,prep#1,?*,?[last:+]{?*,#2[last:+]}}.
+1> PREPOBJ(#1_PREP,#2_PPOBJ) = PP[!closed:!,np-changed:~]{?*,prep#1,?*,pron#2[last:+]}.
+
+/*** REGLE EXTRACT 7 ***\
+/  PREPOBJ     \
+/ PREP NP {det AP} : pour le vraisemblable \
+//1> PREPOBJ(#1_PREP,#2_PPOBJ) = prep#1,?*,?[last:+]{?*,AP{?*,#2[last:+]}}.
+
+/*** REGLE EXTRACT 8 ***\
+/  PREPOBJ     \
+/ infinitive: pour dormir; also pour avoir dormi\
+1> PREPOBJ[inf=+](#1_PREP,#2_INF) = IV{prep#1,?*,verb#2[last:+]}.
+
+
+/*** REGLE EXTRACT 9 ***\
+/relation NN au sein d'un meme NP: L' Espagnole Arantxa Sanchez-Vicario\
+1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     noun#1[argnn=+],noun#2.
+
+/*** REGLE EXTRACT 10 ***\
+/relation NN\
+/ le peintre Modigliani,   \
+/avec le numero 8\
+/ la tete est soit un nom, soit marquee Maj (e.g. M dans M 6) \
+/ s'applique egalement aux NP et aux PP \
+/ATTENTION: ne prend pas en compte " Jean le peintre", a cause du risque d'erreur dans le cas PP NP\
+
+/1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     NP[!time:!,argnn=+]{?*,noun#1} ;
+		PP[!time:!,argnn=+]{?*,NP{?*[int:~],noun#1}} ; 
+		NP[!time:!,argnn=+]{?*,#1[last:+,maj:+]} ;
+		PP[!time:!,argnn=+]{?*,NP{?*,#1[last:+,maj:+]}} ,
+		(AP), NP[fonc:~,!time:!,fonc=FNN]{?*[det:~],#2[pron:~,last:+]}.\
+
+
+1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     NP[time:~,argnn=+]{?*,noun#1} ;
+		PP[time:~,argnn=+]{?*,NP{?*[int:~],noun#1}} ; 
+		NP[time:~,argnn=+]{?*,#1[last:+,maj:+]} ;
+		PP[time:~,argnn=+]{?*,NP{?*,#1[last:+,maj:+]}} ,
+		(AP), NP[np-changed:~,fonc:~,time:~,fonc=FNN]{?*[det:~],#2[pron:~,last:+]}.
+
+1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     NP[!time:!,time,argnn=+]{?*,noun#1} ;
+		PP[!time:!,time,argnn=+]{?*,NP{?*[int:~],noun#1}} ; 
+		NP[!time:!,time,argnn=+]{?*,#1[last:+,maj:+]} ;
+		PP[!time:!,time,argnn=+]{?*,NP{?*,#1[last:+,maj:+]}} ,
+		(AP), NP[fonc:~,!time:!,time,fonc=FNN]{?*[det:~],#2[pron:~,last:+]}.
+
+
+/*** REGLE EXTRACT 11 ***\
+/relation NN\
+/ Charles le Temeraire\
+1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     NP[!time:!,argnn=+]{?*,#1[last:+,maj:+]} ;
+		PP[!time:!,argnn=+]{?*,NP{?*,#1[last:+,maj:+]}} ,
+		NP[fonc:~,!time:!,fonc=FNN]{?[det:+,def:+],?*,#2[pron:~,maj:+,last:+]}.
+
+
+
+
+/*** REGLE EXTRACT 12 ***\
+/ relation NN for NP  following a noun expecting a title: le journal L'Orient-le-jour\
+1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     NP[!time:!,argnn=+]{?*,#1[last:+,titreN]} ;
+		PP[!time:!,argnn=+]{?*,NP{?*,#1[last:+,titreN]}} ,
+		NP[fonc:~,time:~,fonc=FNN]{?*,#2[last]}.
+
+
+
+
+/*** REGLE EXTRACT 13 ***\
+/ connecteurs: e.g. quand, que, qui \
+1> connect(#1_VERB,#2_CONJ) = BG[!conj:!,!int:!]{?*,#2[punct:~,coord:~,last:+,terminal]},  
+              ?*,
+              FV{?*,#1[last:+]} .
+
+// same but for {à laquelle} etc.
+1> connect(#1_VERB,#2_CONJ) = BG[!conj:!,!int:!]{?*,?{?*,#2[punct:~,coord:~,last]}},  
+              ?*,
+              FV{?*,#1[last:+]} .
+
+
+/=================
+pronom interrogatif: vient-il, peut-on
+=================\
+
+/*** REGLE EXTRACT 14 ***\
+1> subjclit[right=+,pron=+](#2_VERB,#1_PRON) = SC{?*,FV[argsubjclit=+,!passive:!,!reflexive:!]{?*,#2[last:+]}} ,  
+		NP[fonc:~, fonc=fsubjclit]{pron#1[last:+,nom:+,hyph:+]}.
+
+/*** REGLE EXTRACT 15 ***\
+1> subjclit[right=+,pron=+](#2_VERB,#1_PRON) = FV[argsubjclit=+,!passive:!,!reflexive:!]{?*,#2[last:+]} ,  
+		NP[fonc:~, fonc=fsubjclit]{pron#1[last:+,nom:+]}.
+
+/*** REGLE EXTRACT 16 ***\
+1> subjclit[left=+,pron=+](#2_VERB,#1_PRON) = FV[argsubjclit=+,!passive:!,!reflexive:!]{?*,NP[fonc:~, fonc=fsubjclit]{pron#1[last:+,nom:+,clit:+]},?*,#2[last:+]}.
+
+
+/*** REGLE EXTRACT 17 ***\
+/ pronoms clitiques  accusatifs anteposes: complement direct: il le voit\
+/ cas des pronoms amb. acc/datif: il nous voit vs. il nous permet\
+/ajout CB: il nous a permis: obj sur permettre et pas avoir\ 
+
+1> if (#1[asn:~] | #2[dat:~])
+varg[dir=+,pron=+,left=+](#1_VERB,#2_COMPLT) =  
+	FV[argcomp:~,argsubj:~,argcomp=+]{?*, PRON#2[acc:+,nom:~,refl:~,fonc:~, fonc=fcomp], (PRON),  VERB#1};
+	IV[argcomp:~,argsubj:~,argcomp=+]{?*, PRON#2[acc:+,nom:~,refl:~,fonc:~, fonc=fcomp], (PRON),  VERB#1};
+	GV[argcomp:~,argsubj:~,argcomp=+]{?*, PRON#2[acc:+,nom:~,refl:~,fonc:~, fonc=fcomp], (PRON),  VERB#1}.
+
+
+
+
+
+/*** REGLE EXTRACT 18 ***\
+/pronoms clitiques accusatifs postposes: complement direct: cas des imperatifs:  donne-le\
+1> varg[dir=+,pron=+,right=+](#1_VERB,#2_COMPLT) = 
+	FV[argcomp:~,argsubj:~,argcomp=+]{?*, VERB#1[imp:+], PRON#2[acc:+,fonc:~, fonc=fcomp]}.
+
+/*** REGLE EXTRACT 19 ***\
+/ pronoms clitiques anteposes: complement indirect: il lui donne\
+
+1> if (~reflex(?,#2))
+varg[indir=+,pron=+,left=+](#1_VERB,#2_IOBJ) =  
+			FV[argsubj:~,argiobj=+]{?*, PRON#2[dat:+,fonc:~, fonc=fiobj],?*, VERB#1};
+		       	IV[argsubj:~,argiobj=+]{?*, PRON#2[dat:+,fonc:~, fonc=fiobj],?*,  VERB#1};
+		       	GV[argsubj:~,argiobj=+]{?*, PRON#2[dat:+,fonc:~, fonc=fiobj],?*,  VERB#1}.
+
+
+/*** REGLE EXTRACT 20 ***\
+/ pronoms clitiques anteposes ni accusatif, ni datif : autres complement il y vient\
+1> vmod[indir=+,pron=+,left=+](#1_VERB,#2_PRON) =  
+		       FV[argsubj:~]{?*, PRON#2[clit,acc:~,dat:~,fonc:~],?*,VERB#1[last]};
+		       IV[argsubj:~]{?*,  PRON#2[acc:~,dat:~,fonc:~],?*,VERB#1[last]};
+		       GV[argsubj:~]{?*,  PRON#2[acc:~,dat:~,fonc:~],?*,VERB#1[last]}.
+
+
+
+/*** REGLE EXTRACT 21 ***\
+/sujet relatif ou pronom: le chat qui dort\
+1> subj[pron=+](#2_VERB,#1_SUBJ) = 
+		BG[fonc:~, nosubj:~,fonc=fsubj]{?*,#1[nom:+, last:+]},  
+              	?*[fin:~,inf:~,noun:~],
+              	FV[argsubj:~,argsubjinf:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 22 ***\
+/interrogative: quel est le chat\
+1> subj[pron=+](#2_VERB,#1_SUBJ) = NP[fonc:~, nosubj:~,fonc=fsubj]{?*,#1[pron,int,rel:~,nom, last]},  
+              ?*[fin:~,inf:~,noun:~],
+              FV[argsubj:~,argsubjinf:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[sadj,last:+]} .
+
+
+/*** REGLE EXTRACT 23 ***\
+/coordination NP + NP: le chien et le loup\
+#CC-NP-NP
+1> COORDITEMS[noun=+](#1,#2) = NP{?*,#1[last]} , AP*, PP*{?[form:~fentre]},
+               PUNCT*[form:fcm], COORD[!coordtype:!],
+               NP{?*,#2[last:+]}.
+
+
+/*** REGLE EXTRACT 23 bis***\
+/coordination PRON-PRON en debut de phrase\
+
+1> COORDITEMS[pron=+](#1,#2) = NP{PRON#1,COORD[!coordtype:!],PRON#2[last]} .
+
+
+/*** REGLE EXTRACT 24 ***\
+/coordination NP + NP:  Jacques, Pierre et Marie\
+// commented out by SALAH
+//1> if (COORDITEMS[noun](#2,?))
+//COORDITEMS[noun=+](#1,#2) = NP{?*,#1[last]} , AP*, PP*,
+//               PUNCT*[form:fcm], 
+//               NP{?*,#2[last:+]}.
+
+
+/*** REGLE EXTRACT 23 ***\
+/coordination PP + PP: du chien et du loup\
+#CC-PP-PP1
+1> if ( prepobj(?,#1) & prepobj(?,#2) & #3[closed]:#4[closed] )
+ COORDITEMS[prep=+](#1,#2) = PP#3[!closed:!]{?*,?[last]{?*,#1[last]}},
+               AP*,
+               PUNCT*[form:fcm], COORD,
+               PP#4[!closed:!]{?*,?[last]{?*,#2[last:+]}},
+               AP*;PP*;ADV*,PUNCT[form:fcm];SENT.
+
+
+/*** REGLE EXTRACT 23 ***\
+/ same as previous but accept PPs in between\
+#CC-PP-PP2
+1> if ( ~COORDITEMS(?,#2) & prepobj(?,#1) & prepobj(?,#2) & #3[closed]:#4[closed] & ~(#5[closed]:#4[closed]) )
+ COORDITEMS[prep=+](#1,#2) = PP#3[!closed:!]{?*,?[last]{?*,#1[last]}},
+               AP*, PP#5+{?[form:~fentre]},AP*,
+               PUNCT*[form:fcm], COORD,
+               PP#4[!closed:!]{?*,?[last]{?*,#2[last:+]}},
+               AP*;PP*;ADV*,PUNCT[form:fcm];SENT.
+
+/*** REGLE EXTRACT 25 ***\
+/coordination PP + NP: entre chien et loup;  avec Paul et avec Jacques\
+1> if (PREPOBJ(#3[form:~fde],#1) & ~COORDITEMS[prep](?,#2))
+COORDITEMS[noun=+,prep=+](#1,#2) = PP{?*,?[last]{?*,#1[last]}} ,
+               ?*[verb:~,noun:~], COORD,
+               NP[fonc:~,fonc=fcoordpp]{?*,#2[last:+]}; PP{?*,?[last]{?*,#2[last]}}.
+
+
+/*** REGLE EXTRACT 26 ***\
+/coordination PP + NP: de Paul et Jacques\
+1> COORDITEMS[noun=+,prep=+](#1,#2) = PP{?*,?[last]{?*,#1[noun,maj,last]}} , PP*,
+               PUNCT*[form:fcm], COORD,
+               NP[fonc:~,fonc=fcoordpp]{?*,#2[maj,last:+]}.
+
+
+/*** REGLE EXTRACT 27 ***\
+/coordination PP + NP: avec le chien, LE CHAT et loup: \
+/ chien et chat coordpp si  COORDITEMS[noun] (chat et loup)\
+1> if (PREPOBJ(#3[form:~fde],#1) & ~COORDITEMS(?,#2) & COORDITEMS(#2,#4))
+COORDITEMS[noun=+,prep=+](#1,#2) = PP{?*,?[last]{?*,#1[last]}} , PP*,
+               PUNCT[form:fcm],
+               NP[fonc:~,fonc=fcoordpp]{?*,#2[last:+]}.
+
+
+
+/*** REGLE EXTRACT 28 ***\
+/ marquage objets (COMP) immediats pour verbes marques avec argsubj  non separes par virgules\
+/cas des relatives\
+/  le fleuve qui longe la ville \
+1> varg[dir=+](#1_VERB,#2_OBJ) = SC{?*, FV[ argcomp:~, argsubj:+, argcomp=+]{?*,#1[last:+]}}, 
+		?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~,coord:~], 
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+
+// same as previous, except that it deals with verbs with no subject (non subj relatives)
+1> varg[dir=+](#1_VERB,#2_OBJ) = NP;PP,SC{BG[rel],?*, FV[ argcomp:~, argcomp=+]{?*,#1[last:+]}}, 
+		?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~,coord:~], 
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+
+
+/*** REGLE EXTRACT 29 ***\
+/marquage sujet inverse dans contexte de proposition interro. ou relative\
+1> subj[right=+](#1_VERB,#2_SUBJECT) = 
+		SC{BG[rel:+], ?*[closed:~], 
+                 FV[argsubj:~, argsubjclit:~, argsubjinf:~, argsubj=+,!passive:!,!reflexive:!]{?*,#1[last:+]}};
+                 SC{BG{CONJQUE}, ?*[closed:~], 
+                FV[argsubj:~, argsubjclit:~, argsubjinf:~, argsubj=+,!passive:!,!reflexive:!]{?*,#1[last:+]}},
+		?*[fin:~,noun:~], 
+		NP[fonc:~,  time:~, closed:+, fonc=fsubj,!noun:!, !pron:! ]{?*,#2[last:+]}.
+
+
+
+/*** REGLE EXTRACT 30 ***\
+/ marquage objets des sous-clauses GV ou IV; afin d'eviter qu'ils ne soient traites comme sujets \
+/ {SC{GV{En travaillant} NP{le bois} , NP{Jean} , NP{le peintre} , FV{siffle}} .}\
+1> varg[dir=+](#1_VERB,#2_OBJ) =
+		GV[ argcomp:~, argcomp=+]{?*[form:~fetre],#1[last:+,sn:+]};
+	     	IV[ argcomp:~, argcomp=+]{?*[form:~fetre],#1[last:+,sn:+]}, 
+             	?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,verb:~], 
+             	NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+,nom:~]}.
+
+
+/*** REGLE EXTRACT 31 ***\
+/=================
+i) marquage des sujets immediats (a gauche du verbe) et pas de virgule
+==================\
+
+1> subj(#2_VERB,#1_SUBJ) = 
+		NP[fonc:~,time:~, dat:~, acc:~, nosubj:~, passive=+, closed:+, fonc=fsubj,!noun:!,!pron:!]{?*,#1[last:+]},   
+		?*[strongbreak:~,form:~fcm,form:~fhyph,form:~fopar,form:~fcpar,form:~f2pts,fin:~,nom:~],  
+               FV[argsubj:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+
+/*** REGLE EXTRACT 32 ***\
+/Marquage du sujet le plus proche a gauche avec virgule (au moins 2), 
+si pas de sujet precedemment identifie
+Jean, le boucher, dort.
+\
+1> subj(#2_VERB,#1_SUBJ) = NP[fonc:~,time:~,nosubj:~,closed:+,fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              	?*[form:~fopar,form:~fcpar,form:~f2pts], 
+		PUNCT[form:fcm],  
+             	 ?*[form:~fopar,form:~fcpar,form:~f2pts], 
+		PUNCT[form:fcm], 
+             	 ?*[form:~fopar,form:~fcpar,form:~f2pts], 
+              	FV[argsubj:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 33 ***\
+/marquage pred. du sujet \
+/ Jean semble heureux.\
+#SPRED1
+1> if ( ~VARG[dir](#1,?) ) 
+ varg[spred=+](#1_VERB,#2_PRED) =  SC{?*, FV[ argspred=+]{?*,#1[last:+,SADJ1:+]}};
+		IV[argspred=+]{?*,#1[last:+,SADJ1:+]};
+		GV[argspred=+]{?*,#1[last:+,SADJ1:+]};
+                verb#1[partpas,auxe], 
+		?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~,verb:~,noun:~], 
+		AP[fonc:~,  fonc=fspred, !adj:!]{?*,#2[last:+]};
+		NP[fonc:~,  fonc=fspred, !noun:!]{?*,#2[last:+]}.
+
+
+/ FT: ajout NP pour "il est question de..." \
+/ Salah: ajout PP pour "il est en mesure de..." \
+
+#SPRED2
+1> if ( ~VARG[dir](#1,?) & (#1 < #2) ) 
+varg[spred=+](#1_VERB,#2_PRED) = 
+                SC{?*, FV[ argspred=+]{?*,#1[last:+,SADJ1:+,copule]}};
+		IV[argspred=+]{?*,#1[last:+,SADJ1:+,copule]};
+		GV[argspred=+]{?*,#1[last:+,SADJ1:+,copule]};
+                verb#1[partpas,auxe],
+		(ADV*),
+		PP[fonc:~,  fonc=fspred]{?*,?[last]{#2[last:+]}}.
+
+
+/*** REGLE EXTRACT 34 ***\
+/ marquage objets immediats pour verbes marques avec fsubj  non separes par virgules\
+/  Jean mange la soupe \
+1> varg[dir=+](#1_VERB,#2_OBJ) = SC{?*, FV[ argsubj:+, argspred:~, argcomp=+]{?*,#1[last:+]}}, 
+		?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~,coord:~], 
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+
+
+
+
+/*** REGLE EXTRACT 35 ***\
+/ marquage objet pour verbes marques avec fsubj  avec insertion complements entre virgules\
+/  Pierre approuve, dans un premier temps, la formule\
+1> varg[dir=+](#1_VERB,#2_OBJ) =
+                SC{?*, FV[ argsubj:+, argspred:~, argcomp=+]{?*,#1[last:+]}}; 
+		GV[argcomp=+]{?*,#1[last:+]}; 
+		IV[argcomp=+]{?*,#1[last:+]}, 
+              	(ADV*), 
+		PUNCT[form:fcm],  
+             	 ?*[form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~,fonc:~], 
+		PUNCT[form:fcm], 
+             	 ?*[form:~fopar,form:~fcpar,fin:~,inf:~,fonc:~], 
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+/ marquage sujets coordonnes \
+
+/*** REGLE EXTRACT 36 ***\
+/Paul et PIERRE mangent\
+1> subj[coord=+](#2_VERB,#1_SUBJ) =	NP[fonc:fsubj], ?*, COORD, ?*, 
+		NP[fonc:~, closed:+,  time:~, nosubj:~, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},
+      	        ?*,
+		FV[argsubj:+]{ ?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 37 ***\
+/Paul, JACQUES et Pierre mangent\
+1> subj[coord=+](#2_VERB,#1_SUBJ) =
+	NP[fonc:~, closed:+,  time:~, nosubj:~, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+		?*, COORD, ?*, ?[fonc:fsubj], ?*,
+              	FV[argsubj:+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+
+
+/*** REGLE EXTRACT 38 ***\
+/marquage infinitive complement direct sans preposition: il veut plaire \
+#VARG-INF-DIR
+1> if ( ~prepobj(?,#2) & ~varg[dir,noun](#1,?) )
+varg[dir=+,inf=+](#1,#2) = 
+		 SC{?*,FV{?*,#1[last:+,SVINF:+]}};
+		 IV{?*,#1[SVINF:+,last:+]};
+		 GV{?*,#1[SVINF:+,last:+]};
+                 verb#1[partpas,auxe,SVINF:+],
+		 ?*[svinf:~ ]{?[form:~fcm],?*} , 
+		IV[fonc:~, dir:+,fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 39 ***\
+/marquage infinitive complement direct (introduite par à ou de) \
+/il accepte de plaire; content de plaire\
+#VARG-INF-INDIR
+1> if (prepobj(?[dir:+],#2) ) // & #1[copule:~])
+varg[indir=+,inf=+](#1_MATRIX,#2_COMPLT) = 
+		 SC{?*,FV{?*,#1[last:+,SVINFDIR:+]}};
+		 IV{?*,#1[SVINFDIR:+,last:+]};
+		 GV{?*,#1[SVINFDIR:+,last:+]};
+                 verb#1[partpas,auxe,SVINFDIR:+],
+		?*[svinfdir:~]{?[form:~fcm],?*} , 
+		IV[fonc:~, dir:+,fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 40 ***\
+/marquage infinitive complement direct (introduite par à ou de) \
+/il accepte de plaire; content de plaire\
+1> if (prepobj(?[dir:+],#2))
+narg[indir=+,inf=+](#1_MATRIX,#2_COMPLT) = 
+		 NP{?*,#1[SVINFDIR:+,last:+]};
+		 PP{?*,?[last]{?*,#1[SVINFDIR:+,last:+]}},
+		?*[svinfdir:~], 
+		IV[fonc:~, dir:+,fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 41 ***\
+/marquage infinitive complement direct (introduite par à ou de) \
+/il accepte de plaire; content de plaire\
+1> if (prepobj(?[dir:+],#2))
+adjarg[indir=+,inf=+](#1_MATRIX,#2_COMPLT) = 
+		 AP{?*,#1[SVINFDIR:+,last:+]},
+		?*[svinfdir:~], 
+		IV[fonc:~, dir:+,fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+
+/*** REGLE EXTRACT 42 ***\
+/marquage infinitive complement : il commence par faire...\
+1> if (prepobj(?[form:fpar],#2))
+varg[indir=+,inf=+](#1_MATRIX,#2_COMPLT) = 
+		 SC{?*,FV{?*,#1[last:+,parSVINF:+]}};
+		 IV{?*,#1[parSVINF:+,last:+]};
+		 GV{?*,#1[parSVINF:+,last:+]},
+		?*[verb:~], 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 43 ***\
+/marquage infinitive complement direct avec pronom objet: il l'incite à partir\
+/############ provisoire: il faudrait verifier compatibilite de prep. avec sous-cat ##########\
+1> if (varg[dir:+,pron:+](#1,?))
+varg[indir=+,inf=+](#1_MATRIX,#2_COMPLT) = SC{?*,FV{?*,#1[last:+,INFCOD:+,verb:?]}};
+		 IV{?*,#1[INFCOD:+,last:+]};
+		 GV{?*,#1[INFCOD:+,last:+]},
+		?*[verb:~,svinfdir:~], 
+		IV[fonc:~, dir:+,fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 44 ***\
+/marquage sujet infinitif: manger est agréable \
+1> subj[inf=+](#2_FINITEVERB,#1_SUBJ) = IV[fonc:~, fonc=fsubj]{?*[prep:~],#1[last:+]},  
+              ?*[verb:~],
+              FV[argsubj:~,argsubj=+,argsubjinf=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 45 ***\
+/marquage infinitive residuel: il vient pour parler; il est doux de plaire\
+1> if (prepobj(?,#2))
+vmod[indir=+,inf=+](#1_MATRIX,#2_INFINIT) = 
+		 SC{?*,FV{?*,#1[last:+]}};
+		 IV{?*,#1[last:+]};
+		 GV{?*,#1[last:+]},
+		?*[verb:~], 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 46 ***\
+/marquage infinitive directe residuel (ne correspond pas a sous-cat: il commence parler\
+1> if (~prepobj(?,#2))
+varg[dir=+,inf=+](#1_MATRIX,#2_INFINIT) = 
+		 SC{?*,FV{?*,#1[last:+]}};
+		 IV{?*,#1[last:+]};
+		 GV{?*,#1[last:+]},
+		?*[verb:~,coord:~,strongbreak:~,sent:~], 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 47 ***\
+/marquage infinitive residuel: le choix de parler\
+1> if (prepobj(?,#2))
+nmod[indir=+,inf=+](#1_NOUN,#2_INFINIT) = 
+		 NP{?*,#1[last:+]};
+		 PP{?*,?[last]{?*,#1[last:+]}},
+		?*[verb:~,noun:~,adj:~], 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 48 ***\
+/marquage infinitive residuel: fier de parler\
+1> if (prepobj(?,#2))
+adjarg[indir=+,inf=+](#1_NOUN,#2_INFINIT) = 
+		 AP{?*,#1[last:+]},
+		?*[verb:~,noun:~,adj:~], 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 49 ***\
+/marquage infinitive residuel: Pour plaire, le chat ronronne \
+1> vmod[indir=+,inf=+,left=+](#1_MATRIX,#2_INFINIT) = 
+		IV[fonc:~, fonc=finfcomp,!passive:!,!reflexive:!]{?*,#2[last:+]},
+                 ?*[verb:~,coord:~,strongbreak:~,sent:~], 
+		 	SC{?*,FV{?*,#1[last:+]}};
+		 	IV{?*,#1[last:+]};
+		 	GV{?*,#1[last:+]}.
+
+/*** REGLE EXTRACT 50 ***\
+/marquage sujet inverse dans cas de discours rapporte avec incise ( ..., écrit M. Machin,  \
+/subj[right=+](#1,#2) != 
+	SC{PUNCT[form:~f2pts],
+        FV[argsubj:~, argsubjclit:~, argsubjinf:~, argsubj=+,!passive:!,!reflexive:!]{?*,#1[last:+,quep:+,asn:+]}}, 		
+	?*[verb:~,noun:~],
+	NP[fonc:~,  time:~, closed:+,  fonc=fsubj,!noun:!, !pron:!]{?*,#2[last:+]}.
+\
+1> subj[right=+,disco=+](#1,#2) != 
+	SC[disco]{?*,
+           FV[argsubj:~, argsubjclit:~, argsubjinf:~, argsubj=+,!passive:!,!reflexive:!]{?*,#1[last]}},
+	?*[verb:~,noun:~],
+	NP[fonc:~,  time:~, closed:+,  fonc=fsubj,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+
+
+
+
+/*** REGLE EXTRACT 51 ***\
+/ marquage reliquat objet \
+/  Pierre mange, indique Paul, la soupe\
+1> if (subj[right,disco](?,#4)) 
+varg[dir=+](#1,#2) = 
+	SC{?*, FV[ argsubj:+, argcomp:~,argspred:~, argcomp=+]{?*,#1[last:+, SN:+]}}, 
+		?*[verb:~,noun:~],
+		SC[disco],NP{?*,#4[last]}, PUNCT[form:fcm],
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}. 
+
+
+/*** REGLE EXTRACT 52 ***\
+/ coordination de verbes (avec sujet commun)\
+/Jean mange et boit\
+	
+1> COORDITEMS[sc=+](#1_SC,#2_SC) = SC[disco:~]{?*,FV[argsubj:+]{?*,#1[last:+]}},  ?*[fin:~],?*[disco],  ?*[fin:~],
+                       SC{BG{COORD};PUNCT[form:fcm], ?*,FV[argsubj:~,argsubj=+]{?*,#2[last:+]}} .
+
+
+/*** REGLE EXTRACT 53 ***\
+/ marquage objets immediats pour verbes marques coorditems[sc]\
+/  Jean mange et aime la soupe \
+1> if (COORDITEMS[sc](?,#1))
+varg[dir=+](#1,#2) = SC{?*, FV[ argspred:~, argcomp=+]{?*,#1[last:+]}}, 
+		?*[form:~fcm,form:~fopar,form:~fcpar,form:~f2pts,fin:~,inf:~], 
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+/*** REGLE EXTRACT 54 ***\
+/
+ marquage du sujet le plus proche a gauche avec une seule virgule , 
+si pas de sujet precedemment identifie
+Jean, qui est le boucher dort.
+does not apply to "semble-t-il, fait-il, dit le president 
+\
+1> if (~subjclit(#2[quep],?)) 
+subj(#2_VERB,#1_SUBJ) =
+  NP[fonc:~, time:~, nosubj:~,closed:+,fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              	?*[form:~fopar,form:~fcpar,form:~f2pts], 
+		PUNCT[form:fcm],  
+             	 ?*[form:~fopar,form:~fcpar,form:~f2pts], 
+		FV[argsubj:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 55 ***\
+/marquage sujet a gauche, si enchassements\
+1> subj(#2_VERB,#1_SUBJ) = 
+	NP[fonc:~,  nosubj:~, time:~, closed:+, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              ?*, SC+,?*,
+              FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+/*** REGLE EXTRACT 55 ***\
+/marquage sujet a gauche, si PP[de/des] : "{des chats} miaulent."  \
+1> if (~subj(#2,?) )
+subj(#2_VERB,#1_SUBJ) = 
+	PP[fonc:~,  nosubj:~, time:~, closed:+, det:+, fonc=fsubj,!noun:!, !pron:!]{?*,NP{?*,#1[last:+]}},  
+              ?*[punct:~,verb:~],
+              FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 56 ***\
+/marquage sujet inverse \
+1> if (~COORDITEMS[sc](?,#1))
+subj[right=+](#1,#2) != SC{?*, FV[argsubj:~, argsubjclit:~, argsubjinf:~, argsubj=+,!passive:!,!reflexive:!]{?*,#1[last:+]}}, 
+		?*[verb:~,coord:~],
+		NP[fonc:~,  time:~, closed:+,  fonc=fsubj,!noun:!, !pron:!]{?*,#2[last:+]}.
+
+
+
+/sujets residuels \
+/ ne traitent pas coordination , a cause du controle sur argsubj) \
+
+
+/*** REGLE EXTRACT 57 ***\
+/ sujets residuels de 1ere classe: idealement +closed \
+1> if (~subjclit(#2[quep],?)) 
+subj(#2_VERB,#1_SUBJ) =
+	 NP[fonc:~,  nosubj:~, time:~, closed:+, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              ?*,
+              FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 58 ***\
+/ reliquat de sujets residuels dans une SC \
+1> subj(#2_VERB,#1_SUBJ) = NP[fonc:~,  nosubj:~, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              ?*,
+              SC[!passive:!,!reflexive:!]{?*,
+                 FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+]{?*,#2[p3,last:+]}}.
+
+/*** REGLE EXTRACT 59 ***\
+/apposition, suite de NPs\
+1> seqnp(#1,#2) =     NP[time:~,argnn=~,argseqnp=+]{?*,noun#1[last:+]};PP[argseqnp=+]{?*,NP{?*,#1[last:+]}},    
+		   NP*[argnn=+], AP*,
+		   PUNCT[form:fcm],
+		   NP[fonc:~,time:~,fonc=fseqnp]{?*,#2[last:+]},
+		   ?*[verb:~],PUNCT.
+
+
+/*** REGLE EXTRACT 60 ***\
+/ sujet de verbe gerondif: les choses etant ce qu'elles sont\
+1> subj(#2_VERB,#1_SUBJ) = NP[fonc:~,  nosubj:~, closed:+, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              ?*[verb:~],
+              GV[argsubj:~,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 61 ***\
+/ sujet clause:  "qui vivra verra"\
+
+1> if (~subjclit(#2[quep],?)) 
+subj[prop=+](#2_VERB,#1_SUBJ) = SC[fonc:~,  nosubj:~, fonc=fsubj]{?*,#1[last:+]},  
+              ?*[verb:~],
+              FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[last:+]} .
+
+
+/*** REGLE EXTRACT 62 ***\
+/ reliquat de sujets residuels a gauche de SC (i.e. contraire a indications grammaire \
+1> subj(#2_VERB,#1_SUBJ) = 
+	NP[fonc:~,  nosubj:~, fonc=fsubj,!noun:!, !pron:!]{?*,#1[last:+]},  
+              adj*, adv*,
+              FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[p3,last:+]};
+              SC{?*, 
+                FV[argsubj:~,argsubjinf:~,argsubjres=+,argsubj=+,!passive:!,!reflexive:!]{?*,#2[p3,last:+]}} .
+
+
+
+/*** REGLE EXTRACT 63 ***\
+/ marquage  objets coordonnes \
+/  Pierre boit l'eau et  LE LAIT\
+1> varg[dir=+](#1,#2) = 
+	SC{?*, FV[ argsubj:+, argspred:~, argcomp:+]{?*,#1[last:+]}}, 		
+		?*,
+		?[coord:+], NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}. 
+
+
+/*** REGLE EXTRACT 64 ***\
+/ marquage  objets coordonnes \
+/  Pierre boit l'eau, LE VIN et  le lait\
+1> varg[dir=+](#1,#2) = SC{?*, FV[ argsubj:+, argspred:~, argcomp:+]{?*,#1[last:+]}}, 		
+		?*[verb:~], 
+		PUNCT[form:fcm],  NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}, 
+		?*[verb:~], COORD, NP[fonc:fcomp].
+
+/*** REGLE EXTRACT 65 ***\
+/ marquage objet QUEP \
+/  Pierre veut que Paul mange\
+/ les passifs sont exclus\
+1> varg[dir=+,propque=+](#1_VERB,#2_OBJ) = 
+	SC{?*, FV[ passive:~,argsubj:+, argcomp:~,argspred:~,  argcomp=+]{?*,#1[quep:+,last:+]}};
+	IV{?*, #1[quep:+,last:+ , passive:~,argcomp:~,argspred:~,  argcomp=+ ]};
+	GV{ ?*,#1[quep:+,last:+, passive:~, argcomp:~,argspred:~,  argcomp=+]} ,
+		?*[inf:~,fin:~,quep:~],
+		SC[fonc:~, fonc=fcomp]{BG{?*,CONJQUE},?*,?[last]{?*,#2[last:+]}}. 
+
+
+
+/*** REGLE EXTRACT 66 ***\
+/ marquage objet QUEP \
+/  le fait  que Paul mange\
+1> narg[dir=+,propque=+](#1_VERB,#2_OBJ) = 
+	NP{ ?*, #1[quep:+,last:+]} ,
+		?*[inf:~,fin:~,quep:~],
+		SC[fonc:~, fonc=fcomp]{BG{?*,CONJQUE},?*,?[last]{?*,#2[last:+]}}. 
+
+/*** REGLE EXTRACT 67 ***\
+/ marquage objet QUEP \
+/  fier que Paul mange\
+1> adjarg[dir=+,propque=+](#1_VERB,#2_OBJ) = 
+	AP{ ?*, #1[quep:+,last:+]} ,	
+		?*[inf:~,fin:~,quep:~],
+		SC[fonc:~, fonc=fcomp]{BG{?*,CONJQUE},?*,?[last]{?*,#2[last:+]}}. 
+
+
+
+/*** REGLE EXTRACT 68 ***\
+/marquage queP: cas du passif (il est admis que)\
+1> varg[PROPQUE=+,imperso=+](#1_VERB,#2_OBJ) = 
+	SC{?*, FV[p3:+,sg:+, passive=+,argsubj:+, argcomp:~,argspred:~,  argcomp=+]{?*,#1[quep:+,last:+]}}, 	
+		?*[noun:~,verb:~],
+		SC[fonc:~, fonc=fcomp]{BG{?*,CONJQUE},?*,#2[last:+]}. 
+
+
+/*** REGLE EXTRACT 69 ***\
+/marquage objet QUE:  le chat que je vois \
+1> varg[dir=+,pron=+](#1_VERB,#2_OBJ) =  
+	SC[fonc:~]{BG[fonc:~, fonc=fcomp]{?*,CONJQUE#2},?*,FV[argcomp:~,argspred:~, argcomp=+]{?*,#1[last:+, SN:+]}}.
+
+
+
+
+
+/*** REGLE EXTRACT 70 ***\
+/ marquage reliquat objet \
+/  Pierre mange et boit le lait\
+1> varg[dir=+](#1,#2) = 
+	SC{?*, FV[ argsubj:+, argcomp:~,argspred:~, argcomp=+]{?*,#1[last:+, SN:+]}}, 
+		?*[verb:~,noun:~],
+		NP[fonc:~,  time:~, fonc=fcomp,!noun:!, !pron:!]{?*,#2[last:+]}. 
+
+
+/#########  ADJECTIFS   ####################\
+/*** REGLE EXTRACT 71 ***\
+/ adjectif postposé le plus proche \
+/ s'applique aux NP et PP *\
+/* la relation s'applique a tous les ADJ trouves a l'interieur de AP *\
+1> NMOD[adj=+,right=+,posit1=+](#1_NOUN,#2_ADJ) = NP{?*,#1[last:+,pron:~]};PP{?*,?[last]{?*,#1[last:+,pron:~]}} , 
+		?*[noun:~,verb:~,prep:~,pron:~,form:~f2pts],
+		AP[fonc:~,fonc=fpost]{?*,adj#2}; INS{?*[punct],AP[fonc:~,fonc=fpost]{?*,adj#2}}.
+
+/*** REGLE EXTRACT 72 ***\
+/ adjectif  postposé en seconde position: NP PP AP\
+1> NMOD[adj=+,right=+,posit2=+](#1_NOUN,#2_ADJ) = NP{?*,#1[last:+,pron:~]};PP{?*,?[last]{?*,#1[last:+,pron:~]}} , PP,
+		?*[noun:~,verb:~,prep:~,pron:~,form:~f2pts],
+		AP{?*,adj#2}; INS{?*[punct],AP[fonc:~,fonc=fpost]{?*,adj#2}}.
+
+/*** REGLE EXTRACT 73 ***\
+/ adjectif postposé le plus proche: cas des participes passés \
+/ s'applique aux NP et PP *\
+1> NMOD[adj=+,right=+,posit1=+,partpre:+](#1_NOUN,#2_ADJ) = NP{?*,#1[last:+]};PP{?*,?[last]{?*,#1[last:+]}} , 
+		?*[noun:~,fin:~,inf:~,prep:~,pron:~,form:~f2pts],
+		VERB#2[partpre:+,fonc:~,fonc=fpost];INS{?*[punct],	VERB#2[partpre:+,fonc:~,fonc=fpost]}.
+
+/*** REGLE EXTRACT 74 ***\
+/ adjectif postposé le plus proche: cas des participes passés \
+/ s'applique aux NP et PP *\
+1> NMOD[adj=+,right=+,posit1=+,partpas:+](#1_NOUN,#2_ADJ) =
+        NP{?*,#1[clit:~,last:+]};PP{?*,?[last]{?*,#1[last:+]}} , 
+	?*[noun:~,fin:~,inf:~,prep:~,pron:~,form:~f2pts,coord:~],
+	VERB#2[partpas:+,fonc:~,fonc=fpost];INS{?*[punct],
+        VERB#2[partpas:+,fonc:~,fonc=fpost]}.
+
+
+/*** REGLE EXTRACT 75 ***\
+/ adjectif antepose au sein d'un NP\
+1> NMOD[adj=+,left=+,posit1=+](#1_NOUN,#2_ADJ) = AP[fonc:~,fonc=fpre]{?*,adj#2}, ?*, noun#1.
+
+
+/*** REGLE EXTRACT 76 ***\
+/ adjectif antepose en dehors d'un NP: apposition: cas des adjectifs et des participes\
+/Furieux, le chat dort\
+1> NMOD[adj=+,left=+,posit2=+](#1_NOUN,#2_ADJ) = AP[fonc:~,fonc=fpre]{?*,adj#2};
+			VERB#2[partpre:+,fonc:~,fonc=fpre], 
+			PP*, PUNCT[form:fcm],
+			 NP[closed:+]{?*,#1[last:+]} .
+
+
+/*** REGLE EXTRACT 77 ***\
+/ adjectif antepose en dehors d'un NP: apposition: cas des adjectifs et des participes\
+/Furieux, le chat dort\
+1> NMOD[adj=+,left=+,posit2=+](#1_NOUN,#2_ADJ) = AP[fonc:~,fonc=fpre]{?*,adj#2};
+			VERB#2[partpas:+,fonc:~,fonc=fpre], 
+			PP*, PUNCT[form:fcm],
+			 NP[closed:+]{?*,#1[last:+]} .
+
+
+/####################   RATTACHEMENT PP  ##########################\
+
+/*** REGLE EXTRACT 78 ***\
+/ PP postposé: rattachement  au AP le plus proche, si sous-cat en "à" \
+/ prêt au sacrifice\
+1> ADJARG[indir=+,arg=+](#1_ADJ,#2_PREP,#3_NOUN) = 
+	AP{?*,#1[last:+,asn:+]},
+		?*[noun:~,adj:~,verb:~,prep:~,pron:~,coord:~,form:~f2pts],
+		PP[fadjpp=+,!noun:!, !pron:!]{?*, #2[prep:+,form:fa], ?*,NP{?*,#3[last:+]}}.
+
+/*** REGLE EXTRACT 79 ***\
+/ PP postposé: rattachement  au AP le plus proche, si sous-cat en "de" \
+/ fier de son chien\
+1> ADJARG[indir=+,arg=+](#1,#2,#3) = 
+	AP{?*,#1[last:+,desn:+]},
+		?*[noun:~,adj:~,verb:~,prep:~,pron:~,coord:~,form:~f2pts],
+		PP[fadjpp=+,!noun:!, !pron:!]{?*, #2[prep:+,form:fde], ?*,NP{?*,#3[last:+]}}.
+
+
+/*** REGLE EXTRACT 80 ***\
+/ PP postposé: rattachement  au NP le plus proche \
+/ s'applique aux NP et PP et certains pronoms dans BG *\
+#NMOD-N-PP1
+1> NMOD[indir=+,posit1=+](#1,#2,#3) = 
+	NP[np-changed:~]{?*,#1[last:+]};
+	PP{?*,?[last,np-changed:~]{?*,#1[last:+]}};
+	BG{?*,pron#1[last:+]},
+		?*[noun:~,verb:~,prep:~,pron:~,coord:~,punct:~],
+		PP[fnpp=+,fadjpp:~,!noun:!, !pron:!]{?*, #2[prep:+], ?*,NP[np-changed:~]{?*,#3[last:+]}}.
+
+/*** REGLE EXTRACT 80 ***\
+/ idem que precedente regle, mais accepte des insertions depunct, sauf avant le PP depednant
+/ PP postposé: rattachement  au NP le plus proche \
+/ s'applique aux NP et PP et certains pronoms dans BG *\
+#NMOD-N-PP2
+1> NMOD[indir=+,posit1=+](#1,#2,#3) = 
+	NP{?*,#1[last:+]};
+	PP{?*,?[last]{?*,#1[last:+]}};
+	BG{?*,pron#1[last:+]}, 
+		?*[noun:~,verb:~,prep:~,pron:~,coord:~,form:~f2pts],
+                ?[noun:~,verb:~,prep:~,pron:~,coord:~,form:~f2pts,form:~fcm],
+		PP[fnpp=+,fadjpp:~,!noun:!, !pron:!]{?*, #2[prep:+], ?*,NP[np-changed:~]{?*,#3[last:+]}}.
+
+
+/*** REGLE EXTRACT 81 ***\
+/ si PP marque prd:+, si verbe est transitif et non marque desn, alors le PP est objet du verbe \
+/e.g. il vend des chats \
+1> varg[dir=+,prd=+](#1,#2) = 
+		SC{?*, FV[passive:~,reflexive:~,argcomp:~,argcomp=+]{?*,verb#1[desn:~,last:+]}};
+		IV[passive:~,argcomp:~,reflexive:~,argcomp=+]{?*,verb#1[desn:~,last:+]};	     
+		GV[passive:~,argcomp:~,reflexive:~,argcomp=+]{?*,verb#1[desn:~,last:+]},
+		?*[det:~,num:~,verb:~,pron:~,coord:~,punct:~],
+		PP[prd:+, fonc=fcomp,!noun:!, !pron:!]{?*, NP[time:~]{?*,#2[last:+]}}.
+
+
+/*** REGLE EXTRACT 82 ***\
+/ PP postposé: rattachement au  verbe le plus proche \
+/l'identification des arguments du verbe se fait dans les REGLEs de deduction\
+#VMOD-PP
+1> VMOD[indir=+,posit1=+](#1_VERB,#2_PREP,#3_NOUN) = SC{?*, FV{?*,#1[last:+]}};
+			     IV{?*,#1[last:+]};			     
+			     GV{?*,#1[last:+]};
+			     VERB#1, 
+		?*[noun:~,verb:~,prep:~,pron:~,coord:~,form:~f2pts];coord[form:fni],
+		PP[fonc:~,fadjpp:~,fvpp=+,!noun:!, !pron:!]{?*, #2[prep:+], ?*,NP{?*,#3[last:+]}}.
+
+/*** REGLE EXTRACT 82 ***\
+// same as previous, mais on accepte les noun
+/ PP postposé: rattachement au  verbe le plus proche \
+/l'identification des arguments du verbe se fait dans les REGLEs de deduction\
+#VMOD-PP2
+1> VMOD[indir=+,posit1=+](#1_VERB,#2_PREP,#3_NOUN) = SC{?*, FV{?*,#1[last:+]}};
+			     IV{?*,#1[last:+]};			     
+			     GV{?*,#1[last:+]};
+			     VERB#1, 
+		?*[verb:~,pron:~,coord:~,form:~f2pts,punct:~];coord[form:fni],
+		PP[fonc:~,fadjpp:~,fvpp=+,!noun:!, !pron:!]{?*, #2[prep:+,form:~fde,form:~fa], ?*,NP{?*,#3[last:+]}}.
+
+
+/*** REGLE EXTRACT 80 ***\
+/ PP postposé: rattachement  au AP le plus proche \
+/ s'applique aux NP et PP et certains pronoms dans BG *\
+#AMOD1
+1> //if ( ~?(?,#2) )
+ ADJMOD[indir=+,posit1=+](#1,#2) = 
+	AP{?*,#1[last:+]}, 
+        ?*[noun:~,verb:~,prep:~,adj:~,pron:~,coord:~,form:~f2pts,punct:~],
+        PP[fonc:~,fnpp=+,fadjpp:~,fadjpp=+,noun:+]{?*,NP{?*,#2[last:+]}}.
+
+
+
+/*** REGLE EXTRACT 83 ***\
+/ PP antepose: Dans un champ, les vaches broutent \
+1> if (~subj(#1,#3) )
+ VMOD[indir=+,left=+](#1,#2,#3) =
+	PP[fnpp:~,fadjpp:~,fvpp:~,fvpp=+,!noun:!, !pron:!,first]{?*, #2[prep:+], ?*,NP{?*,#3[last:+]}},
+ 		   ?*[verb:~,form:~f2pts],
+		   FV{?*,#1[last:+]}.
+
+
+/*** REGLE EXTRACT 84 ***\
+/ ADVERBE postposé: rattachement au  verbe le plus proche \
+/l'identification des arguments du verbe se fait dans les REGLEs de deduction\
+1> VMOD[adv=+,posit1=+](#1_VERB,#2_ADV) = SC{?*, FV{?*,#1[last:+]}};
+			     IV{?*,#1[last:+]};			     
+			     GV{?*,#1[last:+]};
+			     VERB#1, 
+		?*[verb:~,form:~f2pts],
+		ADV#2[abr:~,fvadv:~,fvadv=+],?[adv:~,adj:~,partpas:~].
+
+/*** REGLE EXTRACT 85 ***\
+/adverbe quantitatif \
+/ beaucoup de gens, tellement de salade\
+1> VMOD[adv=+,left=+](#1_VERB,#2_ADV) = ADV#2[fvadv:~,fvadv=+],
+ 		   ?*[verb:~,form:~f2pts,strongbreak:~],
+		   FV{?*,#1[last:+]}.
+
+/*** REGLE EXTRACT 86 ***\
+/ ADV antepose: Souvent, les vaches broutent \
+1> VMOD[adv=+,left=+](#1_VERB,#2_ADV) = ADV#2[fvadv:~,fvadv=+],
+ 		   ?*[verb:~,form:~f2pts,strongbreak:~],
+		   FV{?*,#1[last:+]}.
+
+/*** REGLE EXTRACT 87 ***\
+/ negation \
+1> NEGAT(#1_VEBR) = NEG[fvadv:~,fvadv=+],
+ 		   ?*[verb:~,form:~f2pts],
+		   verb#1.
+
+
+
+
+
+/############ RELATIVES ###############\
+/*** REGLE EXTRACT 88 ***\
+/ antecedents relatives \
+/ candidat le plus proche: les gens qui parlent \
+
+1> coref[rel=+,posit1=+](#1_NOUN,#2_PRON) = NP{?*,#1[last:+]};PP{?*,?[last]{?*,#1[last:+]}} , 
+		?*[noun:~,prep:~,pron:~],
+		SC[fonc:~]{ BG{?*,pron#2[pron:+,rel:+,last:+]};
+			    BG{?*,PP[last:+]{?*,#2[rel:+,last:+]}}
+                           }.
+
+
+/*** REGLE EXTRACT 89 ***\
+/ antecedents relatives \
+/ candidat en seconde position, de type NP PP qui... \
+
+1> coref[rel=+,posit2=+](#1_NOUN,#2_PRON) = NP{?*,#1[last:+]};PP{?*,?[last]{?*,#1[last:+]}} , 
+		?*[noun:~,prep:~,pron:~],
+		PP,	?*[noun:~,prep:~,pron:~],
+		SC[fonc:~]{ BG{?*,pron#2[pron:+,rel:+,last:+]};
+			    BG{?*,PP[last:+]{?*,#2[rel:+,last:+]}}
+                           }.
+
+
+/*** REGLE EXTRACT 90 ***\
+/ antecedents relatives \
+/ candidat en seconde position, de type: l'article 23 qui... \
+
+1> if (NN(#1,#3))
+coref[rel=+,posit2=+](#1,#2) = NP{?*,#1[last:+]};PP{?*,?[last]{?*,#1[last:+]}} , 
+		?*[noun:~,prep:~,pron:~],
+		NP{?*,#3[last]}, 	
+		?*[noun:~,prep:~,pron:~],
+		SC[fonc:~]{ BG{?*,pron#2[pron:+,rel:+,last:+]};
+			    BG{?*,PP[last:+]{?*,#2[rel:+,last:+]}}
+                           }.
+
+
+
+
+/*** REGLE EXTRACT 91 ***\
+/ NP errants rattaches au verbe le plus proche\
+1> straynp(#1_VERB,#2_NP) =   SC{?*, FV{?*,#1[last:+]}};
+		 IV{?*,#1[last:+]};
+		 GV{?*,#1[last:+]}, 
+		 ?*[verb:~], 
+		NP[fonc:~, fvadv:~, fonc=fstraynp]{?*,#2[last:+]}.
+
+/*** REGLE EXTRACT 92 ***\
+/ Subordinate clause: rattachement au  verbe le plus proche \
+1> if (connect[rel:~](#2,?))
+VMOD[subord=+,posit1=+](#1,#2) = 
+			SC{?*, FV{?*,#1[last:+]}};
+			     IV{?*,#1[last:+]};			     
+			     GV{?*,#1[last:+]};
+			     VERB#1, 
+		?*[verb:~,form:~f2pts],
+		SC[fonc:~,fonc=fsubord]{?*, FV{?*,#2[last:+]}}.
+
+
+/*** REGLE EXTRACT 93 ***\
+/ Subordinate clause: anteposee, rattachement au  verbe le plus proche: quand il pleut, le chien dort \
+1> if (connect[rel:~](#2,#3[conjque:~]))
+VMOD[subord=+,left=+](#1,#2) =	SC[fonc:~,fonc=fsubord]{?*, FV{?*,#2[last:+]}},
+ 		   ?*[verb:~,form:~f2pts],
+		   FV{?*,#1[last:+]}.
+
+
+/*** REGLE EXTRACT 94 ***\
+/ il demande qui vient \
+1> if (connect[rel:+](#2,?) & ~varg[dir](#1,?))
+varg[dir=+,prop=+](#1,#2) = SC{?*, FV{?*,#1[quep,last:+]}};
+			     IV{?*,#1[quep,last:+]};			     
+			     GV{?*,#1[quep,last:+]},
+		?*[verb:~,form:~f2pts],
+		SC[fonc:~,fonc=fcomp]{?*, FV{?*,#2[last:+]}}.
+
+
+/*** REGLE EXTRACT 95 ***\
+/ NP errant antepose: le lundi, les vaches broutent \
+1> if (~COORDITEMS(?,#2))
+straynp[left=+](#1,#2) = NP[fonc:~,fvadv:~, fonc=fstraynp]{?*,#2[last:+,pron:~]},
+ 		   ?*[verb:~,form:~f2pts],
+		   FV{?*,#1[last:+]}.
+
+
+
+
+/internal structure of MWE \
+/*** REGLE EXTRACT 96 ***\
+1> MWEHEAD(#1,#2) = noun#1[mwe]{#2}; adv#1[mwe]{#2}; pp#1[mwe]{?*,#2[last]}.
+
+/internal structure of MWE \
+/*** REGLE EXTRACT 97 ***\
+/jour apres jour;  force de frappe ; en 1957\
+1> NMOD[indir=+,noun=+](#1,#2) = adv[mwe]{noun#1,?*[noun:~,prep:~],prep,?*[noun:~,prep:~],noun#2};
+              noun[mwe]{noun#1,?*[noun:~,prep:~],prep,?*[noun:~,prep:~],noun#2}.
+
+/internal structure of MWE \
+/*** REGLE EXTRACT 98 ***\
+/ Louis 5 \
+1> NN(#1,#2) = noun[mwe]{noun#1,num#2}.
+
+
+/*** REGLE EXTRACT 99 ***\
+1> ClosedNP(#1) = NP[closed:+,!noun:!,!pron:!,!proper:!]{?*,#1[last:+]}.
+
+
+
+
+
+
+
+
+
+
+

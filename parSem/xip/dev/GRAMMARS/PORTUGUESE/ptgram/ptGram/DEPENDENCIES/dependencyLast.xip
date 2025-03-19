@@ -1,0 +1,728 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyLast.xip                                          !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency make some reorganization of dependencies                      !
+//!                                                                            !
+//!   Dependencies handled in this file:  AGENT                                !
+//!                                       PATIENT                              !
+//!                                       ATTRIB (enlarged)                    !
+//!                                       MAIN                                 !
+//!                                       PP attachment heuristics             !
+//!                                       Missing SUBJ handled                 !
+//!                                                                            !
+//!                                       SUBJ (Anaphora 0)                    !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Enlargement of ATTRIB relation
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// X chama-se Y -> ATTRIB between X and Y
+// A cidade chama-se Itaporanga ATTRIB(cidade,Itaporange)
+| ?{?*,verb#1[lemma:chamar]}, ?{pron#6[first,last,ref]}, NP#2 |
+   if ( VDOMAIN(#3,#1) & SUBJ(#3,#4) & HEAD(#5,#2) & ^CDIR(#1,#6) )
+   ATTRIB(#4,#5)
+
+// A cidade sempre se chamou Itaporanga
+| ?{pron#6[first,last,ref]}, ?*, ?{?*,verb#1[lemma:chamar]}, NP#2 |
+if ( VDOMAIN(#3,#1) & SUBJ(#3,#4) & HEAD(#5,#2) & ^CDIR(#1,#5) )
+   ATTRIB(#4,#5)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MAIN DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// É o verbo que tem de satisfazer as seguintes restrições:
+//    1. não pode estar debaixo de um SC (excepto se a frase tiver o traço "sentInterr")
+//    2. não pode ser VINF (se estiver fora de uma cadeia verbal)
+//    3. não pode estar no gerúndio (se estiver fora de uma cadeia verbal)
+//    4. tem de ser o mais à esquerda
+//    5. se o verbo for um cop, é o predicativo
+//    6. se estiver à esquerda de um verbo dicendi, é o verbo dicendi
+// Se não houver verbo é o primeiro NP:
+//    1. antes do SC
+//    2. fora do SC
+//    3. não é CDIR
+// Se não existir:
+//    1. é o verbo principal do primeiro SC
+// Se não existir:
+//    1. é a cabeça do primeiro PP
+//
+//
+// Algumas regras assumem que o XIP faz a tentativa de emparelhamento da
+// esquerda para a direita, pelo que encontra sempre o verbo mais à esquerda que
+// satisfaz todos os requisitos.
+
+
+// Example: O João come a banana -> MAIN(come)
+// Example: o João treme de medo, como a Paula tinha dito -> MAIN(treme)
+//
+| TOP{?*[first,verb:~,scfeat:~],
+      ?*[verb:~,scfeat:~], #1[verb,inf:~,lemma:~haver] } |
+ if ( ~MAIN(?) & VDOMAIN(#2,#2) & HEAD(#2,#1) )
+   MAIN(#2)
+
+// Example: O João tinha acabado de comer a banana -> MAIN(comer)
+// Example: O João tinha acabado de comer a banana como a Paula disse -> MAIN(comer)
+//
+| TOP{?*[scfeat:~], #1[verb,lemma:~haver]{?[first,prep:~]} } |
+ if ( ~MAIN(?) & VDOMAIN(?,#2) & HEAD(#2,#1) )
+   MAIN(#2)
+
+// Example: Comida a banana, o João que é meu amigo desde que o encontrei morreu -> MAIN(morreu)
+//
+| TOP{?*, sc#1, ?*, #3[verb]{#2[inf:~,lemma:~haver]} } |
+ if ( ~MAIN(?) & VDOMAIN(?,#2) & HEAD(#2,#3) & HEAD(#4,#1) & ~VDOMAIN(#4,#2)  )
+   MAIN(#2)
+
+//NJM+JB, 2011/12/28
+// Example: Quem fez isto? -> MAIN(fez)
+//
+| TOP[sentInterr]{?*, sc#1 } |
+ if ( ~MAIN(?) &  HEAD(#2,#1) & VDOMAIN(#2,#3) )
+   MAIN(#3)
+
+// Se não há mais nenhum, é o primeiro nome (antes do SC)
+//
+// Example: a belissima banana que eu comi -> MAIN(banana)
+// Example: O João que treme de medo       -> MAIN(João)
+// Example: Ordem para hipotecar           -> MAIN(ordem)
+//
+| TOP{?*[NP:~], NP#1} |
+ if ( ~MAIN(?) & HEAD(#2,#1) )
+   MAIN(#2)
+
+// Se não há mais nenhum, é a cabeça do primeiro PP (antes do SC)
+//
+// Example: da belissima banana que eu comi -> MAIN(banana)
+// Example: do João que treme de medo       -> MAIN(João)
+// Example: da ordem para hipotecar         -> MAIN(ordem)
+//
+| TOP{?*[PP:~], PP#1} |
+ if ( ~MAIN(?) & HEAD(#2,#1) )
+   MAIN(#2)
+
+
+//========================================================
+// If the MAIN is a gerund, then use the next verb
+//========================================================
+
+// Example: Interrompendo o Pedro esta discussão, abandonou a sala. -> MAIN(abandonou)
+//
+if (^MAIN(#1) & VDOMAIN(?[gerund],#1) & VDOMAIN(#3,#4) & #1<#3)
+  MAIN(#4)
+
+
+//========================================================
+// If the MAIN is a cop, then use the predsubj
+//========================================================
+
+// Example: O Zé é um aluno, disse o Paulo -> MAIN(disse)
+//
+if (^MAIN(#1[cop]) & PREDSUBJ(#1,#2) )
+  MAIN(#2)
+
+
+//========================================================
+// If there is a dicendi verb on the right, which is not under an SC,
+// the dicendi is the MAIN
+//========================================================
+
+// Example: Vamos aprovar os grandes projetos que eu acho que o Brasil precisa, afirmou (o Lula, o ano passado.)
+//
+| TOP{?+, punct[comma], (NP), ?[verb]{?*,#3[dicendi]}, ?*[verb:~,inf:~]} |
+if (^MAIN(#1) & #1<#3 & SUBJ(#3,#2) & #3<#2)
+  MAIN(#3)
+
+| TOP{?+, punct[comma], (NP), ?[verb]{?*,#3[dicendi]}, ?*[verb:~,inf:~], ?#5[verb]} |
+if (^MAIN(#1) & #1 < #3 & coord(#4,#3) & coord(#4,#5))
+  MAIN(#3)
+
+
+//========================================================
+// If the MAIN is quantifying a noun, that noun is the MAIN
+//========================================================
+
+// Example: 5 litros de leite -> MAIN(leite)
+//
+if (^MAIN(#1[SEM-unitype]) & QUANTD(#2,#1) )
+  MAIN(#2)
+
+// Example: 5 litros e dois terços de leite -> MAIN(leite)
+//
+if (^MAIN(#1[SEM-unitype]) & (CLINK(#3,#1)|CLINK(#1,#3)) & QUANTD(#2,#3) )
+  MAIN(#2)
+
+
+//========================================================
+// If the MAIN already computed is taking part of a coordination, the new MAIN is
+// the coordination
+//========================================================
+
+// Example: Ele comeu e bebeu
+//
+if (^MAIN(#2) & coord(#1,#2) & coord(#1,#3))
+  MAIN(#1)
+
+
+//NJM, 2011/06/22
+//========================================================
+// If the MAIN does not exist, and the sentence is a sigle node,
+// that node is the
+//========================================================
+// Example: "grau centígrado"
+//
+| TOP{#1[start,end]} |
+if (~MAIN(#1))
+  MAIN(#1)
+
+
+//========================================================
+// Heuristics to limit multiple PP attachments
+//========================================================
+// This rule can be commented if it introduces errors
+// It tries to limit less probable blind PP attachment.
+//
+// Criamos uma barreira dizendo que se houver um sítio onde se pode agarrar um PP
+// que estiver precedido à esquerda por uma vírgula, não se deve ultrapassar esta vírgula
+// neste caso na medida em que há uma potencial âncora para o PP a direita da
+// vírgula, não se tente agarrar mais a esquerda.
+//
+// Example: Não foi além dos 39,2 por centos dos votos, um resultado aquém do conseguido ....
+//
+| punct#1[comma], ?+, PP{?[prep], ?*, #2[last]} |
+if ( ^MOD[post](#3,#2) & MOD[post](#4,#2) & #3 < #1 & #3 < #4 & #1 < #4)
+   ~
+
+//CH, 2007/05/16
+// If we have a noun with feature [inf] i.e. an infinitive used as a noun
+// If this noun is followed by a PP[de], then we just attach this PP[de] to the noun,
+// deleting any other attachment to this noun.
+//
+// Example: O continuar da esperança de os cabo-verdianos poderem resolver problemas
+//           [We attach only esperanca to continuar]
+//
+if ( PREPD(#2,?[lemma:de]) & MOD[post](#1[noun,inf],#2) & ^MOD[post](#1,#3) & #2 < #3 )
+   ~
+
+//CH, 2007/05/16
+// Deleting erroneous MOD[post] attachment when a PP is both attached as subject of
+// infinitive verb and MOD[post] of a governor which is on the left.
+//
+// Example: O continuar da esperança de os cabo-verdianos poderem resolver problemas
+//           SUBJ(resolver,cabo-verdianos) and *MOD(esperanca, cabo-verdianos)
+//
+if ( PREPD(#1[inf,verb],#2) & SUBJ(#1,#3) & #2 < #3 & ^MOD[post](#4,#3) & #4 < #2 )
+~
+
+//NJM+JB, 2011/03/29
+// Deleting erroneous MOD[post] attachment when a PP is modifying another PP that is
+//   being determined by a QUANTD.
+//
+// Example: "O Pedro perdeu muita da herança da mãe.
+//           *MOD_POST(muita,mãe)
+//
+if ( PREPD(#1,?[lemma:de]) & HEAD(#2,?[np]) & ^MOD(#2,#1) & QUANTD(#3,#2) &
+     PREPD(#3,?[lemma:de]) & MOD(#3,#1) )
+    ~
+
+
+//========================================================
+// Heuristics for missing SUBJ
+//========================================================
+
+// This rules tries to capture a SUBJ dependency which is in a long distance
+// from the verb
+// We limitate this rule to NP subjects which are at the beginning of a sentence and
+// which are proper nouns.
+//
+// Example: Geraldo Alckmin, candidato do Partido e antigo governador do estado,
+//           comeu o bolo
+//
+| NP[start]{?*,#1[proper]}, ?*[verb:~], #2[verb] |
+if ( ~SUBJ(?,#1) & HEAD(#3,#2) & ~SUBJ(#3,?) )
+SUBJ[pre=+](#3,#1)
+
+
+
+//========================================================
+// Correction of bad SUB-CDIR-MOD dependencies
+//========================================================
+
+//CH, 2007/05/16
+// Cleaning rule
+// If we have for the same verb two subjects that are calculated, then we chose
+// the one which is nearer
+//
+//NJM, 2007/06/25
+// the rule is not applied if the two subjects are coordinated.
+//
+if ( ^SUBJ(#1,#2) & SUBJ(#1,#3) & #2 < #3 & ~(COORD(#4,#2) & COORD(#4,#3)))
+~
+
+//CH, 2007/05/17
+// Cleaning rule
+// if we have a MOD dependency between a verb and a reflexive "se", then we destroy it
+//
+if ( ^MOD(#1,#2[surface:"se"]) )
+~
+
+// Using the projectivity principal (arrows crossing)
+// For a sequence A B C D, we cannot have SUB[pre](D,B) and CDIR(A,C)
+
+
+//NJM, 2007/06/27
+// Cleaning rule
+// if we have a APPOSIT dependency, then the subject is the first element of the
+// APPOSIT relation
+//
+if ( ^SUBJ[pre](#1,#2) & APPOSIT(#3,#2))
+  SUBJ(#1,#3)
+
+
+
+//========================================================
+// Removal of extra MOD(NP, PP(de,...)) dependencies
+// Removal of extra MOD(PP, PP(de,...)) dependencies
+//========================================================
+
+//NJM, 2007/09/10
+//NJM, 2011/05/09 - rule becomes more general
+// Default cleaning rule (informative rules must be applied before this one)
+//
+// Example: comeu a banana de Portugal -X-> MOD_POST(comer,Portugal)
+//
+|PP#2|
+if ( HEAD(#4,#2) & PREPD(#4,#5[surface:"de"]) & MOD[post](#3,#4) & ^MOD[post](#6,#4) & #6<#3)
+  ~
+
+//NJM, 2011/04/28
+// Default cleaning rule (informative rules must be applied before this one)
+//
+// Example: bebeu uma cerveja com o João -X-> MOD_POST(cerveja,João)
+//
+|PP#2|
+if ( PREPD(#4,#5[surface:~"de"]) & HEAD(#4,#2) & MOD[post](#3[verb],#4) & ^MOD[post](#1,#4) & #3<#1)
+  ~
+
+
+//========================================================
+// NOT ACCEPTING "se" AS SUBJECT if verb is 3 person and plural
+//========================================================
+
+//NJM+JB, 2010/04/07
+// Remove the computed subject if "se" is the subjet of a verb in the 3rth person and plural
+//
+// Example: As frutas se fragmentam       ->  *subj(fragmentam,se) [removed]
+//
+if ( ^SUBJ(?[pl],?[surface:se]) )
+   ~
+
+if ( ^SUBJ(?[1p],?[surface:se]) )
+   ~
+
+if ( ^SUBJ(?[2p],?[surface:se]) )
+   ~
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// ANAPHORA 0
+//
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
+//========================================================
+// ANAPHOR 0 SUBJECTS
+//========================================================
+
+// Example: O rapaz comeu o bolo [mas]CONJ ficou com fome   -> SUBJ_ANAPH0(ficou,rapaz)
+//
+| #1[verb], ?*, CONJ[coord];PUNCT[lemma:";"];PUNCT[lemma:":"], ?*[verb:~,scfeat:~], #3[verb] |
+ if ( VDOMAIN(?,#4) & SUBJ(#4,#5) & HEAD(#4,#1) & HEAD(#6,#3) & VDOMAIN(#6,#7) & ~SUBJ(#7,?) &
+      ((#5[person]:#6[person] & #5[number]:#6[number]) || 
+       (#5[person:~] & #6[3p] & #5[number]:#6[number] & ~COORD(?,#5)) || 
+       (#5[person:~] & #6[3p,pl] & COORD(?,#5)) || 
+       #6[person:~]
+      )
+    )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+//========================================================
+
+// Verbo principal s_pp_qufconj com SC
+// Example: O João ordenou à Ana que lavasse a loiça       -> SUBJ_ANAPH0(lavar,Ana)
+//
+| #1[verb], ?*[verb:~], PP#8, SC{?*, ?#3[verb,last]} |
+ if ( VDOMAIN(?,#4) & SUBJ(#4,#5) & HEAD(#4[s_pp_qufconj],#1) & HEAD(#6,#3) & HEAD(#9,#8) & MOD[post](#4,#9) & VDOMAIN(#6,#7) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#9)
+
+// Caso geral com SC
+// Example: O João comeu batatas quando foi a Lisboa       -> SUBJ_ANAPH0(foi,João)
+//
+| #1[verb], ?*[verb:~], SC{?*, ?#3[verb,last]} |
+ if ( VDOMAIN(?,#4) & HEAD(#4[s_qufconj:~],#1) & SUBJ(#4,#5) & HEAD(#6,#3) & VDOMAIN(#6,#7) & ~SUBJ(#7,?)   &
+      ((#5[person]:#6[person] & #5[number]:#6[number]) || 
+       (#5[person:~] & #6[3p] & #5[number]:#6[number] & ~COORD(?,#5)) || 
+       (#5[person:~] & #6[3p,pl] & COORD(?,#5)) || 
+       #6[person:~]
+      )
+    )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+
+//========================================================
+
+// Example: O Pedro {foi}VF ao cinema SC{porque queria} VINF{ver} o filme     -> SUBJ_ANAPH0(queria, Pedro), SUBJ_ANAPH0(ver,Pedro)
+// Example: O Pedro {foi}VF ao cinema VINF{para ver} o filme.                 -> SUBJ_ANAPH0(ver,Pedro)
+// Example: O Pedro {foi}VF ao cinema VINF{ver} o filme                       -> SUBJ_ANAPH0(ver,Pedro)
+// Example: O Pedro {estava}VCOP ADJP{farto} VINF{de ver} este filme          -> SUBJ_ANAPH0(ver,Pedro)
+//
+ if ( MOD[post,inf,sentential](#1,#7) & SUBJ[pre](#1,#5) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+// Example: O Pedro leu o jornal palitando os dentes          -> SUBJ_ANAPH0(palitando,Pedro)
+//
+ if ( MOD[post,gerund,sentential](#1,#7) & SUBJ[pre](#1,#5) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+
+//========================================================
+
+// Example: Quando o Pedro foi ao Porto, encontrou a Ana         -> SUBJ_ANAPH0(encontrou,Pedro)
+//
+| ?*[verb], SC{?*, ?#1[verb,last]}, ?*[scfeat:~], PUNCT[comma], ?*[verb:~,scfeat:~], ?#3[verb] |
+ if ( INTROD-AUX(?,#2) & VDOMAIN(#2,#4) & HEAD(#2,#1) & SUBJ(#4,#5) & HEAD(#6,#3) & VDOMAIN(#6,#7) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+// Example: Quando veio ao Porto para comer bolos, o Pedro encontrou a Ana         -> SUBJ_ANAPH0(comer,Pedro)
+//
+| ?*[verb], SC{?*, ?#1[verb,last]}, ?*[scfeat:~], SC{?*, ?#3[verb,last]} |
+ if ( INTROD-AUX(?,#2) & VDOMAIN(#2,#4) & SUBJ(#4,#5) & HEAD(#2,#1) & HEAD(#6,#3) & INTROD-AUX(?,#6) & VDOMAIN(#6,#7) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+//========================================================
+
+// Example: O Pedro era esperto mas não era inteligente -> ATTRIB_ANAPH0(Pedro,inteligente)
+//
+ if ( PREDSUBJ(#1[cop],#2) & SUBJ[anaph0](#1,#3) )
+   ATTRIB[anaph0=+](#3,#2).
+
+// Example: O Pedro era esperto mas não inteligente     -> ATTRIB_ANAPH0(Pedro,inteligente)
+//
+| #1[verb], ?*, CONJ[coord];PUNCT[lemma:";"];PUNCT[lemma:":"], (PP*;ADVP*), AP#5 |
+ if ( VDOMAIN(?,#2) & HEAD(#2,#1) & PREDSUBJ(#2,#3) & ATTRIB(#4,#3) & HEAD(#6,#5)  & ~ATTRIB(?,#6) )
+   ATTRIB[anaph0=+](#4,#6)
+
+
+//========================================================
+// CATÁFORA
+//========================================================
+
+// Example: Quando veio ao Porto, o Pedro encontrou a Ana         -> SUBJ_ANAPH0(veio,Pedro)
+//
+| ?*[verb], SC{?*, ?#1[verb,last]}, ?*[scfeat:~], PUNCT[comma], ?*[verb:~,scfeat:~], ?#3[verb] |
+ if ( INTROD-AUX(?,#2) & VDOMAIN(#2,#4) & HEAD(#2,#1) & ~SUBJ(#4,?) & HEAD(#6,#3) & VDOMAIN(#6,#7) & SUBJ(#7,#5) )
+   SUBJ[post=+,anaph0=+](#4,#5)
+
+
+//========================================================
+
+// Example: A Joana e a Maria comeram o bolo mas ficaram com fome -> SUBJ_ANAPH0(ficaram,Joana)
+//                                                                -> SUBJ_ANAPH0(ficaram,Maria)
+//
+ if ( SUBJ[anaph0](#2,#1) && COORD(#3,#1) & COORD(#3,#4) && ~SUBJ(#2,#4) )
+    SUBJ[anaph0=+,pre=+](#2,#4)
+
+ if ( SUBJ[anaph0](#2,#1) && COORD(#3,#1) & COORD(#3,#4) && ^SUBJ[anaph0:~](#2,#4) )
+    SUBJ[anaph0=+](#2,#4)
+
+
+//========================================================
+
+//NJM+JB, 2011/01/20
+// Example: Ouvindo a música, o Pedro saiu da fila                    -> SUBJ_ANAPH0(ouvindo,Pedro)
+// Example: tendo começado a ouvir a música, o Pedro saiu da fila     -> SUBJ_ANAPH0(ouvir,Pedro)
+//
+| #1[verb,start], ?*, PUNCT[comma], ?*[verb:~,scfeat:~], #3[verb] |
+ if ( VDOMAIN(#2[gerund],#4) & HEAD(#2,#1) & ~SUBJ(#4,?) & HEAD(#6,#3) & VDOMAIN(#6,#7) & SUBJ(#7,#5) )
+   SUBJ[post=+,anaph0=+](#4,#5)
+
+//NJM+JB, 2011/03/14
+// Example: Devendo interromper o Pedro o discurso, abandonou o palco -> SUBJ_ANAPH0(ouvindo,Pedro)
+//
+| #1[verb,start], ?*, PUNCT[comma], ?*[verb:~,scfeat:~], #3[verb] |
+ if ( VDOMAIN(#2,#4) & SUBJ(#4,#5) & HEAD(#2[gerund],#1) & HEAD(#6,#3) & VDOMAIN(#6,#7) & ~SUBJ(#7,?) )
+   SUBJ[pre=+,anaph0=+](#7,#5)
+
+
+
+//========================================================
+// REPAIRING CDIR(?,nada)
+//========================================================
+
+//NJM+JB, 2011/03/03
+// When an anaphoric subject, co-referent to the subject of the main clause has been extracted,
+// the 'nada' CDIR is destroyed and instead a modifier of the main verb, if it a participial, is constructed.
+// In this case, the POS 'PRO' attributed to 'nada' is inaccurate, since it functions as an negation ADV
+// on the verb (this is a case of double negative particle).
+//
+// This rule should only be used if the VCPART (node #3) is a transitive direct
+//
+// Example: O Pedro disse que não estava nada resolvido   -> CDIR(resolvido,nada) -> MOD_PRE(resolvido,nada)
+//
+|sc{?*,ADVP#1,?*,VCOP}, NP#5, VCPART#3|
+ if ( ^CDIR(#4,#6) &
+      SUBJ[anaph0](#4,?) & MOD(#4,#2) &
+      HEAD(#6[surface:nada],#5) & HEAD(#2[neg],#1) & HEAD(#4,#3) &
+    )
+  MOD[pre=+,post=~,neg=+](#4,#6)
+
+
+//NJM+JB, 2011/03/03
+// This rule is to be related with the rules of anaphoric subject in subclauses,
+// for the detection of co-reference depends ultimately on the interaction of the main verb
+// and the verb in the subordinate clause.This is why, for the time being,
+// the following incorrect result will be produced:
+//                          PREDSUBJ(estava,belo)
+//                          MOD_PRE_NEG(estava,não)
+//                          MOD_POST_NEG(estava,nada)
+//                          QBOUNDARY_COMPLETIV(que,que,belo)
+//                          ATTRIB_ANAPH0(Pedro,belo)
+//
+// Example: O Pedro disse que não estava nada belo
+//
+|sc{?*,ADVP#1,?*,VCOP#7}, NP#5, AP#3|
+ if ( ^PREDSUBJ(#8,#6) &
+      SUBJ[anaph0](#8,?) & MOD(#8,#2) & MOD(#6,#4) &
+      HEAD(#6[surface:nada],#5) & HEAD(#2[neg],#1) & HEAD(#4,#3) & HEAD(#8,#7) &
+    )
+  PREDSUBJ(#8,#4)
+
+//In 2011/July there was a PROBLEM with THIS RULE, when in file XIP took 80 seconds to process a sentence with 55 words
+//
+|sc{?*,ADVP#1,?*,VCOP#7}, NP#5, AP#3|
+ if ( ^ATTRIB[anaph0](#9,#6) &
+      SUBJ[anaph0](#8,?) & MOD(#8,#2) & MOD(#6,#4) &
+      HEAD(#6[surface:nada],#5) & HEAD(#2[neg],#1) & HEAD(#4,#3) & HEAD(#8,#7) &
+    )
+  ATTRIB(#9,#4)
+
+|sc{?*,ADVP#1,?*,VCOP#7}, NP#5, AP#3|
+ if ( ^QBOUNDARY[completiv](#10,#10,#6) &
+      SUBJ[anaph0](#8,?) &
+      MOD(#8,#2) & MOD(#6,#4) &
+      HEAD(#6[surface:nada],#5) & HEAD(#2[neg],#1) & HEAD(#4,#3) & HEAD(#8,#7)
+    )
+  QBOUNDARY(#10,#10,#4)
+
+|sc{?*,ADVP#1,?*,VCOP#7}, NP#5, AP#3|
+ if ( SUBJ[anaph0](#8,?) & MOD(#8,#2) &
+      ^MOD[post](#6,#4) &
+      HEAD(#6[surface:nada],#5) & HEAD(#2[neg],#1) & HEAD(#4,#3) & HEAD(#8,#7)
+    )
+  MOD[neg=+](#8,#6)
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+//  Identification of Passive
+//
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//Passiva com ser
+// O Pedro leu o livro -> O livro foi lido por o Pedro
+|pastpart#2[pass-ser=+]|
+ if ( VLINK(?[lemma:ser],#2[pastpart]) )
+   ~
+
+
+//Passiva com estar (vcop que não é ser)
+// O Pedro partiu a janela -> A Janela está partida
+|pastpart#2[pass-estar=+]|
+ if ( VLINK(?[cop,lemma:~ser],#2[pastpart]) )
+   ~
+
+//NJM+JB, 2013/06/28
+//Initial steps towards the identification of -se passive constructions.
+//Agreement of the verb in plural with a plural subject
+
+// Example: Alguém fez várias observações à Ana -> Fizeram-se várias observações à Ana
+|?[verb]{#1[pass-pron=+]}, NP{#2[cli,surface:se]}, NP#3|
+ if ( CLITIC(#1,#2) & VDOMAIN(#1[3p,pl],#1) & HEAD(#4[pl],#3) & ^CDIR(#1,#2) )
+   SUBJ(#1,#4)
+
+// Alguém tinha feito várias observações à Ana -> tinham-se feito várias observações à Ana
+|?[verb]{#1[pass-pron=+]}, NP#3|
+ if ( VDOMAIN(#5[3p,pl],#1) & CLITIC(#1,#2) & HEAD(#4[pl],#3) & ^CDIR[pre](#1,#2) )
+   SUBJ[pre=~,post=+](#1,#4)
+
+// As observações que se fizeram
+|SC{#5[pronrel], ?*, NP{#2[surface:se]}, ?*, ?[verb,last]{#3[3p,pl,pass-pron=+]}}|
+ if ( ANTECEDENT[relat](#4[pl],#5) & CLITIC(#1,#2) & VDOMAIN(#3,#1) & ^CDIR(#1,#2) )
+   SUBJ(#1,#5)
+
+|SC{?*, ?{#1[last,pass-pron,pass-pron=~]}}, ?*, ?{#2[pass-pron:~,pass-pron=+]}|
+ if ( VDOMAIN(#1,#2) )
+  ~
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// AGENT and PATIENT DEPENDENCIES  (VERY LIGHT PASSIVE TREATMENT)
+//
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//CH, 2007/05/22
+// Creation of an AGENT and PATIENT dep between agent complements and Verb
+//
+// Example: (O rato) foi comido pelo gato -> AGENT(comer,gato), PATIENT(comer,rato)
+//
+if ( PREPD(#3,?[lemma:por]) & ^MOD[post](#2,#3) & VLINK(?[lemma:ser],#2[pastpart]) & SUBJ(#2,#5) )
+   COMPL[preploc=~,preppdv=~](#2,#3),
+   AGENT[features=~,post=+](#2,#3),
+   PATIENT[features=~,pre=+](#2,#5).
+
+
+// When the AGENT is not present and only PATIENT
+// Requirement of an existing modifier of the verb, in order to avoid to attribute PATIENT relations in // badly disambiguated PPART-ADJ
+//
+// Example: A recompensa foi dada em 2006             -> PATIENT_PRE(dada,recompensa)
+// Example: O Pedro tinha sido lixado para com a Ana. -> xxxxxxxxxx                    2011/03/01 (PREPBENEF restriction)
+//
+if ( SUBJ[!features:!](#2,#3) & VLINK(?[lemma:ser],#2[pastpart]) & ~AGENT(#2,?) &
+     ( MOD[post,PREPBENEF:~](#2,?) | MOD[pre,PREPBENEF:~](#2,?[qu]) )  )
+   PATIENT(#2,#3)
+
+
+//CH, 2007/06/??
+// Allowing not to have a modifier in the case of interrogative clauses
+//
+// Example: O que foi comido?         -> PATIENT(comido,o que)
+// Example: Que foi comido?           -> PATIENT(comido,que)
+// Example: O que é que foi comido?   -> PATIENT(comido,o que)
+//
+if ( SUBJ[interrog,!features:!](#2,#3) & ~PATIENT(#2,#3) & VLINK(?[lemma:ser],#2[pastpart]))
+        PATIENT(#2,#3)
+
+
+//NJM+JB, 2011/03/10
+//Anaphoric Subjects are marked anaphoric Patients
+//
+// Example: O Pedro disse que fora lixado pela Ana. -> PATIENT_ANAPH0(lixado,Pedro)
+//
+if ( ^PATIENT(#1,#2) & SUBJ[anaph0](#1,#2) )
+        PATIENT[anaph0=+](#1,#2)
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// UPDATING (computing new) ATTRIBs
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/03/29
+//This rule makes its first appearance on file dependency5.xip
+// (new subjects have been produced in the meanwhile.  )
+//
+// X cop Y gives
+//            PREDSUBJ(cop,Y) and SUBJ(cop,X)
+// and now also produces:
+//            ATTRIB(X,Y)
+//
+ if ( PREDSUBJ(#1[cop],#2) & SUBJ(#1,#3) & ~ATTRIB(#3,#2) )
+   ATTRIB(#3,#2).
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// UPDATING (remove) PREPLOC features
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2013/01/15
+//This rule removes PREPLOC from CINDIR dependencies
+//
+// Example: Basta, disse ao Pedro
+//
+ if ( ^CINDIR[preploc,preploc=~](#1,#2) )
+   CINDIR[preploc=~](#1,#2).
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// ADDING MOD on TEMPORAL NPs 
+//
+///////////////////////////////////////////////////////////////////////
+
+// Example: O Pedro fez isso todos os dias.   -> MOD(fez,dias)
+//
+if (NE[t-frequency](#1) & HEAD(#2,#1) & ~MOD(?,#2) & MAIN(#3) )
+  MOD(#3,#2)
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// REMOVE DEPENDENCIES RELATED WITH EMPHATIC WORDS
+//
+////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/12/28
+//Example: Que raio fez o Pedro?
+//
+//if ( ^$1(#2[emph],#3) )
+// ~
+//
+//if ( ^$1(#2,#3[emph]))
+// ~

@@ -1,0 +1,327 @@
+sequence:
+
+/ this rule assigns starbis feature to any word after a punctuation at start of sentence\
+/ notice:  ?[punct] covers both PUNCT and SGML categories \
+
+1> ?[startbis=+] @= ?[start,punct], ?*[punct], ?.
+
+1> ?[startbis=+] = ?[start:+].
+
+/ this rule assigns startbis feature to any word after a word marked as strongbreak (typically open parenthesis or ; or :\
+/ notice:  ?[punct] covers both PUNCT and SGML categories \
+1> ? = ?[strongbreak], ?*[punct], ?[startbis=+].
+
+
+tagging:
+
+/ these desambiguation rules rewrite terminal nodes (change lexical category) in certain contexts\
+/ correcting input from lexicon:  -le is a determiner if followed by hyphen and not a pronoun in Monsieur-le-Prince \
+
+3> PRON[acc,hyph] %= DET[det=+,def=+,hyph=+]  |punct[Hyph]|.
+
+/Montrevel-en-Bresse \
+3> PRON[gen,hyph] %= PREP[form:fen, sfen=+, hyph=+]  |punct[Hyph]|.
+
+
+/Montlouis-sur-Loire\
+3> PREFIX[lemme:sur] %= |Punct[hyph]| PREP[form:fsur, sfsur=+, hyph=+].
+
+
+
+
+
+
+/ ---   done in desamb.fic ----\
+/---- Proper Names ---\
+/ Evita, Bats, Octavien \
+
+/
+3> (verb)[maj,noun:~,startbis:~] %= |?[maj];prep|  Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+]. 
+
+3> (verb)[maj,noun:~] %= Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+] |?[maj]| .
+
+3> (adj)[maj,noun:~,startbis:~] %= |?[maj:~,det:~]| Noun[proper=+,maj=+,masc=+,fem=+,sg=+,pl=+,p3=+].
+\
+
+/  ------------------     end desambiguation rules  ---------------- \ 
+
+
+sequence:
+
+/ le porte à porte\
+6> NOUN[mwe=+]  =  |det;prep;num| noun#1, prep, noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+
+/ jour après jour is an adverb \
+7> ADV[mwe=+,compound=+] =  |?[det:~,prep:~,num:~]| noun#1, prep, noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+/ jour après jour is an adverb \
+7> ADV[mwe=+,compound=+] =   noun#1[startbis], prep, noun#2,
+                             where (#1[lemme]:#2[lemme]).
+
+
+
+
+
+/---- rules for prefixed items ----\
+
+/ a rule for coordinated prefixes: les pro et anti-Maastricht\
+6> PREFIX = PREFIX, PUNCT[hyph]; COORD, PREFIX .
+
+
+6>  VERB[prefixed=+,compound=+] = |PRON[Nom];NEG, PRON*| PREFIX, 
+VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p1:!,!p2:!,!p3:!,!ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,pre:!,!pas:!,!fut:!,!subcatfeatures:!].
+
+
+7> NOUN[prefixed=+,P3=+,compound=+] = |DET,(ADJ)| PREFIX,   NOUN[p3, !masc:!,!fem:!,!sg:!,!pl:!,
+					!subcatfeatures:!].
+
+8>  VERB[prefixed=+,compound=+] = |PRON; NOUN| PREFIX,   VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p1:!,!p2:!,!p3:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> VERB[prefixed=+,compound=+,inf=+] = |PREP[prepinf]| PREFIX,   VERB[inf,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> VERB[prefixed=+,compound=+,partpas=+] = |NOUN| PREFIX,   VERB[partpas,!masc:!,!fem:!,!sg:!,!pl:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,!partpas:!,
+					!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+8> NOUN[prefixed=+,compound=+] = PREFIX,   NOUN[!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,
+					!subcatfeatures:!].
+
+8> ADJ[prefixed=+,compound=+] = |NOUN| PREFIX,   ADJ[!masc:!,!fem:!,!sg:!,!pl:!,
+					!subcatfeatures:!].
+
+8> VERB[prefixed=+,compound=+] = |VERB| PREFIX,   VERB[!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,
+                                     !ind:!,!imp:!,!subj:!,!cond:!,!inf:!,partpre:!,
+					!partpas:!,!pre:!,!pas:!,!fut:!,
+					!subcatfeatures:!].
+
+/---- end of rules for prefixed  items ----\
+
+
+
+
+
+/---- rules for hyphenated items ----\
+
+
+/Garges-les-Oies\
+7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!,subcatfeatures:!], ?[hyph], 
+				punct[hyph], ?[subcatfeatures:!, time:!].
+
+/Bourg-de-Peage, Bourg-d'Oisans\
+7> Noun[mwe=+,maj=+] = noun[maj,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], punct[hyph],
+            prep,(punct[hyph]), noun[subcatfeatures:!, time:!].
+
+
+/ FT: regroupe Pierre - Henry dans Pierre - Henry Michaud \
+7> NOUN[proper=+] = NOUN[preN,!maj:!,!preN:!,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!],   PUNCT[hyph],  NOUN. 
+
+/Port-Moresby\
+8> NOUN[compound=+,mwe=+,maj=+] = NOUN[maj,!maj:!,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!],  PUNCT[hyph],  NOUN[maj].
+
+/ ce chien-ci \
+8> NOUN = NOUN[!subcatfeatures:!], PUNCT[hyph],  ADV.
+
+
+/ 35-40, 50 à 56 \
+/8> NUM[compound=+,mwe=+,num=+, time=-] = NUM, PUNCT[hyph];punct[form:fslash];prep[form:fa],  NUM.\
+8> NUM[compound=+,mwe=+,num=+] = NUM, PUNCT[hyph];punct[form:fslash],  NUM.
+
+
+/ son/ses \
+8> det[compound=+,mwe=+,det=+,masc=+,fem=+,sg=+,pl=+] = det, PUNCT[hyph];punct[form:fslash],  det.
+
+/ il/elle \
+8> pron[compound=+,mwe=+,pron=+,masc=+,fem=+,sg=+,pl=+] = pron[!poss:!,!dem:!,!nom:!,!acc:!,!p1:!,!p2:!,!p3:!], 
+						PUNCT[hyph];punct[form:fslash], pron.
+
+
+
+/---- end of rules for hyphenated  items ----\
+
+/
+10> NOUN[measure=+, mwe=+, time=-] = num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+, time=-] = noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+, time=-] = num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+\
+
+10> NOUN[measure=+, mwe=+] = num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+] = noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num[det:~].
+
+10> NOUN[measure=+, mwe=+] = num[det:~], noun[measure,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+
+
+
+
+
+idrules:
+/--------------  grammaire de dates ---------------------\
+
+/lundi soir\
+//14> Noun[date=+,time=+,mwe=+] -> noun[jour,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], noun[postjour].
+
+/lundi 15 au soir\
+//14> Noun[date=+,time=+,mwe=+] -> noun[jour,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!], num, (prep[form:fa,det]), (noun[postjour]).
+
+/lundi 15 mars\
+14> Noun[date=+,time=+,mwe=+,masc=+,sg=+] -> (noun[jour]), num, noun[mois], (prep[form:fa,det]), (noun[postjour]).
+
+/lundi 12 mars 1987\
+14> Noun[date=+,time=+,mwe=+,masc=+,sg=+] -> (noun[jour]), (num), noun[mois], num.
+
+/fin mars 1987\
+14> Noun[date=+,time=+,mwe=+,masc=+,sg=+] -> noun[predate], (noun[jour]), (num), noun[mois], (num).
+
+/fin  1987\
+14> Noun[date=+,time=+,mwe=+,masc=+,sg=+] -> noun[predate], (noun[jour]), (num), num.
+
+/lundi 12 mars 1987 av. JC\
+14> Noun[date=+,time=+,mwe=+,masc=+,sg=+] -> (noun[predate]), (noun[jour]), (num), (noun[mois]), 
+						num, prep, noun[form:fjc]. 
+
+
+
+
+
+
+
+
+/--------------  fin grammaire de dates ---------------------\
+
+
+
+
+
+
+lprules:
+
+14>   [jour:+] < [mois:+]
+14>   [jour:+] < [num:+]
+14>   [prep:+] < [form:fjc]
+14>   [mois:+] < [postjour:+]
+14>   [form:fa] < [postjour:+]
+14>   [predate:+] < [mois:+]
+14>   [predate:+] < [num:+]
+
+sequence:
+
+/en 1989, vers 1989  is a date\
+15> NOUN[mwe=+,time=+,date=+] =  |prep[form:fen];prep[form:fvers]| num[date=+] |punct ; sent; cm ; det;conj;prep|.
+
+
+
+/début 1980\
+15> noun[mwe=+,time=+,date=+] =  noun[predate], num[date=+].
+
+/ trois jours, deux heures\
+15> noun[mwe=+,time=+] =  |?[det:~,prep:~]| num[det:~], noun[time].
+
+
+/un jour, un beau jour\
+15> noun[mwe=+,time=+] =  det[indef,num=~, form:~fde], adj*, noun[time,date:~].
+
+/ il y a analysé comme un verbe fini, comme "voici" \
+//15> verb[mwe=+,fin=+] =  pron[lemme=il], pron[lemme=y], verb[aux:+,form:favoir] |?[verb:~]|.
+
+/ il y a peu \
+//16> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+//verb[aux:+,form:favoir], adv[lemme=peu] | ?[form:~fde] |.
+
+/ il y a ?* TIME \
+//16> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+//verb[aux:+,form:favoir], adv*, ?*[verb:~,noun:~], noun[time:+].
+
+
+/ il y a maintenant un quart de siècle \
+//16> adv[mwe=+,time=+,quep=+] = pron[lemme=il], pron[lemme=y],
+//verb[aux:+,form:favoir], adv*, det;num, noun[partit:+], prep, noun[time:+].
+
+
+
+
+/determinants complexes: beaucoup de gens, tellement de tact\
+//16> det[mwe=+,quant=+] = pron[quant];adv[quant], prep<form:fde,pl:~> 	|det; adj*, noun; pron[ton]|.
+
+
+/determinants complexes: beaucoup d'entre ces gens\
+//16> det[mwe=+,quant=+] = pron[quant];adv[quant], prep<form:fdentre>	|det; pron[ton]|.
+
+/determinants complexes: bien des gens\
+//16> det[mwe=+,quant=+] = adv[form:fbien], det<form:fdu>;det[indef,pl]	|adj*, noun|.
+
+
+/M. et Mme\
+16> Noun[mwe=+,tit=+,pl=+] = noun[tit], coord, noun[tit].
+
+/ M. le Prof. \
+16> Noun[mwe=+,tit=+,sg=+] = noun[tit], det[def], noun[tit].
+
+/ Louis 12, François 1er \
+16> Noun[mwe=+,maj=+,sg=+,proper=+] = noun[maj,preN], num;adj[ord].
+
+/ (les systèmes) question-réponse \
+/ (le projet) TC-STAR \
+16> Noun[mwe=+] = noun, punct[form:fhyph], noun.
+16> Noun[mwe=+] = noun, punct[form:fslash], noun.
+
+/ error list (suite de mots en langue étrangère \
+16> Noun[mwe=+] = noun[guessed,maj:~], noun[guessed,maj:~], noun[guessed,maj:~].
+16> Noun[mwe=+] = noun[guessed,maj:~], noun[guessed,maj:~].
+
+
+/--------------- done at chunking level -------------------\
+/------------------------- grammaire de noms propres ---------------------\
+
+/ M. de Beauharnais\
+/15> Noun[mwe=+,maj=+] = |?[tit], noun*[pren],noun[initial]| prep[form:fde], det*[def,sg], noun[maj].\
+
+
+/ Louis 12\
+/15> Noun[mwe=+,maj=+] = noun[maj,startbis:~,adv:~,prep:~,conj:~,pron:~], num.\
+
+/ Louis 12\
+/15> Noun[mwe=+,maj=+] = noun[maj,startbis,adv:~,prep:~,conj:~,verb:~,pron:~,adj:~], num.\
+
+
+/ M. Jean Dupont\
+/16> Noun[mwe=+] @= noun[tit], noun*[maj], noun[maj].\
+
+/Jean Dupont\
+/ 16> Noun[mwe=+,maj=+] @= noun[maj,startbis:~], noun*[maj,adv:~,prep:~,conj:~,pron:~], noun[maj].\
+
+/Jean Dupont\
+/ 16> Noun[mwe=+,maj=+] @= noun[maj,startbis,adv:~,prep:~,conj:~,verb:~,pron:~,adj:~], noun*[maj], noun[maj].\
+
+
+
+
+
+
+/--------------  fin grammaire de noms propres ---------------------\
+
+
+
+////////////////////////////////////////////////////////////////////////////
+// 2.01
+
+multiwords:
+
+20> "[L,l]' une" = pron[compound=+,sg=+,fem=+,def=+].
+20> "[L,l]' un" = pron[compound=+,sg=+,masc=+,def=+].
+20> "[P,p]ar conséquent" = adv[compound=+].
+20> "[N,n]ous autres" = pron[compound=+,pl=+,nom=+,p1=+].
+20> "[V,v]ous autres" = pron[compound=+,pl=+,nom=+,p2=+]. 
+
+

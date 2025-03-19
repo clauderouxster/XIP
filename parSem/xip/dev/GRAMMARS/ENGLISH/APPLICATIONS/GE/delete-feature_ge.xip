@@ -1,0 +1,109 @@
+Script:
+
+
+// lessor terminates/notifies
+
+iftest ( SUBJ(#1[termination],#2[lemme:lessor]) ) { #1[termination=~] ; }
+iftest ( SUBJ-N(#1[termination],#2[lemme:lessor]) ) { #1[termination=~] ; }
+
+iftest ( SUBJ(#1[notification],#2[lemme:lessor]) ) { #1[notification=~] ; }
+iftest ( SUBJ-N(#1[notification],#2[lemme:lessor]) ) { #1[notification=~] ; }
+
+iftest ( SUBJ(#1[renewal],#2[lemme:lessor]) ) { #1[renewal=~] ; }
+iftest ( SUBJ-N(#1[renewal],#2[lemme:lessor]) ) { #1[renewal=~] ; }
+
+// Lessor sends notice
+
+iftest ( SUBJ(#1,#2[lemme:lessor]) & OBJ(#1,#3[notification]) ) { #3[notification=~] ; }
+
+// notice from lessor
+
+iftest ( MOD[post](#1[notification],#2[lemme:lessor]) & PREPD(#2[lemme:lessor],#3[form:ffrom]) ) { #1[notification=~] ; }
+
+// terminable by lessor
+
+iftest ( MOD[post](#1[termination],#2[lemme:lessor]) & PREPD(#2[lemme:lessor],#3[form:fby]) ) { #1[termination=~] ; }
+
+// notice to Lessee 
+
+
+iftest ( MOD[post](#1[notification],#2[lemme:lessee]) & PREPD(#2[lemme:lessee],#3[form:finfto]) ) { #1[notification=~] ; }
+
+
+// if the sentence contains "policy," it is about insurance, so it is not relevant
+
+DependencyRules:
+
+| #1[negword] |
+	NEGWORD(#1).
+
+| #1[renewal] |
+	RENEWALWORD(#1).
+
+| #1[termination] |
+	TERMINATIONWORD(#1).
+
+| #1[notification] |
+	PRE-NOTIFICATION(#1).
+
+Script:
+
+iftest ( NEGWORD(#1) & RENEWALWORD(#2) ) { #2[renewal=~] ; }
+
+iftest ( NEGWORD(#1) & TERMINATIONWORD(#2) ) { #2[termination=~] ; }
+
+iftest ( NEGWORD(#1) & PRE-NOTIFICATION(#2) ) { #2[notification=~] ; }
+
+DependencyRules:
+
+if ( ^RENEWALWORD(#2[renewal:~]) )
+	~.
+
+if ( ^TERMINATIONWORD(#2[termination:~]) )
+	~.
+
+if ( ^PRE-NOTIFICATION(#2[notification:~]) )
+	~.
+
+// cancel within 15 days - is never a cancallation of renewal
+
+| #2[negprep] |
+if ( ^$1(#1,#2[negprep]) )
+	$1[negprep=+](#1,#2).
+
+| #2[negprep] |
+if ( ^$1(#1[negprep]) )
+	$1[negprep=+](#1).
+
+if ( ^$1[negprep](#1) )
+	~.
+
+Script:
+
+iftest ( $1[negprep](#1[termination],#2) ) { #1[termination=~] ; }
+iftest ( $1[negprep](#1,#2[termination]) ) { #2[termination=~] ; }
+iftest ( $1[negprep](#1[notification],#2) ) { #1[notification=~] ; }
+iftest ( $1[negprep](#1,#2[notification]) ) { #2[notification=~] ; }
+
+DependencyRules:
+
+// until the Equipment is received
+
+| #1[fordep1a] |
+	LIXO[fordep1a=+](#1)
+
+| #1[fordep1b] |
+	LIXO[fordep1b=+](#1)
+
+if ( LIXO[fordep1a](#1) & LIXO[fordep1b](#2) )
+	TIMEX3[renewaltime=+](#1,#2).
+
+if ( ^LIXO(#1) )
+	~.
+
+
+// paid on a quarterly basis
+
+if ( MOD[post](#1[lemme:pay],#2[lemme:basis]) & QUALIF(#2[lemme:basis],#3) & ^TIMEX3(#3) )
+	~.
+

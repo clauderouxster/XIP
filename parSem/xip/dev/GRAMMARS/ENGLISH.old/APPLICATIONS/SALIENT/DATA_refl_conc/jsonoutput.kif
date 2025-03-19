@@ -1,0 +1,203 @@
+parser p(_current+"english-refl-conc.grm");
+
+vector results;
+int sent;
+
+// features to display:
+//A3R framework features
+// CONTEXT, CHALLENGE, CHANGE, LINK2ME
+// dependency features: TEMPORALITY, STANCE, CONTRAST, SHIFT, SUBJECT, OTHERSUBJECT, ANALYSIS, SUBJECT+STANCE, OTHERSUBJECT+STANCE, SUBJECT+ANALYSIS, OTHERSUBJECT+ANALYSIS, LINK+ANALYSIS, LINK+STANCE, CONTRAST+ANALYSIS, CONTRAST+STANCE, SUBJECT+CONTRAST, SHIFT+ANALYSIS, STANCE+ANALYSIS
+
+// word features: RM, SUBJECT, AFFECTIVE, NEGATIVESENT, NEGATION, QUESTION, COMPAR, EPISTEMIC, MODAL, CONJSUB, CAUSATIVE, FUTURETEMP
+
+
+svector listfeats=["AWAPARA",
+     "CONCEPT",
+     "TEMPORALITY", "STANCE", "CONTRAST",
+     "SHIFT", "SUBJECT", "OTHERSUBJECT", "ANALYSIS", "SUBJECT+STANCE",
+     "OTHERSUBJECT+STANCE", "SUBJECT+ANALYSIS", "OTHERSUBJECT+ANALYSIS",
+     "LINK+ANALYSIS", "LINK+STANCE", "CONTRAST+ANALYSIS",
+     "CONTRAST+STANCE", "SUBJECT+CONTRAST", "SHIFT+ANALYSIS", "STANCE+ANALYSIS"
+];
+
+svector listmoves=[
+"CONTEXT", "CHALLENGE",
+     "CHANGE", "LINK2ME"
+];
+
+function incremente() {
+     sent++;
+}
+
+function stock(dependency d) {
+     ssmap feats=d.features();
+     string key;
+     svector keeps;
+     svector keepm;
+     primemap res;
+     bool awapara=false;
+
+     for (key in listfeats) {
+          if (feats.test(key)==true) {
+               if (key=="AWAPARA")
+                    awapara=true;
+               keeps.push(key);
+          }
+     }
+
+     for (key in listmoves) {
+          if (feats.test(key)==true) {
+               keepm.push(key);
+
+          }
+     }
+
+     //     printlnerr(keeps,feats);
+
+     /////////////////////////////
+
+     string surf=d.parameters()[0].surface();
+     surf=surf.html();
+     surf=surf.replace("'","&apos;");
+     surf=surf.replace("`","&apos;");
+     surf=surf.replace("'","&apos;"); 
+     surf=surf.replace("&amp;","&amp;");
+     surf=surf.replace("","&hellip;");
+      if (results.size()>0 and results[-1]["id"]==sent) {
+          if (results[-1]["AWAPARA"]==false and awapara==true)
+               results[-1]["AWAPARA"]=true;
+
+          if (results[-1].test(d.name())) {
+               results[-1][d.name()].push(surf);
+               results[-1][d.name()+"_F"].push(keeps);
+               results[-1][d.name()+"_M"].push(keepm);
+          }
+          else {
+               results[-1][d.name()]=[surf];
+               results[-1][d.name()+"_F"]=[keeps];
+               results[-1][d.name()+"_M"]=[keepm];
+          }
+     }
+     else {
+          res["id"]=sent;
+          res["AWAPARA"]=awapara;
+          res[d.name()]=[surf];
+          res[d.name()+"_F"]=[keeps];
+          res[d.name()+"_M"]=[keepm];
+          results.push(res);
+     }
+
+     /////////////////////
+
+     //     if (results.size()>0 and results[-1]["id"]==sent) {
+     //
+     //          if (results[-1].test(d.name())) {
+     //               results[-1][d.name()].push(d.parameters()[0].surface());
+     //               results[-1][d.name()+"_M"].push(keepm);
+     //          }
+     //          else {
+     //               results[-1][d.name()]=[d.parameters()[0].surface()];
+     //               results[-1][d.name()+"_M"]=[keepm];
+     //          }
+     //     }
+     //     else {
+     //          res["id"]=sent;
+     //          res[d.name()]=[d.parameters()[0].surface()];
+     //          res[d.name()+"_M"]=[keepm];
+     //          results.push(res);
+     //
+     //
+     //     }
+}
+
+/@
+If you want to add new features to trigger some storage in the JSON structure, you need to update both reflfeatures and 
+the feature declaration in rule below.
+@/
+svector reflfeatures=['RM','SUBJECT','AFFECTIVE','NEGATIVESENT','NEGATION','QUESTION','COMPAR',
+     'EPISTEMIC','MODAL','CONJSUB','CAUSATIVE','FUTURETEMP'];
+
+function addtheword(node n) {
+     ssmap traits=n.features();
+     string ft;
+     bool found=false;
+     for (ft in reflfeatures) {
+          if (traits.test(ft)) {
+               found=true;
+               break;
+          }
+     }
+
+     if (not found)
+          return;
+
+     string surf=n.surface();
+     surf=surf.html();
+     surf=surf.replace("'","&apos;");
+     surf=surf.replace("`","&apos;");
+     surf=surf.replace("'","&apos;");            
+     surf=surf.replace("…","&hellip;");
+     surf=surf.replace("&amp;","&amp;");
+     if (results.size()>0 and results[-1]["id"]==sent) {
+          if (results[-1].test(ft)) {
+               if (surf not in results[-1][ft])
+                    results[-1][ft].push(surf);
+          }
+          else
+               results[-1][ft]=[surf];
+     }
+     else {
+          primemap res;
+          res["id"]=sent;
+          res["AWAPARA"]=false;
+          res[ft]=[surf];
+          results.push(res);
+     }
+}
+
+
+string rule = @"
+
+features:
+[json: 
+[
+RM:{},
+SUBJECT:{},
+AFFECTIVE:{},
+NEGATIVESENT:{},
+NEGATION:{},
+QUESTION:{},
+COMPAR:{},
+EPISTEMIC:{},
+MODAL:{},
+CONJSUB:{},
+CAUSATIVE:{},
+FUTURETEMP:{}
+]
+]
+
+Script:
+
+incremente();
+
+if (SENT$1(#1) | REFLCONC$1(#1) | ORGANISATION$1(#1) | LOCATION$1(#1) | LOCORG$1(#1) | PERSON$1(#1) | AUTHOR$1(#1) | CONCEPT$1[REFLSENT](#1) ) {
+     stock($1);
+}
+
+|#1[JSON]| {
+     addtheword(#1);
+}
+
+
+"@;
+
+p.addendum(rule,true);
+
+//string phrase="We propose the design and implementation of effective Social Learning Analytics (SLA) present significant challenges.";
+//p.parse(phrase);
+
+int nb;
+p.parsexml(_args[0],0,nb);
+
+println(results.json());
+

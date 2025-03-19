@@ -1,0 +1,567 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Maud Ehrmann. Annotation temporelle.
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// EN COURS
+
+// Procédure pour pouvoir effacer des deps identiques à des niveaux différents de l'arbre:
+
+Procedures:
+
+Detruiresousnoeuds(#1) {
+ if ($1(#1)) {
+    setfeature($1,"todelete","+");
+ }
+
+ if (next(#1,#2)) {
+    Detruiresousnoeuds(#2);
+ }
+
+ if (daughter(#1,#3)) {
+     Detruiresousnoeuds(#3);
+ }
+return(1);
+}
+
+
+
+
+
+//-------------------------------------
+//------- Annotation temporelle--------
+// Dependances identifiées: 
+// DATE, DATEPOT, DATEMOD, DATEDEDUCED
+// HEURE, HEUREPOT, HEUREDEDUCED
+// DUREE, DUREEMOD
+// SET, INTERVAL
+// Choix :
+// - annotation au niveau des NPs et PPs
+// sauf pour DATEPOT et certain INTERVAL sur des NUM
+// - certains traits remontent au niveau des deps, ce n'est pas obligatoire.
+
+
+
+Déduction:
+
+// tests 
+|NP#1[toto]|
+	TOTO(#1)
+
+//----------
+//EVENEMENT-TEMP
+//----------
+
+
+|NOUN#1[date_event:+]|
+	if (~EVENEMENT-TEMP(#1))
+	EVENEMENT-TEMP(#1).
+
+
+//----------
+//INTERVALLE
+//----------
+
+|PP#1[interval]|
+	if(~INTERVAL-TEMP(#1))
+	INTERVAL-TEMP(#1).
+
+
+|NP#1[interval,heure]|
+	if(~INTERVAL-TEMP(#1))
+	INTERVAL-TEMP[heure=+](#1).
+
+|NP#1[interval,date]|
+	if(~INTERVAL-TEMP(#1))
+	INTERVAL-TEMP[date=+](#1).
+
+|NUM#1[tempexpr,interval]|
+	if(~INTERVAL-TEMP(#1))
+	INTERVAL-TEMP[interval=+](#1).
+
+//----------
+//  HEURES
+//----------
+
+|NP#1[heure:+,duree:~,daytime:~,dureemod:~]|	
+	if (~HEURE(#1))
+	HEURE(#1)
+
+|ADV#1[heure:+,duree:~,daytime:~,dureemod:~]|	
+	if (~HEURE(#1))
+	HEURE(#1)
+
+|NP#1[heure:+,duree:~,daytime:+,dureemod:~]|	
+	if (~HEURE(#1))
+	HEURE[daytime=+](#1)
+
+|PP#1[heure:+,duree:~,t_mod:~approx,orig:~,tfin:~,daytime:~,dureemod:~]|	
+	if (~HEURE(#1))
+	HEURE(#1)
+
+|PP#1[heure:+,duree:~,daytime:+]|	
+	if (~HEURE(#1))
+	HEURE[daytime=+](#1)
+
+|PP#1[heure:+,duree:~,orig:+]|	
+	if (~HEURE(#1))
+	HEURE[orig=+](#1)
+
+|PP#1[heure:+,duree:~,tfin:+]|	
+	if (~HEURE(#1))
+	HEURE[tfin=+](#1)
+
+|PP#1[heure:+,duree:~,t_mod:approx]|	
+	if (~HEURE(#1))
+	HEURE[t_mod=approx](#1).
+
+//heures ambigues
+
+|NOUN#1[heureambig:+]|	
+	if (~HEUREPOT(#1))
+	HEUREPOT[heureambig=+](#1)
+
+// HEUREMOD
+
+|PP#1[heuremod:+]|	
+	if (~HEURE[heuremod:+](#1))
+	HEUREMOD[heuremod:+](#1).
+
+
+
+//----------
+//  SET
+//----------
+
+// tous les (...)
+|NP#1[set]|
+	if (~SET(#1))
+	SET(#1)
+
+|ADV#1[set]|
+	if (~SET(#1))
+	SET(#1)
+
+
+//----------
+//  DUREE
+//----------
+
+// Pour les heures :
+
+
+|NP#1[heure,duree,dureemod:~]|	
+	if (~DUREE(#1))
+	DUREE[heure=+](#1)
+
+
+|PP#1[duree,heure,dureemod:~]|
+	if (~DUREE[heure](#1))
+	DUREE[heure=+](#1).
+
+
+// Pour les dates :
+
+|NP#1[duree,date]|
+	if (~DUREE(#1))
+	DUREE[date=+](#1).
+
+|PP#1[duree,date]|
+	if (~DUREE(#1))
+	DUREE[date=+](#1).
+
+|PP#1[duree,tempexpr]|
+	if (~DUREE(#1))
+	DUREE[date=+](#1).
+
+
+|ADV#1[duree,date]{?*,NOUN#2[duree,date]}|
+	if (~DUREE(#1) & ^DUREE(#2))
+	DUREE[date=+](#1),
+	~.
+
+
+// Durees modifiees :
+
+|NP#1[dureemod,date]{?*,#2}|
+	if (~DUREEMOD(#1))
+	DUREEMOD[date=+](#1).
+
+|NP#1[dureemod,heure]|
+	if (~DUREEMOD(#1))
+	DUREEMOD[heure=+](#1).
+
+
+//----------
+//  DATES
+// en plus de deduction_entites1.xip
+//----------
+
+
+|NP#1[date,absolue,complete:~,incomplete:~,datecoord:~]|
+	if(~DATE(#1) & Mother(#1,#2[prep:~]))
+	DATE[absolue=+](#1).
+
+|PP#1[date,complete:~,incomplete:~,datecoord:~,datemod:~,heure:~,interval:~,duree:~]|
+	if(~DATE(#1))
+	DATE(#1).
+
+// DATES "MODIFIEES" (début octobre, fin 2008,etc.)
+
+|NP#1[datemod,relative]|
+	if(~DATEMOD(#1))
+	DATEMOD[relative=+](#1)
+
+|NP#1[datemod,absolue]|
+	if(~DATEMOD(#1))
+	DATEMOD[absolue=+](#1)
+
+|NOUN#1[datemod,relative,last]|
+	if(~DATEMOD(#1))
+	DATEMOD[relative=+](#1)
+
+|NOUN#1[datemod,absolue]|
+	if(~DATEMOD(#1))
+	DATEMOD[absolue=+](#1)
+
+
+|PP#1[datemod,relative]|
+	if(~DATEMOD(#1))
+	DATEMOD[relative=+](#1)
+
+|PP#1[datemod,absolue]|
+	if(~DATEMOD(#1))
+	DATEMOD[absolue=+](#1)
+
+
+
+
+//SETMOD
+|PP#1[setmod,tempexpr]|
+	if(~SETMOD(#1))
+	SETMOD(#1)
+
+|NP#1[setmod]|
+	if (~SETMOD(#1))
+	SETMOD(#1)
+
+
+// DUREE MODIFIEES
+
+|PP#1[dureemod,heure]|
+	if(~DUREEMOD[heure:+](#1))
+	DUREEMOD[heure=+](#1)
+
+|PP#1[dureemod,date]|
+	if(~DUREEMOD[date:+](#1))
+	DUREEMOD[date=+](#1)
+
+|NP#1[dureemod,heure]|
+	if(~DUREEMOD[heure:+](#1))
+	DUREEMOD[heure=+](#1)
+
+|NP#1[dureemod,date]|
+	if(~DUREEMOD[date:+](#1))
+	DUREEMOD[date=+](#1)
+
+
+// ----------------------------------------------------
+//  DEDUCTIONS 
+// Tentative de traitement de certaines dates coordonnées
+// en Mai et Juin 2008 -> déduire Mai 2008			
+//------------------------------------------------------
+
+Variables:
+
+//pour les dates:
+string _lemjour;
+string _lemNumJour;
+string _lemYear;
+string _lemMonth;
+string _lemDateDeduced;
+string _lemDebutYear;
+string _lemEndYear;
+string _lemDet;
+
+// pour les heures:
+string _lemNumHeure;
+string _lemHeure;
+string _lemHeureDeduced;
+
+Déduction:
+
+//nouvelles deduction
+// les 30 mai et 31 mai 2008 --> restaurer 30 mai 2008
+|NP#1{DET,NOUN#2{num#3[numjourpot],noun#4[mois]}},COORD,NP#5{NOUN#6{num#7[numjourpot],noun#8[mois],num#9[gdnbre]}}|
+	if (DATE[relative](#1) &  ~DATEDEDUCED(?,#2) & DATE[absolue](#5)  _lemNumJour=#3[lemme] & _lemMonth=#4[lemme] & _lemYear=#9[lemme]  &_lemDateDeduced=_lemNumJour+" "+_lemMonth+" "+_lemYear)
+	DATEDEDUCED[depdeduced=+,absolue=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+,annee=+],#2)
+
+
+// Pour les dates
+
+// entre mai et juin 2008
+|PP{prep,NP{noun#1[mois]}},COORD,NP{NOUN#2[date]{noun#3[mois],num#4}}}|
+	if (DATE(#1) & DATE(#2) &  ~DATEDEDUCED(?,#1) &  _lemYear=#4[lemme] & _lemMonth=#1[lemme] & _lemDateDeduced=_lemMonth+" "+_lemYear)
+	DATEDEDUCED[depdeduced=+,absolue=+,incomplete=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,annee=+],#1)
+
+// du 13 au 15 Mai 2008
+|PP{PREP,NP{num#1[numjourpot]}},PP{prep,NP{NOUN#2{num[numjourpot],noun#3[mois],num#4[gdnbre]}}}|
+	if (DATE(#2) &  ~DATEDEDUCED(?,#1)&  _lemNumJour=#1[lemme] & _lemMonth=#3[lemme] & _lemYear=#4[lemme]  &_lemDateDeduced=_lemNumJour+" "+_lemMonth+" "+_lemYear)
+	DATEDEDUCED[depdeduced=+,absolue=+,complete=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+,annee=+],#1)
+
+// du 13 au 15 Mai
+|PP{PREP,NP{?*,num#1[numjourpot]}},PP{prep,NP#4{NOUN#2{num[numjourpot],noun#3[mois]}}}|
+	if ((DATE(#2)|DATE(#4)) & ~DATEDEDUCED(?,#1) & _lemNumJour=#1[lemme] & _lemMonth=#3[lemme] &_lemDateDeduced=_lemNumJour+" "+_lemMonth)
+	DATEDEDUCED[depdeduced=+,relative=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+],#1)
+
+// les 29 et 30 mars 2008
+|DET,NUM#1,COORD,NOUN#2{num,noun#3[mois],num#4[gdnbre]}|	
+	if (DATE(#2) & & ~DATEDEDUCED(?,#1)& _lemNumJour=#1[lemme] & _lemMonth=#3[lemme] & _lemYear=#4[lemme] & _lemDateDeduced=_lemNumJour+" "+_lemMonth+" "+_lemYear )
+	DATEDEDUCED[depdeduced=+,absolue=+,complete=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+,annee=+],#1)
+
+// les 29 et 30 mars
+|DET,NUM#1,COORD,NOUN#2{num,noun#3[mois]}|	
+	if (DATE(#2) & ~DATEDEDUCED(?,#1) &  _lemNumJour=#1[lemme] & _lemMonth=#3[lemme] & _lemDateDeduced=_lemNumJour+" "+_lemMonth )
+	DATEDEDUCED[depdeduced=+,relative=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+],#1)
+
+// le lundi 18 et le mardi 19 avril
+|?*{?*,NP#1{DET#2,NOUN{noun#3,num#4}}},COORD,NP#5{DET,NOUN#6{noun,num,noun#7}}|	
+	if (DATE(#5) & ~DATEDEDUCED(?,#1) & _lemDet=#2[lemme] &  _lemJour=#3[lemme] & _lemNumJour=#4[lemme] &  _lemMonth=#7[lemme] & _lemDateDeduced=_lemDet+" "+_lemJour+" "+_lemNumJour+" "+_lemMonth )
+	DATEDEDUCED[depdeduced=+,relative=+](##NOUNFICT[lemme=_lemDateDeduced,datededuced=+,mois=+,jour=+],#1).
+
+
+// 1989-90 --> restituer 1990
+|NUM#1{NUM#2[date,shortyear:~],PUNCT[form:fhyph],NUM#3[date,shortyear]}|
+     if ( INTERVAL-TEMP(#1) & DATE(#2) & DATE(#3) & ~INTERVALDEDUCED(?,#2) &  _lemDebutYear=left(#2[lemme],2) & _lemEndYear=#3[lemme] & _lemDateDeduced=_lemDebutYear+_lemEndYear  )
+     DATEDEDUCED[datededuced=+](#3,##NOUNFICT[lemme=_lemDateDeduced]),
+     INTERVALDEDUCED[depdeduced=+](##NOUNFICT[lemme=_lemDateDeduced],#2)
+
+
+// Pour les heures
+
+//(entre) 12 et 13 heures
+//13 heures n'est plus ambigu
+|NP#1{DET*,NUM#2,COORD,NOUN#3{num,noun#4}}|
+	if (^HEUREPOT[heureambig](#3) & ~HEUREDEDUCED(?,#2) & _lemNumHeure=#2[lemme] & _lemHeure=#4[surface] & _lemHeureDeduced=_lemNumHeure+" "+_lemHeure)
+	HEUREDEDUCED[heureambig=~](##NOUNFICT[lemme=_lemHeureDeduced],#2),
+	HEURE(#3),
+	~.
+
+
+// Pour affecter le trait datededuced aux noeuds concernés par cette dépendance
+// (besoin par la suite, pour les intervales par exemples)
+
+Script: 
+
+1> if (DATEDEDUCED(#1,?)){
+
+  #1[datededuced=+];
+}
+
+
+
+Déduction:
+
+//-----------------------------
+// GENERIQUE
+//-----------------------------
+
+|NOUN#1[tempexpr,generic]|
+	if(~GENERIQUE(#1))
+	GENERIQUE(#1).
+
+
+//-----------------------------
+// EFFACEMENTS-modifs de traits
+//-----------------------------
+
+
+if( DATE(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( DATEPOT(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( SET(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( DUREE(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( HEURE(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( DATEMOD(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if( DUREEMOD(#1) & Daughter(#1,#2) & Detruiresousnoeuds(#2))
+~.
+
+if($1[todelete](#1))
+	~$1.
+    
+// si datemod sur noeud sup et date sur noeud inf alors efface date
+
+|PP#1{?*,NOUN#2}|
+if (DATEMOD(#1) & ^DATE(#2))
+   ~.
+
+
+// si dureemod sur noeud sup et duree sur noeud inf alors suppression duree
+|?#1{?,?{?*,#2,?*}}|
+if (DUREEMOD(#1) & ^DUREE(#2))
+   ~.
+
+//----
+|NP#1{NP{?,noun{?*,noun}},PP{prep,NP#3{noun}}}|
+	if (DATE(#1) &  ^HEURE(#3))
+	~.
+
+//----
+if (DATE(#1) & ^TEMPEXPR(#2) & (#1[lemme]::#2[lemme]))
+   ~ .
+
+
+//si TEMPEXPR[duree] : HEUREAMBIG devient DUREE[heure]
+|PP#1[tempexpr,duree]{PREP,NP{?*,NOUN#2{?*,noun}}}|
+	if(TEMPEXPR[duree](#1) & ^HEUREPOT[heureambig](#2))
+	~,
+	DUREE[heure=+](#2)
+
+//----
+|NOUN#1{?*,NOUN#2;NUM#2}|
+	if ( DATEMOD(#1) | DATE(#1) &  ^DATE(#2) )
+	~.
+
+
+//----effacements DATEMOD
+|PP#1{PREP,NP{?*,NOUN#2[date]}}|
+	if (DATEMOD(#1) & ^DATE(#2) )	
+	   ~.
+
+|PP#1{PREP,NUM#2[date]}|
+	if (DATEMOD(#1) & ^DATE(#2) )	
+	   ~.
+
+|PP#1{PREP,NOUN#2}|
+	if (DATEMOD(#1) & ^DATE(#2) )	
+	   ~.
+
+|NP#1{?*,NOUN#2}|
+	if (DATEMOD(#1) & ^DATE(#2) )	
+	   ~.
+
+//----effacements DUREEMOD
+|NP#1{?*,NOUN#2}|
+	if (DUREEMOD(#1) & ^DUREE(#2) )	
+	~.
+
+|?#1|
+	if (^DUREE(#1) & DUREEMOD(#1))
+	~.
+
+//-------si DATE_ORIG et DATE
+|PP#1|
+     if(^DATE[relative,orig:~](#1) & DATE[relative, orig:+](#1))
+     ~.
+
+|PP#1|
+     if(^DATE[relative,tfin:~](#1) & DATE[relative, tfin:+](#1))
+     ~.
+
+// effacement des DATES à l'interieur de INTERVALLE
+
+//du mercredi 20 et dimanche 27 aout
+|NP#1[tempexpr,interval]{PP#2[date],PP}|
+	if(INTERVAL-TEMP(#1) & ^DATE(#2))
+	~.
+
+//du mercredi 20 et dimanche 27 aout
+|NP#1[tempexpr,interval]{PP,PP#3[date]}|
+	if(INTERVAL-TEMP(#1) & ^DATE(#3))
+	~.
+
+//du mercredi 20 et dimanche 27 aout 2005
+|NP#1[tempexpr,interval]{PP,PP{PREP,NP#3[date]}}|
+	if(INTERVAL-TEMP(#1) & ^DATE(#3))
+	~.
+
+// effacement des HEURES à l'interieur de INTERVALLE
+
+|NP#1[tempexpr,interval]{PP#2[heure],PP}|
+	if(INTERVAL-TEMP(#1) & ^HEURE(#3))
+	~.
+
+// effacement des DATES à l'interieur de DATECOORD
+
+
+// special InfoMagic
+|?#1|
+     if(DATEMOD(#1) & ^DATE[infomagic:~](#1))
+     ~.
+
+// effacement intervalle sur PP et sur NUM en même temps
+|PP#1[interval]{PREP,NP{NUM#2[interval]}}|
+	if( INTERVAL-TEMP(#1) & ^INTERVAL-TEMP(#2))
+	~.
+
+// effacement doublons HEURE et DATE sur un même noeud (special ESTER,cf marquage temp ligne 98)
+if (^HEURE(#1) & DATE(#1))
+   ~.
+
+//effacement doublon interval-temp et date
+if (^DATE(#1) & INTERVAL-TEMP(#1))
+   ~.
+
+
+//!!!!!!!!!!!!! special  ESTER
+// pour pouvoir prendre la prep suivant une date san modifier les chunks
+// gestion ensuite dans le script perl d'intégration des résultats dans le stm-ne
+
+
+// 48 heures après son arrivée
+//|NP#1[heure,specialester],PP{prep#2[lemme:"après"],?+}|
+//    if(HEURE(#1))
+//    SPECIALESTER[heure=+](#1,#2).
+
+//Script:
+
+//if (SPECIALESTER(#1,#2)){Print("SPECIALESTER#1[surface]);
+//   SPECIALESTER(#1[surface],#2[surface]);
+//Print(#1[surface]);
+//}
+//|?#1[specialester:+]|
+//     if(DATE(#1))
+//    SPECIALESTER[date=+](#1,#2)
+
+// 3 semaines après sa démission
+//|NP#1[date],PP{prep#2[lemme:"après"],?+}|
+//     if(^DATE(#1))
+//     SPECIALESTER[date=+,relative=~](#1,#2),~.
+
+
+// 48 heures après son arrivée
+//|NP#1[heure],PP{prep#2[lemme:"avant"],?+}|
+//     if(HEURE(#1))
+//     SPECIALESTER[heure=+](#1,#2),~.
+
+
+// 3 semaines après sa démission
+//|NP#1[date],PP{prep#2[lemme:"avant"],?+}|
+//     if(^DATE(#1))
+ //    SPECIALESTER[date=+,relative=~](#1,#2),~.
+
+
+// affichage :
+
+print("\n----------------------------------\n----------------------------------\n\n");
+
+
+
+
+
+

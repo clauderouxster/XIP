@@ -1,0 +1,80 @@
+use('kifsqlite');
+
+//we declare a new sqlite variable
+sqlite mydb;
+
+//we open a database.
+mydb.open('corpuraNgram.db');
+
+
+try {
+     //we insert a new table in the current database
+     mydb.create("adj_tags","wsj TEXT","xip TEXT");
+     println("Table:adj_tags is created");
+}
+catch() {
+     //This database already exists
+     println("Table:adj_tags exist!");
+}
+
+//We insert values in the database
+mydb.begin();
+mydb.run("DELETE from adj_tags");
+
+string scr="SELECT wsj,xip from tags where wsj<>xip;";
+iterator it=mydb.run(scr);
+
+for(it.begin();it.nend();it.next()){
+string tag=it.value();
+string wsj=tag["'wsj':":"xip"][7:-6];
+string xip=tag["xip':'":][6:-2];
+if (wsj.split(' ').size()==1){
+ try {  mydb.insert("adj_tags","wsj",wsj,"xip",xip);
+          
+     }
+     catch() {
+          println("Error");
+     }
+}
+}
+
+file r("errEval.csv",'w');
+r.writeln('PTB'+'~'+'XIP'+'~'+'%'+'~'+'sample');
+
+//string script="Select c.wsj,c.xip,cast(c.count/t.total as float)*100 prc  from (SELECT wsj,xip, cast(count(*) as float) as count from adj_tags group by wsj,xip)as c,(SELECT wsj,cast(count(*) as float) as total from adj_tags group by wsj) as t  where c.wsj=t.wsj;";
+
+string script="SELECT wsj,xip,((cast(count(*) as float))/(select cast(count(*)as float) from adj_tags))*100 as prc from adj_tags group by wsj,xip having (((cast(count(*) as float))/(select cast(count(*)as float) from adj_tags))*100) >1;";
+
+
+iterator itt=mydb.run(script);
+for(itt.begin();itt.nend();itt.next()){
+string w_tag=itt.value();
+string prc=w_tag["'prc':":','][6:-1];
+string wsj=w_tag["'wsj':":"xip"][7:-6];
+string xip=w_tag["xip':'":][6:-2];
+string ev_str="'"+wsj+"'"+'~'+"'"+xip+"'"+'~'+prc;
+//println(itt.value());
+//r.writeln(ev_str);
+}
+
+
+string ex="SELECT T1.wsj as wsj,T1.xip as xip,T2.prc as prc,T1.sample as sample from(SELECT g.wsj as wsj,g.xip as xip,(GROUP_CONCAT(g.word,' ')) as sample FROM (SELECT word,wsj,xip from tags where wsj||''||xip in (SELECT wsj||''||xip from adj_tags group by wsj,xip having (((cast(count(*) as float))/(select cast(count(*)as float) from adj_tags))*100) >1))g group by g.wsj,g.xip )T1,(SELECT wsj,xip,((cast(count(*) as float))/(select cast(count(*)as float) from adj_tags))*100 as prc from adj_tags group by wsj,xip having (((cast(count(*) as float))/(select cast(count(*)as float) from adj_tags))*100) >1)T2  where T1.wsj=T2.wsj and T1.xip=t2.xip;";
+iterator it_ex=mydb.run(ex);
+for(it_ex.begin();it_ex.nend();it_ex.next()){
+string ex_word=it_ex.value();
+string sample=ex_word["'sample':":"'wsj':"][9:-7];
+svector sample_vector;
+sample_vector=sample.split(' ').unique();
+string sample_word;
+string set_word='';
+for(sample_word in sample_vector)
+set_word=set_word.trim()+' '+sample_word.trim();
+
+string xip=ex_word["xip':'":][6:-2];
+string wsj=ex_word["'wsj':":"xip"][7:-6];
+string prc=ex_word["{'prc':":"'sample':"][7:-10];
+string ev_str="'"+wsj+"'"+'~'+"'"+xip+"'"+'~'+prc+'~'+set_word;
+r.writeln(ev_str);
+}
+r.close();
+mydb.close();

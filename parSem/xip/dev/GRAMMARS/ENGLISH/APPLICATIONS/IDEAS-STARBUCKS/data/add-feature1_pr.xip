@@ -1,0 +1,192 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : add-feature1_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Split:
+
+//la ponctuation est à l'intérieur de la parenthèse
+| ?*[sent:~], punct[lemme:"."], punct#[form:fcpar, square] |.
+
+// cas général
+| ?*[sent:~], punct#[SENT] |.
+
+Tagging:
+
+
+//"Following" at the beginning of a sentence is a verb not a preposition
+
+1> ?<lemme:following,start> = verb.
+
+1> ?<lemme:tough> = adj.
+
+1> ?<lemme:resume> = verb .
+
+1> ?<lemme:article> = noun.
+
+1> ?<lemme:arm> = noun.
+
+// is considering -> verb
+
+1> ?<lemme:consider,vprog> = | ?[form:fbe] | verb .
+
+// after
+
+1> conj,adv,prep,adj = conj | det, noun, verb |.
+
+// With talks currently deadlocked 
+//1> verb[past,partpas] = | prep[start], noun, (adv) | verb[temp=+] .
+
+// are in Iran surveying -> NUCL[progress,vlink](are,surveying)
+1> ?[form:fbe] = ?[forprog=+] | prep, noun, verb%[vprog,forprog=+] |.
+
+//An unnamed American official doubts Iran will have enough money => doubts = verb
+1> verb[sg,p3,pres],noun = |det[sg, pl:~], adj*[noambiguity], nadj*[noambiguity], noun*[sg, noambiguity]| verb.
+
+//holding talks on training
+1> verb, noun<pl, support:fhold, support_f:obj> = |verb[form:fhold]| noun.
+
+// resume talks -> talks cannot be a verb
+1> verb[sg,p3,pres],noun<pl> = | verb[noambiguity] | noun .
+
+// stresses, wants are probably no nouns
+1> noun<nonounpl, pl>;verb = verb .
+
+//Washington hopes
+verb<lemme:hope>,noun = | ?[proper] | verb .
+
+// evidence is most probably a noun, unless it is in the past. The verb "evidence" seems mostly to be used in biology
+1> noun,verb<lemme:evidence> = noun[hmm_verb=~].
+
+1> noun<lemme:remove>;verb = verb .
+
+1> ?<lemme:assist> = verb .
+
+1> ?<lemme:set> = ?[prod=+] | ?[lemme:up] | .
+
+
+// I am to go -> be[sc_toinf=+]
+1> ?[form:fbe] = ?[sc_toinf=+] | ?[form:finfto] | .
+
+// deemed is always pastpart
+//1> ?<surface:deemed> = ?[past=~,hmm_vpap=~,hmm_vpast=+].
+
+//Deny n'est pas un nom propre 
+1> verb<lemme:deny>,noun = verb.
+
+// That must not happen
+1> aux,noun = |?<pron>|aux |adv[form:fnot]|.
+
+// The worst : le nom worst doit avoir le même trait sup que l'adjectif worst
+1>?[sup] = ?[sup=+].
+
+//cease enriching uranium
+1> verb[prog],adj = |verb[sc_ing]| verb.
+
+// There are conflicting reports
+1> noun<vprog>, adj<vprog>, verb = | adv[form:fthere],?[form:fbe] | adj |?[noun, pl]|.
+
+//Joao Santana, Brazil's infrastructure minister, visits Tehran 
+1> noun,verb<lemme:visit> = verb |?[place]|.
+
+//Said Karim Ali Subhani
+1> verb<surface:Said, start> %= noun[firstname=+, proper=+] |noun[firstname]|.
+1> verb<surface:Said> %= noun[firstname=+, proper=+] |noun[firstname], ?*, verb[maj:~]|.
+
+// mark be + PREP with SUCC
+
+1> ?[form:fbe] = ?[sc_bewithpart=+] | prep | .
+
+1> ?[form:fbe,sc_bewithpart] = | ? | prep[sc_bewithpart=+] .
+
+// make sure
+1> ?<lemme:sure> = | ?<lemme:make> | adv.
+
+1> ?<surface:refuses> = verb .
+
+
+
+////////////////////////////////
+// pour les titres : Iran to Allow Military Site Probe.=> Allow est un infinitif
+// La même règle existe dans la désamb générale pour les infinitifs en minuscules précédés de 'to'
+// pour l'instant cette règle ne suffit pas à obtenir une analyse correcte : il faudrait aussi une règle de chunking spécifique
+5> verb<verb:+,pres:+,sg:~> = | ?*[form:~ffrom], prep[form:finfto] | verb[nfin=+] | ?[verb:~] | .
+
+1> ?[saythat,sc_s:~] = ?[sc_s=+] .
+
+
+// in order to
+1> ?<lemme:order> = | ?<lemme:in> | ?[xrx=~,evnt=~] | ?<lemme:to> | .
+
+
+// help is a verb in structure to help verb
+
+1> noun,verb<sc_inf> = | ?[form:finfto] | verb | verb[bf] |.
+
+// electric power
+
+1> ?<lemme:power> = | ?<lemme:electric> | ?[mil=~,prod=+] .
+
+1> ?<lemme:form> = | quant | ?[transparent=+] | ?[lemme:of] | .
+1> ?<lemme:form> = | det[indef] | ?[transparent=+] | ?[lemme:of] | .
+
+1> ?<surface:opens> = verb.
+
+1> ?<surface:meeting> = | det | noun.
+
+1> ?<lemme:manage> = ?[posi=+] | ?[lemme:to] |.
+
+1> ?<surface:reports> = | noun[start] | verb | ?[verb:~,prep:~] | .
+
+/
+//mark order of coonstituent concepts
+
+1> ?[nega] = ?[!1=+].
+
+1> ?[intent] = ?[!2=+].
+1> ?[tell] = ?[!3=+].
+
+1> ?[beg-act] = ?[!4=+].
+1> ?[cont-act] = ?[!5=+].
+1> ?[end-act] = ?[!6=+].
+1> ?[temp-act] = ?[!7=+].
+
+1> ?[posi] = ?[!8=+].
+1> ?[give-get] = ?[!9=+].
+
+1> ?[secr] = ?[!10=+].
+1> ?[mil] = ?[!11=+].
+1> ?[nuc] = ?[!12=+].
+
+1> ?[prod] = ?[!13=+].
+1> ?[know] = ?[!14=+].
+1> ?[host] = ?[!15=+].
+1> ?[jur] = ?[!16=+].
+1> ?[link] = ?[!17=+].
+1> ?[mon] = ?[!18=+].
+1> ?[move] = ?[!19=+].
+1> ?[Nentity] = ?[!20=+].
+1> ?[sta] = ?[!21=+].
+1> ?[tool] = ?[!22=+].
+
+
+\
+
+
+
+
+Marker:
+// un nom qui est un superlatif (the worst) n'est pas un noyau d'événement
+10> noun[sup,noevnt=+].
+
+
+

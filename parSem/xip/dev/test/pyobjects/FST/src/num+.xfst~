@@ -1,0 +1,98 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      final assembling of lexicon FST
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+#
+# ============================================================================
+# USAGE:        xfst 	-l def-chars.xfst -l [ThisFile]
+# ============================================================================
+
+
+# ------------------------------------------------------------------------------
+# Dates and Time adverbials
+
+define contexte [" "|"."|"?"|","|"!"|";"|":"|"\\"|EOT|"\n"|"\t"|"\r"];
+
+read regex 	[ 
+	hours 	[%+Time:0 %+Adv:0 %+ADV:0] 
+| 	years 	[%+Date:0 %+Adv:0 %+ADV:0] RC contexte
+] ;
+
+define time
+
+# ------------------------------------------------------------------------------
+# Measures
+define chiffre 	Num+ ([%. |%,] Num+) ;
+define money  	(U S) %$  | {FF} | {DEM} ;
+
+define units  [ 
+	([k|M|G]) [[m|W|t r| h] (%.) ((%/) [h|m n | s (e c ) | m | k m]) |  H z | F | F F | W h ] 
+	| [k|M|G] [o|b|B] | k g | c c | c m | m m 
+	] (2);
+
+
+read regex   [
+	(chiffre) units 
+|	(chiffre) money | money chiffre 
+|    	(chiffre) %%
+]  %+InvGen:0 %+InvPL:0 %+Measure:0 %+Noun:0 %+NOUN%_INV:0 
+;
+define Measure
+
+
+# ------------------------------------------------------------------------------
+# numerical expressions
+read regex  	NumBase  %+Num:0 %+NUM:0 ;
+
+define Num1 
+
+define numerals [
+	Ops+ NumBase 
+| 	NumBase %_:[% ] [[m|M|b|B] i l l i o n (s) | [m|M] i l l i a r d (s)] 
+] - [years| hours] ;
+
+
+define numerals [ numerals %+Num:0 %+NUM:0 ]; 
+
+# ------------------------------------------------------------
+# define numeral expressions used as list counter: 2)  iv
+define counters [
+ [
+  [(%0 | 1) [%0 | 1 |2 |3 | 4 | 5 | 6 | 7 | 8 | 9]] |
+  [ i | i i | i i i | i i i i | i v | v | v i | v i i  | v i i i | i x ]
+ ]
+[%. | %)] 
+]
+%+Num:0 %+NUM:0 	LC ["\t" ]  RC " " ;
+
+
+read regex [ numerals | counters ];
+
+
+define Num2
+
+
+
+read regex Num1 | Num2 | Measure | time ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   

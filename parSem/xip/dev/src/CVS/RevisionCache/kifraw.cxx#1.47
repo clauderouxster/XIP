@@ -1,0 +1,3124 @@
+/*
+ * Xerox Research Centre Europe - Grenoble Laboratory
+ *
+ * Copyright (C) 2010 - 2011 Xerox Corporation, XRCE-Grenoble, All Rights Reserved.
+ * This file can only be used with the KiF library, 
+ * it should not and cannot be used otherwise.
+ */
+/* --- CONTENTS ---
+   Project    : KiF
+   Version    : 1.00
+   filename   : kifraw.cxx
+   Date       : 09/09/2010
+   Purpose    : Implementation of the KiF language: External method implementation.
+   Programmer : Claude ROUX
+   Reviewer   : 
+*/
+
+//--------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+//KIF RAW SECTION
+//Below are the basic bodies of specific methods, whose bodies are different in the XIP version
+
+#include "kifinit.h"
+#include "automate.h"
+
+
+extern char* kifErrorStrings[];
+#ifdef _DEBUG
+extern KifCode* currentkifcode;
+#endif
+
+#ifdef WIN32
+int gettimeofday(struct timeval *tv, struct timezone *tz);
+#endif
+
+int GETCH(bool echoing);
+int KifLoadPath(KifCode* loader,string& path,vector<string>& arguments,bool debugkif);
+int KifLoadin(KifCode* kifcode,string path);
+void KifInitFunctions(KifCode* kifcodeptr,KifFrame* kstart);
+KifVector* Selectvector(KifElement* kref,KifElement* context);
+KifMap* Selectmap(KifElement* kref,KifElement* context);
+string replacestringwithautomaton(string &str, string& reg,string& rep);
+extern hmap<short,mathFunc> kifMathFunctions;
+extern KifElement* kifWAIT;
+string KifIdString(short n);
+string Whoami_kif();
+
+#ifndef WIN32
+#define sprintf_s(a,b,c,d) sprintf(a,c,d)
+#define strcpy_s(a,b,c) strcpy(a,c)
+#endif
+
+//===================================================================
+class KifComparison {
+public:
+
+	KifDomain* domain;
+	KifFunction* compare;
+
+	KifComparison(KifDomain* dom,KifFunction* comp) {
+		domain=dom;
+		compare=comp;
+	}
+
+	bool operator() (KifElement* i,KifElement* j) { 
+		return domain->applycomparatorfunction(i,j,compare)->Boolean();
+	}
+};
+//===================================================================
+//We remove this element everywhere in KifCode kifWaitstates
+hmap<string,vector<KifWaitState*> > kifWaitstates;
+
+KifWaitStates::~KifWaitStates() {
+	for (int i=0;i<flags.size();i++) {
+		bool found=false;
+		string flag=flags[i];
+		if (kifWaitstates.find(flag)!=kifWaitstates.end()) {
+			vector<KifWaitState*>& kws=kifWaitstates[flag];
+			vector<KifWaitState*>::iterator it;
+			for (it=kws.begin();it!=kws.end();it++) {
+				if (*it==this) {
+					found=true;
+					break;
+				}
+			}
+			if (found) {
+				kws.erase(it);
+				if (kws.size()==0)
+					kifWaitstates.erase(flag);
+			}
+		}
+	}
+}
+
+vector<KifWaitState*>* Freestate(KifCode* kifcode,string& flag) {
+	ThreadLock _lock(kifSignal);
+	if (kifWaitstates.find(flag)==kifWaitstates.end()) {
+		string message="This wait state does not exist: '";
+		message+=flag;
+		message+="'";
+		kifcode->Returnerror(message);
+		return NULL;
+	}
+	return &kifWaitstates[flag];
+}
+
+//--------------------------------------------------------
+
+KifElement* PreRange(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2 && callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[226]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* ksecond=callfunc->Evaluate(1,dom);
+	if (kfirst->inType()==kifInteger && ksecond->inType()==kifInteger) {
+		long l=kfirst->Integer();
+		long r=ksecond->Integer();
+		long d=r-l+1;	
+		long inc=1;
+		if (callfunc->Size()==3) 
+			inc=callfunc->Evaluate(2,dom)->Integer();
+		if (d<0)
+			d*=-1;
+		if (d<=10000) {
+			KifVector* kvect=Selectvector(callfunc,contextualpattern);
+			kvect->values.reserve(d);
+			for (long i=l;i<r;i+=inc) 
+				kvect->values.push_back(callfunc->kifcode->Provideinteger(i));
+			return kvect;
+		}
+	}
+	else
+		if (kfirst->inType()==kifFloat || ksecond->inType()==kifFloat) {
+			double l=kfirst->Float();
+			double r=ksecond->Float();
+			double inc=1;
+			if (callfunc->Size()==3) 
+				inc=callfunc->Evaluate(2,dom)->Float();
+			if (inc==0)
+				return callfunc->kifcode->Returnerror(kifErrorStrings[225]);
+			double d=(r-l)/inc;
+			if (d<0)
+				d*=-1;
+			if (d<=10000) {
+				KifVector* kvect=Selectvector(callfunc,contextualpattern);
+				kvect->values.reserve(d);
+				for (double i=l;i<r;i+=inc) 
+					kvect->values.push_back(callfunc->kifcode->Providefloat(i));
+				return kvect;
+			}
+		}
+		else
+			if (kfirst->inType()==kifString) {
+				string l=kfirst->String();
+				string r=ksecond->String();
+				if (l.size()!=1 || r.size()!=1)
+					return callfunc->kifcode->Returnerror(kifErrorStrings[230]);
+				int inc=1;
+				if (callfunc->Size()==3) 
+					inc=callfunc->Evaluate(2,dom)->Float();
+				char cl=l[0];
+				char cr=r[0];
+				int d=cr-cl;
+				if (d<0)
+					d*=-1;
+				KifVector* kvect=Selectvector(callfunc,contextualpattern);
+				kvect->values.reserve(d);				
+				for (uchar i=cl;i<cr;i+=inc) {
+					l=(char)i;
+					kvect->values.push_back(callfunc->kifcode->Providestring(l));
+				}
+				return kvect;
+			}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[227]);
+}
+
+//
+KifElement* PrePushFirst(KifElement* kf,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()<2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[38]);
+	//First parameter should be a vector
+	kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifList) {
+		//next parameters are anything
+		for (size_t i=1;i<callfunc->Size();i++)
+			((KifList*)kf)->PushFirst(callfunc->Evaluate(i,dom));
+		return kifTRUE;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[39]);
+}
+
+KifElement* PrePushLast(KifElement* kf,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()<2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[38]);
+	//First parameter should be a vector
+	kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifList) {
+		//next parameters are anything
+		for (size_t i=1;i<callfunc->Size();i++)
+			((KifList*)kf)->PushLast(callfunc->Evaluate(i,dom));
+		return kifTRUE;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[39]);
+}
+
+KifElement* PrePopFirst(KifElement* kf,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[40]);
+	//First parameter should be a vector
+	kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifList)
+		return ((KifList*)kf)->PopFirst();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[41]);
+}
+
+KifElement* PrePopLast(KifElement* kf,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[40]);
+	//First parameter should be a vector
+	kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifList)
+		return ((KifList*)kf)->PopLast();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[41]);
+}
+
+KifElement* PreFirst(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[42]);
+
+	return callfunc->Evaluate(0,dom)->First();
+}
+
+KifElement* PreGetc(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	//Reading of one character
+	if (callfunc->Size()!=0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[214]);
+	int c=GETCH(false);
+	if (contextualpattern->type==kifInteger || contextualpattern->type==kifFloat)
+		return callfunc->kifcode->Provideinteger(c);
+	string s;
+	s=(uchar)c;
+	return callfunc->kifcode->Providestring(s);
+}
+
+
+KifElement* PreComplement(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[195]);
+
+	long v=callfunc->Evaluate(0,dom)->Integer();
+	v=~v;
+	return callfunc->kifcode->Provideinteger(v);
+}
+
+
+KifElement* PreXipReplaceRgx(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	//Replace an element with another
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[128]);
+
+	string str=callfunc->Evaluate(0,dom)->String();
+	string reg=callfunc->Evaluate(1,dom)->String();
+	string rep=callfunc->Evaluate(2,dom)->String();
+
+	string res=replacestringwithautomaton(str,reg,rep);
+	return callfunc->kifcode->Providestring(res);
+}
+
+
+KifElement* PreXipRegex(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreXipRegex");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[89]);
+
+	string str=callfunc->Evaluate(0,dom)->String();
+	string reg=callfunc->Evaluate(1,dom)->String();
+	automate a(USTR(reg),(void*)1);
+	if (contextualpattern->type==kifVector) {
+		KifBaseString localstring(NULL,NULL);
+		localstring.kifcode=callfunc->kifcode;
+
+		KifVector* vect=Selectvector(callfunc,contextualpattern);
+		VECTA<string*> vectr;
+          a.rechercheavecextractiondansvecteur(USTR(str),vectr);
+		  for (int iv=0;iv<vectr.dernier;iv++) {
+			  localstring.value=*vectr[iv];
+			  vect->Push(&localstring);
+		  }
+		  vectr.nettoie();
+		  return vect;
+	}
+	if (contextualpattern->type==kifInteger || contextualpattern->type==kifFloat || contextualpattern->type==kifString) {
+		int res=a.rechercheavecextraction(USTR(str),reg);
+		if (contextualpattern->type==kifString)
+			return callfunc->kifcode->Providestring(reg);
+		return callfunc->kifcode->Provideinteger(res);
+	}
+	
+	etat* e=a.recherche(USTR(str)); 
+	if (e==NULL) 
+		return kifFALSE;
+	return kifTRUE;	
+}
+
+#ifdef KIF_REGEX
+KifElement* PreReplaceRgx(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	//Replace an element with another
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[128]);
+	
+	string str=callfunc->Evaluate(0,dom)->String();
+	string reg=callfunc->Evaluate(1,dom)->String();
+	string rep=callfunc->Evaluate(2,dom)->String();
+
+	try {
+		regex pattern(reg);
+		string res=regex_replace(str, pattern, rep);
+		return callfunc->kifcode->Providestring(res);
+	}
+	catch(...) {
+		str="Wrong regular expression: ";
+		str+=reg;
+		return callfunc->kifcode->Returnerror(str);
+	}
+}
+
+
+
+KifElement* PreRegex(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRegex");
+#endif
+	const sregex_token_iterator end;
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[89]);
+
+	string str=callfunc->Evaluate(0,dom)->String();
+	string reg=callfunc->Evaluate(1,dom)->String();
+	try {
+		regex pattern(reg);
+
+
+		if (contextualpattern->type==kifVector) {
+			KifBaseString localstring(NULL,NULL);
+			localstring.kifcode=callfunc->kifcode;
+
+			KifVector* vect=Selectvector(callfunc,contextualpattern);				
+			for (sregex_token_iterator i(str.begin(),str.end(), pattern);i != end;++i) {
+				localstring.value=*i;
+				vect->Push(&localstring);
+			}
+			return vect;
+		}
+
+		if (contextualpattern->type==kifInteger || contextualpattern->type==kifFloat || contextualpattern->type==kifString) {
+			smatch result;
+			if (regex_search(str, result, pattern)==true) {
+				if (contextualpattern->type==kifString)
+					return callfunc->kifcode->Providestringraw(result[0]);
+				return callfunc->kifcode->Provideinteger(result.position());
+			}
+			return kifNULL;
+		}
+
+		if (regex_match(str, pattern)==false)
+			return kifFALSE;
+	}
+	catch(...) {
+		str="Wrong regular expression: ";
+		str+=reg;
+		return callfunc->kifcode->Returnerror(str);
+	}
+	return kifTRUE;	
+}
+
+KifElement* PreSplitRegex(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSplitRegex");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[188]);
+
+	string str=callfunc->Evaluate(0,dom)->String();
+	string reg=callfunc->Evaluate(1,dom)->String();
+	try {
+		regex pattern(reg);
+
+
+		if (contextualpattern->type==kifVector) {
+			KifBaseString localstring(NULL,NULL);
+			localstring.kifcode=callfunc->kifcode;
+
+			KifVector* vect=Selectvector(callfunc,contextualpattern);	
+			match_results<string::const_iterator> result;
+			if (regex_match(str, result, pattern)==true) {
+				for (int i=1;i<result.size();i++) {
+					localstring.value=result[i];
+					vect->Push(&localstring);
+				}
+			}
+			return vect;
+		}
+	}
+	catch(...) {
+		str="Wrong regular expression: ";
+		str+=reg;
+		return callfunc->kifcode->Returnerror(str);
+	}
+	return kifNULL;
+}
+#endif
+
+
+//find(s,i);
+KifElement* PreFind(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreFind");
+#endif
+	if (callfunc->Size()!=2 && callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[194]);
+
+	//we search for a substring starting at position idx
+	string str=callfunc->Evaluate(0,dom)->String();
+	if (str=="")
+		return kifMINUSONE;
+	int i=0;
+	if (callfunc->Size()==3) 
+		i=callfunc->Evaluate(2,dom)->Integer();
+	
+	string sub=callfunc->Evaluate(1,dom)->String();
+	int k=str.find(sub,i);
+	if (k==string::npos)
+		return kifMINUSONE;
+	return callfunc->kifcode->Provideinteger(k);
+}
+
+KifElement* PreRFind(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRFind");
+#endif
+	if (callfunc->Size()!=2 && callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[194]);
+
+	//we search for a substring starting at position idx
+	string str=callfunc->Evaluate(0,dom)->String();
+	if (str=="")
+		return kifMINUSONE;
+	int i=str.size()-1;
+	if (callfunc->Size()==3)
+		i=callfunc->Evaluate(2,dom)->Integer();
+	string sub=callfunc->Evaluate(1,dom)->String();
+	int k=str.rfind(sub,i);
+	if (k==string::npos)
+		return kifMINUSONE;
+	return callfunc->kifcode->Provideinteger(k);
+}
+
+KifElement* PreSplit(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSplit");
+#endif
+	if (callfunc->Size()!=2 && callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[0]);
+
+	KifBaseString localstring(NULL,NULL);
+	localstring.kifcode=callfunc->kifcode;
+
+	//Third parameter should be a vector
+	KifVector* kvect;
+	bool returnvalue=false;
+	if (callfunc->Size()==3) {
+		contextualpattern=callfunc->Evaluate(2,dom);
+		if (contextualpattern==kifNULL || contextualpattern->type!=kifVector)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[1]);
+		kvect=(KifVector*)contextualpattern;
+		kvect->Clear();
+		returnvalue=true;
+	}
+	else
+		kvect=Selectvector(callfunc,contextualpattern);
+
+	//First parameter is a string to split
+	string thestr=callfunc->Evaluate(0,dom)->String();
+
+
+	//Second parameter is the splitter string
+	string thesplitter=callfunc->Evaluate(1,dom)->String();
+	if (thesplitter=="") {		
+		for (int i=0;i<thestr.size();i++) {
+			localstring.value=c_char_get(USTR(thestr),i,callfunc->kifcode->utf8);
+			kvect->Push(&localstring);
+		}
+		if (returnvalue)
+			return kifTRUE;
+		else
+			return kvect;
+	}
+
+	size_t pos=0;
+	size_t found=0;
+
+	while (pos!=string::npos) {
+		found=thestr.find(thesplitter,pos);
+		if (found!=string::npos) {
+			localstring.value=thestr.substr(pos,found-pos);
+			if (localstring.value!="")
+				kvect->Push(&localstring);
+			pos=found+thesplitter.size();
+		}
+		else
+			break;
+	}
+	localstring.value=thestr.substr(pos,thestr.size()-pos);
+	if (localstring.value!="")
+		kvect->Push(&localstring);
+	
+	if (returnvalue)
+		return kifTRUE;
+	else
+		return kvect;	
+}
+
+static locale loc;                 // the "C" locale
+static const collate<char>& coll = use_facet<collate<char> >(loc);
+
+KifElement* PreHash(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreHash");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[185]);
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	string s=ke->String();
+	if (s=="")
+		return kifNULL;
+	long myhash = coll.hash(s.data(),s.data()+s.length());
+	return callfunc->kifcode->Provideinteger(myhash);
+}
+
+
+KifElement* PreGCSize(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreGCSize");
+#endif
+	static KifMap kmap(NULL,NULL);
+	static KifInteger cursor(NULL,NULL,0);
+	static KifInteger cursormax(NULL,NULL,0);
+	static KifInteger garbage(NULL,NULL,0);
+	
+	static KifInteger cursorstring(NULL,NULL,0);
+	static KifInteger cursorinteger(NULL,NULL,0);
+	static KifInteger cursorfloat(NULL,NULL,0);
+	static KifInteger cursorvector(NULL,NULL,0);
+	static KifInteger cursormap(NULL,NULL,0);
+	static KifInteger cursorlist(NULL,NULL,0);
+
+	static KifInteger garbagestring(NULL,NULL,0);
+	static KifInteger garbageinteger(NULL,NULL,0);
+	static KifInteger garbagefloat(NULL,NULL,0);
+	static KifInteger garbagevector(NULL,NULL,0);
+	static KifInteger garbagemap(NULL,NULL,0);
+	static KifInteger garbagelist(NULL,NULL,0);
+
+	static bool prepare=true;
+	if (prepare==true) {
+		kmap.values["cursor"]=&cursor;
+		kmap.values["cursormax"]=&cursormax;
+		kmap.values["garbage"]=&garbage;
+		kmap.values["cursorstring"]=&cursorstring;
+		kmap.values["cursorinteger"]=&cursorinteger;
+		kmap.values["cursorfloat"]=&cursorfloat;
+		kmap.values["cursorvector"]=&cursorvector;
+		kmap.values["cursormap"]=&cursormap;
+		kmap.values["cursorlist"]=&cursorlist;
+		kmap.values["garbagestring"]=&garbagestring;
+		kmap.values["garbageinteger"]=&garbageinteger;
+		kmap.values["garbagefloat"]=&garbagefloat;
+		kmap.values["garbagevector"]=&garbagevector;
+		kmap.values["garbagemap"]=&garbagemap;
+		kmap.values["garbagelist"]=&garbagelist;
+		prepare=false;
+	}
+	kmap.reference=1024;
+	cursor.reference=1024;
+	cursormax.reference=1024;
+	garbage.reference=1024;
+	garbagestring.reference=1024;
+	garbageinteger.reference=1024;
+	garbagefloat.reference=1024;
+	garbagevector.reference=1024;
+	garbagemap.reference=1024;
+	garbagelist.reference=1024;
+	
+	cursor.value=callfunc->kifcode->cursor;
+	cursormax.value=callfunc->kifcode->cursormax;
+	garbage.value=callfunc->kifcode->garbage.size();
+
+	cursorstring.value=callfunc->kifcode->cursorstring;
+	cursorinteger.value=callfunc->kifcode->cursorinteger;
+	cursorfloat.value=callfunc->kifcode->cursorfloat;
+	cursorvector.value=callfunc->kifcode->cursorvector;
+	cursormap.value=callfunc->kifcode->cursormap;
+	cursorlist.value=callfunc->kifcode->cursorlist;
+
+	garbagestring.value=callfunc->kifcode->stringlist.size();
+	garbageinteger.value=callfunc->kifcode->integerlist.size();
+	garbagefloat.value=callfunc->kifcode->floatlist.size();
+	garbagevector.value=callfunc->kifcode->vectorlist.size();
+	garbagemap.value=callfunc->kifcode->maplist.size();
+	garbagelist.value=callfunc->kifcode->listlist.size();
+
+	return &kmap;
+}
+
+KifElement* PreConvertVector(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertVector");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return ke->Vector(dom);
+}
+
+KifElement* PreConvertMap(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertMap");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return ke->Map(dom);
+}
+
+KifElement* PreConvertString(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertString");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return callfunc->kifcode->Providestringraw(ke->String());
+}
+
+KifElement* PreConvertFloat(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertFloat");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return callfunc->kifcode->Providefloat(ke->Float());
+}
+
+KifElement* PreConvertFraction(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertFloat");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return ke->Fraction();
+}
+
+
+KifElement* PreConvertInteger(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertInteger");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return callfunc->kifcode->Provideinteger(ke->Integer());
+}
+
+KifElement* PreConvertBoolean(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreConvertBoolean");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	return new KifBoolean(callfunc->kifcode,NULL,ke->Boolean());
+}
+
+
+KifElement* PreMethods(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[2]);
+	
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	KifVector* kvect=Selectvector(callfunc,contextualpattern);	
+	ke->Methods(kvect);
+	return kvect;
+}
+
+KifElement* PreInfos(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[2]);
+	
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	KifElement* kstr=callfunc->Evaluate(1,dom);
+	return ke->Information(kstr);
+}
+
+KifElement* PreUTF8ToLatin(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreUTF8ToLatin");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[3]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+
+	string res=conversionUTF8VersLatin((unsigned char*)thestr.c_str());
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+KifElement* PreLatinToUTF8(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreLatinToUTF8");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[4]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+
+	string res=conversionLatinVersUTF8((unsigned char*)thestr.c_str());
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+
+KifElement* PreLeft(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreLeft");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[5]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+
+	//Second parameter is an integer
+	KifElement* sz=callfunc->Evaluate(1,dom);
+	int nbchar=sz->Integer();
+
+	string res=c_left(thestr,nbchar,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+KifElement* PreRight(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRight");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[6]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+
+	//Second parameter is an integer
+	KifElement* sz=callfunc->Evaluate(1,dom);
+	int nbchar=sz->Integer();
+
+	string res=c_right(thestr,nbchar,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+KifElement* PreMid(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreMid");
+#endif
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[7]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+
+	//Second parameter is a position
+	KifElement* sz=callfunc->Evaluate(1,dom);
+	int pos=sz->Integer();
+
+	//Third parameter is a number of characters
+	sz=callfunc->Evaluate(2,dom);
+	int nbchar=sz->Integer();
+
+	string res=c_middle(thestr,pos,nbchar,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+KifElement* PreIsLower(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreIsLower");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[8]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	return new KifBoolean(callfunc->kifcode,NULL,c_Islower(thestr,callfunc->kifcode->utf8));
+}
+
+KifElement* PreIsUpper(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreIsUpper");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[9]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	return new KifBoolean(callfunc->kifcode,NULL,c_Isupper(thestr,callfunc->kifcode->utf8));
+}
+
+KifElement* PreIsDigit(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreIsDigit");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[9]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	string::iterator it;
+	static char tabs[]={'0','1','2','3','4','5','6','7','8','9','.',',','-'};
+	for (it=thestr.begin();it!=thestr.end();it++) 
+		if (strchr(tabs,*it)==NULL)
+			return kifFALSE;		
+	return kifTRUE;
+}
+
+
+KifElement* PreIsAlpha(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreIsAlpha");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[9]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	return new KifBoolean(callfunc->kifcode,NULL,c_Isalpha(thestr,callfunc->kifcode->utf8));
+}
+
+
+KifElement* PreLower(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreLower");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[10]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	thestr=c_Tolower(thestr,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+KifElement* PreUpper(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreUpper");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[11]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	thestr=c_Toupper(thestr,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(thestr);
+}
+
+
+KifElement* PreTrim(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreTrim");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[12]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	int start=0;
+	for (;start<thestr.size();start++) {
+		if (!strchr("\n\r\t ",thestr[start]))
+			break;
+	}
+
+	int end=thestr.size()-1;
+	for (;end>=0;end--) {
+		if (!strchr("\n\r\t ",thestr[end]))
+			break;
+	}
+	int keep=end-start+1;
+
+	string res=thestr.substr(start,keep);
+	return callfunc->kifcode->Providestring(res);	
+}
+
+KifElement* PreTrimright(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreTrim");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[12]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	int start=0;
+	int end=thestr.size()-1;
+	for (;end>=0;end--) {
+		if (!strchr("\n\r\t ",thestr[end]))
+			break;
+	}
+	int keep=end-start+1;
+	string res=thestr.substr(start,keep);
+	return callfunc->kifcode->Providestring(res);	
+}
+
+KifElement* PreTrimleft(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreTrim");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[12]);
+
+	//First parameter is a string
+	KifElement* mystr=callfunc->Evaluate(0,dom);
+	string thestr=mystr->String();
+	int start=0;
+	for (;start<thestr.size();start++) {
+		if (!strchr("\n\r\t ",thestr[start]))
+			break;
+	}
+
+	int end=thestr.size()-1;
+	int keep=end-start+1;
+
+	string res=thestr.substr(start,keep);
+	return callfunc->kifcode->Providestring(res);	
+}
+
+
+KifElement* PreEnvironment(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreEnvironment");
+#endif
+	KifCallFunction* calltop=(KifCallFunction*)callfunc->kifcode->Top();
+	if (calltop==NULL)
+		return kifNULL;
+	if (callfunc->Size()==0) {
+		//This is a case, where we are looking for the type of the contextualpattern
+		if (contextualpattern->type==kifInteger || contextualpattern->type==kifFloat) {
+			int r=contextualpattern->type;
+			return callfunc->kifcode->Provideinteger(r);
+		}
+
+		string resstr=calltop->environment->Type();
+		return callfunc->kifcode->Providestring(resstr);
+	}
+	return kifNULL;
+}
+
+
+KifElement* PreType(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreType");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* res=callfunc->Evaluate(0,dom);
+	if (contextualpattern->type==kifInteger || contextualpattern->type==kifFloat) {
+		int r=contextualpattern->type;
+		return callfunc->kifcode->Provideinteger(r);
+	}
+	return callfunc->kifcode->Providestringraw(res->Type());
+}
+
+KifElement* PreRandom(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	static bool init=false;
+	//we initialise our rand structure...
+	if (init==false) {
+		srand(time(NULL));
+		init=true;
+	}
+	float i=rand();
+	double f=i/RAND_MAX;
+	return callfunc->kifcode->Providefloat(f);
+}
+
+KifElement* PreResetTime(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0 || callfunc->Size()>=8)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[218]);
+	//First parameter is a time
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifTime)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[219]);
+	KifTime* ktime=(KifTime*)timeinfo;
+	gettimeofday(&ktime->value, NULL);
+	return ktime;
+}
+
+KifElement* PreSetDate(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSetDate");
+#endif
+
+	if (callfunc->Size()==0 || callfunc->Size()>=8)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[13]);
+
+	//First parameter is a time
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[14]);
+
+	KifDate* ktime=(KifDate*)timeinfo;
+	struct tm* temps;
+	time_t x=0;
+	temps=localtime(&x);
+
+	int fulldate=0;
+	long res;
+	//Year
+	if (callfunc->Size()>=2) {
+		res=callfunc->Evaluate(1,dom)->Integer();
+		if (res>0) {
+			temps->tm_year=res-1900;
+			fulldate=100;
+		}
+	}
+
+	//Month
+	if (callfunc->Size()>=3) {
+		res=callfunc->Evaluate(2,dom)->Integer();
+		if (res>0) {
+			fulldate+=10;
+			temps->tm_mon=res-1;
+		}
+	}
+
+	//Day
+	if (callfunc->Size()>=4) {
+		res=callfunc->Evaluate(3,dom)->Integer();
+		if (res>0) {
+			fulldate+=1;
+			temps->tm_mday=res;		
+		}
+	}
+	//Hour
+	if (callfunc->Size()>=5) {
+		res=callfunc->Evaluate(4,dom)->Integer();
+		if (res>=0 && res<24) {
+			//reference is 1AM
+			if (fulldate==0)
+				res+=2;
+			else
+				if (fulldate==1)
+					res+=1;
+			temps->tm_hour=res;
+		}
+	}
+
+	//Minute
+	if (callfunc->Size()>=6) {
+		res=callfunc->Evaluate(5,dom)->Integer();
+		if (res>=0 && res<60)
+			temps->tm_min=res;
+	}
+
+	//Second
+	if (callfunc->Size()>=7) {
+		res=callfunc->Evaluate(6,dom)->Integer();
+		if (res>=0 && res<60)
+			temps->tm_sec=res;
+	}
+
+		
+	x=mktime(temps);
+	if (x<=0)
+		return kifFALSE;
+	ktime->value=x;
+	return kifTRUE;
+}
+
+KifElement* PreDate(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreDate");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[15]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		callfunc->kifcode->Returnerror(kifErrorStrings[16]);
+	string d=timeinfo->String();
+	return callfunc->kifcode->Providestring(d);
+}
+
+
+KifElement* PreYear(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreYear");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[17]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[18]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	long vl=temps->tm_year+1900;
+	return callfunc->kifcode->Provideinteger(vl);
+}
+
+KifElement* PreDay(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreDay");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[19]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[20]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	long vl=temps->tm_mday;
+	return callfunc->kifcode->Provideinteger(vl);
+}
+
+KifElement* PreHour(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreHour");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[21]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[22]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	return callfunc->kifcode->Provideinteger(temps->tm_hour);
+}
+
+KifElement* PreMinute(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreMinute");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[21]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[22]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	return callfunc->kifcode->Provideinteger(temps->tm_min);
+}
+
+KifElement* PreSecond(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSecond");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[21]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[22]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	return callfunc->kifcode->Provideinteger(temps->tm_sec);
+}
+
+KifElement* PreMonth(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreMonth");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[23]);
+
+	//First parameter is a string
+	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+	if (timeinfo->type!=kifDate)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[24]);
+	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+	long vl=temps->tm_mon+1;
+	return callfunc->kifcode->Provideinteger(vl);
+}
+
+
+KifElement* PreCatch(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreCatch");
+#endif
+	if (callfunc->kifcode->error==false || callfunc->kifcode->errorptr==NULL)
+		return kifFALSE;
+	if (callfunc->Size()!=1) {
+		callfunc->kifcode->error=false;
+		callfunc->kifcode->errorptr=NULL;
+		return kifTRUE;
+	}
+	callfunc->kifcode->error=false;
+	string resstr=callfunc->kifcode->errorptr->String();
+	callfunc->kifcode->errorptr=NULL;
+	KifElement* res=callfunc->Evaluate(0,dom);
+	if (res->Returnvalue()->type==kifString)
+		res->Setvalue(callfunc->kifcode->Providestring(resstr));
+	else {
+		//We take the first three characters
+		//we look for the first digit
+		string resex;
+		for (int i=0;i<resstr.size();i++) {
+			while (i<resstr.size() && resstr[i]>='0' && resstr[i]<='9') {
+				resex+=resstr[i];
+				i++;
+			}
+			if (resex!="")
+				break;
+		}
+		//Which we transform into a number
+		res->Setvalue(callfunc->kifcode->Provideinteger(atol(STR(resex))));
+	}
+	return kifTRUE;
+}
+
+KifElement* PreRaise(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRaise");
+#endif
+	if (callfunc->kifcode->error==true)
+		return kifFALSE;
+	
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[25]);
+
+	KifElement* res=callfunc->Evaluate(0,dom);
+	string resstr=res->String();
+	callfunc->kifcode->Returnerror(resstr);
+	return res;
+}
+
+KifElement* PreTypeIs(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreTypeIs");
+#endif
+	if (callfunc->Size()!=2)
+		return kifFALSE;
+	KifElement* res=callfunc->Evaluate(0,dom);
+	KifElement* typ=callfunc->Evaluate(1,dom);
+	string resstr=res->Type();
+	string typstr=typ->String();
+	if (resstr==typstr)
+		return kifTRUE;
+	return kifFALSE;
+}
+
+KifElement* PreMath(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreMath");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	double v=callfunc->Evaluate(0,dom)->Float();
+	v=kifMathFunctions[callfunc->Name()](v);
+	return callfunc->kifcode->Providefloat(v);
+}
+
+KifElement* PreFill(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreOrd");
+#endif
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[208]);
+	KifElement* kvstr=callfunc->Evaluate(0,dom);
+	if (kvstr->type!=kifString)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[210]);
+	KifString* kstr=(KifString*)kvstr;
+	KifElement* res=callfunc->Evaluate(1,dom);
+	KifElement* kval=callfunc->Evaluate(2,dom);
+	int sz=res->Integer();
+	if (sz>(unsigned short)-1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[209]);
+	char* s=(char*)malloc(sz+1);
+	char c=' ';
+	string sval=kval->String();
+	if (sval!="")
+		c=sval[0];
+	memset(s,c,sz);
+	s[sz]=0;
+	kstr->value=s;
+	free(s);
+	return kval;
+}	
+
+KifElement* PreOrd(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreOrd");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* res=callfunc->Evaluate(0,dom);
+	string s=res->String();
+	if (s.size()>=1) {
+		long x;
+		if (contextualpattern->type==kifVector) {
+			vector<int> vect;
+			c_char_index_code_all(s,vect,callfunc->kifcode->utf8);
+			KifVector* kvect=Selectvector(callfunc,contextualpattern);
+			for (int i=0;i<vect.size();i++)
+				kvect->Push(callfunc->kifcode->Provideinteger(vect[i]));
+			return kvect;
+		}
+		x=c_char_index_code(s,0,callfunc->kifcode->utf8);
+		return callfunc->kifcode->Provideinteger(x);
+	}
+	return kifNULL;
+}
+
+KifElement* PreChr(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreChr");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* res=callfunc->Evaluate(0,dom);
+	long x=res->Integer();
+	if (x>=0 && x<=255) {
+		char c=(char)x;
+		string s;
+		s=c;
+		return callfunc->kifcode->Providestring(s);
+	}
+	return kifNULL;
+}
+
+
+KifElement* PreKill(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreKill");
+#endif
+
+	ThreadLock _lock(kifSignal);
+	vector<KifWaitState*>* kws;
+	vector<KifWaitState*>::iterator it;
+	if (callfunc->Size()==0) {
+		hmap<string,vector<KifWaitState*> >::iterator itm;
+		for (itm=kifWaitstates.begin();itm!=kifWaitstates.end();itm++) {
+			kws=&itm->second;
+			for (it=kws->begin();it!=kws->end();it++) {
+				if ((*it)->loquet!=NULL) {
+					(*it)->killed=true;
+					(*it)->loquet->Released();
+				}
+			}
+			kws->clear();			
+		}
+		kifWaitstates.clear();
+		return kifTRUE;
+	}
+
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[197]);
+
+	KifElement* kflag=callfunc->Evaluate(0,dom);
+	string flag=kflag->String();
+	kws=Freestate(callfunc->kifcode,flag);
+	if (kws==NULL)
+		return kifNULL;
+	for (it=kws->begin();it!=kws->end();it++) {
+		if ((*it)->loquet!=NULL) {
+			(*it)->killed=true;
+			(*it)->loquet->Released();
+		}
+	}
+	kws->clear();
+	kifWaitstates.erase(flag);
+	return kifTRUE;
+}
+
+
+KifElement* PreCast(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreCast");
+#endif
+	vector<KifWaitState*>* kws;
+	vector<KifWaitState*>::iterator it;
+	ThreadLock _lock(kifSignal);
+
+	if (callfunc->Size()==0) {
+		hmap<string,vector<KifWaitState*> >::iterator itm;
+		//First we duplicate it...
+		for (itm=kifWaitstates.begin();itm!=kifWaitstates.end();itm++) {
+			kws=&itm->second;
+			for (it=kws->begin();it!=kws->end();it++) {
+				if ((*it)->loquet!=NULL)
+					(*it)->loquet->Released();
+			}
+			kws->clear();
+		}
+
+		kifWaitstates.clear();
+		return kifTRUE;
+	}
+
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[198]);
+
+	KifElement* kflag=callfunc->Evaluate(0,dom);
+	string flag=kflag->String();
+	kws=Freestate(callfunc->kifcode,flag);
+	if (kws==NULL)
+		return kifNULL;
+	
+	//We need to duplicate the vector beforehand, to take into account any specific modification
+	//while applying the rest of the functions.
+	for (it=kws->begin();it!=kws->end();it++) {
+		(*it)->lastcast=flag;
+		if ((*it)->loquet!=NULL)
+			(*it)->loquet->Released();
+	}
+	kws->clear();
+	kifWaitstates.erase(flag);
+	return kifTRUE;
+}
+
+
+KifElement* PreWaitOnFalse(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[237]);
+
+	ThreadLock* _lock=new ThreadLock(kifLoquet);
+	//first we get our variable back
+	KifElement* var=callfunc->parameters[0]->Execute(kifNULL,dom,kifNULL,true);
+	int id=var->idgarbage;
+
+	var=var->Returnvalue();
+	//If we wait on a frame object, then the modification is on one of the variables of that object
+	if (var->type==kifDomain) {
+		KifDomain* vdom=(KifDomain*)var;
+		hmap<short,KifElement*>::iterator it;
+		bool found=false;
+		for (it=vdom->declarations.begin();it!=vdom->declarations.end();it++) {
+			if (it->second->type==kifFunction)
+				continue;
+			id=it->second->idgarbage;
+			if (callfunc->kifcode->loquets.find(id)!=callfunc->kifcode->loquets.end()) {
+				found=true;
+				break;
+			}
+		}
+		if (!found) {
+			delete _lock;
+			return kifTRUE;
+		}
+	}
+	else {
+		//if we do not have any lock on this variable, then we need to create it
+		if (callfunc->kifcode->loquets.find(id)==callfunc->kifcode->loquets.end()) {
+			delete _lock;
+			return kifTRUE;
+		}
+	}
+	
+	LockedThread* l=callfunc->kifcode->loquets[id];
+
+	delete _lock;
+	//we wait until our variable to change its status
+	l->Blocked();
+	
+	_lock=new ThreadLock(kifLoquet);
+	callfunc->kifcode->loquets.erase(id);			
+	delete l;		
+	delete _lock;
+	return kifTRUE;
+}
+
+KifElement* PreLock(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[238]);
+	string lock=callfunc->Evaluate(0,dom)->String();
+	//we create our lock
+	KifThreadLock* ktl;
+	if (callfunc->kifcode->locktables.find(lock)==callfunc->kifcode->locktables.end()) {
+		ktl=new KifThreadLock(NULL,false);
+		callfunc->kifcode->locktables[lock]=ktl;
+	}
+	else
+		ktl=callfunc->kifcode->locktables[lock];
+	ktl->Locking();
+	return kifTRUE;
+}
+
+KifElement* PreUnlock(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[239]);
+	string lock=callfunc->Evaluate(0,dom)->String();
+	KifThreadLock* ktl;
+	if (callfunc->kifcode->locktables.find(lock)==callfunc->kifcode->locktables.end()) {
+		string message=kifErrorStrings[240];
+		message+=lock;
+		return callfunc->kifcode->Returnerror(message);
+	}
+	ktl=callfunc->kifcode->locktables[lock];
+	ktl->Unlocking();
+	return kifTRUE;
+}
+
+
+
+KifElement* PreWait(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreWait");
+#endif
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[199]);
+
+	ThreadLock* lock=new ThreadLock(kifSignal);	
+	LockedThread* loquet=new LockedThread;
+	if (callfunc->Size()<1)
+		callfunc->kifcode->Returnerror(kifErrorStrings[212]);
+	KifElement* kflag=callfunc->Evaluate(0,dom);
+	string flag=kflag->String();
+	vector<string> flags;
+	flags.push_back(flag);
+	if (flag!="") {			
+		KifWaitState kws;
+		kws.loquet=loquet;
+		kifWaitstates[flag].push_back(&kws);
+		//we keep a track of all labels...
+		//But only one semaphore is set...
+		for (int i=1;i<callfunc->Size();i++) {
+			flag=callfunc->Evaluate(i,dom)->String();
+			flags.push_back(flag);
+			kifWaitstates[flag].push_back(&kws);
+		}
+		delete lock;
+
+		loquet->Blocked();
+		lock=new ThreadLock(kifSignal);	
+		if (kws.killed)				
+			callfunc->Setreturnvalue(kifTRUE);
+		//cleaning
+		for (int i=0;i<flags.size();i++) {
+			if (kifWaitstates.find(flags[i])!=kifWaitstates.end()) {
+				vector<KifWaitState*>& kwsloops=kifWaitstates[flags[i]];
+				for (int j=kwsloops.size()-1;j>=0;j--) {
+					if (kwsloops[j]==&kws)
+						kwsloops.erase(kwsloops.begin()+j);
+				}
+				if (kwsloops.size()==0)
+					kifWaitstates.erase(flags[i]);
+			}
+		}
+		flag=kws.lastcast;
+	}
+
+	delete loquet;
+	delete lock;
+	return callfunc->kifcode->Providestring(flag);
+}
+
+KifElement* PreWaiting(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreWait");
+#endif
+	ThreadLock _lock(kifSignal);
+	if (callfunc->Size()!=0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[200]);
+	KifVector* kvect=Selectvector(callfunc,contextualpattern);
+	vector<KifWaitState*>* kws;
+	vector<KifWaitState*>::iterator it;
+	hmap<string,vector<KifWaitState*> >::iterator itm;
+	//First we duplicate it...
+	for (itm=kifWaitstates.begin();itm!=kifWaitstates.end();itm++)
+		kvect->Push(callfunc->kifcode->Providestringraw(itm->first));
+	return kvect;
+}
+
+KifElement* PreVersion(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	return callfunc->kifcode->Providestringraw(Whoami_kif());
+}
+
+KifElement* PreFractionSimplify(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	return callfunc->Evaluate(0,dom)->FractionSimplify(false);
+}
+
+KifElement* PreEuclidian(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	return callfunc->Evaluate(0,dom)->Euclidian();
+}
+
+KifElement* PreNumeratorDenominator(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==3) {
+		KifElement* kfract=callfunc->Evaluate(0,dom);
+		KifElement* knum=callfunc->Evaluate(1,dom);
+		KifElement* kden=callfunc->Evaluate(2,dom);
+		long den=kden->Integer();
+		if (den==0)
+			return callfunc->kifcode->Returnerror("MATH(100): Error wrong fraction: denominator is 0");	
+		kfract->ND(knum->Integer(),den);
+		return kfract;
+	}
+	return callfunc->kifcode->Returnerror("MATH(101): Wrong number of parameter in ND");
+}
+
+KifElement* PreDenominator(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (callfunc->Size()==1)
+		return callfunc->kifcode->Provideinteger(kf->D());
+	
+	KifElement* kval=callfunc->Evaluate(1,dom);
+	long val=kval->Integer();
+	if (val==0)
+		return callfunc->kifcode->Returnerror("MATH(100): Error wrong fraction: denominator is 0");
+
+	((KifFraction*)kf)->denominator=val;
+	return kval;
+}
+
+KifElement* PreNumerator(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==1) {
+		KifElement* kf=callfunc->Evaluate(0,dom);
+		return callfunc->kifcode->Provideinteger(kf->N());
+	}
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	KifElement* kval=callfunc->Evaluate(1,dom);
+	((KifFraction*)kf)->numerator=kval->Integer();
+	return kval;
+}
+
+
+KifElement* PrePrint(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePrint");
+#endif
+	KifElement* res=kifNULL;
+	ostream& os=*callfunc->kifcode->os;
+
+	for (size_t i=0;i<callfunc->Size();i++) {
+		res=callfunc->parameters[i]->Execute(callfunc->kifcode->kifTypeSTRING,dom);
+		if (res->type==kifString)
+			os<<((KifString*)res)->value;
+		else
+			os<<res->String();
+	}
+	return res;
+}
+
+
+KifElement* PrePrintLN(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePrintLN");
+#endif
+	KifElement* res=kifNULL;
+	ostream& os=*callfunc->kifcode->os;
+
+	for (size_t i=0;i<callfunc->Size();i++) {
+		if (i)
+			os<<" ";
+		res=callfunc->parameters[i]->Execute(callfunc->kifcode->kifTypeSTRING,dom);
+		if (res->type==kifString)
+			os<<((KifString*)res)->value;
+		else
+			os<<res->String();
+	}
+	os<<Endl;
+	return res;
+}
+
+KifElement* PrePrintFlush(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePrintLN");
+#endif
+	ostream* os=callfunc->kifcode->os;
+	os->flush();
+	return kifTRUE;
+}
+
+KifElement* PrePrinterr(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePrinterr");
+#endif
+	KifElement* res=kifNULL;
+	for (size_t i=0;i<callfunc->Size();i++) {
+		res=callfunc->parameters[i]->Execute(callfunc->kifcode->kifTypeSTRING,dom);
+		if (res->type==kifString)
+			cerr<<((KifString*)res)->value;
+		else
+			cerr<<res->String();
+	}
+	return res;
+}
+
+KifElement* PrePrinterrLN(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePrinterrLN");
+#endif
+	KifElement* res=kifNULL;
+	for (size_t i=0;i<callfunc->Size();i++) {
+		if (i)
+			cerr<<" ";
+		res=callfunc->parameters[i]->Execute(callfunc->kifcode->kifTypeSTRING,dom);
+		if (res->type==kifString)
+			cerr<<((KifString*)res)->value;
+		else
+			cerr<<res->String();
+	}
+	cerr<<Endl;
+	return res;
+}
+
+KifElement* PreSeek(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSeek");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[161]);
+
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	KifElement* ki=callfunc->Evaluate(1,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[162]);
+	KifFile* kfile=(KifFile*)kf;
+	return kfile->Seek(ki->Integer());
+}
+
+KifElement* PreTell(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreTell");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[163]);
+
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[164]);
+	KifFile* kfile=(KifFile*)kf;
+	return kfile->Tell();
+}
+
+
+KifElement* PreWrite(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreWrite");
+#endif
+	if (callfunc->Size()<2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[26]);
+
+	KifElement* kf=callfunc->Evaluate(0,dom);
+
+	KifElement* res=kifNULL;
+	if (kf->type==kifMatrix) {
+		//First parameter should be the filename
+		res=callfunc->Evaluate(1,dom);
+		string mname=res->String();
+		string thetype;
+		if (callfunc->Size()>=3) {
+			res=callfunc->Evaluate(2,dom);
+			thetype=res->String();
+		}
+		kf->Save(mname,thetype);
+		return kifTRUE;
+	}
+
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[27]);
+
+	KifFile* kfile=(KifFile*)kf;
+
+	for (size_t i=1;i<callfunc->Size();i++) {
+		res=callfunc->parameters[i]->Execute(callfunc->kifcode->kifTypeSTRING,dom);
+		kfile->Write(res->String());
+	}
+	return kifTRUE;
+}
+
+KifElement* PreRead(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRead");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[28]);
+	KifFile* kfile=(KifFile*)kf;
+
+	KifElement* res=kfile->Read();
+	return res;
+}
+
+KifElement* PreReadOneLine(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreReadOneLine");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[29]);
+
+	KifFile* kfile=(KifFile*)kf;
+
+	KifElement* res=kfile->Readoneline();
+	return res;
+}
+
+//close(file)
+KifElement* PreClose(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreClose");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[30]);
+
+	KifFile* kfile=(KifFile*)kf;
+	kfile->Close();
+	return kifTRUE;
+}
+
+//openread(file,name)
+KifElement* PreOpenReadfile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreOpenReadfile");
+#endif
+	if (callfunc->Size()!=2)
+		return kifFALSE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[31]);
+
+	//second parameter is a string
+	KifElement* name=callfunc->Evaluate(1,dom);
+	KifFile* kfile=(KifFile*)kf;
+	if (!kfile->Openread(name->String())) {
+		string mess=kifErrorStrings[32]+name->String();
+		return callfunc->kifcode->Returnerror(mess);
+	}
+	return kifTRUE;
+}
+
+//openread(file,name)
+KifElement* PreEndOfFile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreEndOfFile");
+#endif
+	if (callfunc->Size()!=1)
+		return kifTRUE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[33]);
+	KifFile* kfile=(KifFile*)kf;
+	return kfile->EndOfFile();
+}
+
+//openappend(file,name)
+KifElement* PreOpenAppendfile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreOpenWritefile");
+#endif
+	if (callfunc->Size()!=2)
+		return kifFALSE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[34]);
+	//second parameter is a string
+	KifElement* name=callfunc->Evaluate(1,dom);
+	KifFile* kfile=(KifFile*)kf;
+	if (!kfile->Openappend(name->String())) {
+		string mess=kifErrorStrings[35]+name->String();
+		return callfunc->kifcode->Returnerror(mess);
+	}
+	return kifTRUE;
+}
+
+
+//openwrite(file,name)
+KifElement* PreOpenWritefile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreOpenWritefile");
+#endif
+	if (callfunc->Size()!=2)
+		return kifFALSE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[34]);
+	//second parameter is a string
+	KifElement* name=callfunc->Evaluate(1,dom);
+	KifFile* kfile=(KifFile*)kf;
+	if (!kfile->Openwrite(name->String())) {
+		string mess=kifErrorStrings[35]+name->String();
+		return callfunc->kifcode->Returnerror(mess);
+	}
+	return kifTRUE;
+}
+
+KifElement* PreFlushFile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreFlushFile");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+	//First parameter should be a file
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type!=kifFile)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[34]);
+	KifFile* kfile=(KifFile*)kf;
+	if (kfile->mode==2) {
+		kfile->thefile->flush();
+		return kifTRUE;
+	}
+	return kifFALSE;
+}
+
+KifElement* PreInsert(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreInsert");
+#endif
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[36]);
+	size_t idx;
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifVector) {
+		//second parameter is anything
+		KifElement* kval=callfunc->Evaluate(2,dom);
+		idx=callfunc->Evaluate(1,dom)->Integer();
+		if (idx>=((KifVector*)kf)->values.size())
+			((KifVector*)kf)->Push(kval);
+		else
+			((KifVector*)kf)->Insert(idx,kval);
+		return kifTRUE;
+	}
+
+	if (kf->type==kifList) {
+		//second parameter is anything
+		KifElement* kval=callfunc->Evaluate(2,dom);
+		idx=callfunc->Evaluate(1,dom)->Integer();
+		if (idx>=((KifList*)kf)->values.size())
+			((KifList*)kf)->Push(kval);
+		else
+			((KifList*)kf)->Insert(idx,kval);
+		return kifTRUE;
+	}
+
+	if (kf->type==kifString) {
+		//second parameter is anything
+		idx=callfunc->Evaluate(1,dom)->Integer();
+		string val=callfunc->Evaluate(2,dom)->String();
+		if (c_char_index_insert(((KifString*)kf)->value,val,idx,callfunc->kifcode->utf8)==false)
+			return kifFALSE;
+		((KifString*)kf)->update();
+		return kifTRUE;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[37]);
+}
+
+KifElement* PreJoin(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreJoin");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[165]);
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	if (kf->type==kifVector) {
+		KifVector* kvect=(KifVector*)kf;
+		//The separator
+		KifElement* kstrsep=callfunc->Evaluate(1,dom);
+		string sep=kstrsep->String();
+		string res;
+		int it;
+		bool beg=true;
+		for (it=0;it<kvect->values.size();it++) {
+			if (beg==false)
+				res+=sep;
+			beg=false;
+			res+=kvect->values[it]->String();			
+		}
+		return callfunc->kifcode->Providestring(res);
+	}
+	if (kf->type==kifList) {
+		KifList* kvect=(KifList*)kf;
+		//The separator
+		KifElement* kstrsep=callfunc->Evaluate(1,dom);
+		string sep=kstrsep->String();
+		string res;
+		list<KifElement*>::iterator it;
+		bool beg=true;
+		for (it=kvect->values.begin();it!=kvect->values.end();it++) {
+			if (beg==false)
+				res+=sep;
+			beg=false;
+			res+=(*it)->String();			
+		}
+		return callfunc->kifcode->Providestring(res);
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[166]);
+}
+
+
+KifElement* PreSort(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSort");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[46]);
+
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+
+	if (kf->type==kifVector) {
+		KifVector* kvect=(KifVector*)kf;
+		//Second parameter should be function
+		kf=callfunc->Evaluate(1,dom)->Functioncall(dom);
+		if (kf!=NULL && kf->type==kifFunction) {
+			KifComparison kfcomp(dom,(KifFunction*)kf);
+			sort(kvect->values.begin(),kvect->values.end(),kfcomp);
+			return kifTRUE;
+		}
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[47]);
+}
+
+KifElement* PreSum(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSum");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[169]);
+
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+	double v=0;
+	if (kf->type==kifVector) {
+		KifVector* kvect=(KifVector*)kf;
+		for (int it=0;it<kvect->values.size();it++)
+			v+=kvect->values[it]->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+	if (kf->type==kifList) {
+		KifList* kvect=(KifList*)kf;
+		list<KifElement*>::iterator it;		
+		for (it=kvect->values.begin();it!=kvect->values.end();it++)
+			v+=(*it)->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+	if (kf->type==kifMap) {
+		KifMap* kvect=(KifMap*)kf;
+		hmap<string,KifElement*>::iterator it;		
+		for (it=kvect->values.begin();it!=kvect->values.end();it++)
+			v+=it->second->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[170]);
+}
+
+KifElement* PreValues(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[186]);
+	//First parameter should be a map
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+	if (kf->type==kifMap) {
+		KifMap* kmap=(KifMap*)kf;
+		KifVector* kvect=Selectvector(callfunc,contextualpattern);
+		hmap<string,KifElement*>::iterator it;
+		for (it=kmap->values.begin();it!=kmap->values.end();it++)
+			kvect->Push(it->second);
+		return kvect;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[187]);
+}
+
+
+KifElement* PreKeys(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[192]);
+	//First parameter should be a map
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+	KifBaseString localstring(NULL,NULL);
+	localstring.kifcode=callfunc->kifcode;
+	if (kf->type==kifMap) {
+		KifMap* kmap=(KifMap*)kf;
+		KifVector* kvect=Selectvector(callfunc,contextualpattern);
+		hmap<string,KifElement*>::iterator it;
+		for (it=kmap->values.begin();it!=kmap->values.end();it++) {
+			localstring.value=it->first;
+			kvect->Push(&localstring);
+		}
+		return kvect;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[193]);
+}
+
+KifElement* PreProduct(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreProduct");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[171]);
+
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+	double v=1;
+	if (kf->type==kifVector) {
+		KifVector* kvect=(KifVector*)kf;
+		for (int it=0;it!=kvect->values.size();it++)
+			v*=kvect->values[it]->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+	if (kf->type==kifList) {
+		KifList* kvect=(KifList*)kf;
+		list<KifElement*>::iterator it;		
+		for (it=kvect->values.begin();it!=kvect->values.end();it++)
+			v*=(*it)->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+	if (kf->type==kifMap) {
+		KifMap* kvect=(KifMap*)kf;
+		hmap<string,KifElement*>::iterator it;		
+		for (it=kvect->values.begin();it!=kvect->values.end();it++)
+			v*=it->second->Float();
+		return callfunc->kifcode->Providefloat(v);
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[172]);
+}
+
+
+
+KifElement* PreApply(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreApply");
+#endif
+	if (callfunc->Size()<1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[48]);
+	//First parameter should be a XIP rule
+	KifElement* kf=callfunc->Evaluate(0,dom);
+
+	if (kf->type==kifCall || kf->type==kifFunction)
+		return kf->Execute(contextualpattern,callfunc,kf);
+
+	if (kf->type==kifXipRule)
+		return kf->Execute(contextualpattern,callfunc);
+
+	if (kf->type==kifIterator) {
+		KifElement* val=kf->IteratorValue();
+		return val->Execute(contextualpattern,callfunc,val);
+	}
+
+	KifElement* localfunction=NULL;
+	if (callfunc->Size()>=2) {
+		localfunction=callfunc->Evaluate(1,dom);
+		//then it is a simple parameter
+		if (localfunction->type!=kifCall && localfunction->type!=kifFunction)
+			localfunction=NULL;
+	}
+	
+	if (kf->type==kifVector) {
+		KifVector* kvect=(KifVector*)kf;
+		vector<KifElement*>::iterator itx;
+		for (itx=kvect->values.begin();itx!=kvect->values.end();itx++) {
+			kf=*itx;
+			if ((kf->type==kifCall || kf->type==kifFunction) || localfunction==NULL)
+				kf->Execute(contextualpattern,callfunc,kf);
+			else {
+				//We expect a function with one single argument
+				callfunc->parameters[1]=kf;
+				localfunction->Execute(contextualpattern,callfunc,localfunction);
+			}
+			
+			if (callfunc->kifcode->error)
+				return callfunc->kifcode->errorptr;
+		}
+		if (localfunction!=NULL)
+			callfunc->parameters[1]=localfunction;
+		return kifTRUE;
+	}
+
+	if (kf->type==kifList) {
+		KifList* kvect=(KifList*)kf;
+		list<KifElement*>::iterator itx;
+		for (itx=kvect->values.begin();itx!=kvect->values.end();itx++) {
+			kf=*itx;
+			if ((kf->type==kifCall || kf->type==kifFunction) || localfunction==NULL)
+				kf->Execute(contextualpattern,callfunc,kf);
+			else {
+				//We expect a function with one single argument
+				callfunc->parameters[1]=kf;
+				localfunction->Execute(contextualpattern,callfunc,localfunction);
+			}
+			
+			if (callfunc->kifcode->error)
+				return callfunc->kifcode->errorptr;
+		}
+		if (localfunction!=NULL)
+			callfunc->parameters[1]=localfunction;
+		return kifTRUE;
+	}
+
+	if (kf->type==kifMap) {
+		KifMap* kvect=(KifMap*)kf;
+		hmap<string,KifElement*>::iterator itx;
+		for (itx=kvect->values.begin();itx!=kvect->values.end();itx++) {
+			kf=itx->second;
+			if ((kf->type==kifCall || kf->type==kifFunction) || localfunction==NULL)
+				kf->Execute(contextualpattern,callfunc,kf);
+			else {
+				//We expect a function with one single argument
+				callfunc->parameters[1]=kf;
+				localfunction->Execute(contextualpattern,callfunc,localfunction);
+			}
+			
+			if (callfunc->kifcode->error)
+				return callfunc->kifcode->errorptr;
+		}
+		if (localfunction!=NULL)
+			callfunc->parameters[1]=localfunction;
+		return kifTRUE;
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[49]);
+}
+
+KifElement* PreClear(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreClear");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	kf->Clear();
+	return kifTRUE;
+}
+
+KifElement* PreTreeRemove(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	return kfirst->TreeRemove();
+}
+
+KifElement* PreTreeExtract(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	return kfirst->TreeExtract(NULL);
+}
+
+KifElement* PreTreeNext(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* kval=kfirst->TreeNext();
+	if (callfunc->Size()==1)
+		return kval;
+	else {
+		KifElement* kelement=callfunc->Evaluate(1,dom);
+		if (kval==kelement)
+			return kifTRUE;
+	}
+	return kifFALSE;
+}
+
+
+KifElement* PreTreePrevious(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* kval=kfirst->TreePrevious();
+	if (callfunc->Size()==1)
+		return kval;
+	else {
+		KifElement* kelement=callfunc->Evaluate(1,dom);
+		if (kval==kelement)
+			return kifTRUE;
+	}
+	return kifFALSE;
+}
+KifElement* PreTreeParent(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* kval=kfirst->TreeParent();
+	if (callfunc->Size()==1)
+		return kval;
+	else {
+		KifElement* kelement=callfunc->Evaluate(1,dom);
+		if (kval==kelement)
+			return kifTRUE;
+	}
+	return kifFALSE;
+}
+KifElement* PreTreeChild(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (callfunc->Size()==1)
+		return kfirst->TreeChild();
+	else {
+		KifElement* kelement=callfunc->Evaluate(1,dom);
+		if (kfirst==kelement->TreeParent())
+			return kifTRUE;
+	}
+	return kifFALSE;
+}
+
+KifElement* PreTreeLast(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* kval=kfirst->TreeLast();
+	if (callfunc->Size()==1)
+		return kval;
+	else {
+		KifElement* kelement=callfunc->Evaluate(1,dom);
+		if (kval==kelement)
+			return kifTRUE;
+	}
+	return kifFALSE;
+}
+
+KifElement* PreTreeDepth(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[203]);
+	KifElement* kroot=callfunc->Evaluate(0,dom);
+	return callfunc->kifcode->Provideinteger( kroot->Depth());
+}
+
+KifElement* PreTreeAddChild(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[202]);
+	KifElement* kroot=callfunc->Evaluate(0,dom);
+	KifElement* kelement=callfunc->Evaluate(1,dom);
+	if (kelement->type!=kifTree)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[201]);
+	return kroot->TreeAddchild((KifTree*)kelement);
+}
+
+KifElement* PreTreeAddNext(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[202]);
+	KifElement* kroot=callfunc->Evaluate(0,dom);
+	KifElement* kelement=callfunc->Evaluate(1,dom);
+	if (kelement->type!=kifTree)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[201]);
+	return kroot->TreeAddnext((KifTree*)kelement);
+}
+
+KifElement* PreTreeAddPrevious(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[202]);
+	KifElement* kroot=callfunc->Evaluate(0,dom);
+	KifElement* kelement=callfunc->Evaluate(1,dom);
+	if (kelement->type!=kifTree)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[201]);
+	return kroot->TreeAddprevious((KifTree*)kelement);
+}
+
+KifElement* PreSize(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreSize");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	int sz=kfirst->Size();
+	KifElement* ksz=callfunc->kifcode->Provideinteger(sz);
+	return ksz;
+}
+
+KifElement* PreReverse(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreReverse");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[175]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifVector) {
+		KifVector* kvect=(KifVector*)kfirst;
+		vector<KifElement*>::reverse_iterator it;
+		KifVector* kvectres=Selectvector(callfunc,contextualpattern);
+		for (it=kvect->values.rbegin();it!=kvect->values.rend();it++) {
+			kvectres->Push(*it);
+		}
+		return kvectres;
+	}
+	if (kfirst->type==kifList) {
+		KifList* kvect=(KifList*)kfirst;
+		list<KifElement*>::reverse_iterator it;
+		KifList* kvectres=new KifList(callfunc->kifcode,NULL);
+		for (it=kvect->values.rbegin();it!=kvect->values.rend();it++) {
+			kvectres->Push(*it);
+		}
+		return kvectres;
+	}
+	string s=kfirst->String();
+	s=c_char_reverse(s,callfunc->kifcode->utf8);
+	return callfunc->kifcode->Providestring(s);
+}
+
+
+KifElement* PreRemovefirst(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRemovefirst");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[84]);
+
+	KifElement* kstr=callfunc->Evaluate(0,dom);
+	KifElement* knb=callfunc->Evaluate(1,dom);
+	string s=kstr->String();
+	int id=knb->Integer();
+	//On retire en tete
+	int iv=s.length();
+
+	if (iv>0 && id<=iv) {
+		s=s.c_str()+id;
+		return callfunc->kifcode->Providestring(s);
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[85]);
+}
+
+KifElement* PreRemovelast(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreRemovelast");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[125]);
+
+	KifElement* kstr=callfunc->Evaluate(0,dom);
+	KifElement* knb=callfunc->Evaluate(1,dom);
+	string s=kstr->String();
+	int id=knb->Integer();
+	//On retire en tete
+	int iv=s.length();
+
+	if (iv>0 && id<=iv) {
+		s=s.substr(0,iv-id);
+		return callfunc->kifcode->Providestring(s);
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[126]);
+}
+
+KifElement* PreNbInstances(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreNbInstances");
+#endif
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[86]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifMatrix) {
+		long i=((KifMatrix*)kfirst)->values.size();
+		return callfunc->kifcode->Provideinteger(i);
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[87]);
+}
+
+
+KifElement* PreUnGet(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreUnGet");
+#endif
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[173]);
+	
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	int nb=1;
+	if (callfunc->Size()==2) {
+		KifElement* knb=callfunc->Evaluate(1,dom);
+		nb=knb->Integer();
+	}
+
+
+	if (kfirst->type==kifFile) {
+		KifFile* kfile=(KifFile*)kfirst;
+		if (kfile->mode==1) {
+			while (nb>0) {
+				kfile->thefile->unget();
+				nb--;
+			}
+			kfile->thefile->clear();
+			return kifTRUE;
+		}
+		return kifFALSE;
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[174]);
+}
+
+KifElement* PreFormat(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreFormat");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[188]);
+
+	KifElement* knum=callfunc->Evaluate(0,dom);
+	KifElement* kformat=callfunc->Evaluate(1,dom);
+	string sformat=kformat->String();
+	if (knum->type==kifDate) {
+		KifDate* ktime=(KifDate*)knum;
+		struct tm* temps = localtime(&ktime->value); 		
+		strftime(callfunc->kifcode->buffer,100,STR(sformat),temps);
+		return callfunc->kifcode->Providestringraw(callfunc->kifcode->buffer);
+	}
+
+	if (knum->type==kifInteger)
+		sprintf_s(callfunc->kifcode->buffer,1024,STR(sformat),knum->Integer());
+	else 
+		sprintf_s(callfunc->kifcode->buffer,1024,STR(sformat),knum->Float());
+	
+	return callfunc->kifcode->Providestringraw(callfunc->kifcode->buffer);
+}
+
+KifElement* PrePause(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePause");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+	static time_t tempsinitial,tempsfinal;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	int res=kfirst->Integer();
+	time(&tempsinitial);
+	time(&tempsfinal);         
+	char car=8;
+	while (difftime(tempsfinal,tempsinitial)<res) {
+		cout<<"/"<<car<<"/"<<car<<"/"<<car;
+		cout<<"-"<<car<<"-"<<car<<"-"<<car;
+		cout<<"\\"<<car<<"\\"<<car<<"\\"<<car;
+		time(&tempsfinal);
+	}
+	return kifTRUE;
+}
+
+KifElement* PostEval(KifCode* kifcode,string& code,KifElement* contextualpattern,KifDomain* dom) {
+	
+	bool pushed=kifcode->Pushlocal(kifcode->kstart);
+	KifInstructionSEQUENCE ki(NULL,NULL,idsequence);
+	ki.kifcode=kifcode;
+	//We deactivate the garbage temporary (to avoid problems)
+	
+	kifcode->nogarbage=true;
+	kifcode->Evaluate(&ki,code,false);
+	if (pushed)
+		kifcode->Pop();
+	KifElement* ret=ki.Execute(contextualpattern,dom);
+	//we reactivate it...
+	kifcode->nogarbage=false;
+	return ret;
+}
+
+KifElement* PreEval(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePause");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	string code=kfirst->String();
+	return PostEval(callfunc->kifcode,code,contextualpattern,dom);
+}
+
+KifElement* PreOpenSession(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	KifCode* kifcode=new KifCode(callfunc->kifcode->trigger,callfunc->kifcode->utf8,callfunc->kifcode->data,callfunc->kifcode->os);
+	return callfunc->kifcode->Provideinteger(kifcode->idkifmain);
+}
+
+KifElement* PreCloseSession(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[221]);
+	
+	int i=callfunc->Evaluate(0,dom)->Integer();
+	KifCode* kifcode=kifCodeVector.retireElement(i);
+	if (kifcode==NULL || kifcode==callfunc->kifcode)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[222]);
+	delete kifcode;
+	return kifTRUE;
+}
+
+KifElement* PreCompile(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[223]);
+	
+	int i=callfunc->Evaluate(0,dom)->Integer();
+	KifCode* kifcode=kifCodeVector[i];
+	if (kifcode==NULL || kifcode==callfunc->kifcode)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[222]);
+	
+	int firstinstruction=kifcode->kstart->instructions.size();
+	int igarbage=kifcode->garbage.size();
+	int cursor=kifcode->cursor;
+	hmap<short,KifElement*> stack;
+	hmap<short,KifElement*>::iterator it;
+	for (it=kifcode->kstart->declarations.begin();it!=kifcode->kstart->declarations.end();it++)
+		stack[it->first]=it->second;
+
+	KifElement* kfirst=callfunc->Evaluate(1,dom);
+	string code=kfirst->String();
+	kifcode->kstart->adding=true;
+	bool pushed=kifcode->Pushlocal(kifcode->kstart);
+	//We evaluate in kstart...
+	kifcode->Evaluate(kifcode->kstart,code,false);
+	if (pushed)
+		kifcode->Pop();
+	//then from igarbage up to the end, we reference our elements
+	if (kifcode->error==true) {
+		string error=kifcode->errorptr->String();
+		kifcode->error=false;
+		kifcode->errorptr=NULL;
+		int i;
+		for (i=firstinstruction;i<kifcode->kstart->instructions.size();i++)
+			kifcode->kstart->instructions.pop_back();
+		kifcode->kstart->declarations.clear();
+		for (it=stack.begin();it!=stack.end();it++)
+			kifcode->kstart->declarations[it->first]=it->second;
+		for (i=igarbage;i<kifcode->garbage.size();i++) {
+			if (kifcode->garbage[i]!=NULL)
+				delete kifcode->garbage[i];
+		}
+		kifcode->garbage.dernier=igarbage;
+		kifcode->cursor=cursor;
+		return callfunc->kifcode->Returnerror(error);
+	}
+	return callfunc->kifcode->Provideinteger(firstinstruction);
+}
+
+
+
+KifElement* PreRun(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePause");
+#endif
+	if (callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[224]);
+	
+	int i=callfunc->Evaluate(0,dom)->Integer();
+	int firstinstruction=callfunc->Evaluate(1,dom)->Integer();
+	KifCode* kifcode=kifCodeVector[i];
+	if (kifcode==NULL || kifcode==callfunc->kifcode)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[222]);
+	kifcode->kstart->Run(firstinstruction);
+	return kifTRUE;
+}
+
+
+KifElement* PreSleep(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PrePause");
+#endif
+	if (callfunc->Size()!=1)
+		return kifFALSE;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	int res=kfirst->Integer();
+#ifdef WIN32
+	Sleep(res);
+#else
+	sleep(res);
+#endif
+	return kifTRUE;
+}
+
+
+
+KifElement* PreBegin(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreBegin");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator) 
+		return kfirst->Begin();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[132]);
+}
+
+KifElement* PreEnd(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreEnd");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator) 
+		return kfirst->End();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[133]);
+}
+
+KifElement* PreNend(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreNend");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator) {
+		if (kfirst->End()->Boolean()==true)
+			return kifFALSE;
+		return kifTRUE;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[134]);
+}
+
+KifElement* PreIteratorKey(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreIteratorKey");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator) {
+		KifElement* ke=kfirst->IteratorKey();
+		if (ke==NULL)
+			return kifNULL;
+		return ke;
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[135]);
+}
+
+KifElement* PreValue(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreValue");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator)
+		return kfirst->IteratorValue();
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[136]);
+}
+
+KifElement* PreValueType(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreValueType");
+#endif
+	if (callfunc->Size()!=1)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator) {
+		KifElement* ke=kfirst->IteratorValue();
+		string resstr=ke->Type();
+		return callfunc->kifcode->Providestring(resstr);
+	}
+	else {
+		string resstr=kfirst->Type();
+		return callfunc->kifcode->Providestring(resstr);
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[137]);
+}
+
+KifElement* PreValueTypeIs(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+#ifdef PROFILING
+	profilingcall("PreValueTypeIs");
+#endif
+	if (callfunc->Size()!=2)
+		return kifNULL;
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	KifElement* typ=callfunc->Evaluate(1,dom);
+	string resstr;
+	if (kfirst->type==kifIterator) {
+		KifElement* ke=kfirst->IteratorValue();
+		resstr=ke->Type();
+	}
+	else
+		resstr=kfirst->Type();
+
+	string typstr=typ->String();
+	if (resstr==typstr)
+		return kifTRUE;
+	return kifFALSE;
+}
+
+KifElement* PreReplace(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	//Replace an element with another
+	if (callfunc->Size()!=3)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[128]);
+	KifElement* kstr=callfunc->Evaluate(0,dom);
+	KifElement* kreg=callfunc->Evaluate(1,dom);
+	KifElement* krep=callfunc->Evaluate(2,dom);
+
+	string str=kstr->String();
+	string reg=kreg->String();
+	string rep=krep->String();
+
+	size_t lookHere = 0;
+	size_t foundHere;
+	while((foundHere = str.find(reg, lookHere)) != string::npos)    {
+		str.replace(foundHere, reg.size(), rep);
+		lookHere = foundHere + rep.size();
+	}
+
+	return callfunc->kifcode->Providestring(str);
+}
+
+
+KifElement* PreNext(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return kifNULL;
+
+	//First parameter should be a node
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+	if (kfirst->type==kifIterator)
+		return kfirst->Next();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[141]);
+}
+
+KifElement* PreLoad(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+
+	KifElement* ke=callfunc->Evaluate(0,dom);
+	KifElement* filename;
+
+	if (ke->type==kifKiF) {
+		if (callfunc->Size()!=2)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[129]);
+		KifKiF* kpars=(KifKiF*)ke;
+		if (kpars->id!=-1)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[179]);
+		filename=callfunc->Evaluate(1,dom);
+		string flname=filename->String();
+
+		vector<string> arguments;
+		for (int i=0;i<callfunc->kifcode->arguments.size();i++)
+			arguments.push_back(callfunc->kifcode->arguments[i]);
+
+		string error;
+		kpars->id=KifLoadPath(callfunc->kifcode,flname,arguments,false);
+		if (kpars->id==-1) {
+			error=kifErrorStrings[184];
+			error+=flname;
+			return callfunc->kifcode->Returnerror(error);
+		}
+
+		kpars->name=flname;
+		kifCodeVector[kpars->id]->debug=callfunc->kifcode->debug;
+		kifCodeVector[kpars->id]->debugging=callfunc->kifcode->debugging;
+		return callfunc->kifcode->Provideinteger(kpars->id);
+	}
+	return callfunc->kifcode->Returnerror(kifErrorStrings[131]);
+}
+
+KifElement* PrePush(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()<2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[38]);
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is anything
+	KifElement* res;
+	for (size_t i=1;i<callfunc->Size();i++) {
+		res=callfunc->Evaluate(i,dom);
+		kf->Push(res);
+	}
+	return kifTRUE;
+}
+
+KifElement* PrePop(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1 && callfunc->Size()!=2)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[40]);
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+
+	//second parameter is an integer (the number of pop)
+	KifElement* nb=NULL;
+	if (callfunc->Size()==2)
+		nb=callfunc->Evaluate(1,dom);
+	else
+		nb=kifMINUSONE;
+
+	return kf->Pop(nb);
+}
+
+KifElement* PreLast(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()!=1)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[42]);
+	//First parameter should be a vector
+	KifElement* kf=callfunc->Evaluate(0,dom);
+	//second parameter is an integer (the number of pop)
+
+	if (kf->type==kifVector || kf->type==kifMap || kf->type==kifString || kf->type==kifStringPtr || kf->type==kifList)
+		return kf->Last();
+	return callfunc->kifcode->Returnerror(kifErrorStrings[45]);
+}
+
+
+KifElement* PreSet(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[88]);
+
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+
+	if (kfirst->type==kifMatrix) {
+		if (callfunc->Size()!=5)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[88]);
+		KifElement* kline=callfunc->Evaluate(1,dom);
+		KifElement* kclass=callfunc->Evaluate(2,dom);
+		KifElement* katt=callfunc->Evaluate(3,dom);
+		KifElement* kval=callfunc->Evaluate(4,dom);
+		KifMatrix* kmat=(KifMatrix*)kfirst;
+		string mclass=kclass->String();
+		if (mclass=="")
+			return callfunc->kifcode->Returnerror(kifErrorStrings[90]);
+		string matt=katt->String();
+		if (matt=="")
+			return callfunc->kifcode->Returnerror(kifErrorStrings[91]);
+		long mline=kline->Integer();
+		kmat->Addvalue(mclass,matt,kval,mline);
+		return kifTRUE;
+	}
+	if (kfirst->type==kifIterator) {
+		if (callfunc->Size()!=2)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[88]);
+		KifElement* value=callfunc->Evaluate(1,dom);
+		KifElement* var=kfirst->IteratorValue();
+		var->Setvalue(value);
+		return kifTRUE;
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[92]);
+}
+
+KifElement* PreGet(KifElement* pattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return callfunc->kifcode->Returnerror(kifErrorStrings[93]);
+	KifElement* kfirst=callfunc->Evaluate(0,dom);
+
+	if (kfirst->type==kifString || kfirst->type==kifFloat || kfirst->type==kifInteger) { 
+		callfunc->kifcode->Gets();
+		KifElement* ke=callfunc->kifcode->Providestringraw(callfunc->kifcode->buffer);
+		kfirst->Setvalue(ke,NULL,dom);
+		return ke;
+	}
+	if (kfirst->type==kifMatrix) {
+		if (callfunc->Size()!=4)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[93]);
+		KifElement* kline=callfunc->Evaluate(1,dom);
+		KifElement* kclass=callfunc->Evaluate(2,dom);
+		KifElement* katt=callfunc->Evaluate(3,dom);
+		KifMatrix* kmat=(KifMatrix*)kfirst;
+		string mclass=kclass->String();
+		if (mclass=="")
+			return callfunc->kifcode->Returnerror(kifErrorStrings[94]);
+		string matt=katt->String();
+		if (matt=="")
+			return callfunc->kifcode->Returnerror(kifErrorStrings[95]);
+		long mline=kline->Integer();	
+		if (mline<kmat->values.size()) {
+			if (kmat->values[mline].find(mclass)!=kmat->values[mline].end())
+				if (kmat->values[mline][mclass].find(matt)!=kmat->values[mline][mclass].end())
+					return kmat->values[mline][mclass][matt];
+		}
+		return kifNULL;
+	}
+
+	if (kfirst->type==kifFile) {
+		if (callfunc->Size()!=1)
+			return callfunc->kifcode->Returnerror(kifErrorStrings[93]);
+		KifFile* kfile=(KifFile*)kfirst;
+		if (kfile->thefile!=NULL) {
+			if (kfile->EndOfFile()==kifTRUE)
+				return kifMINUSONE;
+			int c=kfile->thefile->get();
+			if (pattern->type==kifInteger || pattern->type==kifFloat)
+				return callfunc->kifcode->Provideinteger(c);
+			else {
+				string s;
+				s=(char)c;
+				return callfunc->kifcode->Providestring(s);
+			}
+		}
+	}
+
+	return callfunc->kifcode->Returnerror(kifErrorStrings[96]);
+}
+
+KifElement* PreThreadId(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	int id=callfunc->kifcode->GetThreadid();
+	return callfunc->kifcode->Provideinteger(id);
+}
+
+KifElement* PreParentThreadId(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	int id=callfunc->kifcode->GetThreadid();
+	return callfunc->kifcode->Provideinteger(id);
+}
+
+KifElement* PreExit(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		exit(-1);
+	KifElement* res=callfunc->Evaluate(0,dom);
+	exit(res->Integer());
+	return res;
+}
+
+KifElement* PreSetutf8(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+	if (callfunc->Size()==0)
+		return kifFALSE;
+	KifElement* kval=callfunc->Evaluate(0,dom);
+	callfunc->kifcode->Setutf8(kval->Boolean());
+	return kifTRUE;
+}
+
+
+//===================================================================
+//It is an XML document
+#ifdef KIF_RAW
+void KifMatrix::Save(string& filename,string& thetype) {
+	//first we need to isolate the class instances
+	vector<map<string,map<string,KifElement*> > >::iterator itins;
+	map<string,map<string,KifElement*> >::iterator itclass;
+	map<string, KifElement*>::iterator itatt;
+	map<string,bool>::iterator itatts;
+	KifElement* k;
+
+	int i;
+	string nm;
+	map<string,bool>::iterator it;
+	string add;
+
+	if (thetype=="arff") {
+		ofstream file(STR(filename));
+		file<<"%KIF GENERATED"<<endl<<endl;
+		file<<"@RELATION "<<STR(KifIdString(name))<<endl<<endl;
+		for (it=attributes.begin();it!=attributes.end();it++) {
+			nm="@ATTRIBUTE ";
+			nm+=it->first.c_str();
+			if (it->second==true)
+				nm+=" STRING\n";
+			else
+				nm+=" NUMERIC\n";
+			file<<STR(nm);
+		}		
+		nm="@ATTRIBUTE class {";
+		i=0;
+		for (it=classes.begin();it!=classes.end();it++) {
+			if (i!=0)
+				nm+=",";
+			i=1;
+			nm+=it->first;
+		}
+		nm+="}";
+		file<<STR(nm)<<endl<<endl<<"@DATA"<<endl;
+		for (itins=values.begin();itins!=values.end();itins++) {
+			for (itclass=(*itins).begin();itclass!=(*itins).end();itclass++) {
+				add="";
+				for (itatts=attributes.begin();itatts!=attributes.end();itatts++) {
+					k=kifNULL;
+					if (itclass->second.find(itatts->first)!=itclass->second.end())
+						k=itclass->second[itatts->first];
+					if (add!="")
+						add+=",";
+					if (itatts->second==true)
+						add+="\"";
+					else
+						if (k==kifNULL)
+							add+="0";
+					add+=k->String();
+					if (itatts->second==true)
+						add+="\"";
+				}
+				add+=",";
+				add+=itclass->first;
+				add=c_to_utf8(USTR(add));
+				file<<STR(add)<<endl;
+			}
+		}
+		return;
+	}
+	kifcode->Returnerror(kifErrorStrings[154]);
+}
+
+extern "C" {
+	void NormalisationNomFichier(char* nomFichier,char* tampon) {
+		strcpy(nomFichier,tampon);
+	}
+}
+KifElement* KifCode::KifParseXipRule(x_node* xn,KifElement* kf) {
+	string message="Not implemented in KiF: "+xn->value;			
+	throw new KifRaiseError(message,current->name,current_start,current_end);
+}
+
+KifElement* KifCode::KifParseXPath(x_node* xn,KifElement* kf) {
+	string message="Not implemented in KiF: "+xn->value;			
+	throw new KifRaiseError(message,current->name,current_start,current_end);
+}
+#endif

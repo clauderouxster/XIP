@@ -1,0 +1,37 @@
+# ============================================================================
+# ENCODING:	UTF-8
+# TYPE:		(x)fst script 
+# CONTENT:	change Italian FST for usage with NTM
+#
+# LANGUAGE:	ITALIAN
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	22-Apr-2008
+# ============================================================================
+# USAGE:	xfst -s <LexFST> -s tok-abbr.fst -l [ThisFile]
+# ============================================================================
+set quit-on-fail ON
+
+define ABBR0
+
+unoptimize net
+define LEX
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+# ----------------------------------------------------------------------------
+# For NTM : remove abbreviations that are NOT in the tokenizer
+
+define ABBR1	LEX .o. [ ABBR0 %. ] ;
+define ABBR2	LEX .o. [ ?* %.] ;
+define PUNCT	$%+Punct .o. LEX ;
+
+# multi-words which combine prepositions and nouns
+# e.g. "a favore d'anno"
+
+define MWE1	$[ CBD ?* %+Noun]  .o. LEX ;
+	
+read regex	[ LEX - [ABBR2|MWE1] ] | ABBR1 | PUNCT ;

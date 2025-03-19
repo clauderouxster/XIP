@@ -1,0 +1,687 @@
+# ============================================================================
+# ENCODING:	UTF-8
+# TYPE:		(x)fst script 
+# CONTENT:	morphological guesser
+# ENCODING:	UTF-8 [€àâáäã]
+# LANGUAGE:	ITALIAN
+#
+# AUTHOR:	A. Romano, A. Schiller
+#
+# CREATED:	02-Nov-1999	(A. Schiller)
+#		- based on 'old' guesser by A, Romano
+#		- added morphological categories	
+# UDATED:	20-Apr-2005	(AS: modified boundary symbols)
+# UPDATED:	03-Apr-2006 	(AS: changed to utf-8)
+# ============================================================================
+# USAGE: 	xfst -utf8 -l [ThisFile]
+# ============================================================================
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+! -------------------------------------------------------------------------
+! Character classes
+! -------------------------------------------------------------------------
+echo >>> define character sets
+define Up1	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z] ;
+define Up2	[Ä|Á|À|Â|Ë|É|È|Ê|Ï|Í|Ì|Î|Ö|Ó|Ò|Ô|Ü|Ú|Ù|Û|Ç|Ñ] ;
+define Up	[ Up1 | Up2 ] ;
+
+define Low1 	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z] ;
+define Low2 	[ä|á|à|â|ë|é|è|ê|ï|í|ì|î|ö|ó|ò|ô|ü|ú|ù|û|ç|ñ|ß] ;
+define Low  	[ Low1 | Low2 ] ;
+
+
+define Dig 	[%0|1|2|3|4|5|6|7|8|9] ;
+
+define DigRom	[I|V|X|L|C|D|M|i|v|x|l|c|d|m] ;
+define NumRom	[[I|V|X|L|C|D|M]+ | [i|v|x|l|c|d|m]+] ;
+
+define Char 	[Up2 | Low2] ;
+
+define Letter 	[Up | Low | %'] ;
+
+define Sym	[%#|%&|%@|%~|%§|%^|%×|%Ø|%Þ|%ø|%þ|%©|%®] ;
+
+define Space	[% ] ;
+
+define Hyphen	[%-] ;
+
+define Slash	[%/] ;
+
+define NotI	[ Low - i ];
+
+define StemLw	[Low+ ] ;
+
+define StemLwHy	[ StemLw Hyphen ]* StemLw ;
+
+# define StemUp [Up+ ];
+
+define PropStem	Up [ %' | Up | Low | Dig ]* (%.) ;
+
+
+! -------------------------------------------------------------------------
+! Guesses
+! -------------------------------------------------------------------------
+
+echo >>> define guesser
+
+regex
+[
+# General
+
+ [ Sym | Char ]						%+Let:0
+
+# Ratios and Not-Hyphenated-Spans: 1/6, 32/33
+
+| Dig+ %/ Dig+						%+Dig:0
+	
+# Measures: 20Mb, 15mmHg
+
+| Dig+ [Low | Up] ([Low | Up]) ([Low | Up])		%+Meas:0
+
+# Digit-Char compounds: 1a, 331a; 1bis, 1ter
+
+| [ Dig+ | NumRom ] (%.) (Dig+) 
+	[Low | Up | b i s | t e r | q u a t e r]  	%+Item:0
+
+# Paragraphs: 1.1.2
+
+| Dig (Dig) (%. Dig (Dig)) %. Dig (Dig) (%.)		%+Item:0
+
+# Items: a., a), A); i), ii), iv)
+
+| [Low | Up] [ %. | %) ]				%+Item:0
+| DigRom+ [ %. | %) ]					%+Item:0
+
+
+# Numerals -> Adj: 1o (=primo), 2a (=seconda), 12mo (=dodicesimo), 34esimo
+
+| Dig+ ( ( e s i ) m ) 
+		[ o 		%+Num:0 %+Ord:0 %+Masc:0 %+Sg:0 
+		| o:a		%+Num:0 %+Ord:0 %+Fem:0 %+Sg:0
+		| o:i		%+Num:0 %+Ord:0 %+Masc:0 %+Pl:0 
+		| o:e		%+Num:0 %+Ord:0 %+Fem:0 %+Pl:0
+		] %+Abbr:0 
+
+
+# Proper names (AS@15/11/99)
+|	[Up [Up|Low]* %.]+			[ %+Prop %+Abbr ]:0
+|	PropStem [ [ %- | %/ ] PropStem ]* 	[ %+Prop ]:0
+
+];
+
+define SPEC;
+
+
+# --------------------------------------------------------------------------
+# suffix based guesses
+
+read regex StemLwHy [
+
+# Conjunctions. Archaic or wrong forms: conciossiacosaché, cosiché
+# Bad accentuated conjunctions: poichè (bad) instead of poiché
+
+  c h [é|è] 				%+Conj:0
+
+
+# Invariant Nouns ending in -tà, -itù: omertà, proprietà, schiavitù.
+
+|  [ t à | i t ù ]		%+Noun:0 %+Fem:0 %+SP:0 
+
+# Invariant Nouns ending in -asi, -esi, -isi: crasi, sintesi, crisi, ipotiposi.
+
+|  [ a | e | i | o ] s i 		%+Noun:0 %+Fem:0 %+SP:0 
+
+# Truncated Nouns ending in -or: amor, dolor, color.
+
+|  [ o r ]			%+Noun:0 %+Masc:0 %+Sg:0 %+Apoc:0
+
+# Singular & plural alterated nouns: 
+#	cavallino, valigetta, alberello, alberguccio; 
+#	ramolaccio, topastro, paperotto, libruzzo, poetucolo;
+#	scatolone, scatolona
+# Singular & plural alterated adjectives: 
+#	facilino, furbetto, poverello, deboluccio;
+#	verdastro, anzianotto;
+
+|  [ i n | [e|o] t t | e l l | s t r | u z z | o l ]
+		[ o 		[%+Noun|%+Adj]:0 %+Masc:0 %+Sg:0 
+		| a		[%+Noun|%+Adj]:0 %+Fem:0 %+Sg:0
+		| o:i		[%+Noun|%+Adj]:0 %+Masc:0 %+Pl:0 
+		| a:e		[%+Noun|%+Adj]:0 %+Fem:0 %+Pl:0
+		]
+|  [a|u] c c 
+		[ i o 		[%+Noun|%+Adj]:0 %+Masc:0 %+Sg:0 
+		| i a		[%+Noun|%+Adj]:0 %+Fem:0 %+Sg:0
+		| i o:0		[%+Noun|%+Adj]:0 %+Masc:0 %+Pl:0 
+		| i:0 a:e	[%+Noun|%+Adj]:0 %+Fem:0 %+Pl:0
+		]
+|  NotI o n 	
+		[ e 		%+Noun:0 %+Masc:0 %+Sg:0 	# ??
+		| a		%+Noun:0 %+Fem:0 %+Sg:0
+		| e:i		%+Noun:0 %+Masc:0 %+Pl:0 	# ??
+		| a:e		%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+# Added by AS		
+# (qualities & aptitudes; nouns often coming from verbs): 
+#	mansuetudine, elaborazione
+#	mansuetudini, elaborazioni
+
+| [ t u d i n | z i o n ]
+		[ e 		%+Noun:0 %+Fem:0 %+Sg:0
+		| e:i		%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+# (agents, roles; classical nouns coming from latin): 
+#	esattore, esaminatrice
+#	eseminatrici, esattori
+# Bug client : estintrici -> estintore APL (manquant) et plus probable que la version en 'trico'
+
+|  
+		[ {tore}		[%+Adj:0|%+Noun:0] %+Masc:0 %+Sg:0
+		| {tore}:{trice}	[%+Adj:0|%+Noun:0] %+Fem:0 %+Sg:0
+		| {tore}:{tori}		[%+Adj:0|%+Noun:0] %+Masc:0 %+Pl:0
+		| {tore}:{trici}	[%+Adj:0|%+Noun:0] %+Fem:0 %+Pl:0
+		]
+
+# (professionals): 
+#	geometra; geometri, geometre
+
+|  m e t r
+		[ a		%+Noun:0 %+MF:0 %+Sg:0
+		| a:i		%+Noun:0 %+Masc:0 %+Pl:0
+		| a:e		%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+# (professionals): 
+#	analista; analiste, analisti
+#	costituzionalista (Adj)
+
+|  i s t 
+		[ a		[%+Adj:0|%+Noun:0] %+MF:0 %+Sg:0
+		| a:i		[%+Adj:0|%+Noun:0] %+Masc:0 %+Pl:0
+		| a:e		[%+Adj:0|%+Noun:0] %+Fem:0 %+Pl:0
+		]
+
+# (scientific products nouns): 
+#	sonagrammi
+#	sonagramma
+| 	
+		[ {gramma}	%+Noun:0 %+Masc:0 %+Sg:0
+		| {gramm} a:i	%+Noun:0 %+Masc:0 %+Pl:0
+		]
+# (professionals, scientists nouns): 
+#	entomologo, zoologa
+#	entomologhi, zoologhe
+
+|  o l o g 
+		[ o		%+Noun:0 %+Masc:0 %+Sg:0
+		| o:a		%+Noun:0 %+Fem:0 %+Sg:0
+		| o:i		%+Noun:0 %+Masc:0 %+Pl:0	
+		| o:[(h) e]	%+Noun:0 %+Fem:0 %+Pl:0		
+		]
+
+# (professionals, scientists nouns): 
+#	dattilografo, dattilografa; dattilografi, dattilografe
+|  g r a f
+		[ o		%+Noun:0 %+Masc:0 %+Sg:0
+		| o:a		%+Noun:0 %+Fem:0 %+Sg:0
+		| o:i		%+Noun:0 %+Masc:0 %+Pl:0
+		| o:e		%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+# (human qualities, techniques and so on): 
+#	agorafobia, dattilografia, pizzeria, piressia
+#	agorafobie, zoofilie, pizzerie, piressie
+
+|  [ f o b | f i l | l o g | g r a f | e r | s s ] i 
+		[ a			%+Noun:0 %+Fem:0 %+Sg:0
+		| a:e			%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+
+# Added by KF
+# Singular nouns 
+# (human-character-kinds nouns): claustrofobo, zoofila
+
+|  [ f o b | f i l ] 
+		[ o 			[%+Adj:0|%+Noun:0] %+Masc:0 %+Sg:0
+		| o:a			[%+Adj:0|%+Noun:0] %+Fem:0 %+Sg:0 
+		| o:i			[%+Adj:0|%+Noun:0] %+Masc:0 %+Pl:0
+		| o:e			[%+Adj:0|%+Noun:0] %+Fem:0 %+Pl:0
+		]
+
+# (qualities): naturalezza, baldanza
+| [ e | a ] [ n | z ] 				
+		[ {za}			%+Noun:0 %+Fem:0 %+Sg:0 
+		| {za}:{ze}		%+Noun:0 %+Fem:0 %+Pl:0
+		]
+
+# (currents, theories; nouns often coming from adjectives): tecnicismo, dadaismo
+| [ m e n t | i s m ] 
+		[ o			%+Noun:0 %+Masc:0 %+Sg:0
+		| o:i			%+Noun:0 %+Masc:0 %+Pl:0
+		]
+
+
+
+
+# Singular & plural adjectives:  
+
+#	stranissimo;
+|  
+		[ o:{issimo} 		%+Adj:0 %+Sup:0 %+Masc:0 %+Sg:0
+		| o:{issima} 		%+Adj:0 %+Sup:0 %+Fem:0 %+Sg:0
+		| o:{issimi} 		%+Adj:0 %+Sup:0 %+Masc:0 %+Pl:0
+		| o:{issime} 		%+Adj:0 %+Sup:0 %+Fem:0 %+Pl:0
+		]
+
+#	sagace, funzionale, esecrabile, cistercense, petulante;
+| [ a c | a l | b i l | v o l | e n s | a n t ]
+		[ e:e			%+Adj:0 %+MF:0 %+Sg:0
+		| e:i			%+Adj:0 %+MF:0 %+Pl:0
+		]
+
+#	puzzolente; 
+| [ [Low - m] e n t | o r ]
+		[ e:e			%+Adj:0 %+MF:0 %+Sg:0
+		| e:i			%+Adj:0 %+MF:0 %+Pl:0
+		]
+ 
+#	aureo, ferruginea, soporifero, iroso, commutativo
+| [ e |  e r | o s | i v ] 
+		[ o:o 			%+Adj:0 %+Masc:0 %+Sg:0
+		| o:a 			%+Adj:0 %+Fem:0 %+Sg:0
+		| o:i			%+Adj:0 %+Masc:0 %+Pl:0
+		| o:e			%+Adj:0 %+Fem:0 %+Pl:0
+		]
+
+#	articolatorio
+|  
+		[ {orio}:{orio} 	%+Adj:0 %+Masc:0 %+Sg:0
+		| {orio}:{oria} 	%+Adj:0 %+Fem:0 %+Sg:0
+		| {orio}:{ori}		%+Adj:0 %+Masc:0 %+Pl:0
+		| {orio}:{orie}		%+Adj:0 %+Fem:0 %+Pl:0
+		]
+
+#	martiriologico, collerico;
+|  i c
+		[ o:o			%+Adj:0 %+Masc:0 %+Sg:0
+		| o:a 			%+Adj:0 %+Fem:0 %+Sg:0
+		| o:i			%+Adj:0 %+Masc:0 %+Pl:0
+		| o:{he}		%+Adj:0 %+Fem:0 %+Pl:0
+		]				
+
+#	spartano
+| a n 
+		[ o:o			%+Adj:0 %+Masc:0 %+Sg:0
+		| o:a			%+Adj:0 %+Fem:0 %+Sg:0
+		| o:i			%+Adj:0 %+Masc:0 %+Pl:0
+		| o:e			%+Adj:0 %+Fem:0 %+Pl:0	 
+		] 
+
+#	congolese
+| e s 
+		[ e:e			[%+Adj:0|%+Noun:0] %+MF:0 %+Sg:0
+		| e:i			[%+Adj:0|%+Noun:0] %+MF:0 %+Pl:0
+		]
+
+#	equide
+| i d
+		[ e:e			%+Noun:0 %+MF:0 %+Sg:0
+		| e:i			%+Noun:0 %+MF:0 %+Pl:0
+		]
+
+
+#AS:	bordatura, procedura, verzura - KF Adj->Noun 
+| u r
+		[ a			%+Noun:0 %+Fem:0 %+Sg:0
+		| a:e			%+Noun:0 %+Fem:0 %+Pl:0	 
+		] 
+
+# ----------------------------------------------------------------------------
+# Adverbs in -mente: raramente.
+
+| m e n t e			%+Adv:0
+];
+
+
+define FLEX
+
+# Adjectival forms by prefixation: ## DOES NOT WORK #AS: | and gender  missing!!!!
+# pro-Prodi, anti-abolizionisti, post-rivoluzione, post-parto
+
+# [ p r o | a n t i | p o s t ] %- (Up) Low+	[%+Adj:0 | %+Noun:0] %+MF:0 [%+Sg:0 | %+Pl:0]
+
+
+# ----------------------------------------------------------------------------
+# General singular nouns: aiuto-vice-capo, stringa; vice-presidente, dermatite; 
+
+define StemN 	StemLw [(Hyphen) Low+]* ;
+define StemNe	StemN [b|c|d|f|g|i|l|m|n|p|r|s|v] ;
+
+
+define NOUNADJ [ 
+  StemN o 	[%+Noun:0|%+Adj:0] %+Masc:0 %+Sg:0
+| StemN o:i 	[%+Noun:0|%+Adj:0] %+Masc:0 %+Pl:0
+| StemN a 	[%+Noun:0|%+Adj:0] %+Fem:0 %+Sg:0
+| StemN a:e 	[%+Noun:0|%+Adj:0] %+Fem:0 %+Pl:0
+| StemNe e	[%+Noun:0|%+Adj:0] %+MF:0 %+Sg:0
+| StemNe e:i	[%+Noun:0|%+Adj:0] %+MF:0 %+Pl:0
+];
+
+
+
+
+
+# ----------------------------------------------------------------------------
+echo >>> Verb forms
+define ClitImpInd	[ DBD:0 s i [%+Pron %+Refl %+Aton %+3P %+MF %+SP ]:0 ];
+define ClitImpv		[ DBD:0 [c|v] i %+Adv:0 
+			| DBD:0 ([c|v] i:e %+Adv:0 CBD:0) [
+				  {loro}:{le} [%+Pron %+Acc %+Aton %+3P %+Fem %+Pl ]:0
+				| {loro}:{li} [%+Pron %+Acc %+Aton %+3P %+Masc %+Pl ]:0
+				| {lui}:{la} [%+Pron %+Acc %+Aton %+3P %+Fem %+Pl ]:0
+				| {lui}:{lo} [%+Pron %+Acc %+Aton %+3P %+Masc %+Pl ]:0
+				| {ne} [%+Pron %+Ne %+MF %+SP ]:0
+				]
+			];
+
+read regex StemLw [
+# conjugation -are
+	[ {are}			[ %+Verb %+Inf ]:0
+	| {are}:{ar}		[ %+Verb %+Inf %+Apoc ]:0
+	| {are}:{ando}		[ %+Verb %+Gerund ]:0
+
+	| {are}:{iamo}		[ %+Verb %+Impv %+1P %+Pl ]:0 (ClitImpv)
+	| {are}:{ate}		[ %+Verb %+Impv %+2P %+Pl ]:0 (ClitImpv)
+	| {are}:{ino}		[ %+Verb %+Impv %+3P %+Pl ]:0 
+
+	| {are}:{ate}		[ %+Verb %+PresInd %+2P %+Pl ]:0
+	| {are}:{ano}		[ %+Verb %+PresInd %+3P %+Pl ]:0
+	| {are}:{iamo}		[ %+Verb %+PresInd %+1P %+Pl ]:0
+
+	| {are}:{iamo}		[ %+Verb %+PresSubj %+1P %+Pl ]:0
+	| {are}:{iate}		[ %+Verb %+PresSubj %+2P %+Pl ]:0
+	| {are}:{ino}		[ %+Verb %+PresSubj %+3P %+Pl ]:0
+
+	| {are}:{avo}		[ %+Verb %+ImpInd %+1P %+Sg ]:0
+	| {are}:{avi}		[ %+Verb %+ImpInd %+2P %+Sg ]:0
+	| {are}:{ava}		[ %+Verb %+ImpInd %+3P %+Sg ]:0 (ClitImpInd)
+	| {are}:{avamo}		[ %+Verb %+ImpInd %+1P %+Pl ]:0
+	| {are}:{avate}		[ %+Verb %+ImpInd %+2P %+Pl ]:0
+	| {are}:{avano}		[ %+Verb %+ImpInd %+3P %+Pl ]:0 (ClitImpInd)
+
+	| {are}:{assi}		[ %+Verb %+ImpSubj %+1P %+Sg ]:0
+	| {are}:{assi}		[ %+Verb %+ImpSubj %+2P %+Sg ]:0
+	| {are}:{asse}		[ %+Verb %+ImpSubj %+3P %+Sg ]:0
+	| {are}:{assimo}	[ %+Verb %+ImpSubj %+1P %+Pl ]:0
+	| {are}:{aste}		[ %+Verb %+ImpSubj %+2P %+Pl ]:0
+	| {are}:{assero}	[ %+Verb %+ImpSubj %+3P %+Pl ]:0
+
+	| {are}:{erò}		[ %+Verb %+FutInd %+1P %+Sg ]:0
+	| {are}:{erai}		[ %+Verb %+FutInd %+2P %+Sg ]:0
+	| {are}:{erà}		[ %+Verb %+FutInd %+3P %+Sg ]:0
+	| {are}:{eremo}		[ %+Verb %+FutInd %+1P %+Pl ]:0
+	| {are}:{erete}		[ %+Verb %+FutInd %+2P %+Pl ]:0
+	| {are}:{eranno}	[ %+Verb %+FutInd %+3P %+Pl ]:0
+
+	| {are}:{erei}		[ %+Verb %+Cond %+1P %+Sg ]:0
+	| {are}:{eresti}	[ %+Verb %+Cond %+2P %+Sg ]:0
+	| {are}:{erebbe}	[ %+Verb %+Cond %+3P %+Sg ]:0
+	| {are}:{eremmo}	[ %+Verb %+Cond %+1P %+Pl ]:0
+	| {are}:{ereste}	[ %+Verb %+Cond %+2P %+Pl ]:0
+	| {are}:{erebbero}	[ %+Verb %+Cond %+3P %+Pl ]:0
+
+	| {are}:{ai}		[ %+Verb %+Perf %+1P %+Sg ]:0
+	| {are}:{asti}		[ %+Verb %+Perf %+2P %+Sg ]:0
+	| {are}:{ò}		[ %+Verb %+Perf %+3P %+Sg ]:0
+	| {are}:{ammo}		[ %+Verb %+Perf %+1P %+Pl ]:0
+	| {are}:{aste}		[ %+Verb %+Perf %+2P %+Pl ]:0
+	| {are}:{arono}		[ %+Verb %+Perf %+3P %+Pl ]:0
+
+	| {are}:{ante}		[ %+Verb %+PresPart %+MF %+Sg ]:0
+	| {are}:{anti}		[ %+Verb %+PresPart %+MF %+Pl ]:0
+	| {are}:{ata}		[ %+Verb %+PastPart %+Fem %+Sg ]:0
+	| {are}:{ate}		[ %+Verb %+PastPart %+Fem %+Pl ]:0
+	| {are}:{ati}		[ %+Verb %+PastPart %+Masc %+Pl ]:0
+	| {are}:{ato}		[ %+Verb %+PastPart %+Masc %+Sg ]:0
+	]
+
+
+# conjugation -ere
+|	[ {ere}			[ %+Verb %+Inf ]:0
+	| {ere}:{er}		[ %+Verb %+Inf %+Apoc ]:0
+	| {ere}:{endo}		[ %+Verb %+Gerund ]:0
+
+	| {ere}:{iamo}		[ %+Verb %+Impv %+1P %+Pl ]:0 (ClitImpv)
+	| {ere}:{ete}		[ %+Verb %+Impv %+2P %+Pl ]:0 (ClitImpv)
+	| {ere}:{ano}		[ %+Verb %+Impv %+3P %+Pl ]:0
+
+	| {ere}:{iamo}		[ %+Verb %+PresInd %+1P %+Pl ]:0
+	| {ere}:{ete}		[ %+Verb %+PresInd %+2P %+Pl ]:0
+	| {ere}:{ono}		[ %+Verb %+PresInd %+3P %+Pl ]:0
+
+	| {ere}:{iamo}		[ %+Verb %+PresSubj %+1P %+Pl ]:0
+	| {ere}:{iate}		[ %+Verb %+PresSubj %+2P %+Pl ]:0
+	| {ere}:{ano}		[ %+Verb %+PresSubj %+3P %+Pl ]:0
+
+	| {ere}:{evo}		[ %+Verb %+ImpInd %+1P %+Sg ]:0
+	| {ere}:{evi}		[ %+Verb %+ImpInd %+2P %+Sg ]:0
+	| {ere}:{eva}		[ %+Verb %+ImpInd %+3P %+Sg ]:0 (ClitImpInd)
+	| {ere}:{evamo}		[ %+Verb %+ImpInd %+1P %+Pl ]:0
+	| {ere}:{evate}		[ %+Verb %+ImpInd %+2P %+Pl ]:0
+	| {ere}:{evano}		[ %+Verb %+ImpInd %+3P %+Pl ]:0 (ClitImpInd)
+
+	| {ere}:{essi}		[ %+Verb %+ImpSubj %+1P %+Sg ]:0
+	| {ere}:{essi}		[ %+Verb %+ImpSubj %+2P %+Sg ]:0
+	| {ere}:{esse}		[ %+Verb %+ImpSubj %+3P %+Sg ]:0
+	| {ere}:{essimo}	[ %+Verb %+ImpSubj %+1P %+Pl ]:0
+	| {ere}:{este}		[ %+Verb %+ImpSubj %+2P %+Pl ]:0
+	| {ere}:{essero}	[ %+Verb %+ImpSubj %+3P %+Pl ]:0
+
+	| {ere}:{erò}		[ %+Verb %+FutInd %+1P %+Sg ]:0		# same as -are
+	| {ere}:{erai}		[ %+Verb %+FutInd %+2P %+Sg ]:0
+	| {ere}:{erà}		[ %+Verb %+FutInd %+3P %+Sg ]:0
+	| {ere}:{eremo}		[ %+Verb %+FutInd %+1P %+Pl ]:0
+	| {ere}:{erete}		[ %+Verb %+FutInd %+2P %+Pl ]:0
+	| {ere}:{eranno}	[ %+Verb %+FutInd %+3P %+Pl ]:0
+
+	| {ere}:{erei}		[ %+Verb %+Cond %+1P %+Sg ]:0		# same as -are
+	| {ere}:{eresti}	[ %+Verb %+Cond %+2P %+Sg ]:0
+	| {ere}:{erebbe}	[ %+Verb %+Cond %+3P %+Sg ]:0
+	| {ere}:{eremmo}	[ %+Verb %+Cond %+1P %+Pl ]:0
+	| {ere}:{ereste}	[ %+Verb %+Cond %+2P %+Pl ]:0
+	| {ere}:{erebbero}	[ %+Verb %+Cond %+3P %+Pl ]:0
+
+	| {ere}:{ei}		[ %+Verb %+Perf %+1P %+Sg ]:0
+	| {ere}:{esti}		[ %+Verb %+Perf %+2P %+Sg ]:0
+	| {ere}:{ette}		[ %+Verb %+Perf %+3P %+Sg ]:0
+	| {ere}:{emmo}		[ %+Verb %+Perf %+1P %+Pl ]:0
+	| {ere}:{este}		[ %+Verb %+Perf %+2P %+Pl ]:0
+	| {ere}:{erono}		[ %+Verb %+Perf %+3P %+Pl ]:0
+
+	| {ere}:{ente}		[ %+Verb %+PresPart %+MF %+Sg ]:0
+	| {ere}:{enti}		[ %+Verb %+PresPart %+MF %+Pl ]:0
+	| {ere}:{ita}		[ %+Verb %+PastPart %+Fem %+Sg ]:0
+	| {ere}:{ite}		[ %+Verb %+PastPart %+Fem %+Pl ]:0
+	| {ere}:{iti}		[ %+Verb %+PastPart %+Masc %+Pl ]:0
+	| {ere}:{ito}		[ %+Verb %+PastPart %+Masc %+Sg ]:0
+	]
+
+# conjugation -ere
+| 	[ {ire}:{ir}		[ %+Verb %+Inf %+Apoc ]:0
+	| {ire}			[ %+Verb %+Inf ]:0
+	| {ire}:{endo}		[ %+Verb %+Gerund ]:0
+
+	| {ire}:{isci}		[ %+Verb %+Impv %+2P %+Sg ]:0
+	| {ire}:{iamo}		[ %+Verb %+Impv %+1P %+Pl ]:0 (ClitImpv)
+	| {ire}:{ite}		[ %+Verb %+Impv %+2P %+Pl ]:0 (ClitImpv)
+	| {ire}:{iscano}	[ %+Verb %+Impv %+3P %+Pl ]:0
+
+	| {ire}:{isco}		[ %+Verb %+PresInd %+1P %+Sg ]:0
+	| {ire}:{isci}		[ %+Verb %+PresInd %+2P %+Sg ]:0
+	| {ire}:{isce}		[ %+Verb %+PresInd %+3P %+Sg ]:0
+	| {ire}:{iamo}		[ %+Verb %+PresInd %+1P %+Pl ]:0
+	| {ire}:{ite}		[ %+Verb %+PresInd %+2P %+Pl ]:0
+	| {ire}:{iscono}	[ %+Verb %+PresInd %+3P %+Pl ]:0
+
+	| {ire}:{isca}		[ %+Verb %+PresSubj %+1P %+Sg ]:0
+	| {ire}:{isca}		[ %+Verb %+PresSubj %+2P %+Sg ]:0
+	| {ire}:{isca}		[ %+Verb %+PresSubj %+3P %+Sg ]:0
+	| {ire}:{iamo}		[ %+Verb %+PresSubj %+1P %+Pl ]:0
+	| {ire}:{iate}		[ %+Verb %+PresSubj %+2P %+Pl ]:0
+	| {ire}:{iscano}	[ %+Verb %+PresSubj %+3P %+Pl ]:0
+
+	| {ire}:{ivo}		[ %+Verb %+ImpInd %+1P %+Sg ]:0
+	| {ire}:{ivi}		[ %+Verb %+ImpInd %+2P %+Sg ]:0
+	| {ire}:{iva}		[ %+Verb %+ImpInd %+3P %+Sg ]:0 (ClitImpInd)
+	| {ire}:{ivamo}		[ %+Verb %+ImpInd %+1P %+Pl ]:0
+	| {ire}:{ivate}		[ %+Verb %+ImpInd %+2P %+Pl ]:0
+	| {ire}:{ivano}		[ %+Verb %+ImpInd %+3P %+Pl ]:0 (ClitImpInd)
+
+	| {ire}:{issi}		[ %+Verb %+ImpSubj %+1P %+Sg ]:0
+	| {ire}:{issi}		[ %+Verb %+ImpSubj %+2P %+Sg ]:0
+	| {ire}:{isse}		[ %+Verb %+ImpSubj %+3P %+Sg ]:0
+	| {ire}:{issimo}	[ %+Verb %+ImpSubj %+1P %+Pl ]:0
+	| {ire}:{iste}		[ %+Verb %+ImpSubj %+2P %+Pl ]:0
+	| {ire}:{issero}	[ %+Verb %+ImpSubj %+3P %+Pl ]:0
+
+	| {ire}:{irò}		[ %+Verb %+FutInd %+1P %+Sg ]:0
+	| {ire}:{irai}		[ %+Verb %+FutInd %+2P %+Sg ]:0
+	| {ire}:{irà}		[ %+Verb %+FutInd %+3P %+Sg ]:0
+	| {ire}:{iremo}		[ %+Verb %+FutInd %+1P %+Pl ]:0
+	| {ire}:{irete}		[ %+Verb %+FutInd %+2P %+Pl ]:0
+	| {ire}:{iranno}	[ %+Verb %+FutInd %+3P %+Pl ]:0
+
+	| {ire}:{irei}		[ %+Verb %+Cond %+1P %+Sg ]:0
+	| {ire}:{iresti}	[ %+Verb %+Cond %+2P %+Sg ]:0
+	| {ire}:{irebbe}	[ %+Verb %+Cond %+3P %+Sg ]:0
+	| {ire}:{iremmo}	[ %+Verb %+Cond %+1P %+Pl ]:0
+	| {ire}:{ireste}	[ %+Verb %+Cond %+2P %+Pl ]:0
+	| {ire}:{irebbero}	[ %+Verb %+Cond %+3P %+Pl ]:0
+
+	| {ire}:{ii}		[ %+Verb %+Perf %+1P %+Sg ]:0
+	| {ire}:{isti}		[ %+Verb %+Perf %+2P %+Sg ]:0
+	| {ire}:{ì}		[ %+Verb %+Perf %+3P %+Sg ]:0
+	| {ire}:{immo}		[ %+Verb %+Perf %+1P %+Pl ]:0
+	| {ire}:{iste}		[ %+Verb %+Perf %+2P %+Pl ]:0
+	| {ire}:{irono}		[ %+Verb %+Perf %+3P %+Pl ]:0
+
+	| {ire}:{ito}		[ %+Verb %+PastPart %+Masc %+Sg ]:0
+	| {ire}:{iti}		[ %+Verb %+PastPart %+Masc %+Pl ]:0
+	| {ire}:{ita}		[ %+Verb %+PastPart %+Fem %+Sg ]:0
+	| {ire}:{ite}		[ %+Verb %+PastPart %+Fem %+Pl ]:0
+
+	| {ire}:{enti}		[ %+Verb %+PresPart %+MF %+Pl ]:0
+	| {ire}:{ente}		[ %+Verb %+PresPart %+MF %+Sg ]:0
+	]
+];
+
+define VERB1
+
+# less "good" guesses
+
+read regex StemLw [
+	  {are}:{a}		[ %+Verb %+Impv %+2P %+Sg ]:0 (ClitImpv)
+	| {are}:{o}		[ %+Verb %+PresInd %+1P %+Sg ]:0
+	| {are}:{i}		[ %+Verb %+PresInd %+2P %+Sg ]:0
+	| {are}:{a}		[ %+Verb %+PresInd %+3P %+Sg ]:0
+	| {are}:{i}		[ %+Verb %+PresSubj %+123P %+Sg ]:0
+	| {ere}:{i}		[ %+Verb %+Impv %+2P %+Sg ]:0 (ClitImpv)
+	| {ere}:{o}		[ %+Verb %+PresInd %+1P %+Sg ]:0
+	| {ere}:{i}		[ %+Verb %+PresInd %+2P %+Sg ]:0
+	| {ere}:{e}		[ %+Verb %+PresInd %+3P %+Sg ]:0
+	| {ere}:{a}		[ %+Verb %+PresSubj %+123P %+Sg ]:0
+];
+
+define VERB2 
+
+echo >>> combine
+
+define GUESS [ [ SPEC | FLEX | VERB1 ] .p. [VERB2|NOUNADJ] ];
+
+read regex GUESS %+guessed:0 ;
+
+
+exit
+
+###########################################################################
+# Elided or truncated or bad stressed.
+# Truncated or bad stressed: mo', po', ca'; Niccoli'
+
+ Low+ [ a | e | i | o | u ] %'			%+NSG:0 |
+ Up Low* [ a | e | i | o | u ] %'		[ %+PROP:0 | %+NSG:0 ] |
+
+
+# Bad stressed e', E'
+
+ [ e | E ] %'					%+VAUXF:0 |
+
+# Elided: mezz', diss', poc', sott'
+
+ Low+ [[c|g] h | c | s | t | v | z ] %'  	[ %+ADJSG:0 | %+VF:0 | 
+						%+QUANTSG:0 | %+ADV:0 ] |
+ 
+
+# Abbreviated Nouns: soc. (società)
+
+ Low+ %.  					[%+NSG:0 | %+NPL:0] |
+
+
+# Abbreviated Nouns: S.p.a. (società per azioni); PhD, pH, dB
+
+ [ [ Up | Low ] %.]+ 				[%+NSG:0 | %+NPL:0] |
+ (Up) Low Up 					[%+NSG:0 | %+NPL:0] |
+
+
+# E-mail addresses: romano@icp.grenet.fr, Antonio.Romano@xerox.fr
+
+ [Letter | Dig |%_|%-|%.]+ %@ [Letter | Dig |%_|%-|%.]+	%+PROP:0 |
+
+
+
+# Foreign Borrows (Nouns): 
+#  forms ending with b,c,...,w (bob, Bob, choc, cow; BOB);
+#  forms containing j,k,w,x,y (kayak, jet; KAYAK);
+#  forms containing non-italian cluster built with italian chars:
+#  (like -sh-, -pt- ...): flash, script, schliessen.
+#  forms ending in -ing): leasing.
+
+ StemLw [ b | c | f | g | h | j | k | m | p |
+	  q | s | t | v | w | x | y | z ]		[%+NSG:0 | %+NPL:0] |	
+
+# StemLw [ j | k | w | x | y ]+ (Hyphen) Low+  		[%+NSG:0 | %+NPL:0] |
+
+# StemLw [ s h | p t | c t | d m | s c h ]+ (Hyphen) Low+ [%+NSG:0 | %+NPL:0] |	
+
+ StemLw [ i n g ] 				 	[%+NSG:0 | %+NPL:0] |	
+
+
+
+# General singular nouns: aiuto-vice-capo, stringa; vice-presidente, dermatite; 
+#			 AIUTO-VICE-CAPO ...
+
+ StemLw [[Hyphen | Slash] | Low]+ [ o | a ]			%+NSG:0 |
+ StemLw (Hyphen) Low+ (Hyphen) Low+ [b|c|d|f|g|l|m|n|p|r|s|v] e	%+NSG:0 |
+ StemLw (Hyphen) Low+ (Hyphen) Low+ [b|c|d|f|g|i|l|n|p|r|s|t|v] e n t e	%+NSG:0 |
+
+# General hyphenated expressions: input-output, vice-presidente
+
+ [StemLw Hyphen]+ StemLw 					%+NSG:0 |
+
+
+
+# General plural nouns: aiuto-vice-capi; stringhe, presidenti.
+
+ StemLw (Hyphen) Low+ (Hyphen) Low+ [b|c|d|f|g|l|m|n|p|r|s|v] i	%+NPL:0 |
+ StemLw (Hyphen) Low+ (Hyphen) Low+ [b|c|d|f|g|i|l|n|p|r|s|t|v] e n t i	%+NPL:0 |
+
+];
+
+
+
+

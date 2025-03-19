@@ -1,0 +1,159 @@
+Pocket Engineer : création des PEUNIT pour le français
+(Aude Rebotier juillet 2006)
+
+**************** fichiers utilisés **********************
+
+* Fichiers :
+french_PE.grm
+ntmscript_PE
+french_PE.xip
+
+* Fichiers ajoutés à la grammaire :
+	fichiers de règles :
+localgram1_PE.xip
+localgram2_PE.xip
+deduction_PE.xip
+normaliser_PE.py
+	lexique :
+lexique_PE.xip
+	déclaration :
+fonction_PE.xip
+cacher_PE.xip 
+
+(tous ces fichiers se trouvent dans FRENCH/GRAMMAR/BASIC)
+
+* Fichiers ajoutés aux FST :
+balises.fst
+lexique_PE.fst
+(dans FST/data ; les scripts xfst à l'origine de ces fichiers se trouvent dans FST/scr/PocketEngineer)
+
+****************** création des PEU *************************
+Le fichier deduction_PE.xip crée des noeuds PEU qui reçoivent ensuite une dépendance PEUNIT.
+
+peuvent former des PEU seuls :
+un NP
+un chunk verbal
+un PP
+un AP
+
+Font partie d'une même PEU :
+
+- plusieurs NP qui se suivent (y compris quand le premier fait partie d'un PP)
+		PEU[du papier format 216mm * 279mm]
+- un NP et le PP qui suit si la préposition est 'de'
+(y compris quand le NP fait partie d'un PP)
+		PEU[la cartouche d'agrafes de l'agrafeuse]
+- un NP et les adjectifs ou participes passés qui suivent
+		PEU[une intervention supplémentaire]
+- un verbe et son objet direct [fondé sur la dépendance OBJ)
+		Ce problème PEU[nécessite une intervention]
+- un adverbe ou un pronom interrogatif en position initiale et la PEU qui suit
+		PEU[Comment charger des transparents]
+- un adverbe final et la PEU qui précède
+		
+- un adverbe placé entre un verbe et son objet direct
+		PEU[Libérer délicatement les leviers]
+- certaines expressions verbales et leur sujet (fondé sur la dépendance SUBJ) :
+	il y a
+		PEU[il y a]
+	les passifs
+		PEU[le travail est interrompu]
+- les groupes INS (groupe entre parenthèses ou entre virgules) et la PEU qui précède
+		PEU[Supprimer un compte Auditron (Services de comptabilisation)]
+- plusieurs noms séparés par / ou |
+		PEU[le Fiery X12|XP12|EX12]
+- quelques PP avec un nom ou un verbe donné
+		PEU[mettre hors tension]
+		PEU[mise hors tension]
+		PEU[provenir de la machine]
+ 
+
+mais : le mot 'message' en italique forme une PEU à lui seul.
+
+Balises xml :
+- certaines sont supprimées (<font>, <sub>, <sup>, les liens <a>)
+- <i> </i>, <b> </b>, <em> </em>, <strong> </strong>  donnent respectivement les traits italic, bold, em et strong aux mots qu'elles encadrent.
+- les autres balises (<tr>, <td>...) sont comptées comme des ponctuations.
+
+
+***************** normalisation ***********************
+
+- sont supprimés dans la forme normalisée :
+les déterminants, les adverbes interrogatifs (comment, qui, où), les conjonctions, les pronoms, la ponctuation, les prépositions, les coordinations, les verbes être, avoir, pouvoir, devoir.
+	[un grincement] [est normal]	=> (grincement], (normal]
+- les autres mots sont ramenés à leur lemme en minuscules
+- lorsqu'un nom est accompagné d'un participe passé (formes passives : NP sujet + verbe passif ou NP + participe)
+	- s'il n'y a qu'un verbe (auxiliaire éventuel non compris), celui-ci est déplacé avant le NP
+		[le travail est interrompu] 	=> interrompre travail
+		[travail interrompu] 		=> interrompre travail
+	- s'il y a plusieurs verbes (auxiliaire éventuel non compris), le participe à droite du nom ne change pas de place 
+		[modifier la langue utilisée]		=> modifier langue utiliser
+		[la langue utilisée est modifiée]	=> modifier langue utiliser
+		[langue utilisée modifiée]		=> modifier langue utiliser
+
+*************** liste des traits *******************
+** Pour la désambiguïsation :
+adjectif : mot dont la lecture privilégiée est un adjectif
+adjectif1 : mot dont la lecture privilégiée est un adjectif dans certains contextes
+nom1 : mot dont la lecture privilégiée est un nom dans certains contextes
+mult : signe de multiplication
+car : signe de ponctuation qui peut être un nom  (#, @)
+
+** Pour la formation des PEU :
+cinf : mot qui peut avoir pour complément un infinitif (en faire une PEU)
+cde : mot qui peut avoir pour complément un PP en 'de' (en faire une PEU)
+mettre : nom qui former la tête d'un complément prépositionnel du verbe 'mettre' ou du nom 'mise'
+
+Les dépendances ajoutées :
+PEUNIT
+TETE	(tête des chunks nominaux, verbaux et adjectivaux)
+
+*************** les problèmes *************************
+ERREURS dans l'analyse et la formations des PEU :
+
+* le sujet d'un verbe passif n'est rattaché à lui que lorsqu'ils sont séparés par un adjectif au plus.
+Pas dans les phrases suivantes :
+    Vérifier que le cordon d’alimentation du chargeur automatique de documents recto verso est placé correctement .
+    Vérifier que la poignée verte derrière la porte avant est verrouillée .
+
+* la coordination n'est pas traitée. D'où incohérence :
+	le Fiery X12 | XP12	=> PEU[le Fiery X12 | XP12] normalisation [fiery x12 xp12]
+	le Fiery X12 ou XP12	=> PEU[le Fiery X12] [XP12] normalisation [fiery x12] [xp12]
+
+* le rattachement des PP (pour former une PEU avec le nom ou le verbe qu'ils qualifient) n'est presque pas traité. Seuls provenir de, mettre (mise) hors / sous tension sont notés (lexique_PE.xip), lorsque le PP suit immédiatement le verbe . Seraient à rattacher :
+	les sélections en cours 	=> actuellement : [les sélections] [en cours]
+		souhaitable : [les sélections en cours]
+	le magasin en cours d'utilisation => actuellement : [le magasin] [en cours d'utilisation]
+		souhaitable : [le magasin en cours d'utilisation]
+	Mettre la machine hors tension	=> actuellement : [Mettre la machine] [hors tension]
+		souhaitable : [Mettre la machine hors tension]
+	
+
+* le point est compté comme séparateur dans certaines formules numériques. 
+   Vérifier que la version du logiciel de la machine est 11.50.3h .
+	=> 11.50 est une unité, le point suivant est SENT, 3h constitue une phrase à lui seul.
+
+* problèmes de corpus :
+- le corpus comporte des codes html pour les espaces insécables : &nbsp;
+ils ne sont pas traités pour le moment.
+- les apostrophes de ce corpus ne sont pas toujours bien reconnues
+ex. Un relevé de confirmation s’imprime (succès ou échec de l’opération) .
+	=> s'imprime : noun [guessed]
+
+ERREURS dans la normalisation :
+* le choix de supprimer les prépositions dans la normalisation est provisoire ; il demanderait une étude lexicale détaillée.
+
+* participes passés : 
+certains sont analysés comme verbes, d'où une forme lemmatisée à l'infinitif
+	travail interrompu => interrompre travail
+d'autres sont analysés comme adjectifs :
+	écran éteint => écran éteint
+	mot de passe refusé => mot de passe refusé
+
+* l'inversion nom + participe passé ne fonctionne pas lorsque le nom fait partie d'un PP
+	les impressions effectuées 	=> effectuer impression
+	sur les impressions effectuées 	=> impression effectuer
+
+* on pourrait envisager de supprimer de la forme normalisée certains adverbes ('uniquement', 'si nécessaire')
+
+

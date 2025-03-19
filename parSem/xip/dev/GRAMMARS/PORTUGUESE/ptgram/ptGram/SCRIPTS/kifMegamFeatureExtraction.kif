@@ -1,0 +1,213 @@
+// file that contains all the functions required to build a megam instace based on a verb node
+
+function getPronounCase(node n){
+	vector cases;
+	string cliCase;
+	
+	for(cliCase in cliticCase){
+		if(n.feature(cliCase)){
+			cases.push(cliCase);
+		}
+	}
+	
+	return(cases);
+}
+
+function getSemanticNodeFeatures(node n){
+	vector feats;
+	
+	//semantic node features
+	string k;
+	for(k in megamViperNodeFeatureMap.keys()){
+		if(n.feature(k)){
+			feats.push(megamViperNodeFeatureMap[k]);
+		}
+	}
+	
+	return(feats);
+}
+
+function getSemanticDependencyFeatures(node n){
+	vector feats;
+	
+	//semantic dpendency features
+	string k;
+	for(k in megamViperDependencyFeatureMap.keys()){
+		if(n.feature(k)){
+			feats.push(megamViperDependencyFeatureMap[k]);
+		}
+	}
+	
+	return(feats);
+}
+
+function testNodeType(string switchName, string caseName){
+	if(caseName in switchName)
+		return(true);
+	return(false);
+}
+
+///////////////////////////////////////////////////////
+// functions to build megam entries - context tokens
+///////////////////////////////////////////////////////
+
+function buildContextEntry(node n, int index, list destList){
+
+	int i;
+	string signal;
+
+	if(index>0){
+		signal="+";
+		i=index;
+	} else {
+		signal="-";
+		i=-1*index;
+	}
+
+	if(debugMegam==true){ println("Context - index: ",index," node: ",n); }
+
+	if(n!=null){
+		string lemma=n.lemma(); //more than one value can be returned return(true);
+		lemma=lemma.replace(" ","_"); //megam does not allow spaces
+
+		string pos=n.pos();
+
+		destList.pushlast("TOK"+signal+i+"-pos:"+pos);
+		destList.pushlast("TOK"+signal+i+"-lemma:"+lemma);
+		
+		if(semanticTokens){
+		switch(n.name()) with testNodeType {
+			"NOUN": {
+				vector semFeatures = getSemanticNodeFeatures(n);
+				string f;
+				for(f in semFeatures){
+					destList.pushlast("TOK"+signal+i+"-sem:"+f);
+				}
+			}
+			
+			"PRON": {
+				vector clitCases = getPronounCase(n);
+				string cliCase;
+				for(cliCase in clitCases){
+					destList.pushlast("TOK"+signal+i+"-case:"+cliCase);
+				}
+
+				vector semFeatures = getSemanticNodeFeatures(n);
+				string f;
+				for(f in semFeatures){
+					destList.pushlast("TOK"+signal+i+"-sem:"+f);
+				}
+			}
+		}
+		}
+	}
+	else {
+		if(generateNulls) { destList.pushlast("TOK"+signal+i+":NULL"); }
+	}
+}
+
+///////////////////////////////////////////////////////
+// functions to build megam entries - dependencies
+///////////////////////////////////////////////////////
+function buildDependencyEntries(node n, list destList){
+	string d;
+	for(d in relevantDependencies){
+
+		vector deps=getDependency(n,d); //get deps with name
+
+		dependency dep;
+		for(dep in deps){//process each dependency
+
+			//only generate if dep exists
+			if(dep!=null){
+				if(debugMegam==true){ println("Dependency - ",dep, " Params: ",dep.parameters()); }
+
+				node depNode=dep.parameters()[1]; //node 0 is the verb node
+
+				string lemma=depNode.lemma();
+				lemma=lemma.replace(" ","_"); //megam does not allow spaces
+
+				string pos=depNode.pos();
+
+				destList.pushlast("DEP-"+d+"-pos:"+pos);
+				destList.pushlast("DEP-"+d+"-lemma:"+lemma);
+
+				//semantic node features
+				vector semFeatures = getSemanticNodeFeatures(depNode);
+				string f;
+				for(f in semFeatures){
+					destList.pushlast("DEP-"+d+"-sem:"+f);
+				}
+
+				//semantic dependency features
+				vector depFeatures = getSemanticDependencyFeatures(depNode);
+				for(f in depFeatures){
+					destList.pushlast("DEP-"+d+"-sem:"+f);
+				}
+			}
+		}
+
+		if(generateNulls && deps.size()==0) { destList.pushlast("DEP-"+d+":NULL"); }
+	}
+}
+
+///////////////////////////////////////////////////////
+// functions to build megam entries - verb stuff
+///////////////////////////////////////////////////////
+function buildVerbEntry(node n, list destList){
+	node parent=n.parent();
+
+	if(parent.feature("vdic")){
+		destList.pushlast("VERB:vdic");
+		if(debugMegam==true){ println("Verb - vdic"); }
+	}
+}
+
+///////////////////////////////////////////////////////
+// functions to build megam entries - clitics
+///////////////////////////////////////////////////////
+function buildCliticEntry(node n, list destList){
+	dependency dep=getDependency(n,"CLITIC");
+
+	if(dep!=null){
+		node depNode=dep.parameters()[1]; //node 0 is the verb node
+		
+		string cliCase;
+		vector clitCases = getPronounCase(depNode);
+		
+		for(cliCase in clitCases){
+			destList.pushlast("CLI:"+cliCase);
+			if(debugMegam==true){ println("Clitic - ",depNode.surface()," case: ",cliCase); }
+		}
+	}
+}
+
+/////////////////////////////////////////////
+// entry function to build megam entries
+/////////////////////////////////////////////
+function buildFeatureList(node n){
+	list megamFeatures;
+
+	int i;
+	node prev=n;
+	node next=n;
+
+	for(i=1;i<=contextTokens;i++){
+		prev=getPreviousNode(prev);
+		buildContextEntry(prev,i*-1,megamFeatures);
+
+	}
+
+	for(i=1;i<=contextTokens;i++){
+		next=getNextNode(next);
+		buildContextEntry(next,i,megamFeatures);
+	}
+
+	buildDependencyEntries(n,megamFeatures);
+
+	buildVerbEntry(n,megamFeatures);
+
+	buildCliticEntry(n,megamFeatures);
+
+	return(megamFeatures);
+} 

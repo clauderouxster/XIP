@@ -1,0 +1,156 @@
+<project name="mysql++" default="compile" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"			value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}buildInclude.xml" />
+
+<!--     project properties -->
+<!-- debug,log -->
+<property name="cc.debug"		value="${cc.debug.common}" />
+<property name="log.level"		value="verbose" />
+<!-- dir -->
+<!-- define -->
+<property name="define.common" 		value="" /> 
+<property name="define.windows" 	value="WIN32, _WIN32, MYSQLPP_MAKING_DLL, _WINDLL, _UNICODE" />
+<property name="define.solaris" 	value="UNIX" />	
+<property name="define.linux" 		value="UNIX" />
+<!-- include -->
+<property name="inc.dir"		location="${basedir}${fs}include" />
+<!-- doc -->
+<property name="doc.name"		value="mySQL++" />
+<!-- compiler arg -->
+<property name="compiler.arg.solaris"	value="-w" />
+<property name="compiler.arg.linux"	value="-w" />
+<property name="compiler.arg.windows"	value="" />
+<!-- linker arg -->
+<property name="link.arg.solaris"	value="-mt" />
+<property name="link.arg.linux"		value="-mt" />
+<property name="link.arg.windows.exe"	value="" />
+<property name="link.arg.windows.lib.shared"	value="" />
+
+<property name="mainTest" value="dbinfo" />
+
+<target name="test" depends="testwindows, testlinux" description="run a test" >
+</target>
+
+<target name="testwindows" depends="testCompile" description="run a test" if="windows">
+	<copy file="${mySQL.lib.dir}${fs}libmysql.dll" todir="${basedir}" />
+	<exec executable="${basedir}${fs}bin${fs}${platform}${fs}${mainTest}" dir="${basedir}" failonerror="true"  >
+		<!-- host user password port -->
+                <arg line= "bionnassay.grenoble.xrce.xerox.com root root" />
+        </exec>
+</target>
+
+<target name="testlinux" depends="testCompile" description="run a test" if="linux">
+	<exec executable="${basedir}${fs}bin${fs}${platform}${fs}${mainTest}" dir="${basedir}" failonerror="true"  >
+		<env key="LD_LIBRARY_PATH" path="${lib.dir}"/>
+		<!-- host user password port -->
+                <arg line= "bionnassay.grenoble.xrce.xerox.com root root" />
+        </exec>
+</target>
+
+<target name="testCompile" depends="compile" description=" compile a test">
+	<echo message="------------- mySQL++ TEST compile: start ---------- " />
+	<property name="binRecordFile" value="${log.dir}${fs}${mainTest}" />
+        <record name="${binRecordFile}" loglevel="${log.level}" action="start"/>
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${obj.dir}" subsystem="console" exceptions="true" 
+                multithreaded="true" outtype="executable" runtime="dynamic" outfile="${bin.dir}${fs}${mainTest}" >
+                <!-- C++ compilation -->
+                <compiler name = "${compilerCplus.name}" debug="${cc.debug}">
+                        <compilerarg value="${compiler.arg.solaris}" location="start" if="solaris" />
+                        <compilerarg value="${compiler.arg.linux}" location="start" if="linux" />
+                        <compilerarg value="${compiler.arg.windows}" location="start" if="windows" />
+                        <fileset dir="${mySQL++.src.dir}${fs}..${fs}examples" includes="${mainTest}.cpp, util.cpp"  />
+                        <includepath>
+                                <pathelement location="${mySQL.inc.dir}"/>
+                                <pathelement location="${mySQL++.src.dir}"/>
+                        </includepath>
+                        <defineset define="${define.common}"/>
+                        <defineset define="${define.windows}" if="windows"/>
+                        <defineset define="${define.solaris}" if="solaris"/>
+                        <defineset define="${define.linux}" if="linux"/>
+                </compiler>
+                <!-- link -->
+                <linker name= "${compilerCplus.name}" debug="${cc.debug}" >
+                        <linkerarg value="${link.arg.solaris}" location="start" if="solaris" />
+                        <linkerarg value="${link.arg.linux}" location="start" if="linux" />
+                        <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+                        <syslibset libs="${system.libCplus.names}" if="linux"/>
+                        <syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+                        <libset dir="${lib.dir}" libs="mysql++"  />
+			<!-- on windows: error undefined symbol: mysql_ti_sql_type_info -->
+                        <libset dir="${mySQL.lib.dir}" libs="libmysql" if="windows" />
+                </linker>
+        </cc>
+	<record name="${binRecordFile}" action="stop"/>	
+	<echo message="------------- mySQL++ TEST compile: end ---------- " />
+</target>
+
+<!-- ********************************************  library: compile and link lib  ************************************* -->
+<target name="compile" depends="setCommonProperties" description="compile and link lib " unless="solaris">
+	<echo message="------------- mySQL++ compile: start ---------- " />
+	<property name="libRecordFile" value="${log.dir}${fs}mysql++" />
+        <record name="${libRecordFile}" loglevel="${log.level}" action="start"/>
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${obj.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="shared" runtime="dynamic" outfile="${lib.dir}${fs}mysql++" >
+		<!-- C++ compilation -->
+		<compiler name = "${compilerCplus.name}" debug="${cc.debug}">
+			<compilerarg value="${compiler.arg.solaris}" location="start" if="solaris" />
+			<compilerarg value="${compiler.arg.linux}" location="start" if="linux" />
+			<compilerarg value="${compiler.arg.windows}" location="start" if="windows" />
+			<fileset dir="${mySQL++.src.dir}" includes="*.cpp"  />
+			<includepath>
+				<pathelement location="${mySQL.inc.dir}"/>
+				<pathelement location="${mySQL++.src.dir}"/>
+			</includepath>
+			<defineset define="${define.common}"/> 
+			<defineset define="${define.windows}" if="windows"/> 
+			<defineset define="${define.solaris}" if="solaris"/> 
+			<defineset define="${define.linux}" if="linux"/>
+		</compiler>
+		<!-- link -->
+		<linker name= "${compilerCplus.name}" debug="${cc.debug}" >
+			<linkerarg value="${link.arg.solaris}" location="start" if="solaris" />
+                        <linkerarg value="${link.arg.linux}" location="start" if="linux" />
+                        <linkerarg value="${link.arg.windows.lib.shared}" location="start" if="windows" />
+                        <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+                        <syslibset libs="${system.libCplus.names}" if="linux"/>
+                        <syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+			<libset dir="${mySQL.lib.dir}" libs="libmysql" if="windows"/>
+			<libset dir="${mySQL.lib.dir}" libs="mysqlclient"  if="linux"/>
+		</linker>
+	</cc>
+	<record name="${libRecordFile}" action="stop"/>	
+	<echo message="------------- mySQL++ compile: end ---------- " />
+</target>
+
+<!-- ********************************************  property  ************************************* -->
+<target name="setCommonProperties" depends="platformSetting, mysql, mysql++" description="action before compiling">
+	<property name="lib.dir" 		location="${lib.dirs}${fs}${platform}" />
+	<property name="obj.dir" 		location="${obj.dirs}${fs}${platform}" />
+	<property name="bin.dir" 		location="${bin.dirs}${fs}${platform}" />
+	<property name="log.dir" 		location="${log.dirs}${fs}${platform}" />
+	<mkdir dir="${lib.dir}" />
+	<mkdir dir="${obj.dir}" />	
+	<mkdir dir="${bin.dir}" />	
+	<mkdir dir="${log.dir}" />
+</target>
+
+<target name="mysql++" depends="" description="mySQL++ setting" >
+        <property name="mySQL++.src.dir" 	location="${basedir}${fs}mysql++-2.0.4${fs}lib" />
+</target>
+
+<target name="mysql" depends="" description="mySQL setting" >
+	<property name="mySQL.dir"           location="${basedir}${fs}..${fs}mySQL${fs}4.1.14${fs}${platform}" />
+	<property name="mySQL.inc.dir"       location="${mySQL.dir}${fs}include" />
+	<property name="mySQL.lib.dir"       location="${mySQL.dir}${fs}lib" />
+</target>
+
+<target name="localCleanAll" depends="" >
+</target>
+
+</project>
+

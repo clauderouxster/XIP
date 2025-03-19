@@ -1,0 +1,166 @@
+<project name="xip" default="test" basedir=".">
+
+<property name="name"	 		value="xip" />
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"			value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}buildInclude.xml" />
+
+<!--     project properties -->
+<!-- debug,log -->
+<property name="cc.debug"		value="${cc.debug.common}" />
+<property name="log.level"		value="verbose" />
+<!-- dir -->
+<property name="src.dir"		location="${basedir}" />
+<property name="python.dir"             location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}..${fs}python${fs}${python.version}" />
+<property name="root_xip"           	location="${basedir}${fs}..${fs}..${fs}..${fs}GRAMMARS" />
+<property name="grm.file"           	location="${root_xip}${fs}ENGLISH${fs}GRMFILES${fs}GRAM_GEN${fs}gram_gen_entit.grm" />
+<!-- define -->
+<property name="define.common" 		value="" /> 
+<property name="define.windows" 	value="WIN32" />
+<property name="define.solaris" 	value="UNIX" />	
+<property name="define.linux" 		value="UNIX" />
+<!-- include -->
+<!-- lib -->
+<!-- compiler arg -->
+<property name="compiler.arg.solaris"	value="-w" />
+<property name="compiler.arg.linux"	value="-w" />
+<property name="compiler.arg.windows"	value="" />
+<!-- linker arg -->
+<property name="link.arg.solaris"	value="-mt" />
+<property name="link.arg.linux"		value="-mt" />
+<property name="link.arg.windows.exe"	value="" />
+<property name="link.arg.windows.lib.static"	value="" />
+<property name="link.arg.windows.lib.shared"	value="" />
+<!-- source file names -->
+<property name="src.files" value=" test.cpp"/>
+
+<!-- ********************************************   compile and link   ************************************* -->
+<target name="compile" depends="setCommonProperties" description="compile and link shared lib ">
+	<echo message="------------- libStorage/test/test1 compile: start ---------- " />
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="obj${fs}${platform}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="test" >
+		<!-- C++ compilation -->
+		<compiler name = "${compilerCplus.name}" debug="${cc.debug}">
+			<compilerarg value="${compiler.arg.solaris}" location="start" if="solaris" />
+			<compilerarg value="${compiler.arg.linux}" location="start" if="linux" />
+			<compilerarg value="${compiler.arg.windows}" location="start" if="windows" />
+			<fileset dir="${src.dir}" includes="${src.files}"  />
+			<includepath>
+				<pathelement location="${libStorage.inc.dir}"/>
+			</includepath>
+			<defineset define="${define.common}"/> 
+			<defineset define="${define.windows}" if="windows"/> 
+			<defineset define="${define.solaris}" if="solaris"/> 
+			<defineset define="${define.linux}" if="linux"/>
+		</compiler>
+		<!-- link -->
+		<linker name= "${compilerCplus.name}" debug="${cc.debug}" >
+			<linkerarg value="${link.arg.solaris}" location="start" if="solaris" />
+			<linkerarg value="${link.arg.linux}" location="start" if="linux" />
+			<linkerarg value="${link.arg.windows.lib.shared}" location="start" if="windows" />
+			<syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+			<syslibset libs="${system.libCplus.names}, dl, util" if="linux"/>
+			<syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+			<libset dir="${mySQL++.lib.dir}" libs="mysql++" />
+			<libset dir="${libStorage.lib.dir}" libs="libStorage" />
+			<libset dir="${xips.lib.dir}" libs="xips"  />
+		</linker>
+	</cc>
+	<echo message="------------- libStorage/test/test1 compile: end ---------- " />
+</target>
+
+<target name="test" depends="clean, compile, testLinux, testWindows" >
+</target>
+
+<target name="testLinux" depends="genRun, compile" if="linux">
+	<echo message="------------- libStorage/test/test1 run test: start ---------- " />
+	<exec  executable="${basedir}${fs}test" dir="${basedir}" failonerror="true" >
+                <env key="ROOT_XIP" path="${root_xip}"/>
+		<env key="LD_LIBRARY_PATH" path="${mySQL++.lib.dir}:${libStorage.lib.dir}:${xips.lib.dir}"/>
+		<arg line="${grm.file} bionnassay.grenoble.xrce.xerox.com litigation root root ${basedir}${fs}myfile.txt 1 1" />	
+        </exec>
+	<echo message="------------- libStorage/test/test1 run test: end ---------- " />
+</target>
+
+<target name="genRun" >
+        <echo file="${basedir}${fs}run" >
+        #!bin/sh
+        set -x
+        ROOT_XIP=${root_xip}
+        export ROOT_XIP
+	LD_LIBRARY_PATH=${mySQL++.lib.dir}:${libStorage.lib.dir}:${xips.lib.dir}
+        ${basedir}${fs}test ${grm.file} bionnassay.grenoble.xrce.xerox.com litigation root root ${basedir}${fs}myfile.txt 1 1
+        </echo>
+        <chmod perm="+x" file="run" />
+</target>
+
+<target name="testWindows" depends="genRunBat, compile" if="windows">
+	<echo message="------------- libStorage/test/test1 run test: start ---------- " />
+	<copy file="${libStorage.lib.dir}${fs}libStorage.dll" todir="${basedir}" />
+	<copy file="${mySQL.lib.dir}${fs}libmysql.dll" todir="${basedir}" />
+	<copy file="${mySQL++.lib.dir}${fs}mysql++.dll" todir="${basedir}" />
+	<copy file="${python.dir}${fs}${platform}${fs}python24.dll" todir="${basedir}" />
+	<copy file="${xips.lib.dir}${fs}xips.dll" todir="${basedir}" />
+	<exec  executable="${basedir}${fs}test" dir="${basedir}" failonerror="true" >
+                <env key="ROOT_XIP" path="${root_xip}"/>
+		<arg line="${grm.file} bionnassay.grenoble.xrce.xerox.com litigation root root ${basedir}${fs}myfile.txt 1 1" />	
+        </exec>
+	<echo message="------------- libStorage/test/test1 run test: end ---------- " />
+</target>
+
+<target name="genRunBat" >
+        <echo file="${basedir}${fs}run.bat" >
+        set ROOT_XIP=${root_xip}
+        ${basedir}${fs}test ${grm.file} bionnassay.grenoble.xrce.xerox.com litigation root root ${basedir}${fs}myfile.txt 1 1
+        </echo>
+</target>
+
+<!-- ********************************************  property  ************************************* -->
+<target name="setCommonProperties" depends="platformSetting, mysql++, mysql, libStorage" description="action before compiling">
+	<property name="obj.dir" 		location="${obj.dirs}${fs}${platform}" />
+	<mkdir dir="${obj.dir}" />
+	<property name="xips.lib.dir"          	location="${basedir}${fs}..${fs}..${fs}..${fs}lib${fs}${platform}${fs}sharedLibPy" />	
+</target>
+
+<target name="mysql++" depends="" description="mySql++ setting" >
+	<property name="mySQL++.dir"           	location="${basedir}${fs}..${fs}..${fs}mySQL++" />
+        <property name="mySQL++.lib.dir"        location="${mySQL++.dir}${fs}lib${fs}${platform}" />
+        <property name="mySQL++.inc.dir"        location="${mySQL++.dir}${fs}mysql++-2.0.4${fs}lib" />
+</target>
+
+<target name="mysql" depends="" description="mySql setting" >
+	<property name="mySQL.dir"           location="${basedir}${fs}..${fs}..${fs}mySQL${fs}4.1.14${fs}${platform}" />
+        <property name="mySQL.inc.dir"       location="${mySQL.dir}${fs}include" />
+        <property name="mySQL.lib.dir"       location="${mySQL.dir}${fs}lib" />
+</target>
+
+<target name="libStorage" depends="" description="libStorage setting" >
+	<property name="libStorage.dir"           location="${basedir}${fs}..${fs}.." />
+        <property name="libStorage.inc.dir"       location="${libStorage.dir}${fs}include" />
+        <property name="libStorage.lib.dir"       location="${libStorage.dir}${fs}lib${fs}${platform}" />
+</target>
+
+<target name="clean" >
+	<delete dir="obj" />
+	<delete file="history.xml" />
+	<delete file="test.lib" />
+	<delete file="test.exp" />
+	<delete file="test.exe" />
+	<delete file="test" />
+	<delete file="libStorage.dll" />
+	<delete file="libmysql.dll" />
+	<delete file="mysql++.dll" />
+	<delete file="python24.dll" />
+	<delete file="xips.dll" />
+	<delete file="run" />
+	<delete file="run.bat" />
+</target>
+
+<target name="localCleanAll" depends="" >
+</target>
+
+</project>
+

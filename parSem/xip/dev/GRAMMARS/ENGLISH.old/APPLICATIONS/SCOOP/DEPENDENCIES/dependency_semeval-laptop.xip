@@ -1,0 +1,63 @@
+DependencyRules:
+
+|#1[laptop-term]{?*,#2,?*}|
+        if (^SENTIMENT(#1,#2) ) 
+        ~
+|#1[laptop-term]{?*,#2,?*}|
+        if (^SENTIMENT(#2) ) 
+        ~
+|#1[lemme:"work",laptop-term=~]|
+        if (SUBJ-N(#1,#2[p2]))
+        ~
+
+// For the price 
+
+if (PREPD(#1[lemme:"price"],#2[lemme:"for"]))
+        SENTIMENT[positive=+](#1).
+if (PREPD(#1[lemme:"value"],#2[lemme:"for"]))
+        SENTIMENT[positive=+](#1).
+///*********** FINAL EXTRACTIONS***********************
+
+|NOUN#1{?*,?[laptop-term]}|
+       LAPTOPNP(#1)
+
+|#3[laptop-term:+]|
+      if ( MOTHER(#3,#4) & print(#4[lemme]+"\n") & ~LAPTOPNP(#4) ) 
+        LAPTOP(#3)
+
+|#3[laptop-term,bus]|
+        if (^LAPTOP(#3))
+        ~
+
+|#3[laptop-term,bus:~]|
+      if (SENTIMENT[!sentiments:!](#1,#3))
+       OPINION-ON-ASPECT-TERM(#3)
+
+|#3[laptop-term,bus:~]|
+      if (SENTIMENT[!sentiments:!](#3,#1))
+       OPINION-ON-ASPECT-TERM(#3)
+
+|#3[laptop-term,bus:~]|
+      if (SENTIMENT[!sentiments:!](#3))
+       OPINION-ON-ASPECT-TERM(#3)
+
+// marquer les elements vus pour pouvoir marquer les neutres
+|#3{?+[marque=+]}|
+        if ( OPINION-ON-ASPECT-TERM(#3) )
+        ~
+        
+// neutral 
+|#3[laptop-term,bus:~]|
+        if (~SENTIMENT[positive](#3,#1) & ~SENTIMENT[negative](#3,#2) & ~SENTIMENT[positive](#3) & ~SENTIMENT[negative](#3) & LAPTOP(#3) & ~SENTIMENT[positive](#1,#3) & ~SENTIMENT[negative](#2,#3) )
+        OPINION-ON-ASPECT-TERM[neutral=+](#3)
+
+
+
+//cleaning 
+
+|#1{?*,#2,?*}|
+        if (^PERSON(#1))
+        ~
+|#1{?*,#2,?*}|
+        if (^LOCORG(#1))
+        ~

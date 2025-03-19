@@ -1,0 +1,281 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : GE application
+//!   filename   : gram_ge.xip
+//!   Date       : May 2006
+//!   Author     : Caroline Hagege
+//!   Description: ad-hoc rules for GE application on leasing
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+if ( ^$1(#1,#1) )
+	~.
+
+| noun[termination=+]{?[lemme:non], punct, ?[lemme:renewal,renewal=~]} |
+~
+
+
+// thirty (30) days
+| #1num[card,tempnum] |
+if ( ^TIMEX3(#2[tempnum]) )
+	TIMEX3(#1,#2).
+	
+
+
+// until returned
+
+if ( ^CONNECTOR[subord](#1[partpas],#2[tempconj]) )
+	TIMEX3[renewaltime=+](#2,#1).
+
+
+if ( ^PREPD(#1[partpas],#2[tempconj]) )
+	TIMEX3[renewaltime=+](#2,#1).
+
+
+| #1[notification] |
+if ( RENEWALWORD(#2) | TERMINATION(#3) )
+	NOTIFICATION(#1).
+
+| #1[renewaltime] |
+if ( ^TIMEX3(#1) )
+	TIMEX3[renewaltime=+](#1).
+
+
+if ( ^$1(#1[renewal],#2[timefact]) | ^$1(#1[timefact],#2[renewal]) )
+	$1[renewal=+](#1,#2).
+
+if ( ^$1(#1[termination],#2[timefact]) | ^$1(#1[timefact],#2[termination]) )
+	$1[termination=+](#1,#2).
+
+// (Renewal Term) term continue to apply
+
+if ( RENEWALWORD(#3) & ^$1(#1[timefact],#2[timefact]) )
+	$1[renewal=+](#1,#2).
+
+// will continue until returned
+
+//| #3[tempconj] |
+//if ( ^$1(#1[timefact],#2[timefact]) & TIMEX3()
+//	$1[renewal=+](#1,#2).
+
+if ( ^$1(#1[notification],#2) | ^$1(#1,#2[notification]) & RENEWALWORD(#3) )
+	$1[notification=+](#1,#2).
+
+if ( ^$1(#1[notification],#2) | ^$1(#1,#2[notification]) & TERMINATION(#3) )
+	$1[notification=+](#1,#2).
+
+if ( $1[renewal](#1,#2) & TIMEX3(#3) )
+	TIMEX3[renewaltime=+](#3)
+
+if ( $1[renewal](#1,#2) & TIMEX3(#3,#4) )
+	TIMEX3[renewaltime=+](#3,#4)
+
+
+
+
+//if ( TIMEX3[renewaltime:~](#1) & PRE-NOTIFICATION(#2) & RENEWALWORD(#3) & ~NOTETIME(#1,#2) )
+//	NOTETIME(#1,#2).
+
+if ( TIMEX3[renewaltime:~](#1) & PRE-NOTIFICATION(#2) & RENEWALWORD(#3) & ~NOTETIME(#1) )
+	NOTETIME(#1).
+
+//if ( TIMEX3[renewaltime:~](#1,#4) & PRE-NOTIFICATION(#2) & RENEWALWORD(#3) & ~NOTETIME(#1,#4,#2) )
+//	NOTETIME(#1,#4,#2).
+
+if ( TIMEX3[renewaltime:~](#1,#4) & PRE-NOTIFICATION(#2) & RENEWALWORD(#3) & ~NOTETIME(#1,#4) )
+	NOTETIME(#1,#4).
+
+//if ( TIMEX3[renewaltime:~](#1) & PRE-NOTIFICATION(#2) & TERMINATIONWORD(#3) & ~NOTETIME(#1,#2) )
+//	NOTETIME(#1,#2).
+
+if ( TIMEX3[renewaltime:~](#1) & PRE-NOTIFICATION(#2) & TERMINATIONWORD(#3) & ~NOTETIME(#1) )
+	NOTETIME(#1).
+
+//if ( TIMEX3[renewaltime:~](#1,#4) & PRE-NOTIFICATION(#2) & TERMINATIONWORD(#3) & ~NOTETIME(#1,#4,#2) )
+//	NOTETIME(#1,#4,#2).
+
+if ( TIMEX3[renewaltime:~](#1,#4) & PRE-NOTIFICATION(#2) & TERMINATIONWORD(#3) & ~NOTETIME(#1,#4) )
+	NOTETIME(#1,#4).
+
+if ( TIMEX3[renewaltime](#1,#4) & $1[renewal](#2,#3) & ~RENEWTIME(#1,#4) )
+	RENEWTIME(#1,#4).
+
+if ( TIMEX3[renewaltime](#1) & $1[renewal](#2,#3) & ~RENEWTIME(#1) )
+	RENEWTIME(#1).
+
+//if ( TIMEX3[renewaltime](#1) & $1[termination](#2,#3) & ~RENEWTIME(#1,#2) )
+//	RENEWTIME(#1,#2).
+if ( TIMEX3[renewaltime](#1) & $1[termination](#2,#3) & ~RENEWTIME(#1) )
+	RENEWTIME(#1).
+
+
+
+// will continue until returned
+
+if ( TIMEX3[renewaltime](#1,#2) & $1(#3[timefact],#4[timefact]) ~RENEWTIME(#1,#2) )
+	RENEWTIME(#1,#2).
+
+if ( TIMEX3[renewaltime](#1) & $1(#3[timefact],#4[timefact]) ~RENEWTIME(#1) )
+	RENEWTIME(#1).
+
+// continue until such time
+
+if ( MOD[post](#1[timefact],#2[lemme:time]) & MOD[pre](#2[lemme:time],#3) & PREPD(#2[lemme:time],#4[tempconj]) )
+	RENEWTIME(#4,#2).
+
+// continue until canceled
+
+if ( MOD[post](#1[timefact],#2[lemme:canceled]) & TIMEX3[renewaltime](#3[tempconj],#2[lemme:canceled]) )
+	RENEWTIME(#3,#2).
+
+
+// if RENWTIME and NOTETIME are the same, if it is days, it will be notetime
+
+
+| #2{ ?*, #1[noteday], ?* } |
+if ( ^RENEWTIME[noteday:~](#2) )
+	RENEWTIME[noteday=+](#2).
+
+| #2{ ?*, #1[noteday], ?* } |
+if ( ^NOTETIME[noteday:~](#2) )
+	NOTETIME[noteday=+](#2).
+
+if ( ^RENEWTIME[noteday](#2) & NOTETIME[noteday](#2) )
+	~.
+
+if ( ^RENEWTIME(#1,#2[noteday]) & NOTETIME(#1,#2[noteday]) )
+	~.
+
+if ( ^RENEWTIME(#1[noteday],#2) & NOTETIME(#1[noteday],#2[noteday]) )
+	~.
+
+// if in a RENEWAL there are several times, the noteday is not valid
+
+if ( ^RENEWTIME[noteday](#1) & RENEWTIME[noteday:~](#2) )
+	~.
+
+// if RENWTIME and NOTETIME are the same, if it is monthss, it will be renewtime
+
+| #2{ ?*, #1[renewmonth], ?* } |
+if ( ^RENEWTIME[renewmonth:~](#2) )
+	RENEWTIME[renewmonth=+](#2).
+
+| #2{ ?*, #1[renewmonth], ?* } |
+if ( ^NOTETIME[renewmonth:~](#2) )
+	NOTETIME[renewmonth=+](#2).
+
+if ( RENEWTIME[renewmonth](#2) & ^NOTETIME[renewmonth](#2) )
+	~.
+
+if ( RENEWTIME(#1,#2[renewmonth]) & ^NOTETIME(#1,#2[renewmonth]) )
+	~.
+
+if ( RENEWTIME(#1[renewmonth],#2) & ^NOTETIME(#1[renewmonth],#2[renewmonth]) )
+	~.
+
+// if in a RENEWAL there are several times, the renewmonth is not valid
+
+if ( RENEWTIME[renewmonth](#1) & ^RENEWTIME[renewmonth:~](#2) )
+	~.
+
+| TOP#1 |
+if ( NOTETIME(#13) | NOTETIME(#2,#3) |  RENEWTIME(#4,#5) | RENEWTIME(#12) |  RENEWTIME(#8,#9,#10,#11) | TERMTIME(#6,#7) )
+	RELTIME(#1).
+
+if ( ^RELTIME(#1) & NOTETIME(#2,#3) )
+	RELTIME[notification=+](#1).
+
+if ( ^RELTIME(#1) & NOTETIME(#2) )
+	RELTIME[notification=+](#1).
+
+if ( ^RELTIME(#1) & RENEWTIME(#4) )
+	RELTIME[renewal=+](#1).
+
+if ( ^RELTIME(#1) & RENEWTIME(#4,#5) )
+	RELTIME[renewal=+](#1).
+
+if ( ^RELTIME(#1) & RENEWTIME(#4,#5,#6,#7) )
+	RELTIME[renewal=+](#1).
+
+| TOP#1 |
+if ( ~RELTIME(#1) )
+	SENT(#1).
+
+//Script:
+
+//| top#1 | 
+//if ( RENEWAL(?) | NOTIFICATION(?) )
+//{
+//	print(#1[surface]);
+//	print("\n");
+//}
+
+
+Script:
+
+if ( RELTIME[notification](#1) ) 
+{
+	_nbnotif=_nbnotif+1;
+	print("TOTO");
+
+}	
+
+if ( RELTIME[renewal](#1) )
+{
+	_nbrenew=_nbrenew+1;
+
+}
+
+DependencyRules:
+
+
+if ( ^ORGANISATION(#1[lemme:state]) )
+	~.
+
+if ( ^LOCATION(#1[lemme:carrier]) )
+	~.
+
+Script:
+
+
+Final:
+
+if ( _nbnotif:0 ) {
+	print("No information on notification found\n");
+}
+else {
+	if ( _nbnotif:1 ) {
+		print("Ambiguity degree for notification : 1");
+		print("\n");
+	}
+	else {
+		print("Ambiguity degree for notification : 2");
+		print("\n");
+	}
+}
+
+
+if ( _nbrenew:0 ) {
+	print("No information on renewal found\n");
+}
+else {
+	if ( _nbrenew:1 ) {
+		print("Ambiguity degree for renewal : 1");
+		print("\n");
+	}
+	else {
+		print("Ambiguity degree for renewal : 2");
+		print("\n");
+	}
+
+}
+
+
+
+ 

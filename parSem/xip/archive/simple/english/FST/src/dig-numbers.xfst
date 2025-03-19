@@ -1,0 +1,105 @@
+# ============================================================================
+# CONTENT:      basic digital numbers
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      09-Mar-2006
+# ============================================================================
+# USAGE:        xfst 	-l [ThisFile]
+# ============================================================================
+
+# ------------------------------------------------------------------------------
+# BASIC DEFINITIONS
+# ------------------------------------------------------------------------------
+# white space
+define WS	%  ;
+
+# decimal separator
+define DOT	%. ;
+define COMMA	%, ;
+define SEPDEC	DOT | COMMA ;
+
+# define dash (for decimals)
+define DASH	%- ;
+
+
+# plus/minus signs
+define SIGN	[
+  "\u002B"	# PLUS SIGN
+| "\u002D"	# HYPHEN-MINUS
+| "\u00B1"	# PLUS-MINUS SIGN
+| "\u2212"	# MINUS SIGN
+| "\u2213"	# MINUS-OR-PLUS SIGN
+];
+
+# digits
+define DIGIT	%0|1|2|3|4|5|6|7|8|9 ;
+
+
+# -------------------------------------------------------------------------
+# unsigned cardinals with thousands separator 
+# e.g. 	12,000,000
+define CARDCOMMA	DIGIT (DIGIT (DIGIT)) [COMMA DIGIT^3]+ ;
+define CARDDOT		DIGIT (DIGIT (DIGIT)) [DOT DIGIT^3]+ ;
+define CARDSPACE	DIGIT (DIGIT (DIGIT)) [WS  DIGIT^3]+ ;
+
+# unsigned cardinal
+define DIGCARD	[DIGIT+|CARDCOMMA|CARDDOT|CARDSPACE];
+
+# unsigned decimal number
+define DIGDEC	[
+  [DIGIT+|CARDCOMMA]	DOT 	DIGIT+	#	12,345.00	
+| [DIGIT+|CARDDOT] 	COMMA	DIGIT+	#	12.345,00
+| [DIGIT+|CARDSPACE]	SEPDEC 	DIGIT+	#	12 345,00 or 12 345.00
+| [DIGIT+|CARDSPACE]	SEPDEC 	DASH	#	12 345,- or 12 345.-
+|			SEPDEC 	DIGIT+	#	.123 or ,123
+|		DASH  	SEPDEC 	DIGIT+	#	-.123 or -,123
+];
+
+
+# ------------------------------------------------------------------------------
+# ordinals 
+define AnyORD	DIGCARD ;
+
+define ORD1	AnyORD & [[ ?* 1 ] - [ ?* 1 1 ]] ;	# 1st, but 11th
+define ORD2	AnyORD & [[ ?* 2 ] - [ ?* 1 2 ]] ;	# 2nd, but 12th
+define ORD3	AnyORD & [[ ?* 3 ] - [ ?* 1 3 ]] ;	# 3rd, but 13th
+
+define ORD	AnyORD - [ ORD1|ORD2|ORD3] ;
+
+define DIGORD	[ ORD1 0:{st} | ORD2 0:{nd} | ORD3 0:{rd} | ORD 0:{th} ];
+
+# ------------------------------------------------------------------------------
+# dits with percentag
+define DIGPERC	[ DIGCARD | DIGDEC ] %% ;
+
+# ------------------------------------------------------------------------------
+# roman numbers
+define ROMANLOW [
+	[ (m (m (m))) ] 
+	( [c m | d | c d | (d) (c (c (c))) ] ) 
+	( [x c | l | x l | (l) (x (x (x))) ] ) 
+	( [i x | v | i v | (v) (i (i (i))) ] )
+	] - [] ;
+
+define ROMANUPP [
+	[ (M (M (M))) ] 
+	( [C M | D | C D | (D) (C (C (C))) ] ) 
+	( [X C | L | X L | (L) (X (X (X))) ] ) 
+	( [I X | V | I V | (V) (I (I (I))) ] )
+	] - [] ;
+
+define ROMAN	[ ROMANUPP | ROMANLOW ];
+
+read regex [
+	(SIGN) DIGCARD			%+Dig:0 %+Card:0
+|	(SIGN) DIGDEC			%+Dig:0	%+Dec:0
+|	(SIGN) DIGORD 			%+Dig:0 %+Ord:0 
+|	(SIGN) DIGPERC			%+Dig:0 %+Percent:0
+
+|	ROMAN				%+Dig:0 %+Rom:0
+];
+
+

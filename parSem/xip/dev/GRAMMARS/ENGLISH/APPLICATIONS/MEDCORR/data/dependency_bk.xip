@@ -1,0 +1,1818 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for Pubmed abstracts
+//!   filename   : dependency_bk.xip
+//!   Date       : 15/03/2006
+//!   Author     : Agnes Sandor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+if ( ^VDOMAIN(?,?))
+	~.
+
+//if ( ^HEAD(#1,#2) )
+//	~.
+
+// create a dependency between a the negative word and a subject complement
+
+if ( MOD(#1,#2[form:fnot]) & NUCL(#1,#3) )
+	MOD[negative=+](#3,#2).
+
+
+
+//marking words that have special roles in relsents and bkdepsent: level
+
+
+
+////////////////////////////////////////////////////////////
+//BKDEP
+////////////////////////////////////////////////////////////
+
+
+/////////////////////
+
+// has not previously been demonstrated
+
+| #1[bk,adv], #2[form:fbe], #3[bk] |
+	MOD(#1,#3).
+
+
+
+
+| #1[bk],#2[bk] |
+//if ( ~$1(#1,#2) | ~$2(#2,#1) | ~$3(#1,#3[bk]) | ~$4(#3[bk],#1) | | ~$5(#2,#3[bk]) | ~$4(#3[bk],#2) )
+if ( ~$1(#1,#2) | ~$2(#2,#1) )
+	LIXO(#1,#2).
+
+if (^LIXO(#1,#2) & $3(#1,#3[bk]) | $4(#3[bk],#1) | $5(#2,#3[bk]) | $4(#3[bk],#2) )
+	~.
+
+if ( ^LIXO(#1,#2))
+	MOD(#1,#2).
+
+
+// basic dependency 1 
+
+if ( $1(#1[bk],#2[bk]) )
+        $1[bk=+](#1,#2).
+
+
+
+
+//////////////////
+
+//////////////////
+// 2 keywords that are not potential bkdeps
+//////////////////
+
+if ( ^$1[bk](#1[mental,know],#2[mental,know:~]) )
+	$1[bk=~](#1,#2).
+
+// Basic dependency 2: Words that cannot build unary dependencies are possible BKDEPs when in relationship with importance and attitude words. Importance words can also make a potential bkdep with scope words
+
+if ( $1(#1[nounary],#2[importance]) )
+        $1[bk=+](#1,#2).
+
+if ( $1(#1[nounary],#2[attitude]) )
+        $1[bk=+](#1,#2).
+
+if ( $1(#1[scope,level:~],#2[importance]) )
+        $1[bk=+,weak=+](#1,#2).
+
+if ( $1(#1[noun,know,level:~],#2[importance]) )
+        $1[bk=+,weak=+](#1,#2).
+
+if ( $1(#1[contr],#2[importance]) )
+        $1[bk=+](#1,#2).
+
+if ( $1(#1[importance],#2[contr]) )
+        $1[bk=+](#1,#2).
+
+
+//////////////////
+// dependency types that don't allow the feature bk
+//////////////////
+
+// AJCOORD
+
+if ( ^AJCOORD[bk](#1,#2) )
+	~.
+
+// NCOORD
+
+if ( ^NCOORD[bk](#1,#2) )
+	~.
+
+// VCOORD
+
+if ( ^VCOORD[bk](#1,#2) )
+	~.
+
+//////////////////
+
+// indirect dependencies
+
+// "it has been done" the parser links "it has" and "has been done"
+
+
+//if ( SUBJ(#1,#2[bk]) & OBJ(#1,#3[bk]) )
+//	OBJ[bk=+](#2,#3).
+
+//if ( SUBJ(#1,#2[bk]) & NUCL[subjcompl](#1,#3[bk]) & ~BKDEP(#2,#3) )
+if ( SUBJ(#1,#2[bk]) & NUCL(#1,#3[bk]) & ~BKDEP(#2,#3) )
+	SUBJ[bk=+](#2,#3).
+
+//"In contrast to what was generally believed"
+
+if ( $1(#1[mental],#2[form:fwhat]) & PREPD(#2,#3[contr]) )
+	CONTR[bk=+](#3,#1).
+
+// dependency with the same lemma is not a potential BKDEP
+
+//if ( ^$1(#1,#2) & #1[lemme]::#2[lemme] )
+if ( ^$1(#1,#2) & #1::#2 )
+//	$1[bk=~](#1,#2).
+	~.
+
+
+
+////////////////////////
+//idiosyncrasies
+////////////////////////
+
+
+// certain words (wseem) when they are in a dependency with "seem", are BKDEPs
+
+if ( $1(#1[form_bk:fseem],#2[wseem]) )
+	BKDEP(#1,#2).
+
+if ( $1(#1[wseem],#2[form_bk:fseem]) )
+	BKDEP(#1,#2).
+
+// first time
+// This rule has been transferred to the compounds
+
+//if ( QUANTD(#1[form_bk:ftime],#2[change,form:fone]) )
+//	QUANTD[bk=+](#1,#2).
+
+// first report
+
+if ( QUANTD(#1[publ,noun,notfirsttime:~],#2[change,form:fone]) )
+	QUANTD[bk=+](#1,#2).
+
+//hitherto, debate, questions
+
+| #1[bkbk] |
+	BKDEP(#1).
+
+// Restrictions on the cooccurence
+
+// wscope: if the word having this feature appears with a word that does not have the feature "scope", the dependency is removed. However, if it also appears with a contr word, the bk is kept
+
+if ( ^$1[bk](#1[wscope],#2[scope]) )
+	$1[wscope=+](#1,#2).
+
+if ( ^$1[bk](#1[scope],#2[wscope]) )
+	$1[wscope=+](#1,#2).
+
+if ( $1[bk,wscope](#1[wscope],#2[scope]) & ^$2(#1[wscope],#3[contr] ))
+	$2[wscope=+](#1,#3).
+
+if ( ^$1(#1[contr],#2[wscope] ))
+	$1[wscope=+](#1,#2).
+
+if ( $1(#1[wscope],#2[contr] ))
+	$1[wscope=+](#1,#2).
+
+if ( ^$1[bk,wscope:~](#1[wscope],#2) )
+	~.
+
+if ( ^$1[bk,wscope:~](#1,#2[wscope]) )
+	~.
+
+if ( ^$1[wscope](#1,#2) )
+	$1[bk=+,wscope=~](#1,#2).
+
+// the challenge was examined
+
+if ( ^$1(#1[form_bk:fchallenge],#2[methodology]) | ^$1(#1[methodology],#2[form_bk:fchallenge]) )
+	$1[bk=~](#1,#2).
+
+
+
+
+
+// wwidescope: if the word having this feature appears with a word that does not have the feature "widescope", the dependency is removed
+
+if ( ^$1[bk](#1[wwidescope],#2[widescope]) )
+	$1[wwidescope=+](#1,#2).
+
+if ( ^$1[bk](#1[widescope],#2[wwidescope]) )
+	$1[wwidescope=+](#1,#2).
+
+if ( $1[bk,wwidescope](#1[wwidescope],#2[widescope]) & ^$2(#1[wwidescope],#3[contr] ))
+	$2[wwidescope=+](#1,#3).
+
+if ( $1[bk,wwidescope](#1[wwidescope],#2[widescope]) & ^$2(#3[contr],#1[wwidescope] ))
+	$2[wwidescope=+](#3,#1).
+
+if ( $1[bk,wwidescope](#1[widescope],#2[wwidescope]) & ^$2(#3[contr],#2[wwidescope] ))
+	$2[wwidescope=+](#3,#2).
+
+if ( $1[bk,wwidescope](#1[widescope],#2[wwidescope]) & ^$2(#2[wwidescope],#3[contr] ))
+	$2[wwidescope=+](#2,#3).
+
+if ( ^$1[bk,wwidescope:~](#1[wwidescope],#2) )
+	~.
+
+if ( ^$1[bk,wwidescope:~](#1,#2[wwidescope]) )
+	~.
+
+if ( ^$1[wwidescope](#1,#2) )
+	$1[bk=+,wwidescope=~](#1,#2).
+
+
+
+// wtime
+
+if ( ^$1[bk](#1[wtime],#2[timefact,verb:~]) ) 
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[timefact,verb:~],#2[wtime]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk,weak:~](#1[wtime],#2 ) )
+	~ .
+
+if ( ^$1[bk,weak:~](#1,#2[wtime]) )
+	~ .
+
+
+//wcontr
+
+if ( ^$1[bk](#1[wcontr],#2[contr:~]) )
+	~ .
+
+if ( ^$1[bk](#1[contr:~],#2[wcontr]) )
+	~ .
+
+
+if ( ^$1[bk](#1[wcontr],#2[contr,noun:~]) )
+	~ .
+
+if ( ^$1[bk](#1[contr,noun:~],#2[wcontr]) )
+	$1[bk=+](#1,#2).
+
+if ( ^$1(#1[wcontr],#2[contr,noun,noweak]) )
+	~ .
+
+if ( ^$1[bk](#1[contr,noun,noweak],#2[wcontr]) )
+	$1[bk=+](#1,#2).
+
+
+// wneg: positive words that make up a contr dependency when negated
+
+if ( $1(#1,#2[form:fnot,toutmaj:~]) & $2(#1,#3[wneg]) )
+	BKDEP[weak=+](#2,#3).
+
+
+// wment
+
+if ( ^$1[bk](#1[wment],#2[mental:~]) )
+	~ .
+
+if ( ^$1[bk](#1[mental:~],#2[wment]) )
+	~ .
+
+// wknow
+
+if ( ^$1[bk](#1[wknow],#2[know:~]) )
+	~ .
+
+if ( ^$1[bk](#1[know:~],#2[wknow]) )
+	~ .
+
+// wmentsco
+
+if ( ^$1[bk](#1[wment],#2[mentsco:~]) )
+	~ .
+
+if ( ^$1[bk](#1[mentsco:~],#2[wment]) )
+	~ .
+
+// "first" + verb
+
+if ( ^$1[bk](#1[verb,form_bk:~fevidence],#2[form_bk:ffirst]) )
+	~.
+
+if ( ^$1[bk](#1[verb,form_bk:~fevidence],#2[form:fone,ord]) )
+	~.
+
+if ( ^$1[bk](#1[form:fone,ord],#2[verb,form_bk:~fevidence]) )
+	~.
+
+// "recognition" is very ambiguous. It is accepepted only in a dependency with a word that has the feature "incr" or "timefact"
+
+if ( ^$1[bk](#1[form_bk:frecognition],#2) | ^$1[bk](#1,#2[form_bk:frecognition]) )
+	~.
+
+
+if ( ^$1(#1[form_bk:frecognition],#2[incr]) | ^$1(#1[incr],#2[form_bk:frecognition]) )
+	$1[bk=+](#1,#2).
+
+if ( ^$1(#1[form_bk:frecognition],#2[timefact]) | ^$1(#1[timefact],#2[form_bk:frecognition]) )
+	$1[bk=+](#1,#2).
+
+//"accumulate" is a "change" word, but it can only be coupled with words that can "grow":
+
+if ( ^$1[bk](#1[nogrow],#2[wnogrow]) )
+	~.
+
+if ( ^$1[bk](#1[wnogrow],#2[nogrow]) )
+	~.
+
+
+
+
+
+//////////////////
+
+// Unary dependencies: for important words for which either no dependency is calculated in the general grammar or are in relationship with a non-marked word
+
+| #1[contr,form:~fnot,toutmaj:~,form:~fno,form_bk:~flittle,wscope:~,nounary:~] |
+if ( ~$1[bk](#1[contr,form:~fnot,toutmaj:~,form:~fno,form_bk:~flittle],?) & ~$2[bk](?,#1[contr,form:~fnot,toutmaj:~,form:~fno]) )
+	MAIN[bk=+,weak=+](#1).
+	
+| #1[attitude,nounary:~] |
+if ( ~$1[bk](#1[attitude],?) & ~$2[bk](?,#1[attitude]) )
+	MAIN[bk=+,weak=+](#1).
+
+| #1[form:fwhile,contr,func:~,wment:~] |
+	MAIN[bk=+,weak=+](#1).
+
+// challenge when it is vprog
+
+| #1[form_bk:fchallenge,vprog] |
+if ( ~$1[bk](#1[form_bk:fchallenge,vprog],?) & ~$2[bk](?,#1[form_bk:fchallenge,vprog]) )
+	MAIN[bk=+,weak=+](#1).
+
+// exceptions wscope
+
+if ( ^$1[bk](#1[wscope]) )
+	~ .
+
+// exceptions wment
+
+if ( ^$1[bk](#1[wment]) )
+	~ .
+
+// If a word consituting a unary dependency is an argument in a dependency, the unary dependency is deleted
+
+if (^MAIN[bk,weak](#1) & $1[bk](#1,#2) )
+	~.
+
+if (^MAIN[bk,weak](#2) & $1[bk](#1,#2) )
+	~.
+
+
+
+// If a sentence just contains a dependency with 1 importance argument and one uanry dependency, it is not a potential weak bkdep
+
+if ( ^$1[bk](#1[importance],#2[contr:~]) & $2[bk](#3) & ~$3[bk](#4[importance:~],#5) )
+	$1[bk=~](#1,#2).
+
+if ( ^$1[bk](#1[contr:~],#2[importance]) & $2[bk](#3) & ~$3[bk](#4,#5[importance:~]) )
+	$1[bk=~](#1,#2).
+
+if ( ^$1[bk](#1[importance],#2[contr,func]) & $2[bk](#3) & ~$3[bk](#4[importance:~],#5) )
+	$1[bk=~](#1,#2).
+
+if ( ^$1[bk](#1[contr,func],#2[importance]) & $2[bk](#3) & ~$3[bk](#4,#5[importance:~]) )
+	$1[bk=~](#1,#2).
+
+
+
+////////////////////
+
+// weak BKDEP
+
+// just "possibility"
+
+if ( ^$1[bk](#1[possibility],#2) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1,#2[possibility]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+// dependency with arguments of the same type
+
+if ( ^$1[bk](#1[scope],#2[scope]) )
+	$1[bk=+,weak=+](#1,#2) .
+	
+if ( ^$1[bk](#1[timefact],#2[timefact]) )
+	$1[bk=+,weak=+](#1,#2) .
+	
+if ( ^$1[bk](#1[change],#2[change]) )
+	$1[bk=+,weak=+](#1,#2) .
+	
+if ( ^$1[bk](#1[mental],#2[mental]) )
+	$1[bk=+,weak=+](#1,#2) .
+	
+if ( ^$1[bk](#1[contr,mental:~,change:~,know:~],#2[contr,mental:~,change:~,know:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+// subject dependencies with arguments of the same kind are not potential BKDEPs
+
+
+if ( ^SUBJ[bk,weak](#1[scope],#2[scope]) )
+	SUBJ[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[bk,weak](#1[timefact],#2[timefact]) )
+	SUBJ[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[bk,weak](#1[change],#2[change]) )
+	SUBJ[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[bk,weak](#1[mental],#2[mental]) )
+	SUBJ[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[bk,weak](#1[contr],#2[contr]) )
+	SUBJ[bk=~,weak=~](#1,#2) .
+
+if ( ^SUBJATTR[bk,weak](#1[scope],#2[scope]) )
+	SUBJATTR[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[bk,weak](#1[timefact],#2[timefact]) )
+	SUBJATTR[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[bk,weak](#1[change],#2[change]) )
+	SUBJATTR[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[bk,weak](#1[mental],#2[mental]) )
+	SUBJATTR[bk=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[bk,weak](#1[contr],#2[contr]) )
+	SUBJATTR[bk=~,weak=~](#1,#2) .
+
+// certain couples of dependencies
+
+if ( ^$1[bk](#1[mental,contr:~],#2[scope]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+
+if ( ^$1[bk](#1[scope],#2[mental,contr:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+
+if ( ^$1[bk](#1[change],#2[timefact]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[timefact],#2[change]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+//if ( ^$1[bk](#1[scope],#2[timefact]) )
+//	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[timefact],#2[scope]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[contr,noun:~,mental:~],#2[timefact]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[timefact],#2[contr,mental:~,noun:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[timefact,adj],#2[attitude]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1[mental,know,contr:~],#2[question,contr]) || ^$1(#1[question,contr],#2[mental,know,contr:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+// specweak: no evidence/role
+
+if ( ^$1[bk](#1[specweak],#2[form:fno,toutmaj:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+// "recent results may"
+
+if ( ^$1[bk](#1[possibility],#2[scope]) & $2[bk](#2[scope],#3[timefact]) )
+	$1[weak=+](#1,#2).
+
+if ( $1[bk](#1[possibility],#2[scope]) & ^$2[bk](#2[scope],#3[timefact]) )
+	$2[weak=+](#2,#3).
+
+//(may_BK:+_MENTSCOPOSS:+_POSSIBILITY:+,results_BK:+_MENTSCOPOSS:+_MENTSCOTIME:+_MENTSCO:+_SCOPE:+)
+//(results_BK:+_MENTSCOPOSS:+_MENTSCOTIME:+_MENTSCO:+_SCOPE:+,Recent_BK:+_MENTSCOTIME:+_TIMEFACT:+)
+
+
+// "no contradiction" - not a BKDEP, and the other dependencies with "contradiction" don't count either
+
+| ?{#1[contr,form:fno,toutmaj:~],?*,#2[contr,noun]} |
+if ( ^$1[bk](?,#2) )
+	~ .
+
+| ?{#1[contr,form:fno,toutmaj:~],?*,#2[contr,noun]} |
+if ( ^$1[bk](#2,?) )
+	~ .
+
+// if one argument of the dependency has the feature "weak", the dependency becomes weak
+
+if ( ^$1[bk](#1[weak],#2) )
+	$1[bk=+,weak=+](#1,#2) .
+
+if ( ^$1[bk](#1,#2[weak]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+// exception: amazing discovery
+
+if ( ^$1[bk,weak](#1[attitude],#2[widescope]) | ^$1[weak](#1[widescope],#2[attitude]) )
+	$1[bk=+,weak=~](#1,#2) .
+	
+
+// if a sentence contains just 1 negation with "not", the dependency is weak
+
+if ( ^$1[bk](#1,#2[form:fnot,toutmaj:~]) )
+	$1[bk=+,weak=+](#1,#2) .
+
+//////////////////////////////
+// noweak
+////////////////////////////
+
+// If an argument of a weak dependency has the feature "noweak", the 
+// dependency is not weak any more. If 1 of the arguments of a BKDEP has the feature noweak, and the other argument is a possibility, the dependency is still weak.
+
+
+if ( ^$1[weak](#1[noweak],#2[possibility:~]) | ^$1[weak](#1[possibility:~],#2[noweak]) )
+	$1[weak=~](#1,#2).
+
+
+
+
+
+/////////////////////////////////////
+// Marking BKDEP's
+/////////////////////////////////////
+
+
+
+// If besides a weak dependency, a sentence just contains a dependency
+// whose only argument has the feature "attitude", both dependencies
+// will be BKDEPs, and get the feature "attitude"
+
+if ( $1[weak](#1) & ^$2(#2[attitude]) & ~$1[bk,weak:~](#3,#4))
+	$2[attitude=+,weak=~](#2).
+
+if ( $1[weak](#1) & ^$2(#2[attitude]) & ~$1[bk,weak:~](#3))
+	$2[attitude=+,weak=~](#2).
+
+if ( ^$1[weak](#1) & $2(#2[attitude]) & ~$1[bk,weak:~](#3,#4) )
+	$1[attitude=+,weak=~](#1).
+
+if ( ^$1[weak](#1) & $2(#2[attitude]) & ~$1[bk,weak:~](#3) )
+	$1[attitude=+,weak=~](#1).
+
+if ( $1[weak](#1,#2) & ^$2(#3[attitude]) & ~$1[bk,weak:~](#4,#5) )
+	$2[attitude=+,weak=~](#3).
+
+if ( $1[weak](#1,#2) & ^$2(#3[attitude]) & ~$1[bk,weak:~](#4) )
+	$2[attitude=+,weak=~](#3).
+
+if ( ^$1[weak](#1,#2) & $2(#3[attitude]) & ~$1[bk,weak:~](#4,#5) )
+	$1[attitude=+,weak=~](#1,#2).
+
+if ( ^$1[weak](#1,#2) & $2(#3[attitude]) & ~$1[bk,weak:~](#4) )
+	$1[attitude=+,weak=~](#1,#2).
+
+if ( $1[attitude](#1) )
+	BKDEP[attitude=+](#1).
+
+if ( $1[attitude](#1,#2) )
+	BKDEP[attitude=+](#1,#2).
+
+//if ( ^BKDEP[attitude](#1) & $1[attitude:~,bk](#2) )
+//	~.
+
+//if ( ^BKDEP[attitude](#1) & $1[attitude:~,bk](#2,#3) )
+//	~.
+
+//if ( ^BKDEP[attitude](#1,#2) & $1[attitude:~,bk](#3) )
+//	~.
+
+//if ( ^BKDEP[attitude](#1,#2) & $1[attitude:~,bk](#3,#4) )
+//	~.
+
+// if 2 importance words are syntactic relationship, the dependency gets the feature attitude
+
+if ( $1(#1[importance],#2[importance]) )
+	BKDEP[attitude=+](#1,#2).
+
+
+// if the sentence contains other bk-dependencies besides a weak one, the sentence is selected
+
+//a) if the sentence contains a non-weak bk dependency, the sentence is selected
+
+
+if ($1[bk,weak:~](#1,#2))
+	BKDEP(#1,#2).
+
+if (^$1[bk,weak](#1,#2) & BKDEP(#3,#4))
+	BKDEP[weak=~,bk=~](#1,#2).
+
+if (^$1[bk,weak](#1) & BKDEP(#3,#4))
+	BKDEP[weak=~,bk=~](#1).
+
+if (^$1[bk,weak](#1,#2) & BKDEP(#3))
+	BKDEP[weak=~,bk=~](#1,#2).
+
+if (^$1[bk,weak](#1) & BKDEP(#2))
+	BKDEP[weak=~,bk=~](#1).
+
+
+// b) if the sentence contains several weak dependencies, the sentence is selected
+
+
+if (~BKDEP(#1,#2) & $1[bk,weak](#1,#2) & $2[bk,weak](#3,#4) &  (#1<#3 | #3<#1 | #2<#4 | #4<#2) )
+	BKDEP(#1,#2).
+
+if (~BKDEP(#3,#4) & $1[bk,weak](#1,#2) & $2[bk,weak](#3,#4) &  (#1<#3 | #3<#1 | #2<#4 | #4<#2) )
+	BKDEP(#3,#4).
+
+
+if (~BKDEP(#1,#2) & $1[bk,weak](#1,#2) & $2[bk,weak](#3) & (#1<#3 | #3<#1 | #2<#3 | #3<#2 ))
+	BKDEP(#1,#2).
+
+if (~BKDEP(#3) & $1[bk,weak](#1,#2) & $2[bk,weak](#3) & (#1<#3 | #3<#1 | #2<#3 | #3<#2 ) )
+	BKDEP(#3).
+
+if (~BKDEP(#1) & $1[bk,weak](#1) & $2[bk,weak](#2) & (#1<#2 | #2<#1) )
+	BKDEP(#1).
+
+if (~BKDEP(#2) & $1[bk,weak](#1) & $2[bk,weak](#2) & (#1<#2 | #2<#1) )
+	BKDEP(#2).
+
+
+/////////////////////////////////////
+
+// if the sentence contains BKDEP's that only contain "mental" and "scope" arguments, the sentence is not selected
+
+
+if ( ^BKDEP(#1[mentsco],#2[mentsco]) )
+	BKDEP[mentsco=+](#1,#2).
+
+if ( ^BKDEP[mentsco](#1,#2) &  BKDEP[mentsco:~](?,?) )
+	BKDEP[mentsco=~](#1,#2) .
+
+if ( ^BKDEP[mentsco](#1,#2) &  BKDEP[mentsco:~](?) )
+	BKDEP[mentsco=~](#1,#2) .
+
+if ( ^BKDEP[mentsco](#1,#2) )
+	~ .
+
+// if the sentence contains BKDEP's that only contain "mental" and "contr" arguments, the sentence is not selected
+
+
+if ( ^BKDEP(#1[mentcont,func],#2[mentcont,func:~]) )
+	BKDEP[mentcont=+](#1,#2).
+
+if ( ^BKDEP(#1[mentcont,func:~],#2[mentcont,func]) )
+	BKDEP[mentcont=+](#1,#2).
+
+if ( ^BKDEP[mentcont](#1,#2) &  BKDEP[mentcont:~](?,?) )
+	BKDEP[mentcont=~](#1,#2) .
+
+if ( ^BKDEP[mentcont](#1,#2) &  BKDEP[mentcont:~](?) )
+	BKDEP[mentcont=~](#1,#2) .
+
+
+if ( ^BKDEP[mentcont](#1,#2) )
+	~ .
+
+
+// If a sentence contains BKDEP's that only contain CONTR arguments that have the feature FUNC, the sentence is not selected
+
+if ( ^BKDEP(#1[func,mental:~,change:~]) )
+	BKDEP[contr=+](#1).
+
+if ( ^BKDEP[contr](#1) & BKDEP[contr:~](#2,#3) )
+	BKDEP[contr=~](#1).
+
+if ( ^BKDEP[contr](#1) & BKDEP[contr:~](#2) & ~BKDEP[contr](#2) )
+	BKDEP[contr=~](#1).
+
+if ( ^BKDEP[contr](#1) )
+	~ .
+
+
+// If a sentence besides unary contr+func dependencies only contains dependencies that contain an argument with the "possibility" feature, the sentence is not selected
+
+
+if ( ^BKDEP(#1[possibility],#2) & BKDEP(#3[contr,func]) )
+	BKDEP[test=+](#1,#2).
+
+
+if ( ^BKDEP(#1,#2[possibility]) & BKDEP(#3[contr,func]) )
+	BKDEP[test=+](#1,#2).
+
+if ( ^BKDEP[test](#1,#2) & BKDEP(#3,#4) )
+	BKDEP[test=~](#1,#2).
+
+
+if ( ^BKDEP[test](#1,#2) & BKDEP(#3[contr:~,func:~]) )
+	BKDEP[test=~](#1,#2).
+
+if ( ^BKDEP[test](#1,#2) )
+	~ .
+
+
+
+/////////////////////////////////////
+// Giving features to change of direction sentences
+/////////////////////////////////////
+
+
+// A BKDEP that has an "importance" argument gets the feature "emph"
+
+if ( ^BKDEP(#1[contr:~],#2[importance]) | ^BKDEP(#1[importance],#2[contr:~])   )
+	BKDEP[emph=+](#1,#2).
+
+if ( ^BKDEP(#1[contr,func],#2[importance]) | ^BKDEP(#1[importance],#2[contr,func])   )
+	BKDEP[emph=+](#1,#2).
+
+if ( ^BKDEP(#1[contr,func:~],#2[importance]) | ^BKDEP(#1[importance],#2[contr,func:~])   )
+	BKDEP(#1,#2).
+
+// more complicated than previously thought - must be refined
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[old],#2[publ]) | $1(#1[publ],#2[old]) & MOD[pre](#3[partpas],#4[compar]) & #4<#5 )
+//	BKDEP(#3,#4,#5).
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[old],#2[publ]) | $1(#1[publ],#2[old]) & MOD[pre](#3[partpas],#4[compar]) & #4<#5 )
+//	BKDEP(#1,#2).
+
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & MOD[pre](#3[adv],#4[compar]) & #4<#5 )
+//	BKDEP(#3,#4,#5).
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & MOD[pre](#3[adv],#4[compar]) & #4<#5 )
+//	BKDEP(#1,#2).
+
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & MOD[pre](#3[adj],#4[compar]) & #4<#5 )
+//	BKDEP(#3,#4,#5).
+
+//| #5[form_bk:fthan] |
+//if ( BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & MOD[pre](#3[adj],#4[compar]) & #4<#5 )
+//	BKDEP(#1,#2).
+
+
+//| #1[compar] |
+//if ( ~MOD[pre](#2,#1[compar]) )
+//	MAIN(#1).
+
+//| #3[form_bk:fthan] |
+//if ( MAIN(#4[compar]) & BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & #4<#3 )
+//	BKDEP(#4,#3).
+
+//| #3[form_bk:fthan] |
+//if ( MAIN(#4[compar]) & BKDEP(#1[old],#2) | BKDEP(#1,#2[old]) | $1(#1[publ],#2[old]) | $1(#1[old],#2[publ]) & #4<#3 )
+//	BKDEP(#1,#2).
+
+//if ( ^MAIN(#1[compar]) )
+//	~.
+	
+
+
+/////////////////////////////////////
+// 1. Sentences containing dependencies having words with the feature "old" 
+// express a change of direction if they also contain dependencies with
+// the features "contr", "change" or "attitude". If this is not the case
+// the sentence is marked "OLD". Such sentences are potentially
+// change of direction sentences, but it is less probable than the
+// sentences that contain the above-mentioned features
+//////////////////////////////////////
+
+
+if ( ^BKDEP(#1[old,contr:~,change:~,attitude:~],#2[contr:~,change:~,attitude:~]) | ^BKDEP(#1[contr:~,change:~,attitude:~],#2[old,contr:~,change:~,attitude:~]) )
+	BKDEP[old=+](#1,#2).
+
+if ( ^BKDEP[old](#1,#2) & BKDEP(#3[attitude]) | BKDEP(#3,#4[attitude]) | BKDEP(#3[attitude],#4) | BKDEP(#3[contr]) | BKDEP(#3,#4[contr]) | BKDEP(#3[contr],#4) | | BKDEP(#3,#4[change]) | BKDEP(#3[change],#4) )
+	BKDEP[old=~](#1,#2).
+
+
+////////////////////////////////////
+// 2. Sentences containing dependencies having words with no other features
+// than "mental", "scope" and "timefact", are marked TEMPSTAT, since they 
+// are probably just statements about some past, present or current 
+// hypotheses.
+////////////////////////////////////
+
+if ( ^BKDEP(#1[old,mental],#2) | ^BKDEP(#1,#2[old,mental]) )
+	BKDEP[tempstat=+](#1,#2).
+
+
+
+if ( ^BKDEP(#1[timefact],#2[mentscotime]) | ^BKDEP(#1[mentscotime],#2[timefact]) )
+	BKDEP[tempstat=+](#1,#2).
+
+if ( BKDEP[tempstat](#1,#2) & ^BKDEP[tempstat:~](#3[mentscotime],#4[mentscotime]) )
+	BKDEP[tempstat=+](#3,#4).
+
+// TEMPSTAT_OLD
+
+if ( ^BKDEP[tempstat](#1[old],#2) | ^BKDEP[tempstat](#1,#2[old]) )
+	BKDEP[old=+](#1,#2).
+
+if ( ^BKDEP[tempstat,old](#1,#2) & ^BKDEP[tempstat,old:~](#1,#3) )
+	BKDEP[old=+](#1,#3).
+
+if ( ^BKDEP[tempstat,old](#1,#2) & ^BKDEP[tempstat,old:~](#3,#1) )
+	BKDEP[old=+](#3,#1).
+
+if ( ^BKDEP[tempstat,old](#1,#2) & ^BKDEP[tempstat,old:~](#2,#3) )
+	BKDEP[old=+](#2,#3).
+
+if ( ^BKDEP[tempstat,old](#1,#2) & ^BKDEP[tempstat,old:~](#3,#2) )
+	BKDEP[old=+](#3,#2).
+
+////////////////////////////////////
+// 2.a "However+BKDEP[tempstat]" 
+////////////////////////////////////
+
+if ( ^BKDEP[tempstat](#1,#2) & BKDEP[tempstat:~](#3[however]) & ~BKDEP[tempstat:~](#4,#5) )
+	BKDEP[tempstat=+,contr=+](#1,#2).	
+
+if ( BKDEP[tempstat](#1,#2) & ^BKDEP[tempstat:~](#3[however]) & ~BKDEP[tempstat:~](#4,#5) )
+	BKDEP[tempstat=+,contr=+](#3).	
+
+if ( BKDEP[tempstat](#1,#2) & ^BKDEP[tempstat:~](#3,#4[however]) & ~BKDEP[tempstat:~](#4,#5) )
+	BKDEP[tempstat=+,contr=+](#3,#4).	
+
+//if ( BKDEP[tempstat](#1,#2) & ^BKDEP[tempstat](#3[mental,old],#4[however]) & ~BKDEP[tempstat:~](#4,#5) )
+//	BKDEP[tempstat=+,contr=+](#3,#4).	
+
+////////////////////////////////////
+// end 
+////////////////////////////////////
+
+if ( ^BKDEP[tempstat](#1,#2) & BKDEP[tempstat:~,emph:~](#3,#4) | BKDEP[tempstat:~](#5) )
+	BKDEP[tempstat=~,contr=~](#1,#2).
+	
+if ( ^BKDEP[tempstat](#1) & BKDEP[tempstat:~,emph:~](#2,#3) | BKDEP[tempstat:~](#4) )
+	BKDEP[tempstat=~,contr=~](#1).
+
+
+	
+////////////////////////////////////
+// 3. Sentences containing dependencies having words with no other features
+// than "mental", "scope" and "possibility", are marked POSTAT, since they 
+// are probably just statements about some past, present or current 
+// hypotheses.
+////////////////////////////////////
+
+if ( ^BKDEP(#1[possibility],#2[mentscoposs]) | ^BKDEP(#1[mentscoposs],#2[possibility]))
+	BKDEP[postat=+](#1,#2).
+
+if ( BKDEP[postat](#1,#2) & ^BKDEP[postat:~,emph:~](#3[mentscoposs],#4[mentscoposs]) )
+	BKDEP[postat=+](#3,#4).
+
+if ( BKDEP[postat](#1,#2) & ^BKDEP[postat:~,emph:~](#3[mental],#4[func,contr]) )
+	BKDEP[postat=+](#3,#4).
+
+if ( BKDEP[postat](#1,#2) & ^BKDEP[postat:~,emph:~](#3[func,contr],#4[mental]) )
+	BKDEP[postat=+](#3,#4).
+
+if ( BKDEP[postat](#1,#2) & ^BKDEP(#3[func,contr]) )
+	BKDEP[postat=+](#3).
+
+if ( ^BKDEP[postat](#1,#2) & BKDEP[postat:~,emph:~,tempstat:~,old:~](#3,#4) | BKDEP[postat:~](#3) )
+	BKDEP[postat=~](#1,#2).
+
+// open possibility
+
+if ( ^BKDEP(#1[p_open],#2[possibility]) | ^BKDEP(#1[possibility],#2[p_open]) )
+	BKDEP[postat=+](#1,#2).
+
+
+////////////////////////////////////
+// 4. Some sentences just draw our attention to the fact that a
+// phenomenon is unknown. In this case the sentence is marked NOSTAT.
+////////////////////////////////////
+
+////////////////////////////////////
+// 4.a. dependency type: SUBJ or SUBJATTR(scope,know+contr)
+////////////////////////////////////
+
+if ( ^BKDEP(#1[scope],#2[know,contr]) & SUBJ[pre](#1[scope],#2[know,contr]) | SUBJATTR(#1[scope],#2[know,contr]) | MOD[pre](#1[scope],#2[know,contr]) | NUCL[pre](#1[scope],#2[know,contr]) )
+	BKDEP[nostat=+](#1,#2).
+
+
+if ( ^BKDEP(#1[know,contr:~,partpas],#2[form:fnot,toutmaj:~]) )
+	BKDEP[nostat=+](#1,#2).
+	
+
+////////////////////////////////////
+// 4.b. dependency type: BKDEP(cop+timefact,know+contr)
+////////////////////////////////////
+
+if ( ^BKDEP(#1[cop,timefact],#2[know,contr]) )
+	BKDEP[nostat=+](#1,#2).
+
+
+////////////////////////////////////
+// 4.c. dependency type: BKDEP(scope;mental,fno) (no evidence)
+////////////////////////////////////
+
+if (^BKDEP(#1[scope],#2[form:fno,toutmaj:~]) | ^BKDEP(#1[noun,mental],#2[form:fno,toutmaj:~]))
+	BKDEP[nostat=+](#1,#2).
+
+
+////////////////////////////////////
+// 4.d. dependency type: BKDEP(know,nocompl) (no studies)
+////////////////////////////////////
+
+if ( ^BKDEP(#1[know,nocomp]) )
+	BKDEP[nostat=+](#1).
+
+if ( ^BKDEP(#1[know,nocomp],#2) )
+	BKDEP[nostat=+](#1,#2).
+
+if ( ^BKDEP(#1,#2[know,nocomp]) )
+	BKDEP[nostat=+](#1,#2).
+
+if ( ^BKDEP(#1[know,nocomp]) & ~BKDEP(#1[know,nocomp]) & #1::#1)
+	BKDEP[nostat=+](#1).
+
+if ( ^BKDEP(#1[know,nocomp],#2) & ~BKDEP(#1[know,nocomp],#2) & #1::#1 & #2::#2 )
+	BKDEP[nostat=+](#1,#2).
+
+if ( ^BKDEP(#1,#2[know,nocomp]) & ~BKDEP(#1,#2[know,nocomp]) & #1::#1 & #2::#2 )
+	BKDEP[nostat=+](#1,#2).
+////////////////////////////////////
+// 4.e. dependency type: BKDEP(scope,form_bk:flittle) 
+////////////////////////////////////
+
+if ( ^BKDEP(#1[scope],#2[form_bk:flittle]) )
+	BKDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.f. dependency type: BKDEP(form_bk:flittle,know) 
+////////////////////////////////////
+
+if ( ^BKDEP(#1[form_bk:flittle],#2[know]) )
+	BKDEP[nostat=+](#1,#2).
+
+if ( ^BKDEP(#1[know],#2[form_bk:flittle]) )
+	BKDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.g. dependency type: BKDEP(mentscotime,mentscotime) BKDEP(know,contr)
+////////////////////////////////////
+
+if ( ^BKDEP(#1[mentscotime],#2[mentscotime]) & BKDEP(#3[know,contr]) )
+	BKDEP[nostat=+](#1,#2).
+	
+if ( BKDEP(#1[mentscotime],#2[mentscotime]) & ^BKDEP(#3[know,contr]) )
+	BKDEP[nostat=+](#3).
+
+if ( ^BKDEP[nostat:~](#1[mentscotime],#2[mentscotime]) & BKDEP[nostat](#3,#4) )
+	BKDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.h. dependency type: BKDEP(know) BKDEP(know,contr,adv) "poorly understood"
+////////////////////////////////////
+
+if ( ^BKDEP(#1[know],#2[know,contr,adv]) )
+	BKDEP[nostat=+](#1,#2).
+
+if ( ^BKDEP(#1[know,contr,adv],#2[know]) )
+	BKDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.h. dependency type: BKDEP(know;mental;contr,~contr) " largly uncharacterized"
+////////////////////////////////////
+
+if ( ^BKDEP(#1[mental,know,contr],#2[contr:~]) || ^BKDEP(#1[contr:~],#2[mental,know,contr]) )
+	BKDEP[nostat=+](#1,#2).
+
+	
+
+////////////////////////////////////
+// 4.h. "However ... unknown" dependency type: BKDEP(know+contr); 
+// BKDEP(however) 
+////////////////////////////////////
+
+if ( ^BKDEP(#1[contr,know]) & BKDEP(#2[however]) )
+	BKDEP[nostat=+,contr=+](#1).
+	
+if ( BKDEP(#1[contr,know]) & ^BKDEP(#2[however]) )
+	BKDEP[nostat=+,contr=+](#2).
+
+////////////////////////////////////
+// 4.i. nostat + BKDEP(mentscotime,mentscotime)
+//////////////////////////////////////
+
+if (BKDEP[nostat](#1,#2) & ^BKDEP(#3[mentscotime],#4[mentscotime]) )
+	BKDEP[nostat=+](#3,#4).
+
+
+////////////////////////////////////
+// 5. staknow: sentences that indicate the state of knowledge at a 
+// certain time. Dependency type: BKDEP(know;time,old:~)
+////////////////////////////////////
+
+
+if (^BKDEP[old:~](#1[know],#2[timefact,old:~]) )
+	BKDEP[statknow=+](#1,#2).
+
+if (^BKDEP[old:~](#1[timefact,old:~,form:fhave],#2[know]) )
+	BKDEP[statknow=+](#1,#2).
+
+//if ( BKDEP[statknow](#1,#2) & ^BKDEP[statknow:~](#3) )
+//	BKDEP[statknow=+](#3).
+
+//if ( BKDEP[statknow](#1,#2) & ^BKDEP[statknow:~](#3,#4) )
+//	BKDEP[statknow=+](#3,#4).
+
+
+////////////////////////////////////
+//6. BKDEP_with_feature+however: If a sentence contains one or several
+// featured BKDEPs, plus "however", and no other BKDEPs, "however" should
+// also get the feature, and all the dependencies should also get the
+// feature "contr"
+////////////////////////////////////
+
+
+////////////////////////////////////
+// 6.a "However+BKDEP[nostat]" 
+////////////////////////////////////
+
+if ( ^BKDEP[nostat](#1,#2) & BKDEP[nostat:~](#3[however]) )
+	BKDEP[nostat=+,contr=+](#1,#2).	
+
+if ( BKDEP[nostat](#1,#2) & ^BKDEP[nostat:~](#3[however]) )
+	BKDEP[nostat=+,contr=+](#3).	
+
+if ( ^BKDEP[nostat](#1,#2) & BKDEP[nostat:~](#3,#4[however]) )
+	BKDEP[nostat=+,contr=+](#1,#2).	
+
+if ( BKDEP[nostat](#1,#2) & ^BKDEP[nostat:~](#3,#4[however]) )
+	BKDEP[nostat=+,contr=+](#3,#4).	
+
+if ( ^BKDEP[nostat](#1) & BKDEP[nostat:~](#2[however]) )
+	BKDEP[contr=+](#1).
+
+if ( BKDEP[nostat](#1) & ^BKDEP[nostat:~](#2[however]) )
+	BKDEP[contr=+,nostat=+](#2).
+
+if ( BKDEP[nostat](#1) & ^BKDEP[nostat:~](#2,#3[however]) )
+	BKDEP[contr=+,nostat=+](#2,#3).
+
+if ( ^BKDEP[nostat](#1) & BKDEP[nostat:~](#2,#3[however]) )
+	BKDEP[contr=+](#1).
+
+if ( ^BKDEP(#1[know,contr]) & BKDEP(#2,#3[however]) )
+	BKDEP[nostat=+,contr=+](#1).
+
+if ( BKDEP(#1[know,contr]) & ^BKDEP(#2,#3[however]) )
+	BKDEP[nostat=+,contr=+](#2,#3).
+
+if ( ^BKDEP[nostat](#1,#2) & BKDEP[nostat,contr](#3) )
+	BKDEP[contr=+](#1,#2).
+
+if ( ^BKDEP[nostat,contr](#1,#2) & BKDEP[nostat:~,emph:~](#3,#4) )
+	BKDEP[nostat=~,contr=~](#1,#2).
+
+if ( ^BKDEP[nostat,contr](#1,#2) & BKDEP[nostat:~](#3) )
+	BKDEP[nostat=~,contr=~](#1,#2).
+
+if ( ^BKDEP[nostat,contr](#1) & BKDEP[nostat:~,emph:~](#2,#3) )
+	BKDEP[nostat=~,contr=~](#1).
+
+if ( ^BKDEP[nostat,contr](#1) & BKDEP[nostat:~](#2) )
+	BKDEP[nostat=~,contr=~](#1).
+
+// if a dependency like "previously[timefact,old] unknown[know,contr]" gets the feature nostat, it should be deleted
+
+if ( ^BKDEP[nostat](#1[timefact,old],#2[know,contr]) | ^BKDEP[nostat](#1[know,contr],#2[timefact,old]) )
+	BKDEP[nostat=~](#1,#2).
+
+// If besides "nostat" dependencies a sentence only contains an "attitude"
+// dependency that just has 1 argument, all the dependencies get the feature
+// "nostat" and "attitude"
+
+if ( ^BKDEP[nostat](#1,#2) & BKDEP(#3[attitude]) )
+	BKDEP[attitude=+](#1,#2).
+
+if ( BKDEP[nostat](#1,#2) & ^BKDEP(#3[attitude]) )
+	BKDEP[nostat=+,attitude=+](#3).
+
+if ( ^BKDEP[nostat](#1) & BKDEP(#2[attitude]) )
+	BKDEP[attitude=+](#1).
+
+if ( BKDEP[nostat](#1) & ^BKDEP(#2[attitude]) )
+	BKDEP[nostat=+,attitude=+](#2).
+
+// If a sentence only contains dependecies that have an argument whose feature is FUNC, and the other argument of the dependency is not WIDESCOPE, the sentence should not be selected
+
+
+if ( ^BKDEP(#1[func],#2[widescope:~]) | ^BKDEP(#1[know:~,widescope:~],#2[func]) )
+	BKDEP[test=+](#1,#2).
+
+if ( ^BKDEP(#1[func]) )
+	BKDEP[test=+](#1).
+
+if ( ^BKDEP[test](#1,#2) & BKDEP[test:~](#3,#4) )
+	BKDEP[test=~](#1,#2).
+
+
+if ( ^BKDEP[test](#1,#2) & BKDEP[test:~](#3) )
+	BKDEP[test=~](#1,#2).
+
+
+if ( ^BKDEP[test](#1) & BKDEP[test:~](#2,#3) )
+	BKDEP[test=~](#1).
+
+
+if ( ^BKDEP[test](#1) & BKDEP[test:~](#2) )
+	BKDEP[test=~](#1).
+
+if ( ^BKDEP[test](#1,#2) )
+	~.
+
+if ( ^BKDEP[test](#1) )
+	~.
+
+
+// If a sentence contains just 1 BKDEP(scope,change) or 1 BKDEP(change,scope),
+// it gets the feature GROW
+
+if ( ^BKDEP(#1[scope],#2[incr,know:~]) | ^BKDEP(#1[incr,know:~],#2[scope]) )
+	BKDEP[grow=+](#1,#2).
+
+if ( ^BKDEP(#1[mental],#2[incr,know:~]) | ^BKDEP(#1[incr,know:~],#2[mental]) )
+	BKDEP[grow=+](#1,#2).
+
+if ( BKDEP[grow](#1,#2) & ^BKDEP[grow:~](#3,#4) )
+	BKDEP[grow=+](#3,#4).
+
+if ( BKDEP[grow](#1,#2) & ^BKDEP[grow:~](#3) )
+	BKDEP[grow=+](#3).
+
+// If a sentence contains just 1 BKDEP and it contains the word "first", the
+// BKDEP gets the feature "first"
+
+if ( ^BKDEP(#1,#2[form_bk:ffirst]) | ^BKDEP(#1,#2[form:fone, numer,change]) )
+	BKDEP[first=+](#1,#2).
+
+// The compound "first time" turns the sentence into a "first"
+
+if ( ^$1(#1[bkbk,form_bk:ffirst]) )
+	BKDEP[first=+](#1).
+
+// No idea why these 2 rules were made:
+
+//if ( ^BKDEP[first](#1,#2) & BKDEP[first:~](#3,#4) )
+//	BKDEP[first=~](#1,#2).
+
+//if ( ^BKDEP[first](#1,#2) & BKDEP[first:~](#3) )
+//	BKDEP[first=~](#1,#2).
+
+
+// If a BKDEP sentence contains a contradiction that is weaker than a change of direction, it is marked WEAKCONTR. These sentences have dependencies that contain a mental and a scope argument, as well as a cont,func
+
+
+if ( BKDEP(#1[mental],#2[scope]) & ^BKDEP(#3[contr,func]) )
+	BKDEP[weakcontr=+](#3).
+
+if ( ^BKDEP(#1[mental],#2[scope]) & BKDEP(#3[contr,func]) )
+	BKDEP[weakcontr=+](#1,#2).
+
+
+if ( BKDEP[weakcontr:~,emph:~](#1,#2) & ^BKDEP[weakcontr](#3) )
+	BKDEP[weakcontr=~](#3).
+
+
+if ( BKDEP[weakcontr:~,emph:~](#1,#2) & ^BKDEP[weakcontr](#3,#4) )
+	BKDEP[weakcontr=~](#3,#4).
+
+
+if ( ^BKDEP[weakcontr](#1,#2) & BKDEP[weakcontr:~](#3) )
+	BKDEP[weakcontr=~](#1,#2).
+
+
+if ( ^BKDEP[weakcontr](#1) & BKDEP[weakcontr:~](#2) )
+	BKDEP[weakcontr=~](#1).
+
+// If a sentence just contains unary dependencies and one of them is contr, the dependecy is weakcontr
+
+if ( ^BKDEP(#1[contr]) & BKDEP(#2[bkbk:~]) & #1~:#2 )
+	BKDEP[weakcontr=+](#1).
+
+if ( BKDEP[weakcontr](#1[contr]) & ^BKDEP(#2[bkbk:~]) & #1~:#2 )
+	BKDEP[weakcontr=+](#2).
+
+if ( ^BKDEP[weakcontr](#1) & BKDEP[weakcontr:~,emph:~](#2,#3) )
+	BKDEP[weakcontr=~](#1).
+
+if ( ^BKDEP[weakcontr](#1) & BKDEP[weakcontr:~](#2) )
+	BKDEP[weakcontr=~](#1).
+
+// Give the feature "novstat" to sentences that just speak about a novelty
+
+if ( ^BKDEP(#1[new],#2) )
+	BKDEP[novstat=+,tempstat=~](#1,#2).
+
+if ( ^BKDEP(#1,#2[new]) )
+	BKDEP[novstat=+,tempstat=~](#1,#2).
+
+if ( BKDEP[novstat](#1,#2) & ^BKDEP[novstat:~](#3,#4) )
+	BKDEP[novstat=+,tempstat=~](#3,#4).
+
+if ( BKDEP[novstat](#1,#2) & ^BKDEP[novstat:~](#3) )
+	BKDEP[novstat=+,tempstat=~](#3).
+
+// Sentences that have a BKDEP+a level word get the feature LEVEL
+
+if ( ^BKDEP(#1,#2) & LEVEL(#3) )
+	BKDEP[level=+](#1,#2).
+
+if ( ^BKDEP(#1) & LEVEL(#2) )
+	BKDEP[level=+](#1).
+
+
+////////////////////////////////////////////////////////////
+//Relevant sentences: titles, synthetic sentences, last sentences
+////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////
+//Synthetic sentences
+////////////////////////////////////////////////////////////
+
+| TOP#1{ ?+ } |
+if ( contributionsent:1 )
+	SUMMARY[contribution=+](#1).
+
+| TOP#1{ ?+ } |
+if ( _nextanalyse:1 & _nextanalyse=0 )
+//if ( _nextanalyse:1 )
+	SUMMARY[contribution=+](#1).
+
+//Script:
+
+//_nextanalyse=0;
+
+
+// provide evidence is publ:+ : We provide evidence
+
+Script:
+
+iftest ( OBJ(#1[form_bk:fprovide],#2[form_bk:fevidence]) ) { #1[publ=+];}
+
+DependencyRules:
+
+// add the feature synth to sentences that contain 2 marked words
+
+if ( ^$1(#1[mentscopubl],#2[deict]) )
+        $1[contribution=+](#1,#2).
+
+if ( ^$1(#1[deict],#2[mentscopubl]) )
+        $1[contribution=+](#1,#2).
+
+//if ( NUCL[passive](#1,#2[publ]) )
+//	NUCL[contribution=+](#1,#2).
+
+// we will discuss
+
+| TOP#4{ ?+ } |
+if ( SUBJ(#1,#2[deict]) & NUCL(#1,#3[publ]) )
+	SUMMARY[contribution=+](#4).
+
+Script:
+
+iftest ( SUMMARY[contribution](#4) &  SUBJ(#1,#2[deict]) & NUCL(#1,#3[publ]) ) { #1[sumdep=+]; #2[sumdep=+]; #3[sumdep=+];}
+
+DependencyRules:
+
+// taken together/altogether/all together + scope -> synth (These results, taken together)
+
+| #1[adv,publ] |
+	MAIN(#1).
+
+| TOP#4{ ?+ } |
+if ( MAIN(#1[adv,publ]) & SUBJ(#2,#3[scope]) )
+	SUMMARY[contribution=+](#4).
+
+Script:
+
+iftest ( SUMMARY[contribution](#4) & MAIN(#1[adv,publ]) & SUBJ(#2,#3[scope]) ) { #1[sumdep=+];  #2[sumdep=+]; #3[sumdep=+];}
+
+DependencyRules:
+
+| TOP#4{ ?+ } |
+if ( MAIN(#1[adv,publ]) & SUBJ(#2[mental],#3[deict]) )
+	SUMMARY[contribution=+](#4).
+
+Script:
+
+iftest ( SUMMARY[contribution](#4) & MAIN(#1[adv,publ]) & SUBJ(#2[mental],#3[deict]) ) { #1[sumdep=+];  #2[sumdep=+]; #3[sumdep=+];}
+
+DependencyRules:
+
+
+if ( MAIN(#1[adv,publ]) )
+	~ .
+
+
+| TOP#3{ ?+ } |
+if ( $1[contribution](#1) & ~SUMMARY(#2) )
+	SUMMARY[contribution=+](#3).
+
+Script:
+
+iftest ( SUMMARY[contribution](#3) & $1[contribution](#1) ) { #1[sumdep=+]; }
+
+DependencyRules:
+	
+| TOP#3{ ?+ } |
+if ( $1[contribution](#1,#2) & ~SUMMARY(#4) )
+	SUMMARY[contribution=+](#3).
+
+Script:
+
+iftest ( SUMMARY(#3) & $1[contribution](#1,#2) ) { #1[sumdep=+]; #2[sumdep=+];}
+
+DependencyRules:
+
+
+//In conclusion
+
+| TOP#3{ ?+ } |
+if ( $1(#1[relword],#2[prep,maj]) )
+	SUMMARY[contribution=+](#3).
+
+Script:
+
+iftest( SUMMARY(#3) & $1(#1[relword],#2[prep,maj]) ) { #1[sumdep=+]; #2[sumdep=+];}
+
+
+DependencyRules:
+
+
+////////////////////////////////////
+// Last sentences
+////////////////////////////////////
+
+| #1[lastsent] |
+	LASTSENT(#1).
+
+| TOP#1{ ?+ } |
+if ( LASTSENT(#2) )
+	SUMMARY[lastsent=+](#1).
+
+if ( ^SUMMARY[contribution](#1) & SUMMARY[lastsent](#2) )
+	SUMMARY[contribution=+,lastsent=+](#1).
+
+if ( SUMMARY[contribution,lastsent](#1) & ^SUMMARY[lastsent](#2) )
+	~.
+
+if ( ^LASTSENT(#2) )
+	~.
+
+///////////////////////////////
+// Titles
+//////////////////////////////
+
+| TOP#1{ ?+ } |
+if (@_xtd.title->Test())
+	SUMMARY[title=+](#1).
+
+
+
+// Marking viss: BKDEPS without a feature of with "first" or "change"
+
+
+if ( ^BKDEP[old:~,tempstat:~,postat:~,nostat:~,weakcontr:~,statknow:~,contr:~,attitude:~,emph:~,question:~](#1,#2) )
+	BKDEP[vis=+](#1,#2).
+
+
+if ( ^BKDEP[old:~,tempstat:~,postat:~,nostat:~,weakcontr:~,statknow:~,contr:~,attitude:~,question:~](#1) )
+	BKDEP[vis=+](#1).
+
+// Surprisingly , this paper reports 
+
+if ( $1[contribution](#1,#2) & $2(#3[attitude]) )
+	BKDEP[vis=+](#3).
+	
+| TOP#3{ ?+ } |
+if ( BKDEP(#1) & ~IMPSENT(#2) )
+	IMPSENT(#3).
+	
+| TOP#3{ ?+ } |
+if ( BKDEP(#1,#2) & ~IMPSENT(#4) )
+	IMPSENT(#3).
+
+if ( LEVEL(#1) & ^IMPSENT(#2) )
+	IMPSENT[level=+](#2).
+
+
+// Give features to IMPSENT
+
+// If a sentence has a vis BKDEP, the IMPSENT is a vis
+
+if ( BKDEP[vis](#1,#2) & ^IMPSENT(#4) & ~IMPSENT[vis](#5) )
+	IMPSENT[vis=+](#4).
+
+if ( BKDEP[vis](#3) & ^IMPSENT(#4) & ~IMPSENT[vis](#5) )
+	IMPSENT[vis=+](#4).
+
+// contrast: the best viss
+
+// a. contr+scope
+
+if ( ^BKDEP(#1[contr,question:~],#2[scope]) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2). 
+
+if ( ^BKDEP(#1[scope],#2[contr,question:~]) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2). 
+
+// b. mental+contr_scope
+
+| #1[scope] |
+if ( BKDEP(#1[scope],#2) | BKDEP(#2,#1[scope]) )
+	LIXO(#1).
+
+if ( ^BKDEP(#1[mental],#2[contr,question:~]) & LIXO(#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2). 
+
+if ( ^BKDEP(#1[contr,question:~],#2[mental]) & LIXO(#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2).
+
+if ( ^LIXO(#1) )
+	~.
+
+// c. scope+attitude_time 
+
+| #1[timefact] |
+if ( BKDEP(#1[timefact],#2) | BKDEP(#2,#1[timefact]) )
+	LIXO[tempstat=+](#1).
+
+
+if ( ^BKDEP(#1[scope],#2[attitude]) & LIXO[tempstat](#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2). 
+
+if ( ^BKDEP(#1[attitude],#2[scope]) & LIXO[tempstat](#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2).
+
+if ( LIXO(#1) )
+	~.
+
+// d. scope+old_contr
+
+| #1[contr] |
+if ( BKDEP(#1[contr,question:~],#2) | BKDEP(#2,#1[contr,question:~]) | BKDEP(#1[contr]) )
+	LIXO(#1).
+
+if ( ^BKDEP(#1[scope],#2[old]) & LIXO(#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2). 
+
+if ( ^BKDEP(#1[old],#2[scope]) & LIXO(#4) & IMPSENT[vis](#3) )
+	BKDEP[contrast=+](#1,#2).
+
+if ( LIXO(#1) )
+	~.
+
+// If a IMPSENT contains a dependency with contrast, it gets the feature contrast
+
+if ( BKDEP[contrast](#1,#2) & ^IMPSENT[vis](#3) )
+	IMPSENT[contrast=+](#3)
+
+// Other features
+
+if ( BKDEP[tempstat](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[tempstat=+](#3).
+
+if ( BKDEP[old](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[old=+](#3).
+
+if ( BKDEP[postat](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[postat=+](#3).
+
+if ( BKDEP[nostat](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[nostat=+](#3).
+
+if ( BKDEP[nostat](#1) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[nostat=+](#3).
+
+if ( BKDEP[contr](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[contr=+](#3).
+
+if ( BKDEP[contr](#1) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[contr=+](#3).
+
+if ( BKDEP[weakcontr](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[weakcontr=+](#3).
+
+if ( BKDEP[weakcontr](#1) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[weakcontr=+](#3).
+
+if ( BKDEP[statknow](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[statknow=+](#3).
+
+if ( BKDEP[novstat](#1,#2) & ^IMPSENT(#3) )
+	IMPSENT[novstat=+](#3).
+
+if ( BKDEP[grow](#1,#2) & ^IMPSENT(#3) )
+	IMPSENT[grow=+](#3).
+
+if ( BKDEP[first](#1,#2) & ^IMPSENT(#3) )
+	IMPSENT[first=+](#3).
+
+if ( BKDEP[first](#1) & ^IMPSENT(#3) )
+	IMPSENT[first=+](#3).
+
+if ( BKDEP[emph](#1,#2) & ^IMPSENT(#3) )
+	IMPSENT[emph=+](#3).
+
+if ( BKDEP[attitude](#1,#2) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[attitude=+](#3).
+
+if ( BKDEP[attitude](#1) & ^IMPSENT[vis:~](#3) )
+	IMPSENT[attitude=+](#3).
+
+// if a IMPSENT does not have any feature and its verb whose subject is 
+
+////////////////////////////////
+// marking features of relsents
+////////////////////////////////
+
+
+| #1[form:fquest] |
+if ( ^SUMMARY(#2) & LEVEL(#3))
+	SUMMARY[question=+](#2).
+
+| #1[questlevel] |
+	LIXO(#1).
+
+| #1[form:fquest] |
+if ( ^SUMMARY(#2) & LIXO(#3) & ~SUMMARY[question](#2))
+	SUMMARY[question=+](#2).
+
+if ( ^LIXO(#1) )
+	~.
+
+| #1[possibility] |
+if ( ^SUMMARY(#2))
+	SUMMARY[postat=+](#2).
+
+
+| #1[postat] |
+if ( ^SUMMARY(#2))
+	SUMMARY[postat=+](#2).
+
+if ( ^SUMMARY(#2[future],#3[scope]) )
+	SUMMARY[future=+](#2,#3).
+
+
+if ( ^SUMMARY(#2[scope],#3[future]) )
+	SUMMARY[future=+](#2,#3).
+
+
+| #1[forneg] |
+if ( ^SUMMARY(#2) )
+	SUMMARY[negative=+](#2).
+
+//| #1[form:fnot] |
+if ( ^SUMMARY(#2) & $1(#1,#3[forneg,toutmaj:~]) )
+	SUMMARY[negative=+](#2).
+
+if ( ^SUMMARY(#2) & $1(#1[forneg,toutmaj:~],#3) )
+	SUMMARY[negative=+](#2).
+
+| #1[negative] |
+if ( ^SUMMARY(#2) )
+	SUMMARY[negative=+](#2).
+
+| #1[question] |
+if ( ^SUMMARY(#2)  & $1(#1[bk_feat],#3[question]) )
+	SUMMARY[question=+](#2).
+
+| #1[question] |
+if ( ^SUMMARY(#2)  & $1(#1[question],#3[bk_feat]) )
+	SUMMARY[question=+](#2).
+
+if ( ^SUMMARY[postat:~,future:~,contr:~,question:~,title:~](#1) )
+	SUMMARY[stat=+](#1).
+
+if ( ^SUMMARY(#1) & LEVEL(#3) & ~SUMMARY[level](#1) )
+	SUMMARY[level=+](#1).
+
+//| #3[importance] |
+//if ( ^SUMMARY(#1) & ~SUMMARY[strong](#1) )
+//	SUMMARY[strong=+](#1).
+
+
+//| #3[questlevel] |
+//if ( ^SUMMARY[title](#1) & ~SUMMARY[strong](#1) )
+//	SUMMARY[title=+,strong=+](#1).
+
+
+//| #3[bk,possibility:~,func:~] |
+//if ( ^SUMMARY[title,question,negative:~](#1) & ~SUMMARY[strong](#1) )
+//	SUMMARY[title=+,strong=+](#1).
+
+//if ( ^SUMMARY(#1) & $1[bk](#2[form:~fnot,form:~fno,negative:~]) )
+//	SUMMARY[strong=+](#1).
+
+//if ( ^SUMMARY(#1) & $1[bk](#2[form:~fnot,form:~fno,negative:~],#3[form:~fnot,form:~fno,negative:~]) )
+//	SUMMARY[strong=+](#1).
+
+
+/////////////////////////////
+//IMPSUMMARY
+////////////////////////////
+
+// Marking relevant sentences that are BKDEPs - this doesn't seem to be an important category
+
+if ( ^SUMMARY(#1) & $1(#2[level],#3[new]) )
+	IMPSUMMARY[vis=+](#1).
+
+if ( ^SUMMARY(#1) & $1(#2[new],#3[level]) )
+	IMPSUMMARY[vis=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[vis](#2) )
+	IMPSUMMARY[vis=+](#1).
+
+if ( BKDEP[contrast](#1,#2) & ^IMPSUMMARY(#3) )
+	IMPSUMMARY[contrast=+](#3).
+
+if ( ^SUMMARY(#1) & IMPSENT[novstat](#2) )
+	IMPSUMMARY[novstat=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[novstat](#2) )
+	IMPSUMMARY[novstat=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[first](#2) )
+	IMPSUMMARY[first=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[first](#2) )
+	IMPSUMMARY[first=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[old](#2) )
+	IMPSUMMARY[old=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[old](#2) )
+	IMPSUMMARY[old=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[grow](#2) )
+	IMPSUMMARY[grow=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[emph](#2) )
+	IMPSUMMARY[emph=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[grow](#2) )
+	IMPSUMMARY[grow=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[tempstat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[tempstat=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[tempstat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[tempstat=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[nostat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[nostat=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[nostat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[nostat=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[postat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[postat=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[postat](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[postat=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[statknow](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[statknow=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[statknow](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[statknow=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[contr](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[contr=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[contr](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[contr=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[weakcontr](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[weakcontr=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[weakcontr](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[weakcontr=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[attitude](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[attitude=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[attitude](#2) & ~IMPSUMMARY[vis](#3) )
+	IMPSUMMARY[attitude=+](#1).
+
+if ( ^SUMMARY(#1) & IMPSENT[weakreview](#2) )
+	IMPSUMMARY[weakreview=+](#1).
+
+if ( ^IMPSUMMARY(#1) & IMPSENT[weakreview](#2) )
+	IMPSUMMARY[weakreview=+](#1).
+
+if ( IMPSUMMARY(#1) & ^IMPSENT(#2) )
+	~.
+
+if ( IMPSUMMARY(#1) & ^SUMMARY(#2) )
+	~.
+
+if ( ^IMPSUMMARY[strong](#1) )
+	IMPSUMMARY[strong=~](#1).
+
+//if ( LEVEL(#1) & ^IMPSUMMARY(#2) )
+//	IMPSUMMARY[level=+](#2).
+	
+
+
+// This is a correction: BKDEP(REL)SENT having the features CONTR+OLD should have the feature VIS, CONTRAST and not TEMPSTAT or OLDSTAT
+
+if ( ^$1[contr,old](#1) )
+	$1[contr=~,old=~,tempstat=~,oldstat=~,contrast=+,vis=+](#1).
+
+// Marking weak reviews
+
+// grow
+
+if ( ^IMPSENT[grow](#1) )
+	IMPSENT[weakreview=+](#1).
+
+if ( ^IMPSUMMARY[grow](#1) )
+	IMPSUMMARY[weakreview=+](#1).
+
+if ( ^IMPSENT[first](#1) )
+	IMPSENT[weakreview=+](#1).
+
+if ( ^IMPSUMMARY[first](#1) )
+	IMPSUMMARY[weakreview=+](#1).
+
+if ( ^IMPSENT[novstat,vis](#1) )
+	IMPSENT[weakreview=+](#1).
+
+if ( ^IMPSUMMARY[novstat,vis](#1) )
+	IMPSUMMARY[weakreview=+](#1).
+
+| #1[possibility] |
+if ( ^IMPSENT[vis](#2) )
+	IMPSENT[weakreview=+](#2).
+
+| #1[possibility] |
+if ( ^IMPSUMMARY[vis](#2) )
+	IMPSUMMARY[weakreview=+](#2).
+
+| #1[weakreview] |
+if ( ^IMPSENT[vis](#2) )
+	IMPSENT[weakreview=+](#2).
+
+| #1[weakreview] |
+if ( ^IMPSUMMARY[vis](#2) )
+	IMPSUMMARY[weakreview=+](#2).
+
+| #1[form:fquest] |
+if ( ^IMPSENT[vis](#2) )
+	IMPSENT[weakreview=+](#2).
+
+| #1[form:fquest] |
+if ( ^IMPSUMMARY[vis](#2) )
+	IMPSUMMARY[weakreview=+](#2).
+
+
+// If a weakreview sentence contains a bkbk and and a contr it should not be a weakreview
+
+if ( ^IMPSENT[weakreview](#1) & BKDEP(#2[bkbk]) & BKDEP(#3[contr]) )
+	IMPSENT[weakreview=~](#1)
+
+if ( ^IMPSENT[weakreview](#1) & BKDEP(#2[bkbk]) & BKDEP(#3[contr],#4) )
+	IMPSENT[weakreview=~](#1)
+
+if ( ^IMPSENT[weakreview](#1) & BKDEP(#2[bkbk]) & BKDEP(#3,#4[contr]) )
+	IMPSENT[weakreview=~](#1)
+
+
+
+
+
+
+

@@ -1,0 +1,238 @@
+# ---------------------------------------------------------------
+# FILE:		numbers.xfst
+# CONTENT:	(x)fst script for converting numbers <-> digits
+#		French
+#
+# AUTHOR:	A. Schiller
+# CREATED:	03-DEc-1999
+# ---------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# General outline:
+# - define Num1to9
+# - define Num10to99
+# - define Num100to999 
+#	== Num1to9 "hundred" [ 0:%0 0:%0 | 0:%0 Num1to9 | Num10to99 ]
+# - define Num1000to999999
+#	 == [Num1to9|Num10to99|Num100to999] "thousand" 
+#		[ 0:%0 0:%0 0:%0 |
+#		  0:%0 0:%0 Num1to9 |
+#		  0:%0 Num10to99 |
+#		  Num100to999 ]
+# ---------------------------------------------------------------
+
+echo >>> separators
+define HY	0:%- ;
+define SP	0:" " ;
+
+define ET	[HY|SP] 0:{et} [HY|SP] ;
+
+
+echo >>> zero
+define Zero	%0:{zero} ;
+
+# ---------------------------------------------------------------
+echo >>> numbers 1 to  9
+define Num2to9 [
+	2:{deux}
+|	3:{trois}
+|	4:{quatre}
+|	5:{cinq}
+| 	6:{six}
+|	7:{sept}
+|	8:{huit}
+|	9:{neuf}
+];
+
+define Num1to9 	[ 1:{un}  | Num2to9 ] ;
+
+# for "special" numbers 71-79; 91-99
+
+define Spec2to9 [
+	2:{douze}
+|	3:{treize}
+|	4:{quatorze}
+|	5:{quinze}
+|	6:{seize}
+|	0:{dix} HY [ 7:{sept} | 8:{huit} | 9:{neuf} ]
+];
+
+
+# ---------------------------------------------------------------
+echo >>> numbers 10 to 99
+define Num10to99 [
+	{10}:{dix}
+|	{11}:{onze}
+|	[ 1:0 Spec2to9 ]
+
+|[ 	[ 2:{vingt}
+	| 3:{trente}
+	| 4:{quarante}
+	| 5:{cinquante}
+	| 6:{soixante} 
+	| 7:{septante}		# B/CH
+	| 8:{huitante}
+	| 8:{octante}		# B/CH/CA
+	| 9:{nonante}		# B/CH
+	]	[%0:0 | ET 1:{un} | HY Num2to9 ]
+ ]
+|	[ 7:{soixante} [ HY %0:{dix} | ET 1:{onze} | HY Spec2to9 ] ]
+|	[ 8:{quatre-vingt} [ %0:0 | HY Num1to9 ] ]
+|	[ 9:{quatre-vingt} HY [%0:{dix} | 1:{onze} | Spec2to9 ] ]
+] ;
+
+# ---------------------------------------------------------------
+echo >>> numbers 100 to 999
+
+define Num100to999 [
+	[ Num2to9 SP | 1:0 ] 0:{cent}
+	[ 
+	  0:s %0:0 %0:0
+	| SP %0:0 Num1to9 
+	| SP Num10to99
+	]
+] ;
+
+# ---------------------------------------------------------------
+echo >>> numbers 1000 to 999999
+
+define Num1000to999999 [
+	[ [ Num2to9 | Num10to99 | Num100to999 ] SP | 1:0 ] 0:{mille}
+	[ %0:0 %0:0 %0:0 
+	| %0:0 %0:0 SP Num1to9
+	| %0:0 SP Num10to99
+	| SP Num100to999
+	]
+];
+
+# ---------------------------------------------------------------
+echo >>> cardinals
+
+
+define CARD  [
+	[ Zero | Num1to9 | Num10to99 | 	Num100to999 | Num1000to999999 ]
+] ;
+
+# ---------------------------------------------------------------
+echo >>> cardinals for years
+define CARDYEAR	[ [ Num2to9 SP 0:{mille} | 1:{mil} ]
+			[ %0:0 %0:0 %0:0 
+			| %0:0 %0:0 SP Num1to9
+			| %0:0 SP Num10to99
+			| SP Num100to999
+			] 
+		] |
+	# dix-neuf cent trente-huit
+		[ [ Num10to99 SP 0:{cent} ]
+			[ %0:0 %0:0 
+			| %0:0 SP Num1to9
+			| SP Num10to99
+			]
+		];
+
+
+# ---------------------------------------------------------------
+echo >>> ordinals
+define ORD  [
+	[ Num2to9 | Num10to99 | Num100to999 | Num1000to999999 ] 0:i {ème}
+];
+
+define ORDRULES [ 
+ 	f -> v || _ {neu} 
+.o.	q -> {qu} || _ {ième}
+.o.	e -> 0 || _ {ième}
+];
+
+define ORD	[ ORD .o. ORDRULES ];
+
+# ---------------------------------------------------------------
+# roman numbers
+define ROMAN1   [ (m (m (m)))
+            ( [ c m | d | c d | (d) (c (c (c))) ] )
+            ( [ x c | l | x l | (l) (x (x (x))) ] )
+            ( [ i x | v | i v | (v) (i (i (i))) ] ) ] - [];
+
+define ROMAN2   [ (M (M (M)))
+            ( [ C M | D | C D | (D) (C (C (C))) ] )
+            ( [ X C | L | X L | (L) (X (X (X))) ] )
+            ( [ I X | V | I V | (V) (I (I (I))) ] ) ] - [];
+
+define ROMAN  [ ROMAN1 | ROMAN2 ];
+	
+define ROMANCARD	ROMAN - [ {dix} | {DIX} ] ;
+
+define ROMANORD 	ROMAN2 [ e (m e) ]  - [ [C|D|L|M] e  ] ;
+# exclude me, le, ce,  etc. !!
+
+
+# ---------------------------------------------------------------
+echo >>> big numbers
+define DIG	[%0|1|2|3|4|5|6|7|8|9] ;
+define DIG1	DIG+ [ [%.|%,] DIG+]*	;
+
+define BIGNUM	[ [ {mi} | {bi} | {tri} ] [ {llion} | {lliard} ] ] (s);
+
+define NUMDIG	DIG1 (" "  BIGNUM);
+define NUMCARD	CARD (" "  BIGNUM);
+
+# eg. 12 000 000
+define TRIPLE	DIG (DIG (DIG)) [ %  DIG DIG DIG]+ ;
+
+# ---------------------------------------------------------------
+echo >>> dates
+define DAY	(%0) [DIG - %0] | 1 DIG | 2 DIG | 3 [%0 | 1] ;
+define MONTH	(%0) [DIG - %0] | 1 [%0|1|2] ;
+define YEAR	(DIG (DIG)) DIG DIG ;
+
+define DATE	[ DAY %/ MONTH %/ YEAR 
+		| DAY %- MONTH %- YEAR
+		];
+
+
+define HOUR	(%0|1) DIG | 2 [%0|1|2|3|4] ;
+define MINUTE	[%0|1|2|3|4|5] DIG | 6 %0 ;
+
+define TIME	HOUR [h|H|%:] MINUTE (%: MINUTE) ;
+
+# ---------------------------------------------------------------
+echo >>> add features
+
+define BASEORD	[ [ DIG - %0] DIG*] - [1] ;
+define SGPL	[ %+Sg:0 | 0:s %+Pl:0 ]	;
+
+define CARD1	[ NUMCARD  .o. [ ?* u n ] ];
+define CARD2	[ NUMCARD - CARD1 ];
+       		
+
+define CARDall 	[ CARD1 %+Num:0 %+Card:0 %+Masc:0
+       		| CARD1 0:e %+Num:0 %+Card:0 %+Fem:0
+		| CARD2 %+Num:0 %+Card:0 %+MF:0
+
+		| CARDYEAR %+Num:0 %+Card:0 %+Year:0 
+		| CARDYEAR.u %+Num:0 %+Dig:0 %+Year:0 
+		| NUMDIG %+Num:0 %+Dig:0 %+Card:0
+		| TRIPLE %+Num:0 %+Dig:0 %+Card:0
+		| DATE	%+Num:0 %+Date:0 
+		| TIME	%+Num:0 %+Time:0 
+
+		| ROMANCARD	%+Num:0 %+Rom:0 %+Card:0
+		| ROMANORD 	%+Num:0 %+Rom:0 %+Ord:0
+		];
+
+define ORD1 	[ {premier}	%+Num:0 %+Ord:0 %+Masc:0
+		| {première}	%+Num:0 %+Ord:0 %+Fem:0
+		| {segond}	%+Num:0 %+Ord:0 %+Masc:0
+		| {segonde}	%+Num:0 %+Ord:0 %+Fem:0
+		| 1 {er}	%+Num:0 %+Ord:0 %+Masc:0
+		| 1 {er}:{ère}	%+Num:0 %+Ord:0 %+Fem:0
+		| 2 {nd}	%+Num:0 %+Ord:0 %+Masc:0
+		| 2 {nd} 0:e	%+Num:0 %+Ord:0 %+Fem:0
+		| ORD		%+Num:0 %+Ord:0 %+MF:0 
+		| BASEORD ({èm}) e %+Num:0 %+Dig:0 %+Ord:0 %+MF:0 
+		] SGPL ;
+
+define ORD2	[ ORD.i {ment} %+Adv:0 %+Ord:0 ];
+
+read regex CARD1 | CARD2 ;
+save "numbers.fst"
+#read regex CARDall | ORD1 | ORD2 ;

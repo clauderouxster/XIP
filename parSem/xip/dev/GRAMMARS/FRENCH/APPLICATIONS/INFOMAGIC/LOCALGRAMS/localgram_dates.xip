@@ -1,0 +1,369 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//Aude Rebotier
+/--------------  grammaire de dates ---------------------\
+
+
+Fragmenter:
+
+// mi-juin
+1>"mi-%1[[janv,févr,mars,avr,mai,juin,juill,ao,septe,oct,nov,déc]%c*]%2" : noun  = prefix%1[t_mod=mid,fstmod=+], noun%2[time=+,mois=+,fstmod=+].
+
+// mi-été
+1>"mi-%1[[printe,été,automn,hiver]%c*]%2" : noun  = prefix%1[t_mod=mid,fstmod=+], noun%2[time=+,saison=+,fstmod=+].
+
+
+
+Marqueur:
+
+
+//****************
+// Marquage des nombres n'étant pas considérés comme des dates possibles
+//****************
+
+
+// un num supérieur à 4 chiffres n'est pas une date
+2> num[lemme:"%d%d%d%d%d+",nondate=+,datepot=~].
+
+// un num de trois à quatre chiffre commençant par un 0 n'est pas une date
+2> num[lemme:"0[%d%d,%d%d%d]",nondate=+,datepot=~].
+
+// un num de trois chiffres n'est pas une date s'il est suivi directement d'un nom
+// règle à enelever si besoin
+// cela evite de prendre "150 photos"; 
+// pour ce qui est des années entre 0 et 1000, 
+// on peut supposer que la date est suivie d'un determinant/prep/pronom mais pas 
+// directement d'un nom
+2> num[lemme:"%d%d%d",nondate=+,datepot=~], noun.
+
+// *** !!!!! special ESTER 
+
+// attention, règle à enlever peut-être
+// un num commençant par un chiffre supérieur à 3 n'est pas une date
+2> num[lemme:"[3,4,5,6,7,8,9][%d%d%d]",nondate=+,datepot=~].
+
+//corpus oral : 600 mille
+//2> num[nondate=+]{num[lemme:"%d%d%d",chiffres,nondate=+],num[lemme:"mille",nondate=+]}.
+
+// 19 cent 97
+//2> num[datepot=+,time=+]{num[lemme:"19",chiffres],num[lemme:"cent",lettres],num[chiffres]}.
+
+
+// à effacer ensuite
+// penser à gerer autrement les choses comme "la création de 1600 emplois"
+// Tout ce qui ne commence pas par 19 ou 20 n'est pas une date (dans les corpus Infomagic et Ester
+2> num[lemme:"[1,2][1,2,3,4,5,6,7,8][%d%d]",nondate=+,datepot=~].
+
+//*** fin special ester
+
+Séquence:
+
+// "vingt et un" est un nombre
+// Maud:
+// - ajout négation de ou pour coord
+// - "30 et 31" n'est pas un nombre
+
+/un milliard 800 millions est un nombre
+
+
+2> Num [gdnbre=+] = num[noun:+],(punct[form:fhyph]), coord[lemme:~"ou"], (punct[form:fhyph]),num[lemme:"1"].
+
+/ traitement de "entre 18 mille et 50 mille francs" \
+
+3> Num [gdnbre=+] = |prep[form:fentre]| num[noun:+,lemme:~"mi"], num[noun:+], (num[noun:+]) | coord | .
+
+/deux noms de nombres font un seul nombre (quatre mille cinq-cent)\
+// maud : ajout element final qui ne doit pas être un nom de mois --> à surveiller
+
+//CB: le 18 20 continue --> num[18 20 continue]
+//2> Num [gdnbre=+] @= num[noun:+,lemme:~"mi"], num[noun:+], (num[noun:+]), (punct[hyph:+], num[noun:+]), (c//oord, num),?[mois:~].
+
+//règle commentée par Maud:
+//2>Num [gdnbre=+] @= num+[gdnbre1]. 
+// eventuellement à remplacer par marquage : 1> num[gdnbre1:+,gdnbre=+]. 
+
+
+
+/les mois musulmans composés\
+3> noun[time=+, mwe=+, sg=+, mois=+]= noun[mois1:+], (punct[lemme:']), (punct[form:fhyph]), noun[mois2:+].
+
+/Jésus Christ = Jésus-Christ\
+3> noun[form=fjc, masc=+, sg=+, proper=+,p3=+] = noun[lemme:Jésus], noun[lemme:Christ].
+
+
+
+// MODIFS Maud :
+// Sur reconnaissance des dates et traits assignés
+// Si pb reprendre le bloc commenté ci-dessous
+
+
+//--------------------------------
+//       DATES "CLASSIQUES" 
+//--------------------------------
+
+
+//******************************
+//*** DATES ABSOLUES (avec annee)
+
+// Date absolue complète
+// (lundi) 12 mars 1987
+4> noun[date=+,time=+,mwe=+,complete=+,absolue=+] @=  (noun[jour]), num[numjourpot];num[lemme:"premier"], noun[mois],  num[gdnbre:+,datepot=~,annee=+], (prep, noun[form:fjc]).
+
+// Date absolue incomplète
+
+// excep : interval - juillet-août 1990:
+4> NP[interval=+,time=+,mwe=+] @=  noun[mois,date=+], punct[hyph:+], noun [mois], num[gdnbre,datepot=~,annee=+].
+
+// mi-mars 1989
+4> noun[date=+,time=+,mwe=+,absolue=+] @=  prefix[lemme:"mi-"], noun[mois],num[gdnbre,datepot=~,annee=+].
+
+
+// mars 1987
+4> noun[date=+,time=+,mwe=+,incomplete=+,absolue=+] @=  noun[mois],  num[gdnbre,datepot=~,annee=+].
+
+
+
+
+//******************************
+//*** DATES RELATIVES
+
+
+// (lundi) 25 avril au matin
+5> noun[!infomagic=+,mwe=+,tempexpr=+,date=+,daytime=+,relative=+]@= (noun[jour]), num[numjourpot];num[lemme:"premier"], noun[mois], prep[form:fa],noun[daytime].
+
+// (lundi) 15 mars dernier
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @= (noun[jour]), num[numjourpot];num[lemme:"premier"], noun[mois], adj[timemod:+].
+
+//(lundi) 15 mars 
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @= (noun[jour]), num[numjourpot];num[lemme:"premier"], noun[mois].
+
+// dimanche matin
+5> noun[!infomagic=+,mwe=+,tempexpr=+,date=+,daytime=+,relative=+]@= noun[jour],noun[daytime].
+
+// (le) dimanche (num) au matin
+5> noun[!infomagic=+,mwe=+,tempexpr=+,date=+,daytime=+,relative=+]@= noun[jour], (num), prep[form:fa],noun[daytime].
+
+// lundi 15 
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @= noun[jour,sg], num[numjourpot];num[lemme:"premier"]|?[nat:~,noun:~]|.
+
+// lundis 15 
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+,pl=+] @= noun[jour,pl], num[numjourpot];num[lemme:"premier"]|?[nat:~,noun:~]|.
+
+// !!!! à enlever ?
+//  demain mardi
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @=  adv[tempexpr,relative], noun[jour,sg].
+
+// au plus tard (ce) mardi
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @=  adv[t_mod],(det), noun[jour,sg].
+
+// mardi au plus tard
+5> noun[!infomagic=+,date=+,time=+,mwe=+,relative=+] @=  noun[jour,sg], adv[t_mod].
+
+
+// mi-mars
+5> noun[date=+,time=+,mwe=+,relative=+] @=  prefix[lemme:"mi-"], noun[mois].
+
+//300 ap. JC
+5> noun[mwe=+, date=+] = num[date=+], prep, noun[form:fjc].
+5> noun[mwe=+, date=+] = num[date=+], prep, det[poss:+], noun[lemme:ère].
+
+
+Marqueur:
+
+// lundis: au pluriel et sans chiffre derriere ==> generique
+//9> ?[setsignal:~],noun[jour,pl,generic=+],?[num:~,predate:~,timemod:~].
+
+// la planète Mars n'est pas une date
+7>noun[lemme:"planète"], noun[lemme:"Mars",mois=~,time=~].
+
+// lundi,mars
+7>?[pren:~,num:~,mois:~], noun[!infomagic=+,jour,date=+,time=+,relative=+];noun[!infomagic=+,mois, date=+,time=+,relative=+,prenamb:~].
+
+// idem en début de phrase
+7> noun[!infomagic=+,start:+,jour,date=+,time=+,relative=+], ?[num:~].
+7> noun[!infomagic=+,start:+,mois, date=+,time=+,relative=+], ?[num:~].
+
+
+
+//------------------------------------
+// ANNEES SEULES (non reconnues avant)
+//------------------------------------
+
+//**************
+// Marquage en "datepot" des suites de 4 chiffres, desamb en contexte au fur et à mesure ensuite.
+// à savoir : deux chiffres sont marqués comme "shortyear" (cf. plus haut)
+
+// un nombre de 4 chiffres commençant par 19 ou 20 est potentiellemnt une date
+
+10> num[lemme:"19%d%d", 20e=+,datepot=+,time=+,absolue=+,incomplete=+].
+//,?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+10> num[lemme:"20%d%d", 21e=+,datepot=+,time=+,absolue=+,incomplete=+].
+//,?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+// et même un nombre de 4 chiffres
+// tout ceci reste en datepot sauf si moyen de désambiguiser plus loin
+10>?[num:~], num[lemme:"%d%d%d%d",nondate:~,datepot=+,time=+,absolue=+,incomplete=+], ?[unit_monnaie:~,unit_len:~,num:~].
+
+
+//*******************
+//*** Avec Contexte
+
+// Dates avec annee seule : absolue incomplète
+
+
+// une date seule précédée d'un événement :
+// cette règle ne prend en compte que les evenements marqués ds multiwords.xip
+// pour le reste c'est  a la fin localgram_event.
+10>noun[sport,mwe,event],(prep[form:fde]),num[gdnbre, date=+,datepot=~,annee=+].
+
+
+// en 1989, vers 1989, dès 1989, printemps 1989: marquer comme date
+// reconnaisance en mwe,noun dans localgram_temp
+10>?[predate], num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+],  coord, num[shortyear:~,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+].
+
+10>?[predate], num[shortyear:~,gdnbre,nondate:~,time=+,datepot,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+
+10>?[predate], num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], (punct[form:fcm]), (adv), ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,num:~,noun] .
+
+
+Séquence:
+
+// à l'horizon 2008
+11> adv[mwe=+,date=+,incomplete=+,absolue=+] @= adv[lemme:"à l'horizon"], num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+].
+
+
+Marqueur:
+
+// idem mais en fin de phrase
+12> ?[predate], num[end:+,shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+].
+
+
+// pour les shortyears : contexte gauche plus restreint, ne pas prendre tous les [predate] mais seulement qlqs preps
+
+//11> prep[form:fen], num[shortyear:+,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~] .
+//12> prep[predate], num[shortyear:+,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+12>  prep[form:fen], num[shortyear:+,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+12>  prep[form:fdepuis], num[shortyear:+,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,nondate:~] .
+
+// idem mais en fin de phrase
+12> prep[form:fen], num[end,shortyear:+,gdnbre,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+].
+
+
+//de 1998 à 2009 : config qui fait passer de datepot à date
+12> prep, num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], prep[form:fa], num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+].
+
+// l'événement de 1989, la famine de 2006
+// attention : le score de 7 6 , 6 2 = pas un date
+12> noun[nondate:~],prep[form:fde],num[shortyear:~,gdnbre,nondate:~,time=+,datepot=~,date=+,annee=+,absolue=+,incomplete=+], ?[heure:~,periode:~,unit_monnaie:~,unit_len:~,percent:~,measure:~,noun:~] .
+
+// dater de +annee:
+12> verb [lemme:dater], prep[form:fde], num[gdnbre:+,date=+,absolue=+,incomplete=+,datepot=~,annee=+].
+ 
+// 6-21 n'est pas une date:
+12> adv[lemme:"%d-%d%d", date=~].
+
+
+
+Séquence:
+
+// mi-1989
+13> noun[mwe=+,date=+,incomplete=+,absolue=+] @= prefix[lemme:"mi-"];?[lemme:"mi"],num[gdnbre1,date=+].
+// pour les autres (mi-septembre): dans marqueur_temp.xip
+
+
+//  les années 20 (et) 30 = DATE (relative pour shortyear)
+13> noun[!infomagic=+,mwe=+,time=+, date=+,tempexpr=+,relative=+] @=  noun[lemme:année], num[shortyear:+], (coord), num[shortyear:+].
+
+//  les années 1920 (et) 1921) = DATE (absolue sans shortyear)
+13> noun[!infomagic=+,mwe=+,time=+, date=+,tempexpr=+,absolue=+] @=  noun[lemme:année], num[shortyear:~], (coord), num[shortyear:~].
+
+
+
+// les années 20  = DATE (relative pour shortyear)
+13> noun[!infomagic=+,mwe=+,time=+, date=+,tempexpr=+,relative=+] @=  noun[lemme:année], num[shortyear:+].
+
+// les années 1920  = DATE (absolue sans shortyear)
+13> noun[!infomagic=+,mwe=+,time=+, date=+,tempexpr=+,absolue=+] @=  noun[lemme:année], num[shortyear:~].
+
+
+// l'année 2005
+13> noun[!infomagic=+,mwe=+,time=+, date=+,tempexpr=+,absolue=+] @=  noun[lemme:année], num[shortyear:~].
+
+
+
+// un jour en huit : en huit = adjectif 
+13> adj[timemod=+,temp_ref=ST] @= |noun[jour]| prep[form:fen], num[lemme:"huit"].
+
+
+// XVIIIe siècle ou dix-huitième siècle
+16> noun[mwe=+,date=+,absolue=+,tempexpr=+] @= adj[ord:+],noun[lemme:"siècle"].
+
+
+
+
+
+
+
+/*********Fin modifs maud*****\
+
+
+
+
+
+
+/le 9 thermidor an II\
+14> noun[mwe=+,time=+, date=+] = noun[date:+], noun[lemme:an], num.
+
+
+/**************** PERIODES *********************\
+
+Marqueur:
+
+15> noun[lemme:renaissance, maj:+, sg:+, periode=+].
+15> noun[lemme:antiquité, maj:+, sg:+, periode=+].
+
+//s. n'est l'abréviation de siècle que s'il est en minuscule
+15> noun[lemme:"s.", maj:+, siecle=~].
+
+Séquence:
+
+//le IVe siècle (avant JC) et début IIIe
+16> noun[mwe=+,time=+, periode=+] @= adj[ord:+];num[rom:+], noun[siecle:+], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]), coord, (det[def:+];prep[def:+]), (noun[predate]), adj[ord:+];num[rom:+], (noun[siecle:+]), (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+//le IVe (et le IIIe) siècle (av. JC)
+16> noun[mwe=+,time=+, periode=+] @= adj[ord:+];num[rom:+], (coord, (det[def:+];prep[def:+]), (noun[predate]), (det[def:+];prep[def:+]), adj[ord:+];num[rom:+]), noun[siecle:+], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+//15> noun[mwe=+,time=+, periode=+] @= num, noun[siecle:+, sg], (prep, noun[form:fjc]), (prep, det[poss:+], noun[lemme:ère]).
+
+//l'âge du fer
+16> noun[mwe=+,time=+, periode=+] @= |det[def:+]| noun[lemme:âge], prep[form:fde], (det[def:+]), noun[age:+].
+
+//période néolithique
+16> noun[mwe=+, time=+, periode=+] = noun[ere], adj[periode:+];adj[periode2:+].
+
+//l'Ancien Empire
+16> noun[mwe=+, time=+, periode=+] @= ?[empire1, maj], noun[lemme:empire, maj], (adj[empire2]).
+
+
+
+
+Marqueur:
+
+
+// pour enlever le trait datepot au élément ayant été reconnus comme des dates :
+17> ?[date, datepot=~].
+
+
+
+
+

@@ -1,0 +1,57 @@
+
+
+map termreference;
+map termextracted;
+
+string lastid;
+function readXml(xml n,self term) {
+     if (n.name()=="sentence") {
+          lastid=n.properties()["id"];
+          term[lastid]=[];
+     }
+     if (n.name()=="aspectTerm")
+          term[lastid].push(n.properties()["term"]);
+}
+
+
+xmldoc docref(termreference) with readXml;
+docref.load("../Corpus/ABSA_TestData_PhaseB/Restaurants_Test_Data_phaseB.xml");
+docref.close();
+
+xmldoc docextracted(termextracted) with readXml;
+docextracted.load("/opt/ParSem_db/Corpora/SemEval14/SubmissionPHASEA/XRCE_Res_A_C.xml");
+docextracted.close();
+
+
+file diff("terms.txt","w");
+string m;
+int i=1;
+for (lastid in termreference) {
+     svector vref=termreference[lastid];
+     if (vref.size()!=0) {
+          svector vext=termextracted[lastid];
+          for (m in vref)
+               if (m not in vext) {
+                    diff.writeln(i,"<"+m+">"," non extrait ",vext);
+                    i++;
+               }
+     }
+}
+
+diff.writeln("---------------------------------Trop extraits-----------------------------------");
+i=1;
+for (lastid in termreference) {
+     svector vext=termextracted[lastid];
+     if (vext.size()!=0) {
+          svector vref=termreference[lastid];
+          for (m in vext)
+               if (m not in vref) {
+                    diff.writeln(i,"<"+m+">"," en trop ",vref);
+                    i++;
+               }
+     }
+}
+
+
+diff.close();
+println("Fin");

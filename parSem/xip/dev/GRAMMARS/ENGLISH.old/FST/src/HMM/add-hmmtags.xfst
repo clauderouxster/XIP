@@ -1,0 +1,229 @@
+# ============================================================================
+# CONTENT:      mapping for HMM tags
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      18-Jan-2006
+#		- derived from older versions 
+# ============================================================================
+# USAGE:        xfst 	-e "define MARK XXX;" 
+#			-l MORPH.fst 
+#			-l [ThisFile]
+# ============================================================================
+
+define LEX
+
+# determine tags and characters
+read regex LEX ;
+single char sigma net
+define SIG
+regex SIG .o. [ %+ ?+ ];
+multi char sigma net
+define TAG
+
+define CHAR	\[TAG] ;
+
+define MARK	[MARK]:0 ;
+
+
+# ---------------------------------------------------------------------
+echo >>> categories
+define US	[ %= w e %+Pron %+Pers %+Obl %+1P %+Pl ];	# let's
+define NOT	[ %= n o t %+Adv ];				# hasn't
+define ELID	[ %+Elid ];					# 's, 've, ...
+define MOD	NOT | ELID | US ;
+
+define VTAGS	TAG* (MOD) ;
+define VPRES3S	VTAGS & $[ %+Pres %+3sg %+Elid ];	# 's (short for is or has)
+define VPRES	VTAGS & $[%+Pres] & ~$[ %+3sg %+Elid ];	# any other present tense form
+
+
+define ABBR	[ %+Abbr | %+Acron ];
+define NOTABBR	TAG & ~$[ABBR];
+
+define PERS	[ %+1P | %+2P | %+3P ];
+
+define CASE1	[ %+Nom | %+NomObl | %+Obl ];
+define CASE	[ %+Nom | %+NomObl | %+Obl | %+Gen ];
+
+define NUM	[ %+Sg | %+Pl | %+SP | %+1sg | %+2sg | %+3sg ];
+
+define PROP	[ %+Bus | %+Fam | %+Fem | %+Masc | %+Misc | %+WordPart | %+Particle ];
+define PLACE	[ %+City | %+Continent | %+Country | %+Misc | %+UsaState ];
+
+define VPERS	[ %+2sg | %+3sg | %+Non3sg | %+123SP ];
+
+echo >>> define stems
+
+define AnyStem		CHAR* ;
+#define SimpleStem	AnyStem & ~$[%=];
+define SimpleStem	AnyStem ;
+
+define NounStem	SimpleStem - [ {one} | {other} ];
+define AdjStem	SimpleStem - [ {other} | {same} | {such}  ];
+define AdvStem	SimpleStem - [ {to} | {not} | {as} | (n) {either} ];
+define VStem	SimpleStem - [ {be} | {do} | {have} ];
+
+define ConjStem SimpleStem - [ (n) {either} ];
+define PrepStem SimpleStem - [ {as} ];
+
+define NotOne	SimpleStem - [ {one} ];
+define NotAnd	SimpleStem - [ %& ];
+
+
+define SIMPLENOUN	TAG* & ~$[%+VProg];
+define SIMPLEADJ	TAG* & ~$[%+Comp|%+Sup|%+VProg|%+VPap] ;
+define SIMPLEADV	TAG* & ~$[%+Comp|%+Sup|%+Wh] ;
+define SIMPLEQUANT	TAG* & ~$[%+Comp|%+Sup|%+Adv] ;
+define SIMPLEDET	TAG* & ~$[%+Wh];
+define SIMPLEPRON	TAG* & ~$[%+Wh|%+Refl|%+Rel|%+Wh|%+Pers];
+define SIMPLEDIG	TAG* & ~$[%+Ord|%+DlrAmt] ;
+define SIMPLEPUNCT	TAG* & ~$[%+Sent|%+Comma] ;
+
+
+define VPAST	%+PastTense | %+PastBoth ;
+define VPAP	%+PastPerf | %+PastBoth ;
+
+define NOTGEN	TAG* & ~$[%+Gen] ;
+define GEN	TAG* & $[%+Gen] ;
+
+echo >>> define mapping
+
+define MAP [
+# ---- adjectives ---------------------------------------------------------------
+  AdjStem %+Adj SIMPLEADJ		MARK	"+ADJ":0
+| AdjStem %+Adj [TAG* & $%+Comp]	MARK	"+ADJCMP":0
+| AdjStem %+Adj [TAG* & $%+Sup]		MARK	"+ADJSUP":0
+| AdjStem %+Adj [TAG* & $%+VProg]	MARK	"+ADJING":0
+| AdjStem %+Adj [TAG* & $%+VPap]	MARK	"+ADJPAP":0
+| {other} %+Adj	TAG*			MARK	"+ADJPRON":0
+| {same} %+Adj TAG*			MARK	"+ADJPRON":0
+| {such} %+Adj TAG*			MARK	"+PREDET":0
+
+# ---- nouns --------------------------------------------------------------------
+| SimpleStem %+Noun [TAG* & $%+VProg]	MARK	"+NOUNING":0
+| NounStem %+Noun SIMPLENOUN		MARK	"+NOUN":0
+| {one} %+Noun TAG*			MARK	"+PRONONE":0
+| {other} %+Noun TAG*			MARK	"+ADJPRON":0
+
+# ---- proper names--------------------------------------------------------------
+| SimpleStem %+Prop TAG*		MARK	"+NOUN":0
+| SimpleStem %+Title TAG*		MARK	"+TIT":0
+| SimpleStem %+Title +PostMod TAG*	MARK	"+NOUN":0
+| SimpleStem %+Title NOTABBR		MARK	"+NOUN":0
+
+# ---- nadj --------------------------------------------------------------
+| SimpleStem %+NAdj TAG*		MARK	"+NADJ":0
+
+
+# ---- verbs --------------------------------------------------------------------
+| VStem %+Verb [VTAGS & $%+Pres]	MARK	"+VERB":0
+| VStem %+Verb [VTAGS & $[VPAST] ]	MARK	"+VPAST":0
+| VStem %+Verb [VTAGS & $[VPAP] ]	MARK	"+VPAP":0
+| VStem %+Verb [VTAGS & $%+Prog ]	MARK	"+VPROG":0
+
+| {be} %+Verb [VTAGS & $%+Inf ]		MARK	"+VBI":0
+| {be} %+Verb VPRES			MARK	"+VBPRES":0
+| {be} %+Verb VPRES3S			MARK	"+VS":0		# 's
+| {be} %+Verb [VTAGS & $[VPAST]]	MARK	"+VBPAST":0
+| {be} %+Verb [VTAGS & $[VPAP]]		MARK	"+VBPAP":0
+| {be} %+Verb [VTAGS & $%+Prog]		MARK	"+VBPROG":0
+
+| {do} %+Verb [VTAGS & $%+Pres]		MARK	"+DO":0
+| {do} %+Verb [VTAGS & $[VPAST]]	MARK	"+VDPAST":0
+| {do} %+Verb [VTAGS & $[VPAP]]		MARK	"+VDPAP":0
+| {do} %+Verb [VTAGS & $%+Prog]		MARK	"+VDPROG":0
+
+| {have} %+Verb VPRES			MARK	"+HAVE":0
+| {have} %+Verb VPRES3S			MARK	"+VS":0		# 's
+| {have} %+Verb [VTAGS & $[VPAST]]	MARK	"+VHPAST":0
+| {have} %+Verb [VTAGS & $[VPAP]]	MARK	"+VHPAP":0
+| {have} %+Verb [VTAGS & $%+Prog]	MARK	"+VHPROG":0
+
+| SimpleStem %+Aux TAG* (MOD)		MARK	"+VAUX":0
+
+# ---- adverbs ------------------------------------------------------------------
+| AdvStem %+Adv SIMPLEADV		MARK	"+ADV":0
+| AdvStem %+Adv [TAG* & $%+Comp]	MARK	"+ADVCMP":0
+| AdvStem %+Adv [TAG* & $%+Sup]		MARK	"+ADVSUP":0
+| AdvStem %+Adv [TAG* & $%+Wh]		MARK	"+WADV":0
+
+| {to} %+Infto TAG*			MARK	"+INFTO":0
+| {as} %+Adv TAG*			MARK	"+PREPADVAS":0
+| {not} %+Adv TAG*			MARK	"+NOT":0
+| (n) {either} %+Adv TAG*		MARK	"+COADV":0
+
+# ---- quantifiers --------------------------------------------------------------
+| SimpleStem %+Quant SIMPLEQUANT	MARK	"+QUANT":0
+| SimpleStem %+Quant [TAG* & $%+Adv]	MARK	"+QUANTADV":0
+| SimpleStem %+Quant [TAG* & $%+Comp]	MARK	"+QUANTCMP":0
+| SimpleStem %+Quant [TAG* & $%+Sup]	MARK	"+QUANTSUP":0
+
+# ---- determiners --------------------------------------------------------------
+| SimpleStem %+Det SIMPLEDET		MARK	"+DET":0
+| SimpleStem %+Det [TAG* & $%+Wh]	MARK	"+WDET":0
+| SimpleStem %+Pron [GEN & $%+Pers]	MARK	"+DET":0	 # our, their; your; my, his
+
+# ---- pronouns -----------------------------------------------------------------
+| SimpleStem %+Pron [TAG* & $%+Refl]	MARK	"+PRONREFL":0
+| SimpleStem %+Pron [NOTGEN & $%+Pers]	MARK	"+PRONPERS":0
+| SimpleStem %+Pron [NOTGEN & $%+Rel]	MARK	"+PRONREL":0
+| SimpleStem %+Pron [GEN & $%+Rel]	MARK	"+DETREL":0	# whose
+| SimpleStem %+Pron [NOTGEN & $%+Wh]	MARK	"+WPRON":0
+| SimpleStem %+Pron [GEN & $%+Wh]	MARK	"+WDET":0	# whose
+
+| NotOne %+Pron SIMPLEPRON		MARK	"+PRON":0
+| {one} %+Pron TAG*			MARK	"+PRONONE":0
+
+# ---- conjunctions -------------------------------------------------------------
+| ConjStem %+Conj [TAG* & $%+Coord]	MARK	"+COORD":0
+| ConjStem %+Conj [TAG* & $%+Sub]	MARK	"+COSUB":0
+
+| {than} %+Conj TAG*			MARK	"+COTHAN":0
+| (n) {either} %+Conj TAG*		MARK	"+COADV":0
+
+# ---- prepositions -------------------------------------------------------------
+| PrepStem %+Prep TAG*			MARK	"+PREP":0
+| {as} %+Prep TAG*			MARK	"+PREPADVAS":0
+
+# ---- numerals -----------------------------------------------------------------
+| AnyStem %+Dig SIMPLEDIG		MARK	"+CARD":0
+| AnyStem %+Dig [TAG* & $%+DlrAmt]	MARK	"+MONEY":0
+| AnyStem %+Dig [TAG* & $%+Ord]		MARK	"+ORD":0
+| AnyStem %+Num [TAG* & $%+Ord]		MARK	"+ORD":0
+| AnyStem %+Num [TAG* & $%+Fract]	MARK	"+NOUN":0	# ??
+
+| NotOne %+Num %+Card TAG*		MARK	"+CARD":0
+| {one} %+Num %+Card			MARK	"+CARDONE":0
+
+# ---- punctuations -------------------------------------------------------------
+| AnyStem %+Punct %+Sent		MARK	"+SENT":0
+| AnyStem %+Punct %+Comma		MARK	"+CM":0
+| AnyStem %+Punct SIMPLEPUNCT		MARK	"+PUNCT":0
+
+# ---- other --------------------------------------------------------------------
+| AnyStem %+Part %+Gen			MARK	"+POSS":0
+
+| AnyStem %+For				MARK	"+NOUN":0
+| AnyStem %+Init			MARK	"+NOUN":0
+| AnyStem %+Let TAG*			MARK	"+NOUN":0
+| AnyStem %+Deg TAG			MARK	"+NOUN":0
+| AnyStem %+Interj			MARK	"+ITJ":0
+| AnyStem %+Onom			MARK	"+ITJ":0
+| AnyStem %+Meas TAG*			MARK	"+MEAS":0
+| AnyStem %+Markup			MARK	"+SGML":0		# ???
+| AnyStem %+Expr TAG*			MARK	"+ADV":0
+| AnyStem %+Sgml %+Sent			MARK	"+SENT":0
+| AnyStem %+Sgml SIMPLEPUNCT		MARK	"+SGML":0
+
+| NotAnd %+Symbol [TAG - %+Curr]*	MARK	"+MEAS":0
+| %& %+Symbol				MARK	"+COORD":0
+| AnyStem %+Symbol %+Curr		MARK	"+NOUN":0
+
+];
+
+
+echo >>> apply mappings
+regex MAP .o. LEX ;

@@ -1,0 +1,90 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2012 Xerox Corporation.  All Rights Reserved.
+//!
+//! Part 2 of old file chunker.xip that deals with construction of 
+//! SC chunks. This split was necessary to avoid conflicts with the
+//! construction of other chunk types.
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Séquence:
+
+70> SC = bg,?*[fin:~, scbegin:~],fv[!svinfdir:!].
+
+80> SC = bg,?*[fin:~, scbegin:~],fv[!svinfdir:!].
+
+
+/* hyphen: limitations: at least 2 comma between the hyphen and the fv and
+   there must be a second hyphen after the fv *\
+
+80> SC = punct[form:fhyph], ?*[fin:~,scbegin:~,form:~fcm], punct[form:fcm],
+        ?*[fin:~, scbegin:~], punct[form:fcm],  ?*[fin:~, scbegin:~], fv
+        |?*,punct[form:fhyph]|.
+
+/* hyphen: limitations: no comma between the hyphen and the fv and
+   there must be a second hyphen after the fv *\
+
+80> SC = punct[form:fhyph], ?*[scbegin:~,form:~fcm], fv |?*,punct[form:fhyph]|. 
+
+
+/* From the beginning of the sentence to the main FV *\
+90> SC = ?[start:+],?*[fin:~,scbegin:~],fv.
+
+/* This seems to be an imperative or subject inversion case *\
+90> SC = fv[start:+].
+
+/* hyphen: limitations: no comma between the hyphen and the fv *\
+90> SC = punct[form:fhyph], ?*[fin:~, scbegin:~,form:~fcm], fv.
+
+
+
+/* coord then no cm then the fv *\
+100> SC = coord,?*[fin:~, scbegin:~, form:~fcm],fv.
+100> SC = coord,?*[fin:~, scbegin:~],np,?*[fin:~, scbegin:~, form:~fcm],fv.
+ 
+/* coord then AT LEAST one NP (subj) then AT LEAST 2 puncts/cm then FV *\
+100> SC = coord,?*[fin:~, scbegin:~], np, ?*[fin:~, scbegin:~],
+        punct[form:fcm], ?+[fin:~, scbegin:~], punct[form:fcm],
+        ?*[fin:~, scbegin:~],fv.
+
+100> SC = coord,?*[fin:~, scbegin:~], np, ?*[fin:~, scbegin:~],
+        punct[form:fcm], ?+[fin:~, scbegin:~], coord,
+        ?*[fin:~, scbegin:~],fv.
+
+// COMME + FV
+//10> SC = conj,?*[fin:~, scbegin:~, form:~fcm],fv.
+
+
+/* Last chance: one comma *\
+110> SC = punct[form:fcm],*[fin:~,form:~fcm],fv.
+
+
+
+
+/////////////////////////////////
+// RE-CHUNKING selon EASY
+/////////////////////////////////
+
+
+// comme
+
+//20> SC = CONJ.
+
+
+
+Reconstructeur:
+
+120> conj#1,NP#2 = PP{#1,#2}.
+
+// retager "comme" en PREP si c'est un PP
+130> PP{conj#1[form:fcomme],?*#2,#3[last]} = PP{prep#1[form=fcomme],#2,#3}.
+
+// {PP de 10} {PP à vingt chats} ---> {NP de  à 20 chats}
+130> PP{prep#1[form:fde],NP{num#2[first,last]}},PP{prep#3[form:fa],NP{num#4,?*#5,#6[last]}} =
+           PP[prd=+,det=+]{#1,NP{#2,#3,#4,#5,#6}}.
+
+
+// {PP entre 10} {PP et vingt chats} ---> {NP de  à 20 chats}
+//130> PP{prep#1[form:fentre],NP{num#2[first],coord#3,num#4,?*#5,#6[last]}} =
+//           PP[det=+]{#1,NP{#2,#3,#4,#5,#6}}.

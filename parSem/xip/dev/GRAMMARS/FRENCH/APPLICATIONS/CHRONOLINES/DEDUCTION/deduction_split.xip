@@ -1,0 +1,541 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2011 Xerox Corporation.  All Rights Reserved.
+//!
+//! Author: André Bittar
+//! Date: 2011.02.23
+//! 
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+/////////////
+// GENERAL //
+/////////////
+
+// RETYPE CONTROL DEPENDENCIES
+
+// AB 2011.04.11 Make SUBJ dependency DEEPSUBJ for control constructions.
+// e.g. Léa voit Max venir.
+if ( ^SUBJ[control](#2,#3) )
+     DEEPSUBJ[control=~](#2,#3)
+
+///////////////
+//// VDOMAIN //
+///////////////
+//
+// AB 2012.04.13 moved to end of TEMPESTER/DEDUCTION/extract.xip (used in COREF antecedent constraints)
+//
+//// e.g. Jean aurait dû manger une pomme. VDOMAIN(aurait,manger)
+//// e.g. Jean Jean aurait dû essayer de manger une pomme. VDOMAIN(aurait,manger) and *VDOMAIN(aurait,manger)
+//| SC{?*,FV{?*,#1}}, IV[fonc:~finfcomp]{?*,#2[last]} |
+//if ( AUXIL(#1,#3) )
+//     VDOMAIN(#3,#2)
+//
+//// VDOMAIN is transitive over VLINKs
+//if ( VLINK(#1,#2) & VLINK(#2,#3) & ~VDOMAIN(#1,#3) )
+//     VDOMAIN(#3,#1)
+//
+//// VDOMAIN for passive compsed tenses
+//// e.g. Jean avait été aimé par Marie. VDOMAIN(aimé,avait)
+//if ( VLINK(#1_avait,#2_été) & ~VLINK(#2_été,#3_aimé) & ~VLINK(#3_aimé,?) & ~VDOMAIN(#1_avait,?) & ~VDOMAIN(?,#2_été) )
+//     VDOMAIN(#2,#1)
+//
+//// VDOMAIN on a simple verb form (e.g. présent ou imparfait)
+//// e.g. Jean mange. VDOMAIN(mange,mange)
+////      Jean mange une pomme. VDOMAIN(mange,mange)
+//if ( (SUBJ(#1,#2) | OBJ(#1,#2)) & ~VDOMAIN(#1,?) & ~VDOMAIN(?,#1) & ~VLINK(#1,?) & ~VLINK(?,#1) )
+//   VDOMAIN(#1,#1)
+//
+//// VDOMAIN on a single VLINK
+//// e.g. Jean avait mangé.
+//if ( VLINK(#1,#2) & ~VLINK(?,#1) & ~VLINK(#2,?) )
+//   VDOMAIN(#2,#1)
+
+//////////
+// MAIN //
+//////////
+
+// Reported speech verb main clause
+// e.g. Jean est bête, dit Paul. 
+//      Jean est bête, a-t-il dit.
+//      MAIN(dit)
+
+| GROUPE{?*, SC{PUNCT, ?*, FV{?*,#1[vcom]}}} |
+    MAIN(#1)
+
+// Sentences with single finite verb.
+// Jean aurait dû manger une pomme avant de partir. *MAIN(dû)!!!
+// AB 2011.03.01 removed aux:~ from #1 feature restrictions
+| GROUPE{SC{?*[fin:~], FV{?*,#1[verb,last]}}} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// No SC, FV is directly under GROUPE
+| GROUPE{?*[fin:~], FV{?*,#1[verb,last]}} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// Sentence-intial gerundive in subordinate clause, followed by main verb
+// En étudiant..., l'ambassadeur formule
+| GROUPE{SC{GV[partpre], ?*, FV{?*, #1[last]}}} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// The head of the whole sentence is the leftmost highest level verb of the sentence
+// not introduced by a subordinating conjunction.
+// e.g. Lorsqu'il est arrivé, c'était fini *MAIN(arrivé), MAIN(fini)
+| ?*[verb:~], SC{?[scbegin],?*}, ?*, FV{?*,#1[last]} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// Interrogative infinitival main verb
+// e.g. Pourquoi venir ?
+| adv[int,startbis], IV{#1[last]} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// Pick last verb in the sentence
+| GROUPE{?*, SC{?*, FV{?*,#1[last]}}} |
+  if ( ~MAIN(?) )
+  MAIN(#1)
+
+// FIX MAIN
+
+// Main verb is a vcom verb in a parenthetical, but another verb to the right has been tagged instead.
+// e.g. Paul, a déclaré Jean, a indiqué que Max est venu. MAIN(déclaré) and *MAIN(indiqué)
+| GROUPE{ SC{?*, PUNCT[form:fcm], FV{?*, #1[last,vcom]}}, NP, SC{?*, PUNCT[form:fcm], FV{?*, #2}} } |
+  if ( ^MAIN(#2) & ~MAIN(#1) )
+  MAIN(#1)
+
+// Main verb is a vcom verb at the end of the sentence. It is tagged, but another vcom verb is also 
+// tagged. The last vcom verb is the main verb.
+// e.g. Jean a mangé, a indiqué Paul mardi soir, a déclaré Pierre.
+if ( ^MAIN(#1[vcom]) & MAIN(#2[vcom]) & #1 < #2 )
+     ~
+
+///////////
+// EMBED //
+///////////
+
+// EMBED RELATIVE CLAUSES
+
+// Factorize functions as general argument, for relatives use noun constraint
+if ( SUBJ(#1,#2[noun]) | DEEPSUBJ(#1,#2[noun]) | OBJ(#1,#2[noun]) | VMOD(#1,#2[noun]) 
+   | SUBJ(#1,#2[pron]) | DEEPSUBJ(#1,#2[pron]) | OBJ(#1,#2[pron]) | VMOD(#1,#2[pron]) 
+   )
+     VARG[rel=+](#1,#2)
+
+// Subject or direct object relatives
+// e.g. Jean aime la femme qui chante. EMBED(chante,aime)
+//      La femme qui chante aime Jean. EMBED(chante,aime)
+//      La femme qui chante est aimée par Jean. EMBED(chante,aime)
+if ( VARG[rel](#1,#2) & COREF[rel](#2,#4) & VARG[rel](#3,#4) & #1~:#3 )
+     EMBED[rel=+](#3,#1)
+
+// Indirect object relative
+// e.g. La femme dont le chapeau est rouge chante. EMBED(est,chante)
+if ( VARG[rel](#1,#2) & COREF[rel](#2,#4) & NMOD(#5,#4) & VARG[rel](#3,#5) )
+     EMBED[rel=+](#3,#1)
+
+// EMBED INFINITIVAL CLAUSES
+
+// Factorize functions as general argument, for infinitives use verb + VLINK(inf,verb) constraint
+// Account for simple infinitives (e.g. manger) and compound infinitives (e.g. avoir mangé)
+if ( SUBJ(#1,#2[inf]) | OBJ(#1,#2[inf]) | VMOD(#1,#2[inf])
+   | (SUBJ(#1,#2[verb]) & VLINK(#3[inf],#2)) | (OBJ(#1,#2[verb]) & VLINK(#3[inf],#2)) | (VMOD(#1,#2[verb]) & VLINK(#3[inf],#2))
+   )
+     VARG[inf=+](#1,#2)
+
+// Infinitival argument is embedded under governing verb.
+// e.g. Sortir me fait plaisir. EMBED(Sortir,fait)
+//      Jean aime manger. EMBED(manger,aime)
+//      Jean dit à la femme qui mange de venir. *EMBED(venir,mange)
+if ( VARG[inf](#1,#2) & #1~:#2 & ~EMBED(#2,#1) & ~EMBED(#1,?) )
+     EMBED[inf=+](#2,#1)
+
+// Infinitival complement of adjectival subject complement (attribut du sujet) is embedded under the main verb
+// e.g. Jean est content de plaire. EMBED(plaire,est)
+if ( ADJMOD(#1,#2[inf]) & OBJ(#3,#1) & ~EMBED(#2,#3) )
+     EMBED[inf=+](#2,#3)
+
+// Infinitival complement of a modal is embedded beneath the modal.
+// e.g. Jean doit venir. EMBED[inf,modal](doit,venir)
+if ( VLINK[modal](#1,#2) )
+     EMBED[inf=+,modal=+](#2,#1)
+
+// Infinitival complement of a noun is embedded beneath the verb that governs this noun
+// e.g. Jean n'a d'autre ambition que de peindre. EMBED(peindre,a)
+if ( VARG(#1,#2) & NMOD(#2,#3[inf]) )
+     EMBED(#3,#1)
+
+// EMBED COMPLEMENTIZER PHRASES
+
+if ( OBJ[propque](#1,#2) | VMOD(#1,#2[verb]) )
+     VARG[propque=+](#1,#2)
+
+// e.g. Jean dit que Marie vient. EMBED(vient,dit)
+if ( VARG[propque](#1,#2) & ~EMBED(#2,#1) & ~EMBED(#1,?) )
+     EMBED[propque=+](#2,#1)
+
+// EMBED IN CLEFT CONSTRUCTIONS (CLIVEES)
+
+| SC{?*,NP[pron,lemme:ce],FV{?*,#1[verb]}}, ?*[fin:~], ?+[incise], SC{BG{?*,conjque},?*,FV{?*,#2[last]}} |
+if ( #1[incise]::#2[incise] & ~EMBED(#2,?) )
+     EMBED[propque](#2,#1)
+
+////////////////////
+// PARENTHETICALS //
+////////////////////
+
+// Embed non-embedded verb in parenthetical beneath next finite verb to the right
+// Corresponds to first case of parenthetical
+// e.g. Jean, comme devait montrer Marie, n'a d'autre ambition que de peindre. EMBED(devait,a)
+| SC{?*, FV{?*, #1[last,incise]}}, ?*[fin:~], SC{?*, FV{?*,#2[last,incise:~]}};FV{?*,#2[last,incise:~]} |
+if ( ~EMBED(#1,?) )
+     EMBED(#1,#2)
+
+// Embed non-embedded verb in parenthetical beneath next finite verb to the left
+// Corresponds to second case of parenthetical
+// e.g. Il est venu, enfin c'est ce que Jean pense, d'un pays très lointain.
+| SC{?*,FV{?*,#1[last,incise:~]}}, ?*[fin:~], SC{?*,FV{?*,#2[last,incise]}};FV{?*,#2[last,incise]};GV{?*,#2[last,incise]} |
+if ( ~EMBED(#2,?) )
+     EMBED(#2,#1)
+
+//// A parenthetical (incise) between a subject and its verb
+//// e.g. Jean, autorisé par Marie, vient.
+////| SC{?*, punct[form:fcm,incise=+];punct[form:fhyph,incise=+], ?+[incise=+], punct[form:fcm,incise=+];punct[form:fhyph,incise=+], FV{?*, #1[last]}} |
+////~
+//
+//// A participle in a parenthetical is embedded beneath the last verb to the right in a single SC if there is no verb to the left within the same SC
+//// e.g. Jean, autorisé par Marie, vient.
+//| SC{?*[verb:~], PUNCT, ?[verb]{?*, #2[partpas,last];#2[partpre,last]}, ?*[punct:~], PUNCT, ?*, FV{?*, #1[last]}} |
+//if ( ~EMBED(#2,?) )
+//     EMBED(#2,#1)
+//
+//// As above, but participle is attached to GROUPE
+//// e.g. Jean, autorisé par Marie, vient.
+//| SC{?*[verb:~], PUNCT+, verb#2[partpas];verb#2[partpre], ?*[punct:~], PUNCT+, ?*, FV{?*, #1[last]}} |
+//if ( ~EMBED(#2,?) )
+//     EMBED(#2,#1)
+//
+//// A participle in a parenthetical is embedded beneath the first verb to the left of the parenthetical
+//| SC{ ?*, FV{?*, #1[last,verb]}};FV{?*, #1[last,verb]}, ?*[verb:~], PUNCT+, ?[verb]{?*, #2[partpas,last];#2[partpre,last]}, ?*[punct:~], PUNCT |
+//if ( ~EMBED(#2,?) )
+//     EMBED(#2,#1)
+//
+//// As above, but participle is attached to GROUPE
+//| SC{ ?*, FV{?*, #1[last,verb]}};FV{?*, #1[last,verb]}, ?*[verb:~], PUNCT+, verb#2[partpas];verb#2[partpre], ?*[punct:~], PUNCT+ |
+//if ( ~EMBED(#2,#1) )
+//     EMBED(#2,#1)
+//
+//// Main verb of parenthetical introduced by a conjunction is embedded beneath the verb to the right of the parenthetical
+//// e.g. Cette étude, comme devait conclure Jean, est fausse.
+////| SC{?*, PUNCT, SC{ BG{?*, conj}, FV{?*, #1[last]}}, ?*, PUNCT+, FV{?*, #2[last]} } |
+////EMBED(#2,#1)
+//
+//// Main verb is separated from completive complement by parenthetical. Removes embedding with verb inside parenthetical.
+//// e.g. Il montre, et c'est souvent le cas, que Jean ment.
+//| SC{?*, FV{?*,#1[quep,last]}}, PUNCT, #3*[punct:~], PUNCT, SC{BG{?*,?[lemme:que]}, ?*, FV{?*,#2[last]}} |
+//if ( ^EMBED(#2,#3) )
+//EMBED[propque=+](#2,#1)
+
+// EMBEDDINGS WITH MAIN VERB
+
+// A non-finite verb in a pre-posed subordinate clause is embedded under the main verb
+// e.g. Parlant de ça, nous partirons en vacances. EMBED(Parlant,allons)
+| GV{?*, #1}, ?*, FV{?*, #2[last]} |
+if ( MAIN(#2) )
+     EMBED(#1,#2)
+
+// The first finite verb or participle to the right of the main verb is embedded beneath the main verb.
+// e.g. Les combats font rage à Abidjan où les forces de Ouattara tentent de gagner. EMBED(tentent,font)
+| SC{?*, FV{?*, #1[last]}}, ?*[verb:~], FV{?*,#2[last]};SC{?*, FV{?*, #2[last]};GV{?*, #2[last]}} |
+if ( MAIN(#1) & ~EMBED(#2,?) )
+     EMBED(#2,#1)
+
+// REMOVE/MODIFY EMBEDDINGS
+
+// No embedding on (non-modal) auxiliaries
+// e.g. Jean a dit qu'il allait manger. *EMBED(allait,dit)
+//      Jean a dit qu'il devait manger. EMBED(devait,dit)
+if ( EMBED(#1,#2) & ^EMBED(#3,#2) & VDOMAIN(#3[modal:~],#1) )
+~
+
+// Remove incorrect embedding from an infinitive to a relative
+// e.g. L'homme qui mange a essayé de venir. *EMBED(mange,venir)
+if ( EMBED[rel](#1_habite,#2_essayé) & EMBED[inf](#3_saluer,#2_essayé) & ^EMBED(#1_habite,#3_saluer) )
+~
+
+// Bring in maybe once VMOD is fixed
+// Fix wrong embeddings of infinitival PP complement in relative clause that depends on main control verb (controlfeatures)
+// e.g. Jean demande à la femme qui mange de venir. *EMBED(venir,mange) -> EMBED(venir,demande)
+//if ( ^EMBED[inf](#1[inf]_venir,#2_mange) & EMBED[rel](#2_mange,#3[controlfeatures]_demande) )
+//     EMBED(#1_venir,#3_demande)
+
+// Use VLINK to produce correct embedding (e.g. with a modal rather than its infinitival complement)
+// e.g. Jean doit venir, dit Paul. EMBED(doit,dit), *EMBED(venir,dit)
+if ( ^EMBED(#2_venir,#1[modal:~]_dit) & VLINK[modal](#3_doit,#2_venir) )
+     EMBED(#3,#1)
+
+// TYPE EMBEDDINGS
+
+// Infinitive auxiliary
+// e.g. Il viendra après avoir mangé. EMBED[inf](mangé,viendra)
+if ( ^EMBED[propque](#1,#2) & VLINK(#3[inf],#1) )
+     EMBED[inf=+,propque=~](#1,#2)
+
+// Infinitival complement
+if ( ^EMBED[propque](#1[inf],#2) )
+     EMBED[inf=+,propque=~](#1,#2)
+
+// Modal with a finite completive complement (propque)
+// e.g. Il faut que Jean vienne. EMBED[modal,propque](vienne,faut)
+if ( ^EMBED(#1,#2[modal]) )
+   EMBED[modal=+](#1,#2)
+
+//////////////////
+// EMBED LEVELS //
+//////////////////
+
+// Add embedlevel=0 to main verb
+| #1[embedlevel=0] |
+if ( MAIN(#1) )
+~
+
+// Add embedlevel=1 to main verb of first level embedded clauses
+| #2[embedlevel=1] |
+if ( EMBED(#2,#1[embedlevel:0]) )
+~
+
+// Add embedlevel=2 to main verb of second level embedded clauses
+| #3[embedlevel=2] |
+if ( EMBED(#3,#2[embedlevel:1]) )
+~
+
+// Add embedlevel=3 to main verb of third level embedded clauses
+| #4[embedlevel=3] |
+if ( EMBED(#4,#3[embedlevel:2]) )
+~
+
+// Add embedlevel=4 to main verb of fourth level embedded clauses
+| #5[embedlevel=4] |
+if ( EMBED(#5, #4[embedlevel:3]) )
+~
+
+// Add embedlevel=5 to main verb of fifth level embedded clauses
+| #6[embedlevel=5] |
+if ( EMBED(#6,#5[embedlevel:4]) )
+~
+
+////////////////////////////////////
+// PROPAGATE LEVELS TO DEPENDENTS //
+////////////////////////////////////
+
+// level 0
+
+// Assign the feature embedlevel 0 to any dependent (other than auxiliaries or other verbs) of the main verb.
+
+// e.g. Le garçon a dit que... give embedlevel:0 to "Le" and "garçon".
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to assign a level to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=0] | 
+if ( VDOMAIN(#2[embedlevel:0],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=0] |
+if ( VLINK(#1[embedlevel:0],#2[embedlevel:~]) )
+~
+
+// embedlevel 1
+
+// Assign the feature embedlevel 1 to any dependent of the first embedded verb.
+// e.g. Le garçon a dit que Jean est venu... give embedlevel:1 to "Jean".
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:1]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to assign a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=1] | 
+if ( VDOMAIN(#2[embedlevel:1],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=1] |
+if ( VLINK(#1[embedlevel:1],#2[embedlevel:~]) )
+~
+
+// embedlevel 2
+
+// Assign the feature embedlevel 2 to any dependent of the second embedded verb.
+// e.g. Le garçon a dit que l'homme qui a dit que Jean est venu... give embedlevel:2 to "Jean".
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=2] | 
+if ( VDOMAIN(#2[embedlevel:2],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=2] |
+if ( VLINK(#1[embedlevel:2],#2[embedlevel:~]) )
+~
+
+// embedlevel 3
+
+// Assign the feature embedlevel 3 to any dependent of the third embedded verb.
+// e.g. Le garçon a dit que Marie a dit que Paul a dit que Jean est venu... give embedlevel:3 to "Jean".
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:3]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=3] | 
+if ( VDOMAIN(#2[embedlevel:3],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=3] |
+if ( VLINK(#1[embedlevel:3],#2[embedlevel:~]) )
+~
+
+// embedlevel 4
+
+// Assign the feature embedlevel 4 to any dependent of the fourth embedded verb.
+// e.g. Le garçona dit que Marie a dit que Paul a dit que Max a dit que Jean est venu... give embedlevel:4 to "Jean".
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=4] | 
+if ( VDOMAIN(#2[embedlevel:4],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=4] |
+if ( VLINK(#1[embedlevel:4],#2[embedlevel:~]) )
+~
+
+// embedlevel 5
+
+// Assign the feature embedlevel 5 to any dependent of the fifth embedded verb.
+// e.g. Le garçon a dit que Marie a dit que Max a dit que Paul a dit que Léa a dit Jean est venu... give embedlevel:5 to "Jean".
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=5] | 
+if ( VDOMAIN(#2[embedlevel:5],#1) & #1 < #2 & VLINK(#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=5] |
+if ( VLINK(#1[embedlevel:5],#2[embedlevel:~]) )
+~
+

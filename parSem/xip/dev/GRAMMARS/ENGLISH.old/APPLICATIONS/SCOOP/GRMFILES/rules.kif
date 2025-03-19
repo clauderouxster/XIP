@@ -1,0 +1,189 @@
+
+//Variable globale pour garder la trace de l'expression...
+svector expressions;
+
+//On charge la grammaire scoop-partial, qui s'arrete a marker-sentiment.xip...
+string base='W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\GRMFILES\';
+string chemin=base+'scoop-partial.grm';
+//la grammaire est fournie comme parametre sur la ligne de commande...
+parser p(chemin);
+
+simap lesmots;
+map noeudsmots;
+
+//Declarations bizarre de cette fonction...
+//function appel();
+
+//Ces deux fonctions recuperent le nom du trait correspondant au lemme et a la forme de surface...
+string lem=p.lemmafeature();
+string surf=p.surfacefeature();
+
+string polarite;
+
+
+//Cette fonction conserve la liste des mots presents dans l'analyse...
+function gardemots(node n) {
+     noeudsmots[n.surface()]=n;
+}
+
+
+//Liste des traits officiels...
+svector featuretokeep=["PROPER","FAM","FIRSTNAME","PROF","OCCUP","YEAR","DAY","MONTH","PERIOD","APERIOD","PREPERIOD","TEMPEXP",
+     "DECADE","DATE","POSTHOUR","SEASON","TIMEZONE","FORM","ORD","CARD","WH","SYMBOL","COUNTRY","CONTIN","STATE","USASTATE","CITY","ACRON",
+     "PERSONAL","DEG","COMMON","QUANTADV","SHORTYEAR","FOOD","LAPTOP-TERM"];
+
+
+//On parcourt les traits que l'on veut conserver dans nos regles...
+function Feat(node n,vector feat,int i) {
+     ssmap nfeat=n.features();
+     string f;
+     
+     for (f in featuretokeep) {
+          if (nfeat.test(f))
+               feat[i].push(f+":"+nfeat[f]);
+     }
+     feat[i].push(lem+":"+n.lemma());
+     return(true);
+}
+
+map lexique;
+ssmap regles;
+function analyse() {
+
+     string rule;
+     string mot;
+     vector noeuds;
+     vector traits;
+     node n;
+     int i=0;
+     string expression;
+     for (expression in expressions) {
+          svector mots=expression.tokenize();
+          if (mots.size()==1) {
+               //mot=mots[0];
+               //n=noeudsmots[mot];
+               //if (n!=null)
+               //lexique[n.lemma()]=n.pos();
+               continue;
+          }
+
+          noeuds.clear();
+          traits.clear();
+          i=0;
+          for (mot in mots) {
+               n=noeudsmots[mot];
+               if (n!=null) {
+                    noeuds.push(n);
+                    traits.push([]);
+                    if (Feat(n,traits,i)==false) {
+                         i=-1;
+                         break;
+                    }
+                    i++;
+               }
+          }
+
+          if (i==-1)
+               continue;
+
+          rule=p.generaterule("NP",noeuds,traits,[],[],false,1);
+          if ("Error" in rule)
+               continue;
+          rule="NP[laptop-term=+,mwe=+] = "+rule;
+          regles[rule]=expression;
+     }
+}
+
+//We add a rule to the grammar to call the above function dependance for each two slots dependencies
+string rules=@"
+
+script:
+
+|#1[terminal]| {
+     gardemots(#1);
+}
+
+analyse();
+"@;
+
+//Added to the grammar
+p.addendum(rules,true);
+
+
+xmldoc doc;
+
+doc.load('X:\Corpora\SemEval14\Laptops\Laptops_Train.xml');
+
+xml n=doc.node();
+println(n.name());
+
+function termes(xml x, string s) {
+
+     expressions.clear();
+     noeudsmots.clear();
+     ssmap props;
+
+     while (x!=null) {
+          if (x.name()=="aspectTerm") {
+               props=x.properties();
+               expressions.push(props["term"]);
+               polarite=props["polarity"];
+          }
+          x=x.next();
+     }
+
+     p.parse(s);
+     print(".");
+}
+
+function parcours(xml x) {
+     string phrase;
+     string s;
+     while (x!=null) {
+          if (x.name()=="text") {
+               s=x.content();
+               if (s.trim()!="")
+                    phrase=s;
+          }
+          if (x.name()=="aspectTerms") {
+               termes(x.child(),phrase);
+               phrase="";
+          }
+          x=x.next();
+     }
+}
+
+xml sub;
+n=n.child();
+while (n!=null) {
+     if (n.name()=="sentence")
+          parcours(n.child());
+     n=n.next();
+}
+
+doc.close();
+
+function sauvegarde() {
+     file sauve(base+'laptop.xip',"w");
+
+     sauve.writeln("\nsequence:\n\n");
+     string s;
+     for (s in regles) {
+          sauve.writeln('//'+regles[s]);
+          sauve.writeln("1> "+s);
+     }
+     sauve.close();
+
+     //sauve.openwrite(base+"lexiconlaptop.xip");
+     //sauve.writeln("\nVocabulary:\n\n");
+
+     //svector clef=lexique.keys();
+     //clef.sortstring(false);
+     //for (s in clef)
+     //sauve.writeln(s+" : "+lexique[s]+" += [laptop-term=+].");
+     //sauve.close();
+}
+
+sauvegarde();
+
+

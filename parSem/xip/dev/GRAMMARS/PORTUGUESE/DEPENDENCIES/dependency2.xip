@@ -1,0 +1,237 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency2.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede, Paula Vaz                                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating coordination                                    !
+//!                                                                            !
+//!   Dependencies handled in this file:   CLINK                               !
+//!                                        CHEAD                               !
+//!                                        LCOORD                              !
+//!                                        RCOORD                              !
+//!                                        COORD                               !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency2.xip,v 1.5 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CLINK DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//========================================================
+// for NPs (between two consecutive nouns)
+//========================================================
+
+// Example: as pêras e as uvas
+// Example: as pêras ou as uvas -> CLINK(peras,uvas)
+//                              -> LCOORD(ou,peras)
+//                              -> RCOORD(ou,uvas)
+//
+| np#1{?*,?[num:~]}, (AP), conj#2[lemma:e];conj#2[lemma:ou], np#3{?*,?[num:~]} |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5),
+   LCOORD(#2,#4),
+   RCOORD(#2,#5).
+
+// Example: as pêras, as uvas -> CLINK(peras,uvas)
+//
+| np#1{?*,?[num:~]}, (AP), punct[comma], np#3{?*,?[num:~]} |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5)
+
+// Example: Tanto as peras como as uvas -> CLINK(peras,uvas)
+//                                     -> LCOORD(como,peras)
+//                                     -> RCOORD(como,uvas)
+//
+| NP{CONJ[lemma:tanto]},NP#1,ADVP#2{ADV[lemma:como]}, NP#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#2) & HEAD(#6,#3) )
+  CLINK(#4,#6),
+  LCOORD(#5,#4),
+  RCOORD(#5,#6).
+
+
+
+//========================================================
+// for VPs (between two consecutive verbs)
+//========================================================
+
+// Example: rir e chorar
+// Example: rir ou chorar -> CLINK(rir,chorar)
+//                        -> LCOORD(ou,rir)
+//                        -> RCOORD(ou,chorar)
+//
+| #1[verb], conj#2[lemma:e];conj#2[lemma:ou], #3[verb] |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5),
+   LCOORD(#2,#4),
+   RCOORD(#2,#5).
+
+// Example: rir, chorar -> CLINK(rir,chorar)
+//
+| #1[verb], punct[comma], #3[verb] |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5)
+
+
+
+//========================================================
+// for PPs
+//========================================================
+
+// Example: de palhaço ou de pijama
+// Example: de palhaço e de pijamar -> CLINK(palhaço,pijama)
+//                                  -> LCOORD(e,palhaço)
+//                                  -> RCOORD(e,pijama)
+//
+| PP#1, conj#2[lemma:e];conj#2[lemma:ou], PP#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5),
+   LCOORD(#2,#4),
+   RCOORD(#2,#5).
+
+// Example: de palhaço, de pijama -> CLINK(palhaço,pijama)
+//
+| PP#1, punct[comma], PP#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5)
+
+
+// CH, May, 17th 
+//========================================================
+// between PP and NP at the beginning or at the end of a sentece
+//========================================================
+// ADDING a feature pp_not_np to the head of the coordinated NP which has the "value"
+// of the head of a PP. 
+// This is important because it will enable to avoid to have a bad SUBJ and CDIR 
+// calculation in the latter stages
+//
+// Example : A saudade vive entre o coração e a memória without final punctuation
+| PP#1, conj#2[coord:+], NP#3[end:+]{?*,#5[last,pp_not_np=+]} |
+if ( HEAD(#4,#1) )
+	CLINK(#4,#5),
+	LCOORD(#2,#4),
+	RCOORD(#2,#5).
+// Example : A saudade vive entre o coração e a memória with final punctuation
+| PP#1, conj#2[coord:+], NP#3{?*,#5[last,pp_not_np=+]}, punct[end:+] |
+if ( HEAD(#4,#1)  )
+	CLINK(#4,#5),
+	LCOORD(#2,#4),
+	RCOORD(#2,#5).
+
+// Same rule as above when the sequence PP coord NP is at the beginning at the sentence.
+//
+// Example : Entre o coração e a memória vive a saudade.
+| PP#1[start:+], conj#2[coord:+], NP#3{?*,#5[last,pp_not_np=+]} |
+if ( HEAD(#4,#1)  )
+	CLINK(#4,#5),
+	LCOORD(#2,#4),
+	RCOORD(#2,#5).
+
+
+
+//========================================================
+// for APs
+//========================================================
+
+// Example: bonito ou feio
+// Example: bonito e feio -> CLINK(bonito,feio)
+//                        -> LCOORD(e,bonito)
+//                        -> RCOORD(e,feio)
+//
+| AP#1, conj#2[lemma:e];conj#2[lemma:ou], AP#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5),
+   LCOORD(#2,#4),
+   RCOORD(#2,#5).
+
+// Example: bonito, feio -> CLINK(bonito,feio)
+//
+| AP#1,punct[comma],AP#3 |
+ if ( HEAD(#4,#1) & HEAD(#5,#3) )
+   CLINK(#4,#5)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CHEAD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example:
+//
+ if ( HEAD(#1,#2) & ~CLINK(#1, ?) )
+   CHEAD(#1,#1)
+
+// Example:
+//
+ if ( CHEAD(#1,#2) & CLINK(#3,#1) )
+   CHEAD(#3,#2)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// COORD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example:
+//
+ if ( ^LCOORD(#1, #2) & ~COORD(#1,#2) )
+   COORD(#1,#2)
+
+// Example:
+//
+ if ( ^RCOORD(#1, #2) & ~COORD(#1,#2) )
+   COORD(#1,#2)
+
+// Example:
+//
+ if ( COORD(#2,#3) & CHEAD(#1,#3) & ~COORD(#2,#1) )
+   COORD(#2,#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// DISTRIBUTING DEPENDENCIES RELATED WITH COORD
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+// Examples : Entre o coração e a memória vive a saudade. PREPD(memoria,coracao)
+if ( COORD(#1,#2) & COORD(#1,#3[pp_not_np]) & PREPD(#2,#4) & #2 < #3 & ~PREPD(#3,#4) )
+	PREPD(#3,#4).
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CLEANING FAKE CLINK DEPENDENCIES 
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// CH - May, 14th
+//
+// If we have a CLINK but no COORD, coordination is not concretized.
+// We can thus delete those CLINK dependencies
+//
+// Example : Geraldo Alckmin, candidato do Partido da social-democracia brasileira (PSDB) 
+// chegou. *CLINK(Geraldo Alckmin,candidato) 
+
+if ( ^CLINK(#1,#2) & ~COORD(?,#1) & ~COORD(?,#2) )
+	~
+

@@ -1,0 +1,125 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      extract lexicon entries for NE recognition
+# ENCODING:	UTF-8	[€àáäâ]
+#
+# LANGUAGE:     SPANISH
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      04-Aug-2008
+#
+# ============================================================================
+# USAGE:        xfst -utf8 -s morph.fst -l [ThisFile]
+# ============================================================================
+
+
+define LEX
+
+# preprocess lexicon
+# - ignore prefix "ex-"
+# - ignore proper names
+# - ignore verbs with clitics
+read regex	~[e x %- ?* | $%+Prop | $%+Verb ] .o. LEX ;
+
+set quit-on-fail off
+
+substitute symbol %+Acron for %+Sigla ;
+substitute symbol 0 for %+MF ;
+substitute symbol 0 for %+SP ;
+
+substitute symbol %- for "\u2012" ;	# [‒]   FIGURE DASH
+substitute symbol %- for "\u2013" ;	# [–]   EN DASH
+substitute symbol %- for "\u2014" ;	# [—]   EM DASH
+substitute symbol %- for "\u2015" ;	# [―]   HORIZONTAL BAR
+substitute symbol %- for "\u00AD" ;	# [­]   SOFT HYPHEN
+substitute symbol %- for "\u2010" ;	# [‐]   HYPHEN
+substitute symbol %- for "\u2011" ;	# [‑]   NON-BREAKING HYPHEN
+
+substitute symbol %' for "\u2018" ;	# [‘]   LEFT SINGLE QUOTATION MARK
+substitute symbol %' for "\u2019" ;	# [’]   RIGHT SINGLE QUOTATION MARK
+substitute symbol %' for "\u201B" ;	# [‛]   SINGLE HIGH-REVERSED-9 QUOTATION MARK
+
+
+set quit-on-fail on
+define LEX ;
+
+# ----------------------------------------------------------------
+# mapping for continuation classes
+
+define TAB    "\t" ;
+
+define FIN    "#;" ;
+define CONT0  "XSP;" ;
+
+define CONT   [ "FSG;" | "MSG;" | "FPL;" | "FSG;"
+       	      | "FSP;" | "MSP;" | "XSG;" | "XPL;" 
+	      ];
+
+define MAP [ 
+       CONT0 -> "FSG;"	|| $[%+Fem %+Sg] _
+.o.    CONT0 -> "MSG;"	|| $[%+Masc %+Sg] _
+.o.    CONT0 -> "FPL;"	|| $[%+Fem %+Pl] _
+.o.    CONT0 -> "MPL;"	|| $[%+Masc %+Pl] _
+.o.    CONT0 -> "FSP;"	|| $[%+Fem] _
+.o.    CONT0 -> "MSP;"	|| $[%+Masc] _
+.o.    CONT0 -> "XSG;"	|| $[%+Sg] _
+.o.    CONT0 -> "XPL;"	|| $[%+Pl] _
+.o.    [%+Fem|%+Masc|%+Sg|%+Pl] -> 0
+.o.    "^_" -> " " 
+];
+
+# ---------------------------------------------------
+echo >>> prepositions (including contracted forms)
+
+define TMP 	$%+Prep .o. LEX ;
+define LEX	[LEX - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB FIN:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/func.prep
+pop
+
+# ---------------------------------------------------
+echo >>> articles
+
+define TMP 	$%+Art .o. LEX ;
+define LEX	[LEX - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/func.art
+pop
+
+# ---------------------------------------------------
+# echo >>> determiners
+
+define TMP 	$[%+Det|%+PostDet|%+PreDet] .o. LEX ;
+define LEX	[LEX - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/func.det
+pop
+
+# ---------------------------------------------------
+echo >>> pronouns
+
+define TMP 	$%+Pron .o. LEX ;
+define LEX	[LEX - TMP] ;
+
+read regex [MAP.i .o. [ TMP TAB:0 CONT0:0 FIN:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/func.pron
+pop
+
+
+
+# ---------------------------------------------------
+echo >>> conjunctions
+
+define TMP	$%+Conj .o. LEX ;
+define LEX	[LEX - TMP] ;
+
+read regex [MAP.i .o. [TMP TAB FIN:0 ] ];
+write spaced-text | TOOLS/pprint.sh > OLD/func.conj
+pop
+
+
+

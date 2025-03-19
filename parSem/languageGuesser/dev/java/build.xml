@@ -1,0 +1,185 @@
+<project name="lg" default="jar" basedir=".">
+
+<property name="env" environment="env" 	value="env"/>
+<property name="fs"           		value="${file.separator}" />
+<property name="ps"          		value="${path.separator}" />
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}buildInclude.xml" />
+
+<!-- debug,log -->
+<property name="java_debug"    		value="off" />
+<property name="java_optimize" 		value="on" />
+<property name="java_deprecation"  	value="on" />
+<property name="cc.debug"               value="${cc.debug.common}" />
+<property name="log.level"		value="verbose" />
+<!-- dir -->
+<property name="lg.home"               	location=".." />
+<property name="build.dir"         	location="${basedir}${fs}build" />
+<property name="build.classes.dir"      location="${build.dir}${fs}classes" />
+<property name="build.include.dir"      location="${build.dir}${fs}include" />
+<property name="build.doc.dir"	      	location="${build.dir}${fs}doc" />
+<property name="build.src.dir"	      	location="${build.dir}${fs}src" />
+<property name="build.lib.dir"          location="${build.dir}${fs}lib" />
+<property name="dist.dir"          	location="${basedir}${fs}dist" />
+<property name="source.dir"        	location="${basedir}${fs}src" />
+<property name="cxx.source.dir"    	location="${source.dir}${fs}cxx" />
+<property name="java.source.dir"   	location="${source.dir}${fs}java" />
+<property name="class.source.dir"     	location="${java.source.dir}${fs}com${fs}xerox${fs}jxip" />
+
+<target name="all" depends="jar,test"> </target>
+
+<target name="set" depends="platformSetting">
+	<property name="user.name" value="env.USER" />
+	<property name="jar" location="dist${fs}lg.jar" />
+	<property name="sentence" value="Peter is happy." />
+	<property name="class1" value="LanguageGuesser" />
+	<property name="class" value="${class1}" />
+</target>	
+
+<target name="test" depends="jar, testWindows, testSolaris, testLinux" > </target>
+
+<target name="testWindows" depends="set " if="windows" >
+	 <java classpath="${jar}" classname="com.xerox.lg.${class}" fork="true" failonerror="true" maxmemory="128m">
+	</java>
+</target>
+
+<target name="testSolaris" depends="set" if="solaris" >
+	 <java classpath="${jar}" classname="com.xerox.lg.${class}" fork="true" failonerror="true" maxmemory="128m">
+	</java>
+</target>
+
+<target name="testLinux" depends="set" if="linux" >
+	 <java classpath="${jar}" classname="com.xerox.lg.${class}" fork="true" failonerror="true" maxmemory="128m">
+	 	<env key="LD_LIBRARY_PATH" path="/tmp/${user.name}/linux/sharedLib"/>
+	</java>
+</target>
+
+<target name="jar" depends="compile, copyLibDyn">
+	<echo message="-------------------- java: Creating jar file: start ---------------"/>
+	<record name="${log.dir}${fs}jar" loglevel="${log.level}" action="start"/>
+	<!-- create jar file -->
+	<jar jarfile="${basedir}${fs}dist${fs}lg.jar" update="no">
+		<fileset dir="${build.classes.dir}"/>
+		<fileset dir="${build.lib.dir}" excludes="**/*.lib">
+			<include name="**/*.dll"/>
+			<include name="**/*.so"/>
+		</fileset>
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-class" value="com.xerox.jxip.JXip"/>
+			<attribute name="Class-path" value="."/>
+		</manifest>
+	</jar>
+	<record name="${log.dir}${fs}jar"  action="stop"/>
+</target>
+
+<target name="copyLibDyn" depends="" description="copy the languageGuesser lib dyn to the java build dir" >
+	<!-- linux files -->
+	<copy file="${lg.home}${fs}lib${fs}linux${fs}sharedLib${fs}liblanguageGuesser.so"
+		todir="${build.dir}${fs}lib${fs}linux${fs}sharedLib"/>
+	<!-- solaris files -->
+	<copy file="${lg.home}${fs}lib${fs}solaris${fs}sharedLib${fs}liblanguageGuesser.so" 
+		todir="${build.dir}${fs}lib${fs}solaris${fs}sharedLib"/>
+	<!-- windows files -->
+	<copy file="${lg.home}${fs}lib${fs}windows${fs}sharedLib${fs}languageGuesser.dll"
+		todir="${build.dir}${fs}lib${fs}windows${fs}sharedLib"/>
+</target>
+
+<!-- compile and link C++ and java code -->
+<target name="compile" depends="setCommonProperties, javaCompile, nativeHeader, cxxCompile" />
+
+<!-- compile and link C++ code -->
+<target name="cxxCompile" depends="setCommonProperties">
+	<echo message="-------------------- java: compile and link C++ code for java API ----------------"/>
+	<record name="${log.dir}${fs}cxxCompile" loglevel="${log.level}" action="start"/>
+	<property name="output.lib.dir" location="${build.lib.dir}${fs}${fs}${platform}${fs}sharedLib" />
+	<mkdir dir="${output.lib.dir}" />
+	<property name="build.obj.dir" location="${build.dir}${fs}obj${fs}${platform}" />
+	<mkdir dir="${build.obj.dir}" />
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${build.obj.dir}" subsystem="console" exceptions="true"
+		 multithreaded="true" outtype="shared" runtime="dynamic" outfile="${output.lib.dir}${fs}lg">
+		<compiler name="${compilerCplus.name}" debug="${cc.debug}">
+			<fileset dir="${cxx.source.dir}" includes="*.cxx"/>
+			<includepath>
+				<pathelement location="${java.home}${fs}..${fs}include"/>
+				<pathelement location="${build.include.dir}"/>
+				<pathelement location="${lg.home}${fs}include"/>
+			</includepath>
+			<includepath if="windows">
+				<pathelement location="${java.home}${fs}..${fs}include${fs}win32"/>
+			</includepath>
+			<includepath unless="windows">
+				<pathelement location="${java.home}${fs}..${fs}include${fs}${platform}"/>
+			</includepath>
+		</compiler>
+		<linker name="${compilerCplus.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libCplus.names}" />
+			<libset dir="${lg.lib.dir}" libs="languageGuesser" />
+		</linker>
+	</cc>
+	<record name="${log.dir}${fs}cxxCompile" action="stop"/>
+</target>
+
+<!-- generate the native header file from the Java class -->
+<target name="nativeHeader" depends="">
+	<record name="${log.dir}${fs}nativeHeder" loglevel="${log.level}" action="start"/>
+	<echo message="-------------------- java: Native header file creation ---------------------------" />
+	<javah destdir="${build.include.dir}" classpath="${build.classes.dir}">
+		<class name="com.xerox.lg.LanguageGuesser"/>
+	</javah>
+	<record name="${log.dir}${fs}nativeHeder" action="stop"/>
+</target>
+
+<!-- compile java source file -->
+<target name="javaCompile" depends="setCommonProperties">
+	<record name="${log.dir}${fs}javaCompile" loglevel="${log.level}" action="start"/>
+	<echo message="-------------------- java: Compiling Java files -------------------------" />
+	<javac srcdir="${java.source.dir}" 
+		destdir="${build.classes.dir}" 
+		debug="${java_debug}" 
+		deprecation="${java_deprecation}"
+		optimize="${java_optimize}"
+		classpath="${dist.dir}" >
+	</javac>
+	<record name="${log.dir}${fs}javaCompile" action="stop"/>
+</target>
+
+<!-- generate java doc -->
+<target name="doc">
+	<echo message="Generate java doc"/>
+	<delete dir="${build.doc.dir}"/>
+	<mkdir dir="${build.doc.dir}"/>
+	<javadoc packagenames="com.xerox.jxip.JXip"
+		sourcepath="${java.source.dir}"
+		sourcefiles="
+			${class.source.dir}${fs}LanguageGuesser.java,
+		"
+		destdir="${build.doc.dir}"
+		author="false"
+		version="false"
+		use="false"
+		windowtitle="LanguageGuesser java API"
+		>
+		<doctitle><![CDATA[<h1>Language Guesser java API</h1>]]></doctitle>
+		<bottom><![CDATA[<i>Copyright &#169; 2004 Xerox All Rights Reserved.</i>]]></bottom>
+	</javadoc>
+</target>
+
+<target name="setCommonProperties" depends="platformSetting"> 
+	<echo message="Setting up ${ant.project.name} environment" />
+	<mkdir dir="${dist.dir}" />
+	<mkdir dir="${build.dir}" />
+	<mkdir dir="${build.classes.dir}" />
+	<mkdir dir="${build.include.dir}" />
+	<property name="log.dir" location="${build.dir}${fs}log${fs}${platform}" />
+	<mkdir dir="${log.dir}" />
+	<property name="lg.lib.dir" location="${lg.home}${fs}lib${fs}${platform}${fs}sharedLib" />
+</target>
+
+<target name="localCleanAll" depends="" >
+	<delete dir="${build.dir}"/>
+	<delete dir="${dist.dir}"/>
+	<delete file="history.xml"/>
+</target>
+
+</project>

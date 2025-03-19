@@ -1,0 +1,359 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : disamb_before.xip                                           !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Based on a previous version developed by Caroline Hagege at Xerox        !
+//!       Research Centre Europe - Grenoble Laboratory.                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging:
+
+// Disambiguation of ambiguous form that have the same POS
+
+//========================================================
+// PODER
+//========================================================
+// Disambiguation of ambiguous form that have the same POS
+// Example: "pode" cames both from the verb "poder" or "podar"
+1> verb<lemma:podar>, verb<lemma:poder> = verb<lemma:poder> | verb[cop,inf] | .
+// a generaliser pour tous les verbes modaux ambigus.
+
+// if "poder" is preceeded by a preposition and followed by an infinitive, it is a verb and not a noun
+// Example: Veio para poder assistir ao show
+//
+1> verb<lemma:poder,inf>, noun = | prep | verb[inf] | verb[inf,noun:~] | .
+
+
+//========================================================
+// UNS
+//========================================================
+// destroy the lecture of determiner for the form "uns"
+//
+1> art<lemma:um,pl>, pron = pron .
+
+
+//========================================================
+// DEZ
+//========================================================
+// if "dez" is preceeded by a numeral then it is a noun.
+//
+1> noun, num<lemma:dez> = | num | noun .
+1> noun, num<lemma:dez> = noun | prep[lemma:de], num | .
+1> noun, num<lemma:dez> = num .
+
+1> noun<surface:"dez."> %= | noun[lemma:hora], conj[lemma:e] | num .
+1> noun<surface:"dez."> %= | noun[lemma:meio-dia];noun[lemma:meia-noite], conj[lemma:e] | num .
+
+
+//========================================================
+// MAR
+//========================================================
+// if "mar" is preceeded by a numeral then it is a noun of month
+//
+1> noun[lemma:mar] %= | num[dig] | noun[time=+,t-month=3] .
+1> noun[lemma:mar] %= noun[time=+,t-month=3] | (prep[lemma:de]), num[dig] | .
+
+
+
+/////////////////////////////////////////////// UM pronome ou artigo ?
+1> art<lemma:um,sg>, pron = art | ?[noun,verb:~] | .
+
+1> art<lemma:um,sg>, pron = pron | prep | .
+
+
+/////////////////////////////////////////////// FOI - Ser vs IR
+// if "foi" is followed by prep[a], followed by a place, then it is "IR" and not "SER"
+// Example: Foi ao Porto
+1> verb<lemma:ir,surface:"foi">, verb<lemma:ser> = verb[lemma:ir] | prep[lemma:a], (art), (adj), noun[location] | .
+
+
+
+//========================================================
+//  A — prep vs DET
+//========================================================
+
+// ambiguity of "A" prep vs DET
+// if A is followed by a masculine noun, then we choose the preposition interpretation
+1> prep<lemma:a>, art = prep | noun[masc,fem:~] | .
+
+
+// A - PREP vs. ARTIGO
+// In the context "SER (adv) A NOMINAL " A is a determiner
+// Example: Foi um pouco a história ...Foi ainda a mulher....
+3> prep<lemma:a>, art = | ?[lemma:ser,sg], (adv) | art | noun | .
+
+
+// A - PRON vs. ARTIGO
+3> art<lemma:o>, noun = | | art | noun;adj;num[card] | .
+
+
+// A is a PREP before a WH when
+3> prep<lemma:a>, art = prep | pron[qu] | .
+
+
+// A is a PREP when followed by a proper noun bearing no_art feature
+// Example: vou a Londres
+3> prep<lemma:a>, art = prep | noun[proper,no_art] | .
+
+
+// A is a DET when followed by a proper noun and if p
+// Example: vou a Londres
+3> prep<lemma:a>, art = |verb[dicendi], pron[dat,pers]| art | noun[proper] | .
+
+
+//========================================================
+//  O artigo, pronome, letra
+//========================================================
+// comecando uma frase e seguido por um nome singular masculino em maiuscula
+// retiram-se as leituras PRON e SYMBOL
+3> pron, art<lemma:o> = art | noun[masc,sg] | .
+
+
+
+
+//========================================================
+//  PRIMO
+//========================================================
+// when PRIMO is preceeded by an article and followed by a proper noun
+// it is a noun
+3> noun<lemma:primo>, adj, verb = | art | noun | noun[proper] | .
+
+
+//========================================================
+//  ESTADO
+//========================================================
+// when between aftera form of "estar"
+3> noun<sg>, verb<pastpart, lemma:estar, sg> = | verb[lemma:ter] | verb .
+
+// if surface is "estados" and preceeding verb not in plural form, then it is a noun
+// Example: Tem estados vs. Têm estados
+3> noun<pl>, verb<pastpart, lemma:estar> = | verb[lemma:ter, sg] | noun .
+
+
+//========================================================
+//  VEIO
+//========================================================
+// veio + gerundio - veio + a + vinf -> veio e um verbo e nao um nome
+3> noun, verb<lemma:vir> = verb | ?[lemma:a], ?[verb,inf] | .
+3> noun, verb<lemma:vir> = verb | ?[verb,gerund] | .
+3> noun, verb<lemma:vir> = verb | pastpart | .
+// veio before "de" followed by a location is the verb "vir" and not the noun.
+3> noun, verb<lemma:vir> = verb | prep[lemma:de], (art), noun[proper,location] | .
+
+//========================================================
+//  TARDE
+//========================================================
+// Example: veio de tarde
+3> adv<lemma:tarde>, noun, verb = | prep;art | noun .
+
+//========================================================
+//  PELO
+//========================================================
+// possible refinement in order to check agreement between prepdet and following noun/adj
+5> verb<lemma:"pelar">, prep = | pastpart | prep | adj;noun | .
+5> verb<lemma:"pelar",surface:"pela">, prep =  prep | (adj), noun[fem] |.
+5> verb<lemma:"pelar",surface:"pelo">, prep =  prep | (adj), noun[sg] |.
+
+
+//========================================================
+//  NOS
+//========================================================
+// BUG TO BE SOLVED
+// ambuiguity pronoun vs contraction em+os
+// if followed by a verb non ambiguous, then it is a pronoun
+// Example: nos fizeram
+5> prep, pron<surface:"nos"> = pron | art[pl,tokenend], verb[noun:~,adj:~] | .
+
+// if followed by something which is never a verb then it is a prep
+5> prep, pron<surface:"nos"> = prep | art[pl,masc,tokenend], ?[verb:~] | .
+5> prep, pron<surface:"Nos"> = prep | art[pl,masc,tokenend], ?[verb:~] | .
+
+
+
+// if not followed by something which is potentially plural masculine noun (or adj) then
+// this is contraction
+// Example: nos assuntos
+5> prep, pron<surface:"nos"> = prep | art[pl,masc,tokenend], (num), (adj), noun[masc,pl] | .
+
+
+//========================================================
+//  QUINTA
+//========================================================
+// If the word "quinta" started by an uppercase and preceeded by a lower case and followed
+// to another proper noun, then it is the noun quinta (=farm)
+// Example: a Quinta da Portela
+5> noun<lemma:quinta,maj>, num = noun[time:~] | prep[lemma:de], (art[def]), noun[maj] | .
+
+
+//========================================================
+// CHAPADA
+//========================================================
+// Chapada do Araripe
+5> pastpart[lemma:chapar,pastpart,maj] %= noun[fem,noun,geographic,relief,maj] | ?[lemma:de],(art), noun[maj] | .
+
+
+//========================================================
+//  COMO
+//========================================================
+// Como at the beginning of a clause which is ended by a question mark will be considered as a pronoun
+// bearing feature qu
+//
+// Example: Como se chama o rapaz ?
+5> adv<lemma:como,start>,pron %= pron[qu=+] | ?+, punct[lemma:?] |  .
+
+
+//========================================================
+//  SEU
+//========================================================
+// seu which is not preceeded by definite article "O" and which is followed by a recognized proper noun (person)
+// is a noun[title] and not a possessive
+// Example: seu Manuel
+5> pron[lemma:seu] %=  | | noun[noun=+,title=+,masc=+,sg=+] | noun[proper,SEM-Hpeople] | .
+5> pron[lemma:seu] %=  | ?[art:~] | noun[noun=+,title=+,masc=+,sg=+] | noun[proper,SEM-Hpeople] | .
+
+
+//========================================================
+//  NATAL
+//========================================================
+// Natal in upper case can be either a geographic location (Brasil) or a festivity
+// If preceeded by a preposition like antes, depois , a seguir, durante it is a festivity
+//
+// Antes do Natal
+7> noun[maj,surface:Natal] %= | prep[lemma:"antes_de"], (art;?[dem]), (adj) | noun[t-one-day=+,maj=+,proper=+] .
+// depois do Natal
+7> noun[maj,surface:Natal] %= | prep[lemma:"depois_de"], (art;?[dem]), (adj) | noun[t-one-day=+,maj=+,proper=+] .
+// a seguir ao Natal
+7> noun[maj,surface:Natal] %= | prep[lemma:a], verb[lemma:seguir], prep[lemma:a], (art;?[dem]), (adj) | noun[t-one-day=+,maj=+,proper=+] .
+// durante o Natal
+7> noun[maj,surface:Natal] %= | prep[lemma:durante], (art;?[dem]), (adj) | noun[t-one-day=+,maj=+,proper=+] .
+
+// na altura/tempo do Natal
+7> noun[maj,surface:Natal] %= | noun[t-denot-time], prep[lemma:de], art | noun[t-one-day=+,maj=+,proper=+] .
+
+7> noun[maj,surface:Natal] %= noun[t-one-day=+,maj=+,proper=+] | prep[lemma:de], (art, noun), num[lemma:"%d%d%d%d"] |.
+
+7> noun[maj,surface:Natal] %= | verb[lemma:festejar] , (?) | noun[t-one-day=+,maj=+,proper=+] .
+
+7> noun[maj,surface:Natal] %= | noun[lemma:dia], prep[lemma:de], (art) | noun[t-one-day=+,maj=+,proper=+] .
+
+
+// comemorar, festejar o Natal
+7> noun[maj,surface:Natal] %= | ?[lemma:comemorar];?[lemma:festejar];?[lemma:celebrar], (adv), art[def] | noun[t-one-day=+,maj=+,proper=+] .
+
+
+//========================================================
+//  CORRENTE
+//========================================================
+// ADJ versus feminine noun
+// if preceeded by feminine determiner and not followed by noun
+// then it is the noun corrente and not the adjective
+// Example: ligar à corrente.
+7> noun<lemma:corrente>, adj = | prep[lemma:a];pron[dem,fem];art[fem] | noun | prep[noun:~] | .
+
+
+//========================================================
+//  CLIQUE
+//========================================================
+// Clicar is not considered as a verb
+// in the context before "aqui" ou "no link" trata-se de um verbo e nao de o nome "Clique" when at the beginning of a sentence
+7> noun[surface:"Clique"]       %= verb | adv[lemma:aqui] | .
+7> noun[surface:"Clique"]       %= verb | ?+, ?[lemma:link] | .
+
+
+//========================================================
+//  DESTE
+//========================================================
+// verb dar vs. prep+dem
+// if deste is preceeded by "tu" or pron or "nao" or "nunca" this is a verb
+// if not this is a prep+dem
+7> verb<lemma:dar,2p,perf,ind> = | pron; ?[lemma:nunca] | verb .
+7> verb<lemma:dar,2p,perf,ind>, prep = prep .
+
+//========================================================
+//  LETTER vs. ITEM
+//========================================================
+// If letter uppercase followed by point followed by something with first uppercase
+// it is a letter and not an item
+9> num<item>, noun<initial,maj> = noun | ?[maj] | .
+
+//========================================================
+//  CV
+//========================================================
+// CV is not a roman number if preceeded by a determiner
+9> num[lemma:CV] %= | art;pron[dem], (?), (?) | noun[masc,sg].
+
+
+//========================================================
+// ADJECTIVE HAS FEATURE CARGO
+//========================================================
+// If an adjective has feature SEM-Hcargo and followed by something which is not noun
+// then it is a noun and not an adj
+// Example: A conselheira da Atini
+9> adj[maj,noun:~,SEM-Hcargo]      %= noun[maj=+,SEM-Hcargo=+] | ?[noun:~] | .
+
+
+//========================================================
+// SEGUNDO
+//========================================================
+//
+// Example: num segundo momento  -> is a number[ord]
+9> noun[lemma:segundo,masc,sg,t-meas,time,SEM-unitype]     %= |art[sg];?[proxdem,sg]| num[lemma:segundo,ord=+,masc=+,sg=+] | noun | .
+
+
+10> art[indef,surface:"uma"] %= num[fem=+,sg=+]  |?[t-meas];?[t-as-a-meas]|.
+10> art[indef,surface:"um"]  %= num[masc=+,sg=+] |?[t-meas];?[t-as-a-meas]|.
+10> art[indef,surface:"Uma"] %= num[fem=+,sg=+]  |?[t-meas];?[t-as-a-meas]|.
+10> art[indef,surface:"Um"]  %= num[masc=+,sg=+] |?[t-meas];?[t-as-a-meas]|.
+
+
+//========================================================
+// PREP/CONJunction SUBORD
+//========================================================
+//
+// Example: [para além de] estar cansado ...   -> is a conj[sub]
+// Example: [para além de] fazerem ...         -> is a conj[sub]
+10> prep<lemma:"?+ de">, conj<sub>  %= conj |?[inf];?[infflex]|.
+
+
+//========================================================
+// FORA/AFORA
+//========================================================
+//NJM+JB, 2012/03/21
+// Example: pela tarde [fora] ...   -> is a adv
+10> prep, adv<surface:"fora">, verb  %=  |?[time]| adv.
+10> prep, adv<surface:"afora">       %=  |?[time]| adv.
+
+
+//========================================================
+// ATÉ
+//========================================================
+//
+//NJM+JB, 2012/05/10
+//-----> regra de desambiguação: até/S,R |(Td, Pd) N[t-focus] de N[time] -> S:+
+// Example: até meio da década de 80  -> is a prep
+11> prep, adv<surface:até>  %= prep |(art[def], ?[proxdem]), noun[t-focus], ?[surface:de], (art), noun[time]| .
+
+//========================================================
+// MEIO
+//========================================================
+//
+//NJM+JB, 2012/05/10
+// Example: até meio da década
+11> adv<lemma:meio>,noun<lemma:meio> = | prep[lemma:até] | noun | ?[surface:de], (art), noun |.
+11> num<lemma:meio>,noun<lemma:meio> = num |?[SEM-unitype]|.
+
+//========================================================
+// MEIA
+//========================================================
+// Example: meia (2 horas e meia)
+11> num<lemma:meio>,noun<lemma:meia> = | num;?[SEM-unitype], ?[lemma:e] | num .
+
+11> num<lemma:meio>,noun<lemma:meia> = num |?[SEM-unitype]|.

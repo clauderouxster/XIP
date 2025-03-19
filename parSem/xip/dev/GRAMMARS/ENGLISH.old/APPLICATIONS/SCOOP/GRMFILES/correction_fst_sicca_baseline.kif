@@ -1,0 +1,143 @@
+kif:
+
+fst f(_paths[1]+"/../../../NTMFILES/SOURCEFST/FORSEM/nvlex-scoop.fst", "", 0, false);
+automaton au;
+au.load(_paths[1]+'/updatedLexicon_sicca', '+');
+
+int threshold;
+
+//we want to correct the surface form of that word
+
+function getCountFromFeatures(string ff_str){
+     float count;
+     string ff;
+     for (ff in ff_str.split("+")){
+          if (ff.find("prob=", 0)>=0){
+               string count_str = ff.replace("prob=", "");
+               count = count_str;
+          }
+     }
+     return(count);
+}
+
+function correct(node Node) {
+     parser Parser;
+     Parser.getgrammar(Node);
+     string word_surface=Node.surface();     
+     //println("INITIAL word ", word);
+     threshold = min(3, word_surface.size()/2);
+     println("CORRECT:",word_surface, Node.features());
+     boolean prop = false;
+     float max_score = -1000000000;
+     // get count for original surface form
+     if (word_surface in au){
+     	fmap orig_w = au.editdistance(word_surface, 0, null);
+	if (orig_w.keys()[0].find("Proper")>=0){
+	   prop = true;
+	   //println("Proper Name: DO NOT CORRECT", orig_w);
+	   //return(false);
+	}
+	float count = getCountFromFeatures(orig_w.keys()[0]);
+	if (count > 0){
+		//max_score = log(count);
+		if (count > 0.001){
+		   println("CURR WORD IN FST: DO NOT CORRECT", orig_w, count);
+                   return(false);
+		}
+	}
+	else{
+		max_score =  -100000000;
+	}
+     }
+     else{
+	if (Node.feature("Proper"))
+	{
+		prop = true;
+	   //println("Proper Name: DO NOT CORRECT", Node.features());
+	   //return(false);
+	}
+     }
+     float max_count = 0;
+     println(word_surface, max_score);
+     string bestW = word_surface;
+     string pos = Node.pos();
+     smap best_feat = Node.features();
+     bool mod = false;
+     fmap words_sp = au.editdistance(word_surface, threshold, a_first|a_change|a_delete|a_insert|a_switch|a_nocase );
+     //println("POSSIBLE CORRECTIONS:", words_sp);
+     string word_sp_ff;
+     for (word_sp_ff in words_sp.keys()){
+     	 string word_sp = word_sp_ff.split("+")[0];
+     	 float ed_sim = 1/(1+words_sp[word_sp_ff]);
+	 float count = getCountFromFeatures(word_sp_ff);
+	 float curr_score;
+	 if (count > 0){
+	 	 curr_score = log(ed_sim);//+ log(count);
+		 }
+	else{
+	 	 curr_score = log(ed_sim);// - 100000;
+	}
+	 if (curr_score > max_score || (max_count < count && curr_score == max_score)){
+	    string feats = word_sp_ff.replace(word_sp, "");
+	    svector vfeats=feats.split("+");	    
+	    vfeats.pop("count="+count);
+	    smap vres;
+	    pos=Parser.parsefeatures(vfeats, vres);	    
+	    if (vres.test("PROPER") == prop){
+	    	    max_count = count;
+	    	    max_score = curr_score;
+	    	    bestW = word_sp;
+		    println("CORR:", word_sp, vfeats, ed_sim, count, curr_score, best_feat, pos);
+	    }
+
+	 }	
+	  
+     }
+     if (max_score > -10000000 and not bestW == word_surface ){
+     	mod = true;
+	if (pos==""){
+          pos=Node.pos();
+	}
+	println(pos, bestW, "z", best_feat, max_score);
+	best_feat.pop("lemme");
+	best_feat.pop("surface");
+	best_feat["spellch"]="+";
+	Node.lemma(bestW, pos, best_feat);
+	println("CORRECTED:", bestW, best_feat);     	
+
+     }	 
+
+     return(mod);
+}
+
+
+
+function correct(node n1, node n2) {
+     parser p;
+     p.getgrammar(n1);
+     string s=n1.surface()+n2.surface();     
+     //println("INITIAL S ", s);
+     string word_sp;
+     threshold = min(2, s.size()/2);
+     
+     fmap words_sp = au.editdistance(s, threshold, a_nocase );
+     //println(words_sp);
+     float min_score = threshold;
+     smap vres;	 
+     bool mod = false;
+     for (word_sp in words_sp){
+     	  //if (words_sp[word_sp]<=threshold){
+     	  string surface = word_sp.split("+")[0];
+	  string feats = word_sp.replace(surface, "");
+	  //smap s_feats;
+	  //p.parsefeatures(n.features(), s_feats);
+	  println(s, n1.features(), surface, feats, words_sp[word_sp]);     	
+	 //}	     
+
+     }
+     return(mod);
+}
+
+
+
+

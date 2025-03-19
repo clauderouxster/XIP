@@ -1,0 +1,66 @@
+Download the lib from:
+        ftp://xmlsoft.org/libxml2/
+
+http://www.xmlsoft.org/FAQ.html
+
+gunzip libxml2-2.7.8.tar.gz
+
+cd libxml2-2.7.8
+./configure ; make
+
+
+cp libxml2-2.7.8/macos/src/config-mac.h  srcModified/2.7.8
+j'ai modifier config.h pour que sous MAC_OS le fichier config-mac.h soit pris en compte
+
+Pour adapter cette version a nos contraintes, il faut:
+=====================================
+cp .../libxml2-2.7.8/xpath.c .../srcModified/2.7.8
+cp .../libxml2-2.7.8/include/libxml/xpath.h .../srcModified/2.7.8
+cd .../srcModified/2.7.8; maj de xpath.c et xpath.h
+------------------------------------------
+cp .../xml/dev/srcModified/2.6.28/config.h  .../srcModified/2.7.8
+------------------------------------------
+cp .../libxml2-2.7.8/include/libxml/xmlversion.h .../srcModified/2.7.8
+modify .../srcModified/2.7.8/xmlversion.h
+#if 1
+#define LIBXML_ICONV_ENABLED
+#endif
+
+modifier en:
+#if 0
+#define LIBXML_ICONV_ENABLED
+#endif
+-----------------------------------------
+cd .../libxml2-2.7.8
+./configure   (to generate config.h)
+cp .../libxml2-2.7.8/config.h .../srcModified/2.7.8/config.h.unix  
+
+config.h.unix est l'ancien fichier config.h fourni dans la delivery standard xml.
+je l'ai modifier pour MAC_OS: j'ai rajouter une compilation conditionelle autour de la ligne 22:
+#ifdef MAC_OS
+#define HAVE_ANSIDECL_H 1
+#endif
+----------------------------------------
+suite au maj de choranche (maj du compilateur)
+j'ai modifier .../xml/dev/srcModified/2.7.8/config.h  
+#ifdef HaveAnsiDecl
+#define HAVE_ANSIDECL_H 1
+#endif
+
+et build.xml   
+ <if>
+        <or>
+                <equals arg1="${platform}" arg2="windows" />
+                <equals arg1="${platform}" arg2="solaris" />
+                <equals arg1="${platform-arch}" arg2="linux64" />
+        </or>
+        <then>
+                <property name="ansiDecl"  />
+        </then>
+        </if>
+        <defineset id="define.basic" >
+            <define name="HAVE_CONFIG_H"/>
+            <define name="HaveAnsiDecl" if="ansiDecl"/>
+
+
+

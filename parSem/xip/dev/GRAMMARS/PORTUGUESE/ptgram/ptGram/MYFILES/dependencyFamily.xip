@@ -1,0 +1,625 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyFamily.xip                                        !
+//!   Date       : 2010/February                                               !
+//!   Author     : Daniel Santos                                               !
+//!   Revised by : Vera Cabarrão (2010/December)                               !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating the extraction of family relations              !
+//!                                                                            !
+//!   Dependencies handled in this file:   FAMILY                              !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A tia do Pedro chama-se Maria
+| VF{verb#1[lemma:chamar]},NP{?[lemma:eu]},NP{noun#4[human]} |
+  if( SUBJ[PRE](#1,#2[relative]) &
+    ( MOD[POST](#2,#3[human,SEM-Hinstitution:~]) || MOD[POST](#2,#3[ord]) ) &
+    ~FAMILY(#4,#3) & ~FAMILY(#2,#4,#3) & ~MOD[NEG](#1,?)
+  )
+    FAMILY(#2,#4,#3)
+
+// Example: A tia do Pedro é a Maria
+// Example: Os tios do João são o Pedro e a Maria (another rule is used to handle coordination)
+if( PREDSUBJ(#3,#6[human,SEM-Hinstitution:~]) &
+    ( MOD[POST](#4[relative],#1[human,SEM-Hinstitution:~]) || MOD[POST](#4[relative],#1[ord]) )
+    SUBJ[PRE](#3,#4) & ~FAMILY(#6,#1) & ~FAMILY(#4,#6,#1) & ~MOD[NEG](#3,?)
+  )
+    FAMILY(#4,#6,#1)
+
+// Example: O João, tio do Pedro.
+// Example: A tia do João, Maria.
+ if( APPOSIT[REDUCED](#2[human],#3[relative]) & MOD[POST](#3,#5[human,SEM-Hinstitution:~]) & ~FAMILY(#2,?) & ~FAMILY(#3,#2,#5))
+       FAMILY(#3,#2,#5)
+
+// Example: O João é tio do Pedro
+// Example: O primeiro é tio do Pedro
+// Example: É tio do Pedro.
+  if( (SUBJ[PRE](#3[lemma:ser],#2[human]) || SUBJ[PRE](#3[lemma:ser],#2[ord]) || SUBJ[ELIPS](#3[lemma:ser],#2)) &
+      PREDSUBJ(#3,#4[relative]) & MOD[POST](#4,#6[human,SEM-Hinstitution:~]) & ~FAMILY(#2,#6) & ~FAMILY(#4,#2,#6) & ~MOD[NEG](#3,#7))
+    FAMILY(#4,#2,#6)
+
+// Example: João e Pedro, tio e sobrinho,
+  if( CLINK(#2[human],#6[human]) & CLINK(#6,#3[relative]) & CLINK(#3,#4[relative]) & ~FAMILY(#2,#6) & ~FAMILY(#3,#2,#6))
+        FAMILY(#3,#2,#6)
+
+// Example: O general Sebastião Mabote, cabeça de lista da Frelimo por Gaza, personalizou violentas críticas ao líder trabalhista, Miguel Mabote, de que é tio.
+| NP#1{?*,noun#2[human]},?*,NP#3{noun#4[human]},PUNCT,?,SC#5{?*,VF{verb#6[lemma:ser]}},NP{noun#7[relative]} |
+  if( HEAD(#2,#1) & HEAD(#4,#3) & ~FAMILY(#2,#4) & HEAD (#6,#5) & ~FAMILY(#7,#2,#4))
+        FAMILY(#7,#2,#4)
+
+//| NP{?*,noun*[SEM-Hprofession]},NP#1{?*,noun#2[human]},?*,NP#3{noun#4[human]},PUNCT,?,SC#5{?*,VF{verb#6[lemma:ser]}},NP{noun#7[relative]} |
+//  if( HEAD(#2,#1) & HEAD(#4,#3) & ~FAMILY(#2,#4) & HEAD (#6,#5) & ~FAMILY(#7,#2,#4))
+//        FAMILY(#7,#2,#4)
+
+// Example: O João casou-se com a Maria.
+//         O João casou com a Maria.
+//         Casou com a Maria.
+//         O João é casado com a Maria.
+//         É casado com a Maria.
+ if( (SUBJ[ELIPS](#3[lemma:casar],#2) || SUBJ[PRE](#3[lemma:casar],#2[human])) &
+     MOD[POST](#3,#4[human]) & ~FAMILY(#2,#4) & ~MOD[NEG](#3,?))
+    FAMILY[spouse=+](#2,#4)
+
+//VERA, 2011/03/24S
+// Example: O João que é tio do Pedro
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      PREDSUBJ(#3,#4[relative]) &
+      MOD[POST](#4,#5[human]) &
+      ~MOD[NEG](#4,?) &
+      ~FAMILY(#2,#5) &
+      ~FAMILY(#4,#2,#5)
+    )
+   FAMILY(#4,#2,#5)
+
+// Example: A Joana deu à luz a Filipa
+// Example: A Joana, que deu à luz a Filipa
+ if( SUBJ[PRE](#3[lemma:dar],#2[human]) &
+     CDIR[POST](#3,#5[human]) &
+     PREPD(#4[lemma:luz],?[lemma:a]) & MOD[POST](#3,#4) &
+     ~FAMILY(#2,#5)
+   )
+    FAMILY[parent=+,1F=+](#2,#5)
+
+// Example: O Paulo e a Joana deram o nó.
+// Example: O Paulo e a Joana juntaram os trapos.
+if( SUBJ[PRE](#1,#2[human]) & SUBJ[PRE](#1,#3[human])
+    FIXED[normalized](casar,?,?) &
+    CLINK(#2,#3)
+  )
+    FAMILY[spouse=+](#2,#3)
+
+// Example: O Jorge deu o nó com a Mariana
+// Example: O Paulo juntou os trapos com a Carina.
+  if( SUBJ[PRE](#3,#2[human]) &
+      FIXED[normalized](casar,?,?) &
+      MOD[POST](#3,#5[human])
+    )
+        FAMILY[spouse=+](#2,#5)
+
+// Example: O Paulo e a Joana casaram-se
+  if( COORD(#6,#2[human]) & COORD(#6,#4[human]) & SUBJ[PRE](#5[lemma:casar],#2) & SUBJ[PRE](#5,#4) & CLINK(#2,#4))
+    FAMILY[spouse=+](#2,#4)
+
+// Example: O Paulo e a Joana são primos
+  if( COORD(?,#2[human]) & COORD(?,#4[human]) & SUBJ[PRE](#5[lemma:ser],#2) & SUBJ[PRE](#5,#4) & CLINK(#2,#4) &
+      PREDSUBJ(#5,#6[relative]) & ~FAMILY(#6,#2,#4)
+    )
+    FAMILY(#6,#2,#4)
+
+// Example: O João é filho do Pedro e da Maria.
+  if( HEAD(#6[human],#5) & SUBJ(#7[lemma:ser],#2) & PREDSUBJ(#7,#8[relative]) & FAMILY(#8,#2,#4) & COORD(#9,#4) & COORD(#9,#6) & ~FAMILY(#8,#2,#6) & HEAD(#2,1) & ~HEAD(#6,#1))
+    FAMILY(#8,#2,#6)
+
+// Example: O filho de Pedro e Maria, João, nasceu em Lisboa.
+//Não funciona: erros nas dependências de base NJM 2010/12/23
+//  if( SUBJ(#7[lemma:nascer],#2[human]) & MOD(#8[relative],#4[human]) & MOD(#8[relative],#6[human]))
+//  FAMILY(#8,#2,#4),
+//  FAMILY(#8,#2,#6)
+
+// Example: Horácio Roque deixa duas filhas, Teresa e Cristina, ligadas aos seus negócios. -- não está a funcionar
+  if( SUBJ(#5[lemma:deixar],#2[human]) & CDIR(#5,#4[human,relative:~]) & CDIR(#5,#6[relative]))
+    FAMILY(#6,#4,#2)
+
+// Example: João nasceu em Lisboa, filho de Pedro e Maria.
+  if (SUBJ(#7[lemma:nascer],#2[human]) & MOD(#8[relative],#4[human]) & MOD(#8[relative],#6[human]))
+    FAMILY(#8,#2,#4),
+    FAMILY(#8,#2,#6)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Coordenação                                                                                        //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João e a Maria são tios do Pedro.
+//
+//ATENÇÃO: NÃO APLICAR SE FOR UMA RELAÇÃO SIMÉTRICA
+//
+  if( FAMILY(#1[pl],#2,#3) & COORD(#4,#2) & COORD(#4,#5[relative:~]) & ~FAMILY(#1,#5,#3) & HEAD(#2,#6) & HEAD(#3,#7) & ~HEAD(#5,#6)  & ~HEAD(#5,#7))
+    FAMILY(#1,#5,#3)
+
+
+// Example: O Manuel é tio do Filipe e do Mário.
+//
+//ATENÇÃO: NÃO APLICAR SE FOR UMA RELAÇÃO SIMÉTRICA
+//
+ if( FAMILY(#1,#2,#3) & COORD(#4,#3) & COORD(#4,#5[relative:~]) & ~FAMILY(#1,#2,#5) & HEAD(#5,#6) & ~HEAD(#2,#6) & ~HEAD(#3,#6))
+    FAMILY(#1,#2,#5)
+
+// Example: É filho do João e da Maria
+  if( SUBJ(#1[lemma:ser],#2) & PREDSUBJ(#1,#3[relative]) & FAMILY(#3,#2,#4) &
+      COORD(#9,#4) & COORD(#9,#6[human,relative:~]) & ~FAMILY(#3,#2,#6) & ~SUBJ(#1,#4)
+    )
+    FAMILY(#3,#2,#6)
+
+// Example: O João tem um irmão.
+// Example: Tem um irmão.
+  if ( (SUBJ(#2[lemma:ter],#1[human]) || SUBJ[ELIPS](#2[lemma:ter],#1) ) & CDIR(#2,#3[relative]) & ~CDIR(#2,?) & ~FAMILY(#3,#1))
+    FAMILY(#3,#1)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Criação de nós                                                                                   ///
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João e o tio foram ao cinema.
+  if ( COORD(#3,#2) & COORD(#3,#4[relative]) & ~MOD[POST](#4,?[human]) & SUBJ(#6,#2[human,relative:~]) & SUBJ(#6,#4) )
+    FAMILY(#4,##pron#1[surface="Ele",lemma="eu",pers=+,3p=+,sg=+,human=+],#2), MOD(#1,#4)
+
+// Example: ...tio do Mário...
+  if (MOD[POST](#1[relative],#2[human]) & ~FAMILY(#1[relative],#3,#2) &  ~FAMILY(#1[relative],#2,?))
+    FAMILY(#1,##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+,human=+],#2)
+
+// Example: o seu sobrinho Pedro.
+  |#2[relative];#2{?[relative]}|
+  if (  POSS(#2[human,SEM-Hprofession:~],?[surface:"seu"]))
+        FAMILY(##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+,human=+],#2)
+
+// Example: o meu sobrinho Pedro.
+  |#2[relative];#2{?[relative]}|
+  if (  POSS(#2[human,SEM-Hprofession:~],?[surface:"meu"]))
+        FAMILY(##pron[surface="Eu",lemma="eu",pers=+,1p=+,sg=+,human=+],#2)
+
+// Example: o teu sobrinho Pedro.
+  |#2[relative];#2{?[relative]}|
+  if (  POSS(#2[human,SEM-Hprofession:~],?[surface:"teu"]))
+        FAMILY(##pron[surface="Tu",lemma="eu",pers=+,2p=+,sg=+,human=+],#2)
+
+// Example: o nosso sobrinho Pedro.
+  |#2[relative];#2{?[relative]}|
+  if (  POSS(#2[human,SEM-Hprofession:~],?[surface:"nosso"]))
+        FAMILY(##pron[surface="Nós",lemma="eu",pers=+,1p=+,pl=+,human=+],#2)
+
+// Example: o vosso sobrinho Pedro.
+  |#2[relative];#2{?[relative]}|
+  if (  POSS(#2[human,SEM-Hprofession:~],?[surface:"vosso"]))
+        FAMILY(##pron[surface="Vós",lemma="eu",pers=+,2p=+,pl=+,human=+],#2)
+
+// Example: a princesa bateu no filho.
+  if( SUBJ(#1,#2) & (MOD(#1,#3[relative]) || CDIR(#1,#3[relative])) & ~CDIR(#1,?[human,relative:~]))
+    FAMILY(#3,##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+,human=+],#2)
+
+// Example: Madalena, sua mãe
+  if ( APPOSIT(#2[human],#3[relative]) & POSS(#3,#4[lemma:eu]))
+       FAMILY(#3,#2,##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+])
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                                    //
+//                            FEATURES                                                                //
+//                                                                                                    //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            UNCLE                                                                   //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é tio, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio,masc,sg])
+    FAMILY[uncle=+,1M=+](#2,#3)
+
+//Se a palavra é tia(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio,fem])
+    FAMILY[uncle=+,1F=+](#2,#3)
+
+//Se a palavra está no plural e masculino, então não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio,pl,masc])
+    FAMILY[uncle=+](#2,#3)
+
+//Se a palavra é sobrinho, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho,masc,sg])
+    FAMILY[uncle=+,2M=+](#3,#2)
+
+//Se a palavra é sobrinha(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho,fem])
+    FAMILY[uncle=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho,pl,masc])
+    FAMILY[uncle=+](#3,#2)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            PARENT                                                                  //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é pai, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"pai( %c*)",sg])
+    FAMILY[parent=+,1M=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"pai( %c*)",pl])
+    FAMILY[parent=+](#2,#3)
+
+//Se a palavra é mãe, então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"mãe( %c*)"])
+    FAMILY[parent=+,1F=+](#2,#3)
+
+//Se a palavra é mãezinha, então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:mãezinha])
+    FAMILY[parent=+,1F=+](#2,#3)
+
+//Se a palavra é filho, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"filho( %c*?%c*)",masc,sg])
+    FAMILY[parent=+,2M=+](#3,#2)
+
+//Se a palavra é filha(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"filho( %c*?%c*)",fem])
+    FAMILY[parent=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"filho( %c*?%c*)",pl,masc])
+    FAMILY[parent=+](#3,#2)
+
+//Se a palavra é enteado, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:enteado,masc,sg])
+    FAMILY[parent=+,2M=+](#3,#2)
+
+//Se a palavra é enteada(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:enteado,fem])
+    FAMILY[parent=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:enteado] #1[pl,masc])
+    FAMILY[parent=+](#3,#2)
+
+//Se a palavra é padrasto, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:padrasto,sg])
+    FAMILY[parent=+,1M=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:padrasto,pl])
+    FAMILY[parent=+](#2,#3)
+
+//Se a palavra é madrasta, então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:madrasta])
+    FAMILY[parent=+,1F=+](#2,#3)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            SIBLING                                                                 //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é irmão, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"irmão(-%c?%c+)",masc,sg])
+    FAMILY[sibling=+,1M=+](#2,#3)
+
+//Se a palavra é irmã(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"irmão( %c*)",fem])
+    FAMILY[sibling=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"irmão( %c*)",pl,masc])
+    FAMILY[sibling=+](#2,#3)
+
+//Se a palavra é gémeo, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:gémeo,sg,masc])
+    FAMILY[sibling=+,1M=+](#2,#3)
+
+//Se a palavra é gémea(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:gémeo,fem])
+    FAMILY[sibling=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:gémeo,pl,masc])
+    FAMILY[sibling=+](#2,#3)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            GRANDPARENT                                                             //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é avô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"avô( %c*)",masc,sg])
+    FAMILY[grandparent=+,1M=+](#2,#3)
+
+//Se a palavra é avó(s), então o primeiro argumento é do sexo feminino
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"avô( %c*)",fem])
+    FAMILY[grandparent=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"avô( %c*)",pl,masc])
+    FAMILY[grandparent=+](#2,#3)
+
+//Se a palavra é bisavô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"bisavô( %c*)",masc,sg])
+    FAMILY[grandparent=+,1M=+](#2,#3)
+
+//Se a palavra é bisavó(s), então o primeiro argumento é do sexo feminino
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"bisavô( %c*)",fem])
+    FAMILY[grandparent=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"bisavô( %c*)",pl,masc])
+    FAMILY[grandparent=+](#2,#3)
+
+//Se a palavra é trisavô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"trisavô( %c*)",masc,sg])
+    FAMILY[grandparent=+,1M=+](#2,#3)
+
+//Se a palavra é trisavó(s), então o primeiro argumento é do sexo feminino
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"trisavô( %c*)",fem])
+    FAMILY[grandparent=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"trisavô( %c*)",pl,masc])
+    FAMILY[grandparent=+](#2,#3)
+
+//Se a palavra é tetravô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:"tetravô( %c*)",masc,sg])
+    FAMILY[grandparent=+,1M=+](#2,#3)
+
+//Se a palavra é tetravó(s), então o primeiro argumento é do sexo feminino
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"tetravô( %c*)",fem])
+    FAMILY[grandparent=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+ if( ^FAMILY(#1,#2,#3) & #1[lemma:"tetravô( %c*)",pl,masc])
+    FAMILY[grandparent=+](#2,#3)
+
+//Se a palavra é neto, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:neto,masc,sg])
+    FAMILY[grandparent=+,2M=+](#3,#2)
+
+//Se a palavra é neta(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:neto,fem])
+    FAMILY[grandparent=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:neto,pl,masc])
+    FAMILY[grandparent=+](#3,#2)
+
+//Se a palavra é bisneto, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:bisneto,masc,sg])
+    FAMILY[grandparent=+,2M=+](#3,#2)
+
+//Se a palavra é bisneta(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:bisneto,fem])
+    FAMILY[grandparent=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:bisneto,pl,masc])
+    FAMILY[grandparent=+](#3,#2)
+
+//Se a palavra é trisneto, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:trisneto,masc,sg])
+    FAMILY[grandparent=+,2M=+](#3,#2)
+
+//Se a palavra é trisneta(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:trisneto,fem])
+    FAMILY[grandparent=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:trisneto,pl,masc])
+    FAMILY[grandparent=+](#3,#2)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                           SPOUSE                                                                   //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é marido, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:marido])
+    FAMILY[spouse=+,1M=+](#2,#3)
+
+//Se a palavra é mulher, então o segundo argumento é do sexo feminino.
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:mulher] )
+    FAMILY[spouse=+,2F=+](#3,#2)
+
+//Se a palavra é esposo, então o primeiro argumento é do sexo masculino.
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:esposo,masc] )
+    FAMILY[spouse=+, 1M=+](#2,#3)
+
+//Se a palavra é esposa, então o segundo argumento é do sexo feminino.
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:esposo,fem] )
+    FAMILY[spouse=+,2F=+](#3,#2)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            COUSIN                                                                  //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é primo, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:primo,masc,sg])
+    FAMILY[cousin=+,1M=+](#2,#3)
+
+//Se a palavra é prima(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:primo,fem])
+    FAMILY[cousin=+,1F=+](#2,#3)
+
+//Se a palavra está no plural não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:primo,pl,masc])
+    FAMILY[cousin=+](#2,#3)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            BROTHER/SISTER-IN-LAW                                                   //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é cunhado, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:cunhado,masc,sg])
+    FAMILY[brother-in-law=+,1M=+](#2,#3)
+
+//Se a palavra é cunhada(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:cunhado,fem])
+    FAMILY[brother-in-law=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:cunhado,pl,masc])
+    FAMILY[brother-in-law=+](#2,#3)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            PARENT-IN-LAW                                                           //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é sogro, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sogro,masc,sg])
+    FAMILY[parent-in-law=+,1M=+](#2,#3)
+
+//Se a palavra é sogra(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sogro,fem])
+    FAMILY[parent-in-law=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sogro,pl,masc])
+    FAMILY[parent-in-law=+](#2,#3)
+
+//Se a palavra é genro, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:genro,sg])
+    FAMILY[parent-in-law=+,2M=+](#3,#2)
+
+//Se a palavra está no plural, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:genro,pl])
+    FAMILY[parent-in-law=+,2M=+](#3,#2)
+
+//Se a palavra é nora(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:nora])
+    FAMILY[parent-in-law=+,2F=+](#3,#2)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            GODFATHER/GODMOTHER                                                     //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é padrinho, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:padrinho,sg])
+    FAMILY[godfather=+,1M=+](#2,#3)
+
+//Se a palavra está no plural não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:padrinho,pl])
+    FAMILY[godfather=+](#2,#3)
+
+//Se a palavra é madrinha(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:madrinha])
+    FAMILY[godfather=+,1F=+](#2,#3)
+
+//Se a palavra é afilhado, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:afilhado,masc,sg])
+    FAMILY[godfather=+,2M=+](#3,#2)
+
+//Se a palavra é afilhada(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:afilhado,fem])
+    FAMILY[godfather=+,2F=+](#3,#2)
+
+//Se a palavra está no plural não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:afilhado,pl,masc])
+    FAMILY[godfather=+](#3,#2)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            GRAND-UNCLE                                                             //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Se a palavra é tio-avô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-avô,masc,sg])
+    FAMILY[grand-uncle=+,1M=+](#2,#3)
+
+//Se a palavra é tia(s)-avó(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-avô,fem])
+    FAMILY[grand-uncle=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-avô,pl,masc])
+    FAMILY[grand-uncle=+](#2,#3)
+
+//Se a palavra é tio-bisavô, então o primeiro argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-bisavô,masc,sg])
+    FAMILY[grand-uncle=+,1M=+](#2,#3)
+
+//Se a palavra é tia(s)-bisavó(s), então o primeiro argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-bisavô,fem])
+    FAMILY[grand-uncle=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-bisavô,pl,masc])
+    FAMILY[grand-uncle=+](#2,#3)
+
+//Se a palavra é tio-trisavô, então o primeiro argumento é do sexo masculino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-trisavô,masc,sg])
+//  FAMILY[grand-uncle=+,1M=+](#2,#3)
+
+//Se a palavra é tia(s)-trisavó(s), então o primeiro argumento é do sexo feminino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-trisavô,fem])
+//  FAMILY[grand-uncle=+,1F=+](#2,#3)
+
+//Se a palavra está no plural, não se pode concluir nada
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:tio-trisavô,pl,masc])
+//  FAMILY[grand-uncle=+](#2,#3)
+
+//Se a palavra é sobrinho-neto, então o segundo argumento é do sexo masculino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-neto,masc,sg])
+    FAMILY[grand-uncle=+,2M=+](#3,#2)
+
+//Se a palavra é sobrinha(s)-neta(s), então o segundo argumento é do sexo feminino
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-neto,fem])
+    FAMILY[grand-uncle=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-neto,pl,masc])
+    FAMILY[grand-uncle=+](#3,#2)
+
+//Se a palavra é sobrinho-bisneto, então o segundo argumento é do sexo masculino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-bisneto,masc,sg])
+//  FAMILY[grand-uncle=+,2M=+](#3,#2)
+
+//Se a palavra é sobrinha(s)-bisneta(s), então o segundo argumento é do sexo feminino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-bisneto,fem])
+//  FAMILY[grand-uncle=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-bisneto,pl,masc])
+//  FAMILY[grand-uncle=+](#3,#2)
+
+//Se a palavra é sobrinho-trisneto, então o segundo argumento é do sexo masculino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-trisneto,masc,sg])
+//  FAMILY[grand-uncle=+,2M=+](#3,#2)
+
+//Se a palavra é sobrinha(s)-trisneta(s), então o segundo argumento é do sexo feminino
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-trisneto,fem])
+//  FAMILY[grand-uncle=+,2F=+](#3,#2)
+
+//Se a palavra está no plural, não se pode concluir nada
+//  if( ^FAMILY(#1,#2,#3) & #1[lemma:sobrinho-trisneto,pl,masc])
+//  FAMILY[grand-uncle=+](#3,#2)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//                            GENDER                                                                  //
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  if( ^FAMILY(#1,#2) & ~FAMILY[1M](#1,#2) & ~FAMILY[1F](#1,#2) & #1[masc] & ~#1[fem])
+       FAMILY[1M=+](#1,#2)
+
+  if( ^FAMILY(#1,#2) & ~FAMILY[2M](#1,#2) & ~FAMILY[2F](#1,#2) & #2[masc] & ~#2[fem])
+       FAMILY[2M=+](#1,#2)
+
+  if( ^FAMILY(#1,#2) & ~FAMILY[1M](#1,#2) & ~FAMILY[1F](#1,#2) & #1[fem] & ~#1[masc])
+       FAMILY[1F=+](#1,#2)
+
+  if( ^FAMILY(#1,#2) & ~FAMILY[2M](#1,#2) & ~FAMILY[2F](#1,#2) & #2[fem] & ~#2[masc])
+       FAMILY[2F=+](#1,#2)
+

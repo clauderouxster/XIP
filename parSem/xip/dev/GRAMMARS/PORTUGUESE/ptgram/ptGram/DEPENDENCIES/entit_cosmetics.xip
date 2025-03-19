@@ -1,0 +1,472 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : entit_cosmetics.xip                                         !
+//!   author     : C. Hagege                                                   !
+//!   Date       : 2007/Novem                                                  !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!                                                                            !
+//!                                                                            !
+//!                                                                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/17
+// Changed all "company" occurrences to "SEM-Hinstitution" in order to comply with the new set of directives.
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+//DCO, 2010/08/22
+// Changed all "local" occurrences to "location"
+
+DependencyRules:
+
+//cleaning rules - have to check because seems to have problems with feature percolation
+if ( ^NE[pn](#1) )
+   NE[pn=~](#1)
+
+//cleaning rules - for the VALOR entities
+//
+if ( ^NE[SEM-volume](#1) | ^NE[SEM-length](#1) | ^NE[SEM-mass](#1) | ^NE[SEM-volume](#1) | ^NE[SEM-frequence](#1)
+     ^NE[SEM-area](#1) | ^NE[SEM-electcurrent](#1) | ^NE[SEM-electcharge](#1) |
+     ^NE[SEM-electcapacitance](#1)  | ^NE[SEM-electresistance](#1) | ^NE[SEM-electconductance](#1) |
+     ^NE[SEM-electpotencial](#1) | ^NE[SEM-pressure](#1) | ^NE[SEM-energy](#1) | ^NE[SEM-temperature](#1) |
+     ^NE[SEM-luminointensity](#1)  | ^NE[SEM-luminoflux](#1) | ^NE[SEM-illuminance](#1) |
+     ^NE[SEM-substance](#1) | ^NE[SEM-force](#1) | ^NE[SEM-speed](#1) | ^NE[SEM-power](#1) |
+     ^NE[SEM-angle](#1) | ^NE[SEM-infostorage](#1) | ^NE[SEM-density](#1) | ^NE[SEM-flowrate](#1) |
+     ^NE[SEM-inercia](#1) | ^NE[SEM-massforce](#1)  | ^NE[SEM-percentage](#1)   | ^NE[time](#1) | ^NE[SEM-measother](#1) )
+   NE[quantity=+, SEM-length=~, SEM-mass=~, SEM-volume=~, SEM-area=~, SEM-electcurrent=~, SEM-electcharge=~,
+      SEM-electcapacitance=~, SEM-electresistance=~, SEM-electconductance=~, SEM-electpotencial=~,
+      SEM-pressure=~, SEM-energy=~, SEM-temperature=~, SEM-luminointensity=~, SEM-luminoflux=~, SEM-illuminance=~,
+      SEM-substance=~, SEM-force=~, SEM-speed=~, SEM-power=~, SEM-angle=~, SEM-infostorage=~, SEM-density=~, SEM-flowrate=~,
+      SEM-inercia=~, SEM-massforce=~, SEM-percentage=~, time=~, SEM-frequence=~, SEM-measother=~ ](#1)
+
+if ( ^NE[num, quantity:~, classific:~, quant:~](#1[time:~]) )
+   NE[quant=+](#1)
+
+
+// delete feature DATE on dependency if we also have feature HORA
+if ( ^NE[t-date,t-hora](#1) )
+   NE[t-date=~](#1)
+
+
+// change TIPO:abstraccao, SUBTIPO:plano em TIPO:obra, SUBTIPO:plano
+//if ( ^NE[abstraccao,plano](#1) )
+// NE[abstraccao=~,culture=+](#1)
+
+
+// Default
+// If we have a proper noun that is not typed, it will be considered as NE
+//| NP{?*[noun:~],noun#1[proper,maj,last]};PP{?+[noun:~],#1[proper,maj,last]} |
+// if ( ~NE(#1) )
+// NE(#1)
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// NORMALIZATION (TO CREATE XML TAGS USED WITH -NER OPTION)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/02/11
+// if there is an AMOUNT-QUANTITY NE followed by a PP, then we delete the NE dependency and we create a new one, which
+// encompasses the PP. Example: "<EM>centenas de milhares</EM> de pessoas" becomes "<EM>centenas de milhares de pessoas</EM>"
+// There needs to be a QUANTD relation between the PP and the previous node.
+//| ?#4{ NP#1{num#2}, PP#3{prep[lemma:"de"], (art[def]), noun} } |
+//if ( NE$1[quant,num](#1) & ~NE(#3) & QUANTD(?,#2) )
+// ~$1, NE[quant=+,num=+](#4)
+
+////////////////////////////////////////////////////////////////
+// CATEGORY: AMOUNT
+// TYPES: QUANTITY, CURRENCY, CLASSIFICATION and SPORTS_RESULTS
+// SUBTYPES: none
+///////////////////////////////////////////////////////////////
+
+|#1| if ( NE[quant,classific](#1) & #1[env1=+] ) ~
+|#1| if ( NE[quant,curr](#1) & #1[env2=+] ) ~
+|#1| if ( NE[quant,num](#1) & #1[env3=+] ) ~
+|#1| if ( NE[quant,quantity](#1) & #1[env3=+] ) ~
+|#1| if ( NE[quant,classific:~,curr:~,num:~,quantity:~,sports_results:~,SEM-stock:~,SEM-stockindex:~](#1) & #1[env4=+] ) ~
+|#1| if ( NE[quant,sports_results](#1) & #1[env5=+] ) ~
+|#1| if ( NE[quant,SEM-stock,SEM-stockindex](#1) & #1[env6=+] ) ~
+|#1| if ( NE[quant,SEM-stock,SEM-stockindex:~,curr:~](#1) & #1[env7=+] ) ~
+
+//////////////////////////////////
+// CATEGORY: HUMAN
+// TYPE: INDIVIDUAL
+// SUBTYPES: PERSON and POSITION
+/////////////////////////////////
+
+|#1| if ( NE[people,cargo](#1) & #1[enp1=+]) ~
+|#1| if ( NE[people,individual](#1) & #1[enp3=+]) ~
+
+///////////////////////////////////////////////////
+// CATEGORY: HUMAN
+// TYPE: COLLECTIVE
+// SUBTYPES: ADMINISTRATION, INSTITUTION and GROUP
+//////////////////////////////////////////////////
+
+|#1| if ( NE[collective,institution,met-inst-to-ind:~,met-inst-to-loc:~](#1) & #1[eng1=+] ) ~
+|#1| if ( NE[collective,administration,met-admin-to-ind:~](#1) & #1[eng2=+] ) ~
+|#1| if ( NE[collective,institution:~,administration:~,group:~](#1) & #1[eng3=+] ) ~
+|#1| if ( NE[group](#1) & #1[eng4=+] ) ~
+
+/////////////////////////////////////////////////////////////////
+// CATEGORY: LOCATION
+// TYPE: CREATED
+// SUBTYPES: COUNTRY, DIVISION, REGION, CONSTRUCTION and STREET
+////////////////////////////////////////////////////////////////
+
+// COUNTRY
+|#1| if ( NE[location,admin_area,country,met-country-to-coll:~](#1) & #1[enl1=+] ) ~
+
+// DIVISION
+|#1| if ( NE[location,admin_area,city,met-div-to-coll:~](#1) & #1[enl2=+] ) ~
+|#1| if ( NE[location,admin_area,state,met-div-to-coll:~](#1) & #1[enl2=+] ) ~
+|#1| if ( NE[location,admin_area,division,met-div-to-coll:~](#1) & #1[enl2=+] ) ~
+
+// REGION
+//DCO, 2010/09/13
+// Os continentes são regiões, não divisões, logo têm que passar para enl3 (LOCATION CREATED REGION)
+|#1| if ( NE[location,admin_area,continent,met-reg-to-coll:~](#1) & #1[enl3=+] ) ~
+|#1| if ( NE[location,admin_area,region,met-reg-to-coll:~](#1) & #1[enl3=+] ) ~
+
+// STREET
+|#1| if ( NE[location,admin_area,street](#1) & #1[enl4=+] ) ~
+
+// CONSTRUCTION
+|#1| if ( NE[location,admin_area,building](#1) & #1[enl5=+] ) ~
+
+///////////////////////////////////////////////////////////////////////////////
+// CATEGORY: LOCATION
+// TYPE: PHYSICAL
+// SUBTYPES: WATERCOURSE, WATERMASS, RELIEF, PLANET, ISLAND and NATURALREGION
+//////////////////////////////////////////////////////////////////////////////
+
+|#1| if ( NE[location,geographic,watercourse](#1) & #1[enl6=+] ) ~
+|#1| if ( NE[location,geographic,watermass](#1) & #1[enl7=+] ) ~
+|#1| if ( NE[location,geographic,island](#1) & #1[enl8=+] ) ~
+|#1| if ( NE[location,geographic,relief](#1) & #1[enl9=+] ) ~
+|#1| if ( NE[location,geographic,celestialbody](#1) & #1[enl10=+] ) ~
+|#1| if ( NE[location,geographic,region-natural](#1) & #1[enl11=+] ) ~
+|#1| if ( NE[location,geographic,geo-other](#1) & #1[enl12=+] ) ~
+
+////////////////////////////////
+// CATEGORY: LOCATION
+// TYPE: VIRTUAL
+// SUBTYPES: SITE and DOCUMENTS
+////////////////////////////////
+
+//DCO, 2011/01/17
+// Estas já não existem ...
+//|#1| if ( NE[location,virtual,loc-obra](#1) & #1[enl14=+] ) ~
+//|#1| if ( NE[location,virtual,comsocial](#1) & #1[enl15=+] ) ~
+//|#1| if ( NE[location,virtual,geo-other](#1) & #1[enl16=+] ) ~
+
+|#1| if ( NE[location,virtual,site](#1) & #1[enl13=+] ) ~
+|#1| if ( NE[location,virtual,documents](#1) & #1[enl21=+] ) ~
+
+//DCO, 2011/01/17
+// As referências bíblicas e os Decretos-Lei são LOCAL VIRTUAL DOCUMENTOS
+|#1| if ( NE[location,virtual,biblical](#1) & #1[enl21=+] ) ~
+|#1| if ( NE[location,virtual,legal](#1) & #1[enl21=+] ) ~
+
+//DCO, 2011/01/17
+// Novos subtipos: LOCAL VIRTUAL [EMAIL,TEL-FAX,IP]
+|#1| if ( NE[location,virtual,email](#1) & #1[enl22=+] ) ~
+|#1| if ( NE[location,virtual,phone-fax](#1) & #1[enl23=+] ) ~
+|#1| if ( NE[location,virtual,ip](#1) & #1[enl24=+] ) ~
+
+////////////////////////////////
+// CATEGORY: LOCATION
+// TYPE: NONE
+// SUBTYPES: NONE
+// USED: As a general tag
+////////////////////////////////
+
+|#1| if ( NE[location,admin_area,country:~,city:~,division:~,state:~,continent:~,region:~,street:~,building:~,documents:~,biblical:~,email:~,region-natural:~,met-inst-to-loc:~](#1) & #1[enl17=+] ) ~
+|#1| if ( NE[location,geographic,admin_area:~,watercourse:~,watermass:~,island:~,relief:~,celestialbody:~,region-natural:~,geo-other:~,documents:~,biblical:~,email:~](#1) & #1[enl18=+] ) ~
+|#1| if ( NE[location,virtual,site:~,loc-obra:~,comsocial:~,geo-other:~,documents:~,biblical:~,email:~,phone-fax:~,legal:~,ip:~](#1) & #1[enl19=+] ) ~
+|#1| if ( NE[location,admin_area:~,geographic:~,virtual:~,documents:~,biblical:~,email:~](#1) & #1[enl20=+] ) ~
+
+/////////////////////////////////////////
+//DCO, 2011/01/17
+//
+// CATEGORY: DATUM
+// TYPES: NIB, IBAN, BIC-SWIFT
+//        ISBN, ISSN, MATRICULA, OUTROS
+// SUBTYPES: NONE
+////////////////////////////////////////
+
+|#1| if ( NE[SEM-datum-nib](#1) & #1[end1=+] ) ~
+|#1| if ( NE[SEM-datum-iban](#1) & #1[end2=+] ) ~
+|#1| if ( NE[SEM-datum-bic](#1) & #1[end3=+] ) ~
+|#1| if ( NE[SEM-datum-isbn](#1) & #1[end4=+] ) ~
+|#1| if ( NE[SEM-datum-issn](#1) & #1[end5=+] ) ~
+|#1| if ( NE[SEM-datum-plate](#1) & #1[end6=+] ) ~
+|#1| if ( NE[SEM-datum-other](#1) & #1[end7=+] ) ~
+
+////////////////////////////////////////////////////////
+//
+// THIS CATEGORY NO LONGER EXISTS
+// COMPETITION is now EVENT ORGANIZED SPORTS
+// ARENA       is now LOCATION ADMIN_AREA BUILDING
+// SPORT       is now DISCIPLINE SPORTS
+// CLAQUE      is now HUMAN COLLECTIVE GROUP
+// AWARD       is now AWARD SPORTS
+//
+//DCO, 2011/02/04
+//
+// CATEGORY: DESPORTO
+// TYPES: COMPETICAO, ARENA, MODALIDADE, CLAQUE, PREMIO
+//
+// SUBTYPES: NONE
+////////////////////////////////////////////////////////
+
+//|#1| if ( NE[SEM-sport-comp](#1) & #1[ens1=+] ) ~
+//|#1| if ( NE[SEM-sport-arena](#1) & #1[ens2=+] ) ~
+//|#1| if ( NE[SEM-sport-sport](#1) & #1[ens3=+] ) ~
+//|#1| if ( NE[SEM-sport-claq](#1) & #1[ens4=+] ) ~
+//|#1| if ( NE[SEM-sport-award](#1) & #1[ens5=+] ) ~
+
+/////////////////////
+// METONYMY
+/////////////////////
+
+//|#1| if ( NE[met-inst-to-ind](#1) & #1[enmet1=+] ) ~
+//|#1| if ( NE[met-country-to-coll](#1) & #1[enmet2=+] ) ~
+//|#1| if ( NE[met-div-to-coll](#1) & #1[enmet3=+] ) ~
+//|#1| if ( NE[met-reg-to-coll](#1) & #1[enmet4=+] ) ~
+//|#1| if ( NE[met-inst-to-loc](#1) & #1[enmet5=+] ) ~
+//|#1| if ( NE[met-admin-to-ind](#1) & #1[enmet6=+] ) ~
+
+//////////////////////////////////////////////
+// OLD NORMALIZATION (FROM THE TIME OF HAREM)
+/////////////////////////////////////////////
+
+//|#1[ena1=+]| if ( NE[abstraccao,disciplina](#1) ) ~
+//|#1| if ( NE[abstraccao,state](#1) & #1[ena2=+] ) ~
+//|#1[ena3=+]| if ( NE[abstraccao,ideia](#1) ) ~
+//|#1| if ( NE[abstraccao,nome](#1) & #1[ena4=+] ) ~
+
+
+////|#1[eno1=+]| if ( NE[culture,arte](#1) ) ~
+//|#1| if ( NE[culture,plano](#1) & #1[eno2=+] ) ~
+//|#1| if ( NE[culture,reproduzida](#1) & #1[eno3=+] ) ~
+//|#1| if ( NE[culture,inquote](#1) & #1[eno3=+] ) ~
+//|#1| if ( NE[culture,plano:~,reproduzida:~,inquote:~](#1) & #1[eno4=+] ) ~
+//|#1[eno4=+]| if ( NE[culture,???????](#1) ) ~
+
+
+//|#1| if ( NE[coisa,objecto](#1) & #1[enc1=+] ) ~
+//|#1[enc2=+]| if ( NE[coisa,substancia](#1) ) ~
+//|#1[enc3=+]| if ( NE[coisa,num](#1) ) ~
+//|#1[enc4=+]| if ( NE[coisa,quantity](#1) ) ~
+
+//////////
+// TEMPO
+/////////
+
+// TIPO=TEMPO_CALEND   SUBTIPO=DATA
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent2=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent3=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent4=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent4=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent5=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy:~](#1) & #1[ent6=+] ) ~
+
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent7=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent8=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent9=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent9=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent10=+] ) ~
+|#1| if ( NE[tempo,t-date,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy](#1) & #1[ent11=+] ) ~
+
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent13=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent14=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent15=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent15=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent16=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy:~](#1) & #1[ent17=+] ) ~
+
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent18=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent19=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent20=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent20=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent21=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy](#1) & #1[ent22=+] ) ~
+
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent24=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent25=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent26=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent26=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent27=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy:~](#1) & #1[ent28=+] ) ~
+
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent29=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent30=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent31=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent31=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent32=+] ) ~
+|#1| if ( NE[tempo,t-date,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after,t-fuzzy](#1) & #1[ent33=+] ) ~
+
+
+// TIPO=TEMPO_CALEND   SUBTIPO=INTERVALO
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent34=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy](#1) & #1[ent35=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent36=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy](#1) & #1[ent37=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2:~, t-ref-enunc2:~, t-ref-text2 , t-fuzzy:~](#1) & #1[ent38=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut, t-ref-enunc:~, t-ref-text:~, t-absolut2:~, t-ref-enunc2:~, t-ref-text2 , t-fuzzy](#1) & #1[ent39=+] ) ~
+
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent40=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy](#1) & #1[ent41=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent42=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy](#1) & #1[ent43=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2:~, t-ref-enunc2:~, t-ref-text2 , t-fuzzy:~](#1) & #1[ent44=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc, t-ref-text:~, t-absolut2:~, t-ref-enunc2:~, t-ref-text2 , t-fuzzy](#1) & #1[ent45=+] ) ~
+
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent46=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2, t-ref-enunc2:~, t-ref-text2:~, t-fuzzy](#1) & #1[ent47=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy:~](#1) & #1[ent48=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2:~, t-ref-enunc2, t-ref-text2:~, t-fuzzy](#1) & #1[ent49=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2:~, t-ref-enunc2:~, t-ref-text2, t-fuzzy:~](#1) & #1[ent50=+] ) ~
+|#1| if ( NE[tempo,t-interval, t-absolut:~, t-ref-enunc:~, t-ref-text, t-absolut2:~, t-ref-enunc2:~, t-ref-text2, t-fuzzy](#1) & #1[ent51=+] ) ~
+
+
+// TIPO=TEMPO_CALEND   SUBTIPO=COMPLEXO
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent53=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent54=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent55=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent56=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent57=+] ) ~
+
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent58=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent59=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent60=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent61=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-absolut,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent62=+] ) ~
+
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent64=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent65=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent66=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent67=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent68=+] ) ~
+
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent69=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent70=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent71=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent72=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-enunc,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent73=+] ) ~
+
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy:~](#1) & #1[ent75=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent76=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent77=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy:~](#1) & #1[ent78=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy:~](#1) & #1[ent79=+] ) ~
+
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before,t-ref-simult:~,t-ref-after:~,t-fuzzy](#1) & #1[ent80=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent81=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent82=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before,t-ref-simult,t-ref-after:~,t-fuzzy](#1) & #1[ent83=+] ) ~
+|#1| if ( NE[tempo,t-complex,t-ref-text,t-ref-before:~,t-ref-simult:~,t-ref-after,t-fuzzy](#1) & #1[ent84=+] ) ~
+
+// TIPO=TEMPO_CALEND   SUBTIPO=RESIDUAL
+|#1| if ( NE[tempo,t-residual](#1) & #1[ent85=+] ) ~
+
+// TIPO=DURACAO
+|#1| if ( NE[tempo,t-duration, t-fuzzy:~](#1) & #1[ent92=+] ) ~
+|#1| if ( NE[tempo,t-duration, t-fuzzy](#1) & #1[ent87=+] ) ~
+|#1| if ( NE[tempo,t-duration-interval, t-fuzzy:~](#1) & #1[ent93=+] ) ~
+|#1| if ( NE[tempo,t-duration-interval, t-fuzzy](#1) & #1[ent88=+] ) ~
+
+// TIPO=FREQUENCIA
+|#1| if ( NE[tempo,t-frequency, t-fuzzy:~](#1) & #1[ent89=+] ) ~
+|#1| if ( NE[tempo,t-frequency, t-fuzzy](#1) & #1[ent90=+] ) ~
+// TIPO=GENERICO
+|#1| if ( NE[tempo,t-generico](#1) & #1[ent91=+] ) ~
+
+
+
+
+//DCO, 2011/04/01
+// CATEGORIA: EVENTO
+// TIPO: ORGANIZADO
+// SUBTIPOS: POLITICO, DESPORTIVO, CIENTIFICO, ARTISTICO, OUTRO
+|#1| if ( NE[event,organized,political:~,sports:~,scientific:~,artistic:~,event-other:~](#1) & #1[ene1=+] ) ~
+|#1| if ( NE[event,organized,political](#1) & #1[ene2=+] ) ~
+|#1| if ( NE[event,organized,sports](#1) & #1[ene3=+] ) ~
+|#1| if ( NE[event,organized,scientific](#1) & #1[ene4=+] ) ~
+|#1| if ( NE[event,organized,artistic](#1) & #1[ene5=+] ) ~
+|#1| if ( NE[event,organized,event-other](#1) & #1[ene6=+] ) ~
+// TIPO: NATURAL
+|#1| if ( NE[event,natural](#1) & #1[ene7=+] ) ~
+// EVENTO GERAL, caso não haja TIPO nem SUBTIPO
+|#1| if ( NE[event,organized:~,political:~,sports:~,scientific:~,artistic:~,event-other:~,natural:~](#1) & #1[ene8=+] ) ~
+
+//DCO, 2011/04/04
+// CATEGORIA: PREMIO
+|#1| if ( NE[award,sports-award:~,award-other:~](#1) & #1[ena1=+] ) ~
+// TIPO: DESPORTIVO
+|#1| if ( NE[award,sports-award](#1) & #1[ena2=+] ) ~
+// TIPO: OUTRO
+|#1| if ( NE[award,award-other](#1) & #1[ena3=+] ) ~
+
+//DCO, 2011/04/04
+// CATEGORIA: DISCIPLINA
+|#1| if ( NE[discipline,sports-discipline:~,science-discipline:~,art-discipline:~](#1) & #1[endp1=+] ) ~
+// TIPO: DESPORTO
+|#1| if ( NE[discipline,sports-discipline](#1) & #1[endp2=+] ) ~
+// TIPO: CIENCIA
+|#1| if ( NE[discipline,science-discipline](#1) & #1[endp3=+] ) ~
+// TIPO: ARTE
+|#1| if ( NE[discipline,art-discipline](#1) & #1[endp4=+] ) ~
+
+//DCO, 2011/07/07
+// Caso uma entidade esteja duplamente classificada como NE_PEOPLE_INDIVIDUAL e NE_CARGO_PEOPLE, optamos sempre pela primeira, apagando a dependência NE e o traço enp1.
+|#1[enp1,enp3]|
+   if ( NE[people,individual](#1) & NE$1[people,cargo](#1) & #1[enp1=~] )
+      ~$1
+
+//DCO, 2011/07/07
+// Caso uma entidade esteja duplamente classificada como NE_QUANT_NUM e NE_CURR_QUANT, temos a certeza que a errada é a primeira (porque se saiu NE_CURR_QUANT, é porque existe referência a unidade monetária). Assim, damos prioridade sempre a NE_CURR_QUANT
+|#1[env2,env3]|
+   if ( NE[quant,curr](#1) & NE$1[quant,num](#1) & #1[env3=~] )
+      ~$1
+
+//DCO, 2011/03/02
+// If we have either a NP or a PP (which are NEs of the AMOUNT QUANTITY type) followed by a certain PP (see conditions below)
+// then we mark both nodes with special features (cont_entity and end_entity) to allow an annotation expansion, which is
+// done in the XML annotation script (SCRIPTS/latest/xipl2f.pm and SCRIPTS/latest/xipNER.pm).
+//
+// Examples:
+// <EM>milhões</EM> de espectadores becomes <EM>milhões de espectadores</EM>
+// <EM>centenas de milhar de litros</EM> de leite becomes <EM>centenas de milhar de litros de leite</EM>
+//
+// Exceptions:
+// O avião está <EM>a 100 m</EM> de altitude remains the same.
+// O avião tem <EM>100 m</EM> de comprimento remains the same.
+// etc.
+//
+| NP#1[cont_entity=+]{?*, num;?[SEM-unitype,time:~,t-meas:~,t-focus:~]} ; PP#1[cont_entity=+]{?*, num;?[SEM-unitype,time:~,t-meas:~,t-focus:~]}, PP#2[end_entity=+]{prep[lemma:"de",maj:~], (art[def]), noun#3[SEM-unitype:~,quant-diogo:~]} |
+if ( NE[quant,num](#1) & ~NE(#2) & ~NE(#3) )
+   NE-CONTINUATION(#1, #2)
+
+
+//NJM+JB, 2012/06/05
+// Example: um uísque sêxtuplo
+//
+| NP#1[cont_entity=+]; PP#1[cont_entity=+], NP#2[end_entity=+]{num[mult,lemma:~"dobro"]} |
+if ( NE[quant,num](#2) & ~NE(#1) )
+   NE-CONTINUATION(#2, #1)
+
+
+//Como apagar um traço
+//
+//|#1[enl2,eng1]| if ( #1[enl2=~] ) ~

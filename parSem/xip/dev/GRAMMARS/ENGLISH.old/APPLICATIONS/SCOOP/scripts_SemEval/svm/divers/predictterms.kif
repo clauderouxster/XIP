@@ -1,0 +1,94 @@
+
+kif:
+
+use("kifliblinear");
+
+//Le fichier du dictionnaire pour garder le lien entre les mots et leurs indexes...
+loadin("/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/terms.kif");
+
+//Notre modele...
+liblinear before("/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/model_terms_before");
+
+vector sentence;
+
+function addwordtopredict(node n) {
+     sentence.push(n);
+}
+
+function getidx(string s) {
+     if (allthewords.test(s))
+          return(allthewords[s]);
+     return(-1);
+}
+
+function addfeatures(int debut,string bs,svector features) {
+     if (debut<0 || debut>=sentence.size())
+          return;
+
+     node n=sentence[debut];
+     if (n==null || n.pos()=="PUNCT")
+          return;
+
+     features.push(bs+n.surface());
+     features.push(bs+n.pos());
+     string s;
+     for (s in n.features())
+          features.push(bs+s);
+}
+
+
+function enrichiravant(ivector courant,int debut) {
+     node n=sentence[debut];
+     if (n==null || n.pos()=="PUNCT")
+          return;
+
+     
+     svector thefeatures;
+     addfeatures(debut,"",thefeatures);
+     //On prend les deux precedents...
+     addfeatures(debut-1,"1_",thefeatures);
+     addfeatures(debut-2,"2_",thefeatures);
+     addfeatures(debut+1,"11_",thefeatures);
+     addfeatures(debut+2,"22_",thefeatures);
+     //sentence[debut]=null;
+     
+     string s;
+     int idx;
+     for (s in thefeatures) {
+          idx=getidx(s);
+          if (idx!=-1)
+               courant.push(idx);
+     }
+}
+
+function predictterms() {
+     vector donnees;
+     fvector labels=[];
+     iftreemap imd;
+     node n;
+     int i,idx;
+     ivector features;
+     vector reponse;
+
+     for (n in sentence) {
+          features.clear();
+          enrichiravant(features,i);
+          imd.clear();
+          for (idx in features)
+               imd[idx]=1;
+          donnees=[imd];
+          reponse=before.predict(donnees,true,true);
+          idx=reponse[0];
+          println("Avant:",n.surface(),reponse[-1]);
+          
+
+
+          //Three possible values: 0=not a term	1=begin	2=end
+          if (idx==1)
+               n.setfeature("beginterm","+");
+          elif (idx==2)
+               n.setfeature("endterm","+");
+     }
+
+     sentence.clear();
+}

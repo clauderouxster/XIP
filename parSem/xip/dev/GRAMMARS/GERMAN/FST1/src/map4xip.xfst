@@ -1,0 +1,131 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		(x)fst
+# CONTENT:	mappings of features for XIP 
+# AUTHOR:	Anne Schiller
+# DATE:		10-Dec-2008
+# -------------------------------------------------------------------------
+# USAGE: 	fst -s lexicon.fst -l [ThisFile]
+# -------------------------------------------------------------------------
+
+# NOTES:
+# -  XIP requires the following input format:
+#	word <tab> lemma <tab> tags
+#    where tags must start with a "+" and must not be mixed with normal characters
+# - tags are interpreted from left to right,
+#   derivational tags must therefore be removed or renamed
+
+print size
+define LEX
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+
+read regex SIG & [ %+ ?+ ];
+multi char sigma net
+define MORTAG
+
+read regex SIG & [ %^ ?+ ];
+multi char sigma net
+define MARKER
+
+define CHAR	SIG & ? ;
+
+
+# derivation and compound markers
+define DRV   "^{" | "^}" | "^]"  ;
+define SEP   "^=" ;
+define CPD   ["^#" | "^-" ];
+
+# new tags:
+define NEWTAG	[ %+NAdj | %+NInf ];
+
+# boundary for moving tags
+define ANYTAG   MORTAG | NEWTAG ;
+define CONV	%^%] ;
+define DTAG	ANYTAG* DRV ;
+
+define FUGE	"^/" (e) [s|n] ;
+
+set flag-is-epsilon on
+
+
+define MAP1 [
+# move some derivational markers
+	[..] -> %+PPres || %+PPres DTAG [ %+Adj | %+Noun ] _
+.o.	[..] -> %+PPast || %+PPast DTAG [ %+Adj | %+Noun ] _
+.o.	[..] -> %+PPrzu || %+PPrzu DTAG [ %+Adj | %+Noun ] _
+.o.	[..] -> %+NInf	|| %+Inf "^]" %+Noun _
+.o.	[..] -> %+NAdj	|| %+Adj DTAG %+Noun _
+
+.o.	[..] -> %+Card	|| %+Card ANYTAG* DRV CHAR* %+Adj _
+
+# remove others
+.o.	[MORTAG|NEWTAG] -> 0 || _ $[DRV|SEP|CPD|%+Cpd]
+
+].i;
+
+read regex [ MAP1 .o. LEX ];
+print size
+
+set quit-on-fail off
+substitute symbol 0   for "^]" ;
+substitute symbol "}" for "^}" ;
+substitute symbol "{" for "^}" ;
+substitute symbol "=" for "^=" ;
+substitute symbol "/" for "^/" ;
+substitute symbol "#" for "^#" ;
+substitute symbol "-" for "^-" ;
+substitute symbol " " for "^_" ;
+substitute symbol 0   for "^|" ;
+
+define TMP1 %[ %* ;
+define TMP2 %* %] ;
+
+substitute defined TMP1 for "[*" ;
+substitute defined TMP2 for "*]" ;
+
+define LEX
+
+
+define MAP2 [
+
+# remove markers that appear *before* tags
+	MARKER -> 0 || .#. ~$[MORTAG|NEWTAG] _ 
+# add a plus before remaining markers
+.o.	[..] -> %+ || _ MARKER
+].i;
+
+
+read regex [ MAP2 .o. LEX ];
+print size
+define LEX
+
+
+
+define MAP3 [ 
+
+# change tag for infinitive particle 
+    	%+Infzu -> %+CInf     || %+Conj _
+.o.    	%+Izu -> %+Infzu    || %+Ptcl _
+
+# change tag name (otherwise the token consedered as end of sentence!)
+.o. 	%+Sent -> %+SAdv	|| %+Ptcl _
+
+# ordinals
+.o. 	%+Num -> %+Adj 	|| _ [ %+Ord | %+Fract ]  $[%+Sg | %+Pl ]
+
+# change some feature names
+.o. 	%+Ptcl %+Neg -> %+Negat
+].i ;
+
+read regex [ MAP3 .o. LEX ];
+print size
+
+optimize net

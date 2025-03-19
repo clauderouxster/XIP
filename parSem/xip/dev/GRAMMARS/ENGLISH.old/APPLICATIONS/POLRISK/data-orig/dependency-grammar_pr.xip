@@ -1,0 +1,519 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency_loc_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+//******************** HEADS2 *************************
+if (HEAD(#1,#2))
+	HEAD2(#1,#2)
+
+/ HEAD2 in verbal chunks \
+|FV#1{?*,#2[verb,last]}|
+	HEAD2(#2,#1)
+|IV#1{?*,#2[verb,last]}|
+	HEAD2(#2,#1)
+|GV#1{?*,#2[verb,last]}|
+	HEAD2(#2,#1)
+|NFV#1{?*,#2[verb,last]}|
+	HEAD2(#2,#1)
+
+|FV#1{?*,#2[aux,last]}|
+	HEAD2(#2,#1)
+|IV#1{?*,#2[aux,last]}|
+	HEAD2(#2,#1)
+|GV#1{?*,#2[aux,last]}|
+	HEAD2(#2,#1)
+|NFV#1{?*,#2[aux,last]}|
+	HEAD2(#2,#1)
+
+|#1[verb]{?*,#2[last]}|
+	if (HEAD2(#3,#2))
+	HEAD2(#3,#1)
+
+
+// *****************************************
+// les antécédents de where
+|#1, (punct),?{?[first]{#2[first, form:fwhere]}};?[first]{#2[first, form:fwhere]}|
+	if(HEAD2(#3,#1))
+	ANTECEDENT(#3,#2)
+
+|#1[noun];#1[prep], (punct),?{?[first]{#2[first, wh]}};?[first]{#2[first, wh]}|
+	if(HEAD2(#3,#1))
+	ANTECEDENT(#3,#2)
+
+// *** correction des relations EMBED
+
+// les relations EMBED qui dépendent d'interrogatifs wh-
+// que l'antécédent soit exprimé ou non
+/
+if (^EMBED(#1,#2) & MOD[pre](#1,#3[wh]))
+	EMBED[wh=+](#1,#2)
+
+if (MAIN(#2) & MOD[pre](#1,#3[wh]) & #2<#1 & ~EMBED(#1,?))
+	EMBED[wh=+](#1,#2)
+\
+
+if(^EMBED[relativ:~](#1,#2) & $1(#2,#3) & ANTECEDENT(#3,#4) & $2(#1,#4) )
+	EMBED[relativ=+, grpr=+](#1,#2)
+
+|#2[verb], ?*[verb:~], #5;?{?*,#5,?*};?{?*,?{?*,#5,?*},?*};?{?*,?{?*,?{?*,#5,?*},?*},?*}|
+if(MOD[pre](#1,#5[rel]) & ~EMBED(#1,?) & HEAD2(#4,#2))
+	EMBED[relativ=+, grpr=+](#1,#4)
+
+|#2[verb], ?*[verb:~], ?{?*,#5[wh],?*};?{?*,?{?*,#5[wh],?*},?*};?{?*,?{?*,?{?*,#5[wh],?*},?*},?*}, ?*[verb:~], #6[verb]|
+if(~MOD(?,#5) & ~EMBED(#7,?) & HEAD2(#4,#2) & HEAD2(#7,#6))
+	EMBED[wh=+, grpr=+](#7,#4)
+
+// les phrases correspondant à ce schéma ne sont pas toujours bien analysées, à voir
+//if (EMBED(#1,#2) & MOD[pre,sentence](#3,#1) & #2<#3)
+//	TEEST(#2,#1,#3)
+
+
+// un même événement a deux emboîtements : si les mots emboîtants sont tous les deux avant lui, on garde le plus proche
+// Iran must show it is prepared to live up to its obligations .
+//EMBED(live,show) et EMBED(live,is) => EMBED(live,is)
+if (^EMBED(#1,#2) & EMBED(#1,#3) & #2<#3 & #3<#1 & EMBED(#3,#2))
+	~
+
+if (^EMBED(#1,#2) & EMBED(#1,#3) & #2<#3 & #3<#1 & ~EMBED(#3,#2))
+	~, EMBED(#3,#2)
+
+//if (EMBED(#1,#2) & EMBED(#1,#3) & #2<#1 & #1<#3)
+	//TEEST(#1,#3)
+
+// ***
+
+//les compléments qui ont été interprétés à tort comme des compléments de temps (TEMP)
+// la règle n'est peut-être plus nécessaire après modification de la grammaire temporelle
+if (^TEMP(#1,#3) & HEAD2(#2[commonplace],#3))
+	MOD[grpr=+](#1,#2)
+
+//annuler la normalisation des verbes ergatifs, qui pose problème dans la transmission du sujet aux verbes subordonnés
+//if (^OBJ-N(#1,#2) & SUBJ(#1[ergative_a],#2) & SUBJ-N(#1,?[lemme:SOMEONE]))
+//	~
+
+//if (^OBJ-N(#1,#2) & SUBJ(#1[ergative_a],#2) & SUBJ-N(#1,?))
+//	~
+
+//if (SUBJ(#1[ergative_a],#2) & ^SUBJ-N(#1,Pron))
+//	SUBJ-N(#1,#2)
+
+
+// correction : 1 mot est attribut de deux sujets, un des deux sujets a été supprimé à raison dans la grammaire générale, mais la dépendance ATTRIB est restée 
+// s'applique à :
+// On the same subject, Qolamreza Aqazadeh, head of Iran's Atomic Energy Organization, states that if, for example, the Bushehr nuclear power plant were to be attacked by Israel or the United States, Iran is capable of restoring everything in the minimum time.
+if (ATTRIB(#1,#3) & ^ATTRIB(#2,#3) & SUBJATTR(#1,#3) & SUBJATTR(#2,#3) & NUCL[subjcompl](#4,#3) & SUBJ(#4,#1) & ~SUBJ(#4,#2))
+	~
+if (SUBJATTR(#1,#3) & ^SUBJATTR(#2,#3) & NUCL[subjcompl](#4,#3) & SUBJ(#4,#1) & ~SUBJ(#4,#2))
+	~
+
+// marquage des expressions prépositionnelles
+// is on standby to
+if (^PREPD(#1[lemme:standby],  #2[p_on]))
+	PREPD[expr_inf=+, grpr=+](#1,#2)
+
+// corrige l'indication post/pre des relations MOD
+if (^MOD[pre](#1,#2) & #1<#2)
+	MOD[post=+, pre=~, grpr=+](#1,#2)
+
+// reconnaissance du passif dans les formes progressives : beeing determined
+|#3GV{?*, verb#1[form:fbe,prog], verb#2[partpas]}|
+	VDOMAIN[passive=+, grpr=+](#2,#1), NUCL[passive=+, vlink=+, grpr=+](#1,#2)
+
+// le sujet normalisé de ces formes est en fait leur objet
+if (^SUBJ-N(#1,#2) & NUCL[grpr, passive](#3,#1) & ~OBJ-N(#1,?))
+	OBJ-N(#1,#2)
+
+
+//marquage des suites NP-prep et participe_passé-prep
+// permet de traiter, dans les règles de rattachement du sujet de l'infinitif et du progressif, les cas où il n'y a pas de dépendance entre le verbe fini et le verbe non fini à cause d'un adverbe qui s'intercale :
+// to accuse someone of illegally sending equipment / someone is accused of illegally sending equipment
+|#1[noun], prep#2|
+	if(HEAD2(#3,#1))
+	SUCC(#3,#2)
+
+|#1[verb], prep#2|
+	if(HEAD2(#3[partpas],#1))
+	SUCC(#3,#2)
+
+|#1[adj], prep#2|
+	if(HEAD2(#3,#1))
+	SUCC(#3,#2)
+
+// complétives : lorsque deux relations de subordination sont en concurrence, choisir celle qui correspond à une dépendance CONNECTOR
+
+|#1[verb], ?*, #4;?{#4[first]};?{?{#4[first]}}|
+	if(HEAD2(#5,#1) & EMBED(#2,#5) & ^EMBED(#3,#5) & CONNECTOR(#2,#4) & ~CONNECTOR(#3,#4))
+	~
+
+// complétives
+|#1[verb],(?[verb:~])*, #2;?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}}|
+	if(CONNECTOR[complthat](#3,#2) & HEAD2(#4,#1))
+	EMBED[compl=+, grpr=+](#3,#2,#4)
+
+|conj[form:fand], #2;?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}}|
+	if (CONNECTOR[complthat](#3,#2) & ^EMBED(?,#2,?) & EMBED(#4,#5,#6) & #4<#2)
+	EMBED[grpr=+](#3,#2,#4)
+
+if(^EMBED(#1,#2,#3) & ~EMBED(#1,#3))
+	EMBED[grpr=+](#1,#3)
+
+
+//****************** subject of progressive forms
+// les sujets ne sont pas reconnus par la grammaire générale lorsque le verbe dont dépend la forme progressive n'est pas une forme finie
+
+// les verbes à la forme progressive compléments d'un autre verbe
+
+// le sujet de l'infinitif est le sujet du verbe dont il dépend
+
+
+//to avoid making some mistakes
+|#1[verb], #2[verb, prog]|
+	if(HEAD2(#3[sc_ing],#1) & HEAD2(#4,#2) & (SUBJ-N(#3,#5) | SUBJ(#3,#5)) & ~SUBJ-N(#4,#5) & ~POTSUBJ(#4,#5))
+	POTSUBJ(#4,#5), POTMOD(#3,#3,#4)
+
+// quand le sujet de avoid n'est pas encore connu
+|#1[verb], #2[verb, prog]|
+	if(HEAD2(#3[sc_ing],#1) & HEAD2(#4,#2) & ~SUBJ-N(#3,?) & SUBJ(#3,?) & ~SUBJ-N(#4,#5) & ~POTSUBJ(#4,#5))
+	COSUBJ(#4,#3), POTMOD(#3,#3,#4)
+
+
+// Iran is capable of restoring everything
+|prep#6[form:fof], #5[verb, prog]|
+	if(ATTRIB(#1,#2[adj,sc_pof]) & ((NUCL[subjcompl](#3,#2) & MOD(#3,#4[prog])) | SUCC(#2,#6)) & HEAD2(#4,#5) & ~POTSUBJ(#4,#1) & ~SUBJ-N(#4,#1))
+	POTSUBJ(#4,#1), POTMOD(#2,#3,#4), COSUBJ(#4,#3)
+
+// quand le sujet de is n'est pas encore connu
+|prep#6[form:fof], #5[verb, prog]|
+	if(((NUCL[subjcompl](#3,#2[adj,sc_pof]) & MOD(#3,#4[prog])) | SUCC(#2[adj,sc_pof],#6)) & HEAD2(#4,#5) & ~POTSUBJ(#4,?) & ~SUBJ-N(#4,?))
+	POTMOD(#2,#3,#4), COSUBJ(#4,#3)
+
+
+//a reactor capable of producing plutonium
+|prep#6[form:fof], #5[verb, prog]|
+	if(MOD(#1,#2[adj,sc_pof]) & SUCC(#2,#6) & HEAD2(#4,#5) & ~POTSUBJ(#4,#1) & ~SUBJ-N(#4,#1))
+	POTSUBJ(#4,#1), POTMOD(#2,#4)
+
+
+//Iran is years away from building a bomb
+|adv#1[lemme:away], prep#2[sc_pfrom]|
+	if(MOD(#3,#1) & MOD(#3,#4[verb, prog]) & SUBJ-N(#3,#5))
+	POTSUBJ(#4,#5)
+
+// quand le sujet de be n'est aps encore connu
+|adv#1[lemme:away], prep#2[sc_pfrom]|
+	if(MOD(#3,#1) & MOD(#3,#4[verb, prog]) & ~SUBJ-N(#3,?))
+	COSUBJ(#4,#3)
+
+
+//has the intention of doing
+|#1prep[form:fof], #2[verb, prog]|
+	if((SUCC(#3[evnt],#1) | SUCC(#3[phrase_have],#1)) & HEAD2(#4,#2) & (OBJ-N(#5[form:fhave],#3) |OBJ(#5[form:fhave],#3)) & SUBJ(#5,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#4)
+
+//si le sujet de has n'est pas encore connu
+|#1prep[form:fof], #2[verb, prog]|
+	if((SUCC(#3[evnt],#1) | SUCC(#3[phrase_have],#1)) & HEAD2(#4,#2) & (OBJ-N(#5[form:fhave],#3) |OBJ(#5[form:fhave],#3)) & ~SUBJ(#5,?))
+	POTMOD(#5,#4), COSUBJ(#4,#5)
+
+
+// le sujet de l'infinitif est l'objet du verbe dont il dépend
+
+// I see him coming
+// déjà bien analysé à l'actif, pb au passif : coming désambiguïsé comme nom
+|#1[verb], NP#2, (adv), GV#3[prog]|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_ing, cop:~],#1) & HEAD2(#6,#2) & (OBJ-N(#5,#6) | OBJ(#5,#6)) & ~SUBJ-N(#4,#6) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+
+//to accuse someone of sending equipment
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pof],#2)|OBJ(#1[sc_pof],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4)  & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD[prog=+](#1,#1,#3)
+
+//someone is accused of sending equipment
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pof],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD[prog=+](#1,#1,#3)
+
+//si l'objet-N de accused n'est pas encore connu
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pof],#3[verb, prog]) | SUCC(#1[sc_pof],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD[prog=+](#1,#1,#3)
+
+
+//to warn someone against doing
+|prep#7[sc_pagainst], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pagainst],#2)|OBJ(#1[sc_pagainst],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//? someone is warned against doing
+|prep[sc_pagainst], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pagainst],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet-N de warn n'est pas encore connu
+|prep[sc_pagainst], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pagainst],#3[verb, prog]) | SUCC(#1[sc_pagainst],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to charge someone with doing
+|prep[sc_pwith], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pwith],#2)|OBJ(#1[sc_pwith],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+// someone is charged with doing
+|prep[sc_pwith], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pwith],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+//si l'objet de charged n'est pas encore connu
+|prep[sc_pwith], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pwith],#3[verb, prog]) | SUCC(#1[sc_pwith],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to prevent someone from doing
+|prep[sc_pfrom], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pfrom],#2)|OBJ(#1[sc_pfrom],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//someone is prevented from doing
+|prep[sc_pfrom], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pfrom],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet de prevented n'est pas encore connu
+|prep[sc_pfrom], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pfrom],#3[verb, prog]) | SUCC(#1[sc_pfrom],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to blame someone for doing
+|prep[sc_pfor], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pfor],#2)|OBJ(#1[sc_pfor],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+// someone is blamed for doing
+|prep[sc_pfor], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pfor],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet de blamed n'est pas encore connu
+|prep[sc_pfor], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pfor],#3[verb, prog]) | SUCC(#1[sc_pfor],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to congratulate someone on doing
+|prep[sc_pon], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pon],#2)|OBJ(#1[sc_pon],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+// someone is congratulated on doing
+|prep[sc_pon], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pon],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet de blamed n'est pas encore connu
+|prep[sc_pon], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pon],#3[verb, prog]) | SUCC(#1,#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+
+//on rattache une forme progressive en début de phrase au premier verbe principal
+|#1[prog, start], ?*, #2[verb]|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & MAIN(#4) & (SUBJ-N(#4,#5) | SUBJ(#4,#5)) & ~SUBJ-N(#4,#3) & ~ SUBJ(#4,#3) & ~POTSUBJ(#3,#5) & ~SUBJ-N(#3,#5))
+	POTSUBJ(#3,#5)
+
+|#6[prep, start], #1[prog], ?*, #2[verb]|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & MAIN(#4) & (SUBJ-N(#4,#5) | SUBJ(#4,#5)) & ~SUBJ-N(#4,#3) & ~ SUBJ(#4,#3) & ~POTSUBJ(#3,#5) & ~SUBJ-N(#3,#5))
+	POTSUBJ(#3,#5)
+
+
+
+// *** création des relations SUBJ-N (ou OBJ-N) pour les progressifs
+// ils sont créés ici afin que la subordination à plusieurs degrés d'emboîtement soit traitée
+
+if (POTSUBJ(#1,#2) & ~SUBJ-N(#1,#2) & ~SUBJ(#1,#2) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#2)
+
+
+if (POTSUBJ(#1,#2) & ~OBJ-N(#1,#2) & ~OBJ(#1,#2) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#2)
+
+
+//****************** subject of infinitive **************
+// **** possible patterns
+// complément à la grammaire qui notamment ne traite pas les infinitifs régis par des verbes non finis
+
+//to have the right to do
+|NP#1, (adv), IV#2|
+	if ((HEAD2(#3[phrase_have],#1)| HEAD2(#3[evnt],#1)) & HEAD2(#4,#2) & OBJ-N(#5[form:fhave],#3) & (SUBJ(#5,#6) | SUBJ-N(#5,#6)))
+	NOSUBJ(#4,#3), POTSUBJ(#4,#6), POTMOD(#3,#5,#4)
+
+//si le sujet de have n'est pas encore connu
+|NP#1, (adv), IV#2|
+	if ((HEAD2(#3[phrase_have],#1)| HEAD2(#3[evnt],#1)) & HEAD2(#4,#2) & OBJ-N(#5[form:fhave],#3) & ~SUBJ(#5,?) & ~SUBJ-N(#5,?))
+	NOSUBJ(#4,#3), COSUBJ(#4,#5), POTMOD(#3,#5,#4)
+
+
+// They have 30 days to answer
+|NP#1, (adv), IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & TEMP(#5[form:fhave],#1) & SUBJ(#5,#6))
+	NOSUBJ(#4,#3), POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+//si le sujet de have n'est pas encore connu
+|NP#1, (adv), IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & TEMP(#5[form:fhave],#1) & ~SUBJ(#5,?))
+	NOSUBJ(#4,#3), COSUBJ(#4,#5), POTMOD(#5,#5,#4)
+
+// *** suppression des relations erronées
+if(NOSUBJ(#1,#2) & ^SUBJ(#3,#2))
+	~
+if(NOSUBJ(#1,#2) & ^SUBJ-N(#3,#2))
+	~
+if(NOSUBJ(#1,#2) & ^POTSUBJ(#3,#2))
+	~
+
+// They want him to go
+|#1[verb], NP#2, (adv), IV#3|
+	if (HEAD2(#4,#3) & (HEAD2(#5[sc_np_toinf, sc_toinf:~, cop:~],#1) | HEAD2(#5[sc_np_toinf, sc_np_toinf1, cop:~],#1)) & HEAD2(#6[evnt:~, phrase_have:~],#2) & (OBJ-N(#5,#6) | OBJ(#5,#6)) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+
+//si l'objet de want n'est pas encore connu
+|#1[verb], NP#2, (adv), IV#3|
+	if (HEAD2(#4,#3) & (HEAD2(#5[sc_np_toinf, sc_toinf:~, cop:~],#1) | HEAD2(#5[sc_np_toinf, sc_np_toinf1, cop:~],#1)) & HEAD2(#6[evnt:~, phrase_have:~],#2) & ~OBJ-N(#5,?) & ~OBJ(#5,?) & ~SUBJ-N(#4,#6) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	SUBJOBJ(#4,#5), POTMOD(#5,#5,#4)
+
+
+//They deny him the right to go
+|#1[verb], NP#2, NP#3, (adv), IV#4|
+	if(HEAD2(#8[deny=+],#1) & HEAD2(#5,#2) & HEAD2(#6[phrase_have],#3) & HEAD2(#7,#4) & OBJ-N(#8,#6))
+	POTSUBJ(#7,#5), POTMOD(#6,#8,#7)
+
+
+// He is allowed to go
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_toinf, cop:~],#1) & VDOMAIN[passive](#5,?) & (OBJ-N(#5,#2) | SUBJ(#5,#2)) & ~SUBJ-N(#4,?) & ~POTSUBJ(#4,#2))
+	POTSUBJ(#4,#2), POTMOD(#5,#5,#4)
+
+// si l'objet N de allowed n'est pas encore connu
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_toinf, cop:~],#1) & VDOMAIN[passive](#5,?) & ~OBJ-N(#5,?) & ~SUBJ(#5,?) & ~SUBJ-N(#4,?) & ~POTSUBJ(#4,#2))
+	SUBJOBJ(#4,#5), POTMOD(#5,#5,#4)
+
+
+// He wants to go
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_toinf, cop:~],#1) & (SUBJ-N(#5,#2) | SUBJ(#5,#2)) & ~SUBJ-N(#4,#2) & ~SUBJ-N(#4,#2) & ~POTSUBJ(#4,#2) & ~NOSUBJ(#4,#2) )
+	POTSUBJ(#4,#2), POTMOD(#5,#5,#4)
+
+//si le sujet de wants n'est pas encore connu
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_toinf, cop:~],#1) & ~SUBJ-N(#5,?) & ~SUBJ(#5,?) & ~SUBJ-N(#4,#2) & ~SUBJ-N(#4,#2) & ~POTSUBJ(#4,#2) & ~NOSUBJ(#4,#2) )
+	COSUBJ(#4,#5), POTMOD(#5,#5,#4)
+
+
+//It is necessary for him to go
+if(SUBJ-N(#2,#3[form:fit]) & SUBJATTR(#3,#4) & MOD(#2,#5) & (PREPD(#5,?[form:ffor])|PREPD(#5,?[form:fof])) & ((MOD(#5,#1) & HEAD2(#1,?[inf]))|EMBED[infinit](#1,#2)  ) & ~SUBJ-N(#1,?))
+	POTSUBJ(#1,#5), POTMOD(#4,#2,#1)
+
+
+//Russia is likely to sign
+//his country is ready to resume negotiations 
+if(SUBJ-N(#2,#3) & ((NUCL[subjcompl](#2,#4[adj, adjmod:~]) & ~DETD(#4,?))|NUCL[subjcompl](#2,#4[adv])) & (MOD(#2,#1)|MOD(#4,#1)) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & ~POTSUBJ(#1,?))
+	POTSUBJ(#1,#3), POTMOD[infinit=+](#4,#2,#1)
+
+//si le sujet de is n'est pas encore connu
+/
+if(~SUBJ-N(#2,?) & ((NUCL[subjcompl](#2,#4[adj, adjmod:~]) & ~DETD(#4,?))|NUCL[subjcompl](#2,#4[adv])) & (MOD(#2,#1)|MOD(#4,#1)) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & (~POTSUBJ(#1,?)|POTSUBJ(#1,#6) & NOSUBJ(#1,#6)))
+	COSUBJ(#1,#2), POTMOD[infinit=+](#4,#2,#1)
+\
+
+if(NUCL[subjcompl](#2,#4[adj, adjmod:~]) & ~DETD(#4,?) & MOD(#2,#1) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & ~SUBJ-N(#2,?))
+	COSUBJ(#1,#2), POTMOD[infinit=+](#4,#2,#1)
+
+//to be able to change
+if(NUCL[vlink](#1,#2[adj]) & NUCL [modal](#2,#3) & ~SUBJ-N(#3,?))
+	COSUBJ(#3,#1)
+
+//They are on standby to visit the plant
+if (PREPD[expr_inf](#1,#2) & MOD[infinit](#1,#3) & MOD(#4[form:fbe],#1) & SUBJ-N(#4,#5))
+	POTSUBJ(#3,#5), POTMOD[infinit=+](#1,#4,#3)
+
+//si le sujet de are n'est pas encore connu
+if (PREPD[expr_inf](#1,#2) & MOD[infinit](#1,#3) & MOD(#4[form:fbe],#1) & ~SUBJ-N(#4,?))
+	POTSUBJ(#3,#4), POTMOD[infinit=+](#1,#4,#3)
+
+
+//// traduire les relations POTMOD en EMBED
+if (POTMOD[infinit=+](#1,#2,#3) & ~EMBED(#3,#2))
+	EMBED[infinit=+, grpr=+](#3,#2)
+
+//déplacé dans dependency-core- :
+//Iranian plans to build nuclear power plants
+//|#1[noun], IV#2|
+//	if (HEAD2(#3[evnt],#1) & HEAD2(#4,#2) & SUBJ-N(#3,#5) & ~POTSUBJ(#4,#5))
+//	POTSUBJ(#4,#5)
+
+
+
+// *** création des relations SUBJ-N (ou OBJ-N) pour les infinitifs et les progressifs
+if (POTSUBJ(#1,#2) & ~SUBJ-N(#1,#2) & ~SUBJ(#1,#2) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#2)
+
+
+if (POTSUBJ(#1,#2) & ~OBJ-N(#1,#2) & ~OBJ(#1,#2) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#2)
+
+// cas des noms composés (noeud noun construit par règles) : quand une relation SUBJ existe à plusieurs degrés de profondeur, choisir celle qui concerne le noeud le plus bas dans l'arbre (la feuille)
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#2))
+	~
+
+|#2{?*, #3}|
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#4) & HEAD2(#2,#4))
+	~
+
+|#2{?*, ?{?*, #3}}|
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#4) & HEAD2(#2,#4))
+	~
+
+// 2e création des relations SUBJ-N (ou OBJ-N) pour les infinitifs et les progressifs
+// concerne les cas d'emboîtements successifs : le sujet (ou l'objet) du verbe emboîtant a été trouvé entre-temps
+if (COSUBJ(#1,#2) & ~SUBJ-N(#1,?) & ~SUBJ(#1,?) & SUBJ-N(#2,#3) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#3)
+
+if (COSUBJ(#1,#2) & ~OBJ-N(#1,?) & ~OBJ(#1,?) & SUBJ-N(#2,#3) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#3)
+
+if(SUBJOBJ(#1,#2) & ~SUBJ-N(#1,?) & ~SUBJ(#1,?) & OBJ-N(#2,#3) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#3)
+
+if (SUBJOBJ(#1,#2) & ~OBJ-N(#1,?) & ~OBJ(#1,?) & OBJ-N(#2,#3) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#3)
+
+//cette règle provisoire sert à établir une dépendance entre les verbes non finis et les verbes dont ils dépendent afin qu'un CORE-VERB[drive] soit créé 
+//if(POTMOD(#1[adj],#2,#3))
+//	POTMOD(#1,#3)
+
+if(POTMOD(#1,#2,#3) & ~$1(#2,#3))
+	POTMOD(#2,#3)
+
+
+if(^EMBED(#1,#2,#3))
+	~
+

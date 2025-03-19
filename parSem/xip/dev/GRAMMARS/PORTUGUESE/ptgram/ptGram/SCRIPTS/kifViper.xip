@@ -1,0 +1,119 @@
+//Main file to be added in the portuguese.xip grammar
+
+kif:
+
+// ALWAYS CHECK THE PATHS TO THE FILES!
+//
+// THE ORDER MATTERS!!!
+
+//common variables first
+loadin(_paths[1]+"/kifViperVariables.kif");
+
+//then util functions
+loadin(_paths[1]+"/kifUtilFunctions.kif");
+
+// MFS classification
+loadin(_paths[1]+"/kifMFSMap.kif");
+
+// ML classification
+loadin(_paths[1]+"/kifMegamVariables.kif");
+loadin(_paths[1]+"/kifMegamViperMappings.kif");
+loadin(_paths[1]+"/kifMegamStoreDependencies.kif");
+loadin(_paths[1]+"/kifMegamFeatureExtraction.kif");
+loadin(_paths[1]+"/kifMegamPredict.kif");
+
+
+function classifyMFS(node n){
+     //debug
+     //print(mfsMap);
+
+     //acesso ao lemma
+     string lemma=n.lemma(); //more than one value can be returned return(true);
+
+     //features viper
+     vector vipersInNode=getVipersInNode(n);
+
+     //test if lemma exists in the map, if not -> do nothing
+     if(mfsMap.test(lemma)==true){
+
+          //get senses for that lemma
+          vector senses;
+          mfsMap[lemma].split(",",senses);
+
+          if (debugViper==true) {
+               displayNode(n);
+               println("\n");
+               println("  MFS >>> Vipers in node: ",vipersInNode);
+               println("  MFS >>> MFS Vector: ",lemma," ",senses);
+          }
+
+          //remove viper classes until only 1 is left
+          while (vipersInNode.size()>1){
+               //get last sense from vector (least frequent)
+               string remSense=senses.last();
+               senses.pop();
+
+               //if the least frequent sense is in the node remove it
+               if(remSense in vipersInNode){
+                    vipersInNode=vipersInNode & senses; //HORRIBLE! LEFT SIDE MUST BE A SUPER SET OF THE RIGHT SIDE
+                    n.removefeature(remSense);
+                    if (debugViper==true) { println("  MFS >>> Removing ",remSense," remaining: ",getVipersInNode(n)); }
+               }
+
+          }
+
+          if (debugViper==true) { println("\n"); }
+     }
+     else {
+          //report missing verb from the MFS mapa
+          if(debugViper==true) { println("\n"); println("MFS >>> Missing in MFS Map: ",lemma); println("\n");}
+     }
+}
+
+function classifyML(node n){
+     parseMegamModel(n);
+
+     string mlViperClass = predictMegam(n,false);
+
+     //features viper
+     vector vipersInNode=getVipersInNode(n);
+
+     //remove all viper classes and add the one from ML classification
+     while (vipersInNode.size()>0){
+          string viperVal = vipersInNode.last();
+          vipersInNode.pop();
+          n.removefeature(viperVal);
+          if (debugViper==true) { println("  Megam >>> Removing ",viperVal," remaining: ",getVipersInNode(n)); }
+     }
+
+     n.setfeature(mlViperClass,"+");
+     if (debugViper==true) { println("  Megam >>> Adding ",mlViperClass," remaining: ",getVipersInNode(n)); }
+}
+
+//
+// function used to classify a viper node (n)
+// entry point for classification
+//
+function classify(node n) {
+
+     string lemma = n.lemma();
+
+     //test if the file for ML classification exists
+     // if not, then, use the MFS classification
+     if(lemma in megamVerbs){
+          if(debugViper==true) {
+               println("\n");
+               println("===== Classification Post Rules - MEGAM =====");
+               println("\n");
+          }
+          classifyML(n);
+     }
+     else {
+          if(debugViper==true) {
+               println("\n");
+               println("===== Classification Post Rules - MFS =====");
+               println("\n");
+          }
+          classifyMFS(n);
+     }
+}

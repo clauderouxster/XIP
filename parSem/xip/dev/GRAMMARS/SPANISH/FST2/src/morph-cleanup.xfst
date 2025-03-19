@@ -1,0 +1,109 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		(x)fst
+# CONTENT:	modifications of morphological analyzer
+# ENCODING:	UTF8 [€àâáäã]
+# LANGUAGE:	Spanish
+# AUTHOR:	Anne Schiller, Elena Lopez Garcia
+# CREATED:	17-Feb-2006
+# UPDATED:	27-May-2008 (AS: renamed; converted to UTF8)
+# -------------------------------------------------------------------------
+# USAGE: 	fst -s morph-base.fst -l [ThisFile]
+# -------------------------------------------------------------------------
+
+define LEX 
+
+
+# derivation boundary 
+define DB	[ "^|" ] ; 		# derivation marker
+define SB	[ "^|" | "^=" ];	# segment boundary
+
+define SP	"^_";
+
+# ---------------------------------------------------------------------------------
+echo >>> remove proper names that are redefined in special lexicons
+read regex ~$[ %+Prop | %+WordPart ] .o. LEX ;
+
+define LEX ;
+# ---------------------------------------------------------------------------------
+echo >>> remove digits with spaces
+define DIG	$%+Dig .o. LEX .o. $" " ;
+
+define LEX 	LEX - DIG;
+
+# ---------------------------------------------------------------------------------
+echo >>> correct some tags in the lexicon
+
+define MAP [
+
+# add missing category for interrogative
+# e.g.		cómo+Interrog+Man		==>	cómo+Adv+Interrog+Man
+#		cúyo+Interrog+Poss+Masc+Sg	==>	cúyo+Pron+Interrog+Poss+Masc+Sg
+	[..]	-> %+Pron || \[%+Pron] _ %+Interrog %+Poss
+.o.	[..]	-> %+Adv  || \[%+Pron] _ %+Interrog 
+
+
+# correct number of "lo" 
+# e.g.		el+Art+Def+Neut+SP	==> el+Art+Def+Neut+Sg
+
+.o.	%+SP -> %+Sg	|| %+Neut _ 
+
+# possessives
+.o.   %+Pron %+Gen -> %+Det %+Poss
+
+
+];
+
+read regex MAP.i .o. LEX ;
+
+
+define LEX
+
+# ---------------------------------------------------------------------------------
+echo >>> remove some readings
+
+define REMOVE [
+  {españolar} %+Verb ?*
+| {paso} %+Adj ?*
+| {regalo} %+Adj ?*
+| {ve} %+Let ?*
+| {principal} %+Noun ?*
+| {haber} %+Noun ?*
+| {impositiva} %+Noun ?*
+| {listín} %+Adj ?*
+| {dictador} %+Adj ?*
+| {resoltar} %+Verb ?*
+| {recuerdo} %+Adj ?*
+| {envanecimiento} %+Adj ?*
+| {resulta} %+Noun ?*
+| {lisa} %+Noun ?*
+| {cuándo} %+Conj ?*
+| {cuando} %+Adv ?*
+| {facer} %+Verb ?*
+| {romanzar} %+Verb ?*
+| {frutar} %+Verb ?*
+| {pistar} %+Verb ?*
+| {erar} %+Verb ?*
+| {sin} SP {embargo} %+Adv ?*
+| {claro}  SP {que} %+Conj ?*
+| {imprimar} %+Verb ?*
+| {clarar} %+Verb ?*
+| {falsar} %+Verb ?*
+| {culturar} %+Verb ?*
+| {según} %+Adv ?*
+
+];
+
+read regex  ~[REMOVE] .o. LEX ;
+
+define LEX
+
+define COLA ${colar} .o. LEX .o. {cola} ;
+
+read regex LEX - COLA ;
+
+

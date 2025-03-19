@@ -1,0 +1,190 @@
+Notes on creating UIMA annotators based on XIP
+
+Aaron Kaplan August 2007
+
+Table of Contents:
+
+1. Compiling an existing annotator from CVS source
+2. Overview of annotator structure
+3. Developing in eclipse (optional)
+4. Building a PEAR (summary: don't)
+
+
+
+=====================================================================
+1. Compiling an existing annotator from CVS source
+=====================================================================
+
+- Make sure you are using Java 1.6 (e.g. setenv JAVA_HOME
+  /opt/java/jdk1.6) and ant 1.7 (e.g. /opt/ParSem/tools/ant/1.7.0/bin/ant)
+
+- Check out the parSem CVS module.  (You can check out the whole thing
+  if you want, but to avoid getting the entire 800MB directory
+  structure I prefer to do it as follows, replacing FRENCH with the
+  appropriate language for the application:)
+
+        cvs -d /opt/ParSem/cvs_repo co -l parSem/xip/dev/GRAMMARS/FRENCH
+	cd parSem
+	cvs up -d xip/dev/GRAMMARS/FRENCH
+	cvs up -ld xip/dev/uimaxip
+	cvs up -d xip/dev/uimaxip
+
+- Create the file
+
+        parSem/xip/dev/uimaxip/uimaxip_core/common.properties
+
+  where you can customize some build options.  To build on a linux
+  machine on the XRCE network, it should suffice to make
+  common.properties a symbolic link to common.unix.properties.
+
+- Go to the annotator directory, e.g.
+
+        parSem/xip/dev/uimaxip/annotators/InfomagicXipAnnotator
+
+- Compile the annotator:
+
+        ant
+
+- Test it:
+
+        ant test.cvd
+
+  This runs the CAS Visual Debugger, a tool that's part of the UIMA
+  distribution that allows you to enter a text and browse the
+  annotations that it generates.
+
+Note that at this point the annotator is not yet in a form that can be
+delivered outside of XRCE.  For that, see "building a PEAR" below.
+
+
+
+
+=====================================================================
+2. Overview of annotator structure
+=====================================================================
+
+The uimaxip directory has the following structure:
+
+  uimaxip
+    uimaxip_core
+    annotators
+      annotator1
+      annotator2
+      ...
+
+uimaxip_core defines the class UimaXip_Base (which is a subclass of
+the UIMA class JCasAnnotator_ImplBase).  Each annotator defines a
+subclass of UimaXip_Base.
+
+The UimaXip_Base class takes care of receiving a document from the
+UIMA platform, and running XIP on it.  The only code you need to write
+is the methods processToken and processDependency, which will be
+called once for each token and dependency in XIP's output.  Your code
+should create feature structures and add them to the cas as
+appropriate for each token and dependency.
+
+The type system defines the feature structures that you can create.
+It is defined in desc/<annotatorname>.xml.  You can edit this file by
+hand or using an eclipse plugin (see below).
+
+The path to the grammar is defined in build.properties in the
+annotator directory (e.g. annotators/InfomagicXipAnnotator).  The
+grammar must be checked out in the same CVS workspace as the
+annotator.  When you test the annotator in place, i.e. without
+packaging it into a PEAR file, the grammar is loaded directly from the
+original files.  When you create a PEAR file, encrypted versions of
+the grammar files are included in the package, and when the PEAR is
+installed these encrypted files will be used (i.e. the directory
+defined in build.properties will be ignored).
+
+
+
+
+=====================================================================
+3. Developing in eclipse (optional)
+=====================================================================
+
+Using Eclipse is not necessary for any part of the process.  There is
+an eclipse plugin for editing type systems that you may or may not
+prefer to editing the descriptor by hand.
+
+There is an installation of eclipse in /opt/ParSem/tools/eclipse with
+the UIMA plugins already installed.  If you want to use a different
+version of eclipse, then get the plugins from
+/opt/ParSem/tools/uima/<version>/eclipsePlugins .
+
+- Build everything in ant once before trying to build in eclipse.  If
+  you ever do ant clean, build in ant again or eclipse will get
+  confused.  (The problem is that eclipse doesn't know how to create
+  the src-jcasgen directory.)
+
+- If a machine connected to the XRCE network,
+  Windows->Preferences->Java->Build
+  Path->User Libraries->Import, in File Location put
+  parSem/xip/dev/uimaxip/uimaxip_core/eclipse-library-uima-2.2.0.userlibraries
+
+- If on a laptop or a windows machine, instead of the above step,
+  install the UIMA libraries somewhere and create an eclipse library
+  that points to them:
+  windows->Preferences->Java->Build Path->User Libraries->New, select
+  all the jars in the lib directory of the UIMA installation.
+
+- File->Import->General->Existing Projects into Workspace
+
+- Select root directory: .../parSem/xip/dev/uimaxip
+
+- check the boxes for uimaxip_core and the annotator you want to work
+  on.  Leave "Copy projects into workspace" unchecked.
+
+There are some run configurations already defined in the project (go
+to Run->Run..., expand "Java Application), but currently they don't
+work as-is, they need to be adapted for each annotator.  Ignore the
+Document Analyzer and PEAR installer configurations for now.  To make
+a working run configuration for the CVD, make a copy of the "CAS
+visual debugger" run configuration, and make the following changes in
+the copy:
+
+    - on the Arguments tab, under VM arguments, indicate the name of
+      your grm file as follows:
+
+         -Dcom.xerox.xrce.uimaxip.core.grammar.grmfile=/local/foo/parSem/xip/dev/GRAMMARS/FRENCH/BASIC/french_entityOnly.grm
+
+    - still on the Arguments tab, under "Working directory", select
+      "Other" and set it to ${workspace_loc:InfomagicXipAnnotator}
+      (replacing InfomagicXipAnnotator with the name of your
+      annotator.
+
+    - on the Common tab, select "Save as local file".
+
+Launching that run config should now run the CVD with your annotator.
+
+To edit a UIMA type system, find its descriptor in the package
+explorer (it should be under desc/), right-click on it, and select
+Open with->Component Descriptor Editor.
+
+
+
+
+=====================================================================
+4. Building a PEAR
+=====================================================================
+
+For the moment please let me (Aaron) do this, until I have put some
+automated checks in place.  Don't use the eclipse pear generator
+plugin.
+
+Basic steps:
+
+- update the version number in the descriptor
+
+- tag the CVS repository with the annotator name and version number.
+  Remember to tag the annotator code, the uimaxip_core code,
+  shared-type-systems, and the grammar, including GRAMMARS/build.xml.
+
+- generate the encryption key
+
+- ant pear
+
+- delete previous installation
+
+- ant test.pear

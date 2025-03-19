@@ -1,0 +1,146 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb_func.xip
+//! Content:	Disambiguation rules for some specific function words
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	23-Mar-2010
+//!
+//! ENCODING : UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Tagging:
+
+// =========================================================================
+// lexical correction
+1> ?<ignore> = ?<ignore:~>.
+
+// =========================================================================
+// uppercase words
+// (1) Any capitalized word may appear at the beginning of the sentence
+// (2) inside a sentence only nouns and proper names are written with upeprcase
+//     and some other words that are markes "+Upp" in the lexicon
+//     (as for example polite pronoun "Sie" )
+
+// special case: adjectives that are part of a proper name
+//:: die Freie Universität Berlin
+// NOTE: these are analysed as "noun[nadj]"
+
+1> adj<cap,start2:~> = adj<proper=+>,noun | noun |.
+1> adj<cap,start2:~,upp:~,guessed:~> = adj<proper=+>,noun | (adv*[sadv:~], adj[attr])*, noun |.
+1> ?<cap,start2:~,proper:~> = noun, ?<upp,guessed:~>, ?<proper> .
+
+
+// -----------------------------------------------------------------------------
+// word "zu" 
+// -----------------------------------------------------------------------------
+// (1) preposition:
+//:: Er kommt zu Weihnachten. Er kommt zu uns. Er kam bis zu dieser Stelle.
+// (2) adjective modifier
+//:: Er ist zu langsam. Er spielt zu oft falsch.
+//:: mit den zu bezahlenden Optionen
+//:: ALSO: er kommt zu spielenden Kindern
+// (3) ordinal marker (preposition?)
+//:: Sie kommen zu dritt.
+// (4) infinitive particle
+//:: Er verspricht zu kommen. Er kommt herein ohne zu fragen.
+// (5) verb prefix
+//:: Er hört nicht zu. Er geht auf ihn zu.
+// (6) predicative or adverbial (multi-word)
+//:: Die Tür ist zu. Er spielt ab und zu.
+// -----------------------------------------------------------------------------
+
+2> ptcl<lemma:zu> = ptcl<infzu> | verb[with_zu, not_verb:~] |.
+
+2> ptcl<lemma:zu> = ?[infzu:~] | ?[with_zu:~] |.
+2> ptcl<lemma:zu> = ?[mod_adj:~] | ?[adj:~,adv:~] |.
+
+2> ptcl<lemma:zu> = ptcl<mod_adj> | adj[attr,verb:~,dat:~] |.	//:: das sind zu kleine Hosen
+2> ptcl<lemma:zu> = |det | ptcl<mod_adj> | adj[with_zu] |. 	//:: die zu erreichenden Ziele
+2> ptcl<lemma:zu> = prep | adj[attr,dat], noun[dat] |.	   	//:: das passt zu kleinen Hosen
+
+2> adv<lemma:zu,end2> = ptcl<pref>,adv.
+2> adv<lemma:zu> = ptcl<pref>,adv | punct[comma] |.
+
+2> prep<lemma:zu> = ?[adv:~].
+
+
+// -----------------------------------------------------------------------------
+// word "als" 
+// -----------------------------------------------------------------------------
+// (1) subordinating conjunction
+//:: Er kam, als Peter abreiste.
+//:: Peter schreibt schneller, als Klaus liest.
+//:: Als Reiter kamen, floh er.
+// (2) coordinating conjunction
+//:: sowohl Klaus als auch Peter sind da
+// (3) comparison conjunction
+//:: Es sieht aus, als würde er kommen
+// (4) comparison particle:
+//:: Peter ist schneller als Klaus
+// (4) preposition (?):
+//:: Klaus arbeitet als Lehrer.
+//:: Die Sache gilt als sicher.
+//:: Ich schätze ihn als Freund.
+//:: Als Reiter verkeidet er sich nur sonntags.
+//:: Als Chef der Grupper ist er gut.
+// -----------------------------------------------------------------------------
+2> conj<lemma:als> = |punct[comma]| conj[comp] | verb[finite], ? |.	//:: es sieht aus, als käme er
+
+2> conj<lemma:als> = | conj[lemma:sowohl], ?*[conj:~] | conj[coord].
+
+2> conj<lemma:als> = ?[prep:~] | pron[pers] |.
+
+2> conj<lemma:als> = ~| adj[comp];adv[comp], ?*[punct:~,conj:~] | ?[comp:~].
+
+2> conj<lemma:als> = | punct[comma] | conj[subord] | ?*[punct:~], verb[finite] |.
+2> conj<lemma:als,start2> = conj[subord] | ?*[punct:~], verb[finite], punct[comma], verb[finite] |.
+
+// -----------------------------------------------------------------------------
+// word "wie" 
+// -----------------------------------------------------------------------------
+// (1) interrogative adverb
+//:: Wie geht es euch?
+//:: er fragt, wie es ihm ergangen ist.
+//:: Wie groß ist das Teil?
+//:: Er will wissen, wie oft er kommen soll.
+// (2) comparison conjunction
+//:: Peter ist so groß wie Klaus.
+//:: Er hat so viele Bücher wie keiner sonst
+//:: Er rennt wie ein Hase.
+//:: Er sieht aus wie ein Affe. Er sieht wie ein Affe aus.
+//:: Er fliegt schnell wie ein Pfeil.
+//:: Das neue Haus ist so wie das alte.
+// (3) coordinating conjunction
+//:: Männer wie Frauen sind eingeladen.
+//:: Instrumente wie etwa Geigen sind teuer.
+//:: Das gilt in Deutschland wie in Frankreich.
+// (4) subordinating conjunction (?) -> adverb !
+//:: Es kam am Montag, wie er angekündigt hatte.
+
+//2> conj<lemma:wie> = | adv[lemma:so] | conj[comp] .
+//2> conj<lemma:wie> = | adv[lemma:so], adj, ((punct[comma]),adj)*, (noun) | conj[comp] .
+//2> conj<lemma:wie> = | verb[finite,not_verb:~], (adv;adj[pred])* | conj<comp> .
+
+
+2> adv<lemma:wie,start2> = adv | adj[pred];adv;verb[finite] |. 
+2> adv<lemma:wie> = | punct[comma] | adv | adj[pred];adv |.
+
+//2> conj<lemma:wie,start2> = conj<subord>.
+//2> conj<lemma:wie> = | punct[comma] | conj<subord> .
+2> conj<lemma:wie,start2> = adv<wh>.
+2> conj<lemma:wie> = | punct[comma] | adv<wh> .
+
+2> conj<lemma:wie> = ?[adv:~,subord:~].
+
+
+
+
+
+
+// ==============================================================================
+Sequence:
+//:: Intrumente wie etwa Geigen
+3> conj[comp=+] = conj[lemma:wie], adv[mod_wie].

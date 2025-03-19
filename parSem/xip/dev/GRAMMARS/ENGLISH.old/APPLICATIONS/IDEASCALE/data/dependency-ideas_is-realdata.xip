@@ -1,0 +1,524 @@
+
+//Variables:
+
+//xml nd;
+//xml anc;
+//string namexmlnd;
+
+
+Procedures:
+
+testidea() {
+   @_xtd()->Set(nd);
+   xmltag(nd,namexmlnd);
+//   printerr("Testcomment 1:",namexmlnd,"\n");
+   xmlparent(nd,anc);
+   xmltag(anc,namexmlnd);
+//   printerr("Testcomment 2:",namexmlnd,"\n");
+   if (namexmlnd: "idea") {
+//      printerr("Trouve\n");
+      return(1);
+   }
+//   printerr("Echec...\n");
+   return(0);
+}
+  
+
+
+
+
+
+
+DependencyRules:
+
+| #1np{#2} } |
+if ( ^HEAD(#2,#1) )
+   ~.
+
+//PP HEAD
+//PP{with NP{social network website}} 
+//HEAD(website,social network website)
+//HEAD(website,with social network website)
+
+| PP#1{?*, NP{?+}} |
+if ( ^HEAD(#2,#1) )
+   HEAD[pp=+](#2,#1).
+
+//| #1[wh,question=+] |
+//  ~.
+
+| #1[compy] |
+if ( ~COMPY(#1) )
+   COMPY(#1).
+
+| #2[compy=+] |
+if ( $1(#1[compy],#2[idea_feat:~]) )
+   ~.
+
+| #1[compy=+] |
+if ( $1(#1[idea_feat:~],#2[compy]) )
+   ~.
+
+if ( ^$1(#1[idea_feat,explicite:~],#2[compy]) | ^$1(#1[compy],#2[idea_feat,explicite:~]) )
+   $1[ideadep=+](#1,#2).
+
+
+if ( ^$1(#1[conditional],#2[compy]) | ^$1(#1[compy],#2[conditional]) )
+   $1[conditional=+](#1,#2).
+
+if ( ^$1(#1[suggestion],#2[compy]) | ^$1(#1[compy],#2[suggestion]) )
+   $1[suggestion=+](#1,#2).
+
+if ( ^$1(#1[request],#2[compy]) | ^$1(#1[compy],#2[request]) )
+   $1[request=+](#1,#2).
+
+if ( ^$1(#1[need],#2[compy]) | ^$1(#1[compy],#2[need]) )
+   $1[need=+](#1,#2).
+
+if ( ^ARGUMENT[obj](#1[bf],#2[compy]) & ~ARGUMENT[subj](#1,#3) & ~MOD(#4,#1) )
+   ARGUMENT[ideadep=+,request=+](#1,#2).
+
+if ( ^ARGUMENT[obj,ideadep,request](#1,#2) & ARGUMENT[subj](?,?) )
+   ARGUMENT[ideadep=~,request=~](#1,#2).
+
+| IV{?,#1}} | 
+if ( ^ARGUMENT[obj,ideadep,request](#1,#2) )
+   ARGUMENT[ideadep=~,request=~](#1,#2).
+
+//if ( ^OBJ[link,post](#1,#2[compy]) )
+//   OBJ[ideadep=+,request=+](#1,#2).
+
+//if ( ^OBJ[prod,evnt,post](#1,#2[compy]) )
+//   OBJ[ideadep=+,request=+](#1,#2).
+
+if ( ^OBJ[pre](#1[compy],#2[wh]) )
+   OBJ[ideadep=+,request=+](#1,#2).
+
+if ( ^OBJ(#1[form:fdo],#2[compy,noun]) & ~SUBJ-N[pre](#1,#3) )
+   OBJ[ideadep=+,question=+](#1,#2).
+
+if ( ^OBJ(#1[form:fdo],#2[compy,nadj]) & ~SUBJ-N[pre](#1,#3) )
+   OBJ[ideadep=+,question=+](#1,#2).
+
+//Why not develop a system that mirrors this one for insurance claims?
+//MOD_IDEADEP_PRE_RELATIV(develop,Why)
+
+if ( ^$1[ideadep](#1,#2[wh,start]) )
+   $1[question=+](#1,#2)
+
+//if ( ^$1(#1[question],#2[compy]) | ^$1(#1[compy],#2[question]) )
+//   $1[question=+](#1,#2).
+
+| #2[explicite] |
+if ( ^COMPY(#1) )
+   COMPY[ideadep=+](#1).
+
+if ( $1(#1[explicite],#2[lemme:I]) )
+   $1[ideadep=+,explicite=+](#1,#2)
+
+//Potential ideas include using social networking sites to find borrowers.Also look into sharing skip trace information across areas within CEFS
+
+if ( ^SUBJ(#1,#2[explicite]) )
+   SUBJ[ideadep=+,explicite=+](#1,#2).
+   
+
+///////*********conditional, suggestion: auxiliaries*********\\\\\\\\\
+
+
+if ( $1[ideadep](#1[idea_feat],#2) & ^$2(#1,#3) )
+   $2[ideadep=+](#1,#3).
+
+//Starbucks should let local animal rescues
+//SUBJ_PRE(#1should,#2Starbucks)
+//NUCL_VLINK_MODAL(#1should,#3let)
+//OBJ_POST(#3let,#4rescues)
+//HEAD(#4rescues,#5local animal rescues)
+
+if ( SUBJ[ideadep](#1[idea_feat],#2[compy]) & $2(#1,#3) & ARGUMENT[obj](#3,#4) & HEAD[pp](#4,#5) )
+   IDEA(#2,#1,#3,#5).
+
+//I recommend
+
+if ( SUBJ(#1[suggest],#2[lemme:I]) )
+   IDEA[suggestion=+](#1,#2).
+
+if ( SUBJ-N(#1[suggest],#2[lemme:I]) )
+   IDEA[suggestion=+](#1,#2).
+
+if ( ^SUBJ(#1[suggest],#2[lemme:I]) )
+   SUBJ[suggestion=+](#1,#2).
+
+if ( ^SUBJ-N(#1[suggest],#2[lemme:I]) )
+   SUBJ-N[suggestion=+](#1,#2).
+
+
+///////*********request: imperative*********\\\\\\\\\
+
+//Connect Sbux with social network website.
+//OBJ_LINK_POST(#1Connect,#2Sbux)
+//MOD_LINK_SUBCAT_POST(#1Connect,#3website)
+//HEAD(#3website,#4with social network website)
+
+| #1[request=+] |
+if ( OBJ[post](#1,#2[compy]) & MOD[post](#1,#3) & HEAD(#3,#4) )
+   IDEA[request=+](#1,#2,#4).
+
+//Temporarily house client and employee data for companies that are being bought or sold by our customers
+
+//OBJ_IDEADEP_POST(house,client)
+//OBJ_IDEADEP_POST(house,data)
+
+if ( OBJ[ideadep](#1[bf],#2) & ~SUBJ(#1,#3) & ~SUBJ-N(#1,#3) & ~PREPD(#1,#4) )
+   IDEA[request=+](#1,#2)
+
+//As a tool for combating double and triple-digit call center agent turnover, develop learning that will provide skills necessary for success on the job, as well as awarding college credit.
+
+//CORE-DRIVE(develop,learning)
+//MOD_IDEADEP_POST_GERUND(develop,learning)
+
+if ( MODALITIES[ideadep](#1[bf],#2) & ~SUBJ(#1,#3) & ~SUBJ-N(#1,#3) & ~PREPD(#1,#4)  )
+   IDEA[request=+](#1,#2)
+
+
+//Please re-instate the practice of posting store hours!
+//OBJ_PROD_EVNT_POST(re - instate,practice)
+//MOD_SUBCAT_POST(practice,posting)
+//{SC{{FV{Please}} FV{VERB{re - instate}} NP{the practice} of GV{posting} NP{store} NP{hours} !} 
+
+| TOP#1{SC{FV{#2[lemme:please]}},?+ } |
+  IDEA[request=+](#1).
+
+
+//Bring back totally FREE wi-fi cont.
+//TOP{SC{FV{Bring}} back ADVP{totally FREE} NP{NADJ{wi - fi} cont.}}
+
+| TOP#1{SC{FV{?[bf,aux:~]}}, ?+} |
+  IDEA[request=+](#1).
+
+///////*********need*********\\\\\\\\\
+
+//Starbucks needs sidewalks.
+//ARGUMENT_SUBJ(needs,Starbucks)
+//ARGUMENT_OBJ(needs,sidewalks)
+//HEAD(sidewalks,sidewalks)
+
+if ( ARGUMENT[subj](#1[need],#2[compy]) & ARGUMENT[obj](#1[need],#3) )
+   IDEA[need=+](#2,#1,#3).
+
+
+//if ( SUBJ(#1[need],#2[compy]) & OBJ(#1,#3) & HEAD(#3,#4) )
+//   IDEA[need=+](#2,#1,#4).
+
+
+//////////////////////////////////////////////
+
+//if ( ^IDEA(#1) )
+//   IDEA[ideadep=+](#1).
+
+if ( $1[ideadep](?,?) & ARGUMENT[obj](#1,#2[noun]) & HEAD(#2,#3) & ~ACTION(#1,#3)  )
+   ACTION(#1,#3).
+
+
+if ( $1[ideadep](?,?) & ARGUMENT[obj](#1,#2[noun]) & ~HEAD(#2,#3) & ~ACTION(#1,#2) )
+   ACTION(#1,#2).
+
+
+if ( ARGUMENT[obj,ideadep](#1,#2[noun]) & HEAD(#2,#3) & ~ACTION(#1,#3) )
+   ACTION(#1,#3).
+
+if ( ARGUMENT[obj,ideadep](#1,#2[noun]) & ~HEAD(#2,#3) & ~ACTION(#1,#2) )
+   ACTION(#1,#2).
+
+if ( $1[ideadep](?,?) & MOD[subcat](#1[verb],#2[noun]) & HEAD[pp](#2,#3) & ~ACTION(#1,#3) )
+   ACTION(#1,#3).
+
+if ( $1[ideadep](?,?) & MOD[subcat](#1[verb],#2[noun]) & ~HEAD(#2,#3) )
+   ACTION(#1,#2).
+
+if ( ^ACTION(#1[form:fdo],#2) & ~SUBJ-N(#1,#3) )
+   ~.
+
+if ( ^ACTION(#1,#2[lemme:you]) )
+   ~.
+
+if ( ^ACTION(#1,#2) & ACTION(#1,#3) & HEAD(#2,#3) )
+   ~.
+
+
+if ( ^ACTION(#1,#2) & ACTION(#1,#3) & #1::#1 )
+   ACTION(#1,#2,#3).
+
+if ( ACTION(#1,#2,#3) & ^ACTION(#1,#3) )
+   ~.
+
+
+| TOP#4{?+} |
+if ( ACTION(#1,#2,#3) )
+   IDEA(#4).
+
+
+| TOP#4{?+} |
+if ( ACTION(#1,#2) )
+   IDEA(#4).
+
+if ( $1[request](#1,#2) & ^IDEA(#3) )
+   IDEA[request=+](#3)
+
+| #1[verb,start,first,last,bf] |
+if ( ACTION(#2,#3) | ACTION(#4,#5,#6) & ^IDEA(#7) )
+   IDEA[request=+](#7)
+ 
+if ( $1[question](#1,#2) & ^IDEA(#3) )
+   IDEA[question=+](#3)
+   
+| TOP#5{?+} |
+if ( $1[question](#1,#2) & $2[ideadep](#3,#4) )
+   IDEA[question=+](#5)
+   
+if ( $1[need](#1,#2) & ^IDEA(#3) )
+   IDEA[need=+](#3)
+
+if ( $1[conditional](#1,#2) & ^IDEA(#3) )
+   IDEA[conditional=+](#3)
+   
+| TOP#5{?+} |
+if ( $1[suggestion](#1,#2) )
+   IDEA[suggestion=+](#5)
+   
+if ( $1[suggestion](#1,#2) & ^IDEA(#3) )
+   IDEA[suggestion=+](#3)
+   
+if ( $1[explicite](#1,#2) & ^IDEA(#3) )
+   IDEA[explicite=+](#3)
+
+
+
+
+
+if ( ^IDEA(#1) & IDEA(#1) )
+   ~.
+
+if ( IDEA[explicite](#1) |  IDEA[suggestion](#1)  | IDEA[conditional](#1) | IDEA[need](#1) | IDEA[question](#1) | IDEA[request](#1) )
+   LIXO(#1).
+
+if ( ^IDEA(#1) & ~LIXO(#1) )
+   ~.
+
+if ( ^IDEA(#1,#2) )
+   ~.
+
+if ( ^IDEA(#1,#2,#3) )
+   ~.
+
+if ( ^IDEA(#1,#2,#3,#4) )
+   ~.
+
+if ( ^IDEA(#1,#2,#3,#4,#5) )
+   ~.
+
+
+////////////////////////////////////////////
+
+//MARK ACTIONS
+
+
+///////////////////////////////////////////
+
+
+if ( ^ACTION(#1[innovate],#2) | ^ACTION(#1,#2[innovate]) )
+   ACTION[innovate=+](#1,#2).
+   
+if ( ^ACTION(#1[continue],#2) | ^ACTION(#1,#2[continue]) )
+   ACTION[continue=+](#1,#2).
+   
+if ( ^ACTION(#1[modify],#2) | ^ACTION(#1,#2[modify]) )
+   ACTION[modify=+](#1,#2).
+   
+if ( ^ACTION(#1[advertisement],#2) | ^ACTION(#1,#2[advertisement]) )
+   ACTION[advertisement=+](#1,#2).
+   
+if ( ^ACTION(#1[ct],#2) | ^ACTION(#1,#2[ct]) )
+   ACTION[ct=+](#1,#2).
+   
+if ( ^ACTION(#1[customer],#2) | ^ACTION(#1,#2[customer]) )
+   ACTION[customer=+](#1,#2).
+   
+if ( ^ACTION(#1[drink-food],#2) | ^ACTION(#1,#2[drink-food]) )
+   ACTION[drink-food=+](#1,#2).
+   
+if ( ^ACTION(#1[drink],#2) | ^ACTION(#1,#2[drink]) )
+   ACTION[drink=+](#1,#2).
+   
+if ( ^ACTION(#1[employee],#2) | ^ACTION(#1,#2[employee]) )
+   ACTION[employee=+](#1,#2).
+   
+if ( ^ACTION(#1[environment],#2) | ^ACTION(#1,#2[environment]) )
+   ACTION[environment=+](#1,#2).
+   
+if ( ^ACTION(#1[specevent],#2) | ^ACTION(#1,#2[specevent]) )
+   ACTION[specevent=+](#1,#2).
+   
+if ( ^ACTION(#1[experience],#2) | ^ACTION(#1,#2[experience]) )
+   ACTION[experience=+](#1,#2).
+   
+if ( ^ACTION(#1[food],#2) | ^ACTION(#1,#2[food]) )
+   ACTION[food=+](#1,#2).
+   
+   
+if ( ^ACTION(#1[health],#2) | ^ACTION(#1,#2[health]) )
+   ACTION[health=+](#1,#2).
+   
+if ( ^ACTION(#1[localization],#2) | ^ACTION(#1,#2[localization]) )
+   ACTION[localization=+](#1,#2).
+   
+if ( ^ACTION(#1[material],#2) | ^ACTION(#1,#2[material]) )
+   ACTION[material=+](#1,#2).
+   
+   
+   
+if ( ^ACTION(#1[nature],#2) | ^ACTION(#1,#2[nature]) )
+   ACTION[nature=+](#1,#2).
+   
+if ( ^ACTION(#1[organization],#2) | ^ACTION(#1,#2[organization]) )
+   ACTION[organization=+](#1,#2).
+   
+if ( ^ACTION(#1[service],#2) | ^ACTION(#1,#2[service]) )
+   ACTION[service=+](#1,#2).
+   
+if ( ^ACTION(#1[smoking],#2) | ^ACTION(#1,#2[smoking]) )
+   ACTION[smoking=+](#1,#2).
+   
+if ( ^ACTION(#1[social],#2) | ^ACTION(#1,#2[social]) )
+   ACTION[social=+](#1,#2).
+   
+if ( ^ACTION(#1[sports],#2) | ^ACTION(#1,#2[sports]) )
+   ACTION[sports=+](#1,#2).
+   
+if ( ^ACTION(#1[temporal],#2) | ^ACTION(#1,#2[temporal]) )
+   ACTION[temporal=+](#1,#2).
+   
+if ( ^ACTION(#1[transaction],#2) | ^ACTION(#1,#2[transaction]) )
+   ACTION[transaction=+](#1,#2).
+   
+//////////////////////////////////////////////
+
+
+if ( ^ACTION(#1[innovate],#2,#3) | ^ACTION(#1,#2,#3[innovate]) )
+   ACTION[innovate=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[continue],#2,#3) | ^ACTION(#1,#2,#3[continue]) )
+   ACTION[continue=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[modify],#2,#3) | ^ACTION(#1,#2,#3[modify]) )
+   ACTION[modify=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[advertisement],#2,#3) | ^ACTION(#1,#2,#3[advertisement]) | ^ACTION(#1,#2[advertisement],#3) )
+   ACTION[advertisement=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[ct],#2,#3) | ^ACTION(#1,#2[ct],#3) | ^ACTION(#1,#2,#3[ct]) )
+   ACTION[ct=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[customer],#2,#3) | ^ACTION(#1,#2[customer],#3) | ^ACTION(#1,#2,#3[customer]) )
+   ACTION[customer=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[drink-food],#2,#3) | ^ACTION(#1,#2[drink-food],#3) | ^ACTION(#1,#2,#3[drink-food]) )
+   ACTION[drink-food=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[drink],#2,#3) | ^ACTION(#1,#2[drink],#3) | ^ACTION(#1,#2,#3[drink]) )
+   ACTION[drink=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[employee],#2,#3) | ^ACTION(#1,#2[employee],#3) | ^ACTION(#1,#2,#3[employee]) )
+   ACTION[employee=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[environment],#2,#3) | ^ACTION(#1,#2[environment],#3) | ^ACTION(#1,#2,#3[environment]) )
+   ACTION[environment=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[specevent],#2,#3) | ^ACTION(#1,#2[specevent],#3) | ^ACTION(#1,#2,#3[specevent]) )
+   ACTION[specevent=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[experience],#2,#3) | ^ACTION(#1,#2,#3[experience]) | ^ACTION(#1,#2[experience],#3) )
+   ACTION[experience=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[food],#2,#3) | ^ACTION(#1,#2[food],#3) | ^ACTION(#1,#2,#3[food]) )
+   ACTION[food=+](#1,#2,#3).
+   
+   
+if ( ^ACTION(#1[health],#2,#3) | ^ACTION(#1,#2[health],#3) | ^ACTION(#1,#2,#3[health]) )
+   ACTION[health=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[localization],#2,#3) | ^ACTION(#1,#2[localization],#3) | ^ACTION(#1,#2,#3[localization]) )
+   ACTION[localization=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[material],#2,#3) | ^ACTION(#1,#2[material],#3) | ^ACTION(#1,#2,#3[material]) )
+   ACTION[material=+](#1,#2,#3).
+   
+   
+   
+if ( ^ACTION(#1[nature],#2,#3) | ^ACTION(#1,#2[nature],#3) | ^ACTION(#1,#2,#3[nature]) )
+   ACTION[nature=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[organization],#2,#3) | ^ACTION(#1,#2[organization],#3) | ^ACTION(#1,#2,#3[organization]) )
+   ACTION[organization=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[service],#2,#3) | ^ACTION(#1,#2[service],#3) | ^ACTION(#1,#2,#3[service]) )
+   ACTION[service=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[smoking],#2,#3) | ^ACTION(#1,#2[smoking],#3) | ^ACTION(#1,#2,#3[smoking]) )
+   ACTION[smoking=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[social],#2,#3) | ^ACTION(#1,#2[social],#3) | ^ACTION(#1,#2,#3[social]) )
+   ACTION[social=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[sports],#2,#3) | ^ACTION(#1,#2[sports],#3) | ^ACTION(#1,#2,#3[sports]) )
+   ACTION[sports=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[temporal],#2,#3) | ^ACTION(#1,#2[temporal],#3) | ^ACTION(#1,#2,#3[temporal]) )
+   ACTION[temporal=+](#1,#2,#3).
+   
+if ( ^ACTION(#1[transaction],#2,#3) | ^ACTION(#1,#2[transaction],#3) | ^ACTION(#1,#2,#3[transaction]) )
+   ACTION[transaction=+](#1,#2,#3).
+
+/////////////////////////////////////////
+/// CONCEPTS/////////////////////////////
+////////////////////////////////////////
+
+
+if ( IDEA(#1) & HEAD[pp:~](#2[noun],#3) )
+   CONCEPT(#3).
+
+////////////////////////////////////
+/////////ONLY IN IDEAS/////////////
+////////////////////////////////////
+
+
+if ( @_xtd.title->Test() & ^IDEA(#1) )
+   ~.
+
+if ( @_xtd.title->Test() & ^IDEA(#1,#2) )
+   ~.
+
+if ( @_xtd.title->Test() & ^IDEA(#1,#2,#3) )
+   ~.
+
+if ( @_xtd.title->Test() & ^IDEA(#1,#2,#3,#4) )
+   ~.
+
+if ( @_xtd.title->Test() & ^ACTION(#1,#2) )
+   ~.
+
+if ( @_xtd.title->Test() & ^ACTION(#1,#2,#3) )
+   ~.
+
+if ( @_xtd.title->Test() & ^CONCEPT(#1) )
+   ~.
+
+
+if ( ^IDEA(#1) )
+   IDEALL(#1).
+
+if ( testidea() & ^IDEALL(#1) )
+   IDEA(#1).
+
+if ( ^IDEALL(#1) )
+   ~.
+

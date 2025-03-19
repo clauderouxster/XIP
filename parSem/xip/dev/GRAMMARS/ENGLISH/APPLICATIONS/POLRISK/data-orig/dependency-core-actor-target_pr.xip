@@ -1,0 +1,753 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-core-actor-target_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+/
+if ( ^SUBJ(#1,#2) )
+	~.
+
+if ( ^OBJ(#1,#2) )
+	~.
+\
+
+// We formalize the way in which the sentences refer to events. One sentence may refer to several events. Our formal representation of a sentence is the set of the representations of each event. The representation of each event (i.e. EVENT) is the set of several elements. 
+// We represent EVENTs with the following elements:
+// 1) The central element: the "name" of the event. We call it the CORE. The CORE can be a verb (CORE-VERB), a noun (CORE-NOUN) or an adjective (CORE-ADJ)
+// 2) The circumstances. We call them the COORDINATES. The COORDINATES are in syntactic or semantic relationship with the CORE. We represent the following COORDINATES: AGENT, OTHER-NEMED-ENTITY, TIME, LOCATION
+// 3) The entity that utters the EVENT. SOURCE. Taking into account the SOURCE is an important factor for the interpretation of the relevance of an EVENT.  Our representation includes the SOURCE of the description. 
+// 4) We assign a value to the each set CORE+COORDINATES with respect to its relationship to reality as expressed by the SOURCE. We have 3 values: FACTUAL (the SOURCE expresses that the EVENT is a fact), COUNTER-FACTUAL (the SOURCE expresses that the EVENT is not a fact), POSSIBLE ( the SOURCE does not say that the EVENT is FACTUAL or COUNTER-FACTUAL. This value is very vague for the time being. It covers possibility, probability or no information at all.)
+// 5) We distinguish two types of relationship between two EVENTs: 
+// 6) We also annotate the contribution of particular EVENTs to the information content of main and reported sentences. An EVENT gets the label INFORMATION when it describes the EVENT that the (main or reported) sentence is about (i.e. the EVENT that is the predication of the sentence, or the predications in case of coordination) or TOPIC when it describes the EVENT with respect to which the INFORMATION is given. The intermediary EVENTs don't get a label with respect to their information content. 
+// The output of our analysis for each EVENT is the following: EVENT_(INFORMATION/TOPIC)_(FACTUAL/COUNTER_FACTUAL_POSSIBLE)(|SOURCE|,|EVENT-DRIVE|,|CORE|,|AGENT|,|OTHER-NAMED-ENTITY|,|TIME|,|LOCATION|)
+// Example1:  U.S. officials allege that a secret annex at the site may be used for researching high explosives.
+// CORE-VERB(allege)
+// CORE-VERB(used)
+// CORE-VERB(researching)
+// COORDINATE_SUBJ(allege,officials)
+// COORDINATE_OBJ(used,annex)
+// COORDINATE_OBJ(researching,explosives)
+// COORDINATE_LOC(used,site)
+// COORDINATE_LOC(researching,site)
+// CORE-ATT(may,used)
+// CORE-DRIVE(allege,used)
+// CORE-DRIVE(used,researching)
+// EVENT_INFORMATION_FACTUAL(Author_of_ARTICLE,0,allege,U.S. officials,0,date_of_the_article,0)
+// EVENT_INFORMATION_POSSIBLE( U.S. officials,allege,used,0,0,not_past,site)
+// EVENT_TOPIC_POSSIBE(U.S. officials,used,researching,0,0,not_past,site)
+// Example2: Referring to a Washington Post report that U.S. drones have been overflying Iran seeking evidence of a nuclear weapons program for over a year, Iranian Intelligence Minister Ali Yunesi asserts, "Most of the shining objects that our people see over Iran's airspace are American spying equipment used to spy on Iran's nuclear and military facilities.
+// CORE-VERB(asserts)
+// COORDINATE_SUBJ(asserts,Ali Yunesi)
+// CORE-VERB(Referring)
+// COORDINATE_SUBJ(Referring,Ali Yunesi)
+// CORE-DRIVE(Referring,report)
+// CORE-ANNEX(Ali Yunesi,Referring)
+// CORE-NOUN(report)
+// COORDINATE_SUBJ(report,Washington Post)
+// CORE-VERB(overflying)
+// COORDINATE_SUBJ(overflying,drones)
+// COORDINATE_LOC(overflying,Iran)
+// CORE-DRIVE(report,overflying)
+// CORE-VERB_(seeking)
+// COORDINATE_SUBJ(seeking,drones)
+// CORE-ANNEX(drones,seeking)
+// CORE-VERB(are)
+// COORDINATE_SUBJ(are,objects)
+// CORE-DRIVE(asserts,are)
+// COORDINATE_LOC(are,Iran's airspace)
+// CORE-VERB(see)
+// COORDINATE_SUBJ(see,people)
+// COORDINATE_LOC(see,Iran's airspace)
+// CORE-ANNEX(objects,see)
+// CORE-VERB(used)
+// CORE-ANNEX(equipment,used)
+// CORE-VERB(spy)
+// COORDINATE_LOC(spy,Iran's nuclear and military facilities)
+// CORE-DRIVE(used,spy)
+// EVENT_INFORMATION_FACTUAL((Author_of_ARTICLE,0,asserts,Ali Yunesi,0,date_of_the_article,0)
+// EVENT_FACTUAL(Author_of_ARTICLE,0,referring,Ali Yunesi,0,date_of_the_article,0)
+// EVENT_FACTUAL(Author_of_ARTICLE,Referring,report,Washington Post,0,0,0)
+// EVENT_INFORMATION_FACTUAL(Washington Post,report,overfly,drones,0,before_the_report,Iran)
+// EVENT_TOPIC_FACTUAL(Washington Post,0,seeking,drones,0,before_the_report,Iran)
+// EVENT_INFORMATION_FACTUAL(Ali Yunesi,asserts,are,objects,0,date_of_the_article,Iran's airspace)
+// EVENT_FACTUAL(Ali Yunesi,0,see,people,0,date_of_the_article,Iran's airspace)
+// EVENT_FACTUAL(Ali Yunesi,0,used,0,0,0,0)
+// EVENT_TOPIC_POSSIBLE(Ali Yunesi,used,spy,0,0,Iran's nuclear and military facilities)
+
+//************************** version modifiée :
+
+// We formalize the way in which the sentences refer to events. One sentence may refer to several events. Our formal representation of a sentence is the set of the representations of each event. The representation of each event (i.e. EVENT) is the set of several elements. 
+// We represent EVENTs with the following elements:
+// 1) The central element: the "name" of the event. We call it the CORE. The CORE can be a verb (CORE-VERB), a noun (CORE-NOUN) or an adjective (CORE-ADJ)
+// 2) The circumstances. We call them the COORDINATES. The COORDINATES are in syntactic or semantic relationship with the CORE. We represent the following COORDINATES: AGENT, OTHER-NEMED-ENTITY, TIME, LOCATION
+// 3) The entity that utters the EVENT. SOURCE. Taking into account the SOURCE is an important factor for the interpretation of the relevance of an EVENT.  Our representation includes the SOURCE of the description. 
+// 4) We assign a value to the each set CORE+COORDINATES with respect to its relationship to reality as expressed by the SOURCE. We have 3 values: FACTUAL (the SOURCE expresses that the EVENT is a fact), COUNTER-FACTUAL (the SOURCE expresses that the EVENT is not a fact), POSSIBLE ( the SOURCE does not say that the EVENT is FACTUAL or COUNTER-FACTUAL. This value is very vague for the time being. It covers possibility, probability or no information at all.)
+// 5) We distinguish two types of relationship between two EVENTs: 
+// 6) We also annotate the contribution of particular EVENTs to the information content of main and reported sentences. An EVENT gets the label INFORMATION when it describes the EVENT that the (main or reported) sentence is about (i.e. the EVENT that is the predication of the sentence, or the predications in case of coordination) or TOPIC when it describes the EVENT with respect to which the INFORMATION is given. The intermediary EVENTs don't get a label with respect to their information content. 
+// *The output of our analysis for each EVENT is the following: EVENT_(INFORMATION/TOPIC)_(FACTUAL/COUNTER_FACTUAL_POSSIBLE)(|SOURCE|,|EVENT-DRIVE|,|CORE|,|AGENT|,|OTHER-NAMED-ENTITY|,|LOCATION1|,|LOCATION2|,|TIME|)
+// Example1:  U.S. officials allege that a secret annex at the site may be used for researching high explosives.
+// CORE-VERB(allege)
+// CORE-VERB(used)
+// CORE-VERB(researching)
+// *COORDINATE_SUBJ_ACTOR(allege,officials)
+// COORDINATE_OBJ(used,annex)
+// COORDINATE_OBJ(researching,explosives)
+// COORDINATE_LOC(used,site)
+// COORDINATE_LOC(researching,site)
+// CORE-ATT(may,used)
+// CORE-DRIVE(allege,used)
+// CORE-DRIVE(used,researching)
+// *MODALITIES_MAIN(allege,used, researching)
+// *EVENT_INFORMATION_FACTUAL(Author_of_ARTICLE,0,allege,U.S. officials,0,0,0,date_of_the_article)
+// *EVENT_INFORMATION_POSSIBLE( U.S. officials,allege,used,0,0,0,site,not_past)
+// *EVENT_TOPIC_POSSIBE(U.S. officials,used,researching,0,0,0,site,not_past)
+// Example2: Referring to a Washington Post report that U.S. drones have been overflying Iran seeking evidence of a nuclear weapons program for over a year, Iranian Intelligence Minister Ali Yunesi asserts, "Most of the shining objects that our people see over Iran's airspace are American spying equipment used to spy on Iran's nuclear and military facilities.
+// CORE-VERB(asserts)
+// *COORDINATE_SUBJ_ACTOR(asserts,Ali Yunesi)
+// CORE-VERB(Referring)
+// *COORDINATE_SUBJ_ACTOR(Referring,Ali Yunesi)
+// CORE-DRIVE(Referring,report)
+// *CORE-ANNEX(asserts,Referring)
+// CORE-NOUN(report)
+// *COORDINATE_SUBJ_ACTOR(report,Washington Post)
+// CORE-VERB(overflying)
+// *COORDINATE_SUBJ_ACTOR(overflying,drones)
+// COORDINATE_LOC(overflying,Iran)
+// CORE-DRIVE(report,overflying)
+// CORE-VERB_(seeking)
+// *COORDINATE_SUBJ_ACTOR(seeking,drones)
+// *CORE-ANNEX(overflying,seeking)
+// CORE-VERB(are)
+// *COORDINATE_SUBJ_ACTOR(are,objects)
+// CORE-DRIVE(asserts,are)
+// COORDINATE_LOC(are,Iran's airspace)
+// CORE-VERB(see)
+// *COORDINATE_SUBJ_ACTOR(see,people)
+// COORDINATE_LOC(see,Iran's airspace)
+// *CORE-ANNEX(are,see)
+// CORE-VERB(used)
+// *CORE-ANNEX(are,used)
+// CORE-VERB(spy)
+// COORDINATE_LOC(spy,Iran's nuclear and military facilities)
+// *COORDINATE_TARGET(spy,Iran)
+// CORE-DRIVE(used,spy)
+// *MODALITIES_MAIN(asserts,are)
+// *MODALITIES_ANNEX(Referring,report, overflying)
+// *MODALITIES_ANNEX(used, spy)
+// *EVENT_INFORMATION_FACTUAL((Author_of_ARTICLE,0,asserts,Ali Yunesi,0,0,0,date_of_the_article)
+// *EVENT_FACTUAL(Author_of_ARTICLE,0,referring,Ali Yunesi,0,0,0,date_of_the_article)
+// *EVENT_FACTUAL(Author_of_ARTICLE,Referring,report,Washington Post,0,0,0)
+// *EVENT_INFORMATION_FACTUAL(Washington Post,report,overfly,drones,0,Iran,0,before_the_report)
+// *EVENT_TOPIC_FACTUAL(Washington Post,0,seeking,drones,0,Iran,0,before_the_report)
+// *EVENT_INFORMATION_FACTUAL(Ali Yunesi,asserts,are,objects,0,Iran's airspace,0,date_of_the_article)
+// *EVENT_FACTUAL(Ali Yunesi,0,see,people,0,Iran's airspace,0,date_of_the_article)
+// *EVENT_FACTUAL(Ali Yunesi,0,used,0,0,0,0,0)
+// *EVENT_TOPIC_POSSIBLE(Ali Yunesi,used,spy,0,Iran,Iran's nuclear and military facilities,0,0)
+
+
+
+// Method: COREs 1) Nouns
+
+/////////////////////////////////////////////////////
+// NOUNS
+/////////////////////////////////////////////////////
+
+
+// CORE-NOUN=nouns that are potentially cores of events. They are nouns that refer to an action. These nouns are either in derivational relationships with verbs or eneterd from the corpus with the feature [evnt]
+
+/
+if ( HEAD(#1[noun],#2) & S0(#1[noun],#3[verb]) )
+	CORE-NOUN(#1).
+
+if ( HEAD(#1[noun],#2) & Sto(#1[noun],#3[verb]) & ~CORE-NOUN(#1))
+	CORE-NOUN(#1).
+
+if ( HEAD(#1[noun],#2) & S2(#1[noun],#3[verb]) & ~CORE-NOUN(#1))
+	CORE-NOUN(#1).
+\
+if ( HEAD(#1[evnt],#2) & ~CORE-NOUN(#1) & ~CORE-NOUN(#1))
+	CORE-NOUN(#1).
+
+// AR certains noms qui ont une relation S0 / Sto / S2 ne sont pas des noms d'événement
+if (^CORE-NOUN(#1[noevnt]))
+	~
+
+if (^CORE-NOUN(#1[lemme:installation]) & (~PREPD(#3,#2[form:fof]) | (PREPD(#3,#2[form:fof]) &~LOCATION(#3) & ~LOCORG(#3))))
+	~ 
+// Method: establish the coordinates of nouns
+
+// ***** les coordonnées des noms d'événements
+
+//on établit une relation (de sujet) entre le nom d'événement et son acteur
+
+
+if (SREL(#1[fictivenode:~],#2) & SUBJ-N(#2,#3) & CORE-NOUN(#1) )
+	COORDINATE[Nsubj=+,nomevent=+](#1,#3)
+
+// create COORDEP with nominal cores and premodifier where it hasn't been done 
+
+if ( CORE-NOUN(#1) & MOD[pre](#1,#2[proper]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nsubj=+,pre=+,nomevent=+](#1,#2).
+
+if ( CORE-NOUN(#1) & MOD[pre](#1,#2[hmm_tit]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nsubj=+,pre=+,nomevent=+](#1,#2).
+
+if ( CORE-NOUN(#1) & MOD[pre](#1,#2[country,adj]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nsubj=+,pre=+,nomevent=+](#1,#2).
+
+
+
+// on établit une relation d'objet entre le nom d'événement et sa cible
+
+if(OBJ-N(#1[fictivenode],#2) & SREL(#3,#1) & CORE-NOUN(#3) )
+	COORDINATE[Nobj=+,nomevent=+](#3,#2)
+
+// create COORDINATE with nominal cores and postmodifier where it hasn't been done
+
+// reports of U.S. commandos
+
+if ( CORE-NOUN(#1) & MOD[post](#1,#2[proper]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nobj=+,post=+,nomevent=+](#1,#2).
+
+if ( CORE-NOUN(#1) & MOD[post](#1,#2[hmm_tit]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nobj=+,post=+,nomevent=+](#1,#2).
+
+if ( CORE-NOUN(#1) & MOD[post](#1,#2[country,adj]) & ~COORDINATE(#1,#2) )
+	COORDINATE[Nobj=+,post=+,nomevent=+](#1,#2).
+
+// choix entre plusieurs sujets
+// à l'intérieur d'un même NP
+// Russian-Iranian Energy Cooperation
+|NP#4{#1, (?), #2,#3}|
+	if (HEAD2(#3,#4) & COORDINATE[Nsubj](#3,#1) & ^COORDINATE[Nsubj](#3,#2) & ~LOCATION(#2) & ~LOCORG(#2) & ~PERSON(#2))
+	~
+
+|NP#4{#1,#2,#5,#3}|
+	if (HEAD2(#3,#4) & COORDINATE[Nsubj](#3,#1) & ^COORDINATE[Nsubj](#3,#2) & ~COORDINATE[Nsubj](#3,#5) & ~LOCATION(#2) & ~LOCORG(#2) & ~PERSON(#2))
+	~
+
+//les sujets retenus ne sont pas dans le même NP
+if (^COORDINATE[Nsubj, pre](#1,#2) & COORDINATE[Nsubj, pre](#1,#3) & #2<#3)
+	~
+
+//le sujet du nom d'événement n'est plus un autre argument de ce nom
+if (COORDINATE[Nsubj](#1,#2) & ^COORDINATE[Nsubj:~](#1,#2))
+	~
+
+// Method: verbal coordinates (we don't know why this is here)
+
+// les sujets des verbes non finis qui dépendent de noms d'événements
+
+//Iranian plans to build nuclear power plants
+|#1[noun], IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & COORDINATE[Nsubj](#3,#5) & ~VDOMAIN[passive](#4,?) & ~SUBJ-N(#4,#5) & ~COORDINATE[subj](#4,#5))
+	COORDINATE[subj=+](#4,#5)
+
+//the hope to be understood
+|#1[noun], (PP), IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & COORDINATE[Nsubj](#3,#5) & VDOMAIN[passive](#4,?) & ~COORDINATE[subj](#4,#5) )
+	COORDINATE[obj=+](#4,#5)
+
+//a request by the IAEA to access a suspected military site 
+|#1[noun], PP, IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & COORDINATE[Nsubj](#3,#5) & ~VDOMAIN[passive](#4,?) & ~SUBJ-N(#4,#5) & ~COORDINATE[subj](#4,#5))
+	COORDINATE[subj=+](#4,#5)
+
+
+//*****  dépendance LIGHT : on identifie les relations noms d'événement - verbes supports (light verbs)
+/ pour le moment j'ai choisi le verbe support pour être le noyau, dans ce cas il faudra ajouter le nom dans les arguments ; mais on peut aussi choisir le nom.\
+
+//if((MOD(#1[verb,lemme:carry],#2[p_out]) | NUCL(#1,#2[p_out])) & OBJ-N(#1,#3[supp:carry_out]))
+//	LIGHT[obj=+](#1,#3).
+
+//if((MOD(#1[verb,lemme:carry],#2[p_out]) | NUCL(#1,#2[p_out])) & OBJ-N(#1,#3) & CORE-NOUN(#3) & ~LIGHT(#1,#3))
+//	LIGHT[obj=+](#1,#3).
+
+//if (SUBJ-N(#1[supp:subj],#2) & CORE-NOUN(#2) & ~LIGHT(#1,#2))
+//	LIGHT[subj=+](#1,#2)
+
+//if (OBJ(#1[lemme:take], #2[lemme:place]) & SUBJ-N(#1,#3) & CORE-NOUN(#3))
+//	LIGHT[subj=+](#1,#3)
+
+
+
+//********************* AR]
+
+
+
+// eliminate shorter head
+
+if ( ^HEAD[prep_modif:~](#1,#2) & HEAD[prep_modif](#1,#3) )
+	~.	
+
+// Method: Definitions of COREs 2) Verbs a) non-finite 
+
+/////////////////////////////////////////////////////
+// VERBS
+/////////////////////////////////////////////////////
+
+
+// create dependence CORE-VERB for verbs that are non-finite
+
+| iv{(?[form:finfto]), ?*, #1[verb]} |
+	CORE-VERB[modality=+,nonf=+](#1).
+
+| iv{?[form:fnot], #1[verb]} |
+	CORE-VERB[modality=+,nonf=+](#1).
+
+| ?[form:finfto], fv{#1[verb]} |
+	CORE-VERB[modality=+,nonf=+](#1).
+
+| nfv{#2[lemme:be,inf], ?*, #1[last]} |
+//if ( ~NUCL(#2,#1) )
+	CORE-VERB[modality=+,nonf=+](#1).
+
+| nfv{#2[lemme:have,inf], ?*, #1[last]} |
+//if ( ~NUCL(#2,#1) )
+	CORE-VERB[modality=+,nonf=+](#1).
+
+| gv{#1} |
+	CORE-VERB[modality=+](#1).
+
+|gv{#1,?*,#2}|
+	if (NUCL[vlink, passive](#1,#2) & ~CORE-VERB( #2))
+	CORE-VERB[modality=+](#2).
+
+if ( NUCL[vlink,modal](#2,#1) & ~CORE-VERB(#1) )
+	CORE-VERB[modality=+](#1).
+
+if ( MOD[post,pastpart](#1,#2) )
+	CORE-VERB[modality=+](#2).
+
+
+// Method: Definitions of COREs 2) Verbs b) finite 
+
+
+| nfv{#2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,progress](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{#2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,perfect](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{#2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,progress](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB[modality](#2) & NUCL[vlink,perfect](#1,#2) )
+	CORE-VERB(#2).
+
+// mark verbs that don't have a modality
+
+| fv{?*, #1[verb]} |
+if ( ~CORE-VERB(#1) )
+	CORE-VERB[main=+](#1).
+
+//if ( ^CORE-VERB[modality:~](#1) & ~NUCL(1,#2) )
+if ( ^CORE-VERB[modality:~](#1) )
+	CORE-VERB[main=+](#1).
+
+// it is necessary is->attached
+// c'est traité plus bas
+//if (^CORE-VERB[main](#1[form:fbe]) & NUCL[subjcompl](#1,#2[adjmod]) )
+//	CORE-VERB[main=~](#1).
+
+// auxiliaries are not CORE-VERB
+
+if ( NUCL[vlink,progress](#1,#2) | NUCL[vlink,perfect](#1,#2) | NUCL[vlink,passive](#1,#2) & ^CORE-VERB(#1) )
+	~.
+
+| fv{#1[form:fhave,inf:~]}, nfv{?+} |
+if ( ^CORE-VERB(#1) )
+	~.
+	
+| ?{?+, fv{#1[form:fdo,inf:~]}}, iv{?+} |
+if ( ^CORE-VERB(#1) )
+	~.
+
+//Don't hinder peace
+if (NUCL[insist](#1,#2) & ^CORE-VERB(#1))
+	~
+// are going to read
+if (NUCL[progress](#1,#2) & NUCL[vlink](#2,#3) & ^CORE-VERB(#2))
+	~
+
+// Method: Mark the verbs that have an inherited modality = modality coming from another event
+
+////////////////////////////////
+// modality of embedded sentence
+
+if ( EMBED(#1[verb],#2) & ^CORE-VERB(#1) )
+	CORE-VERB[modality=+,embed=+,main=~](#1).
+
+// Method: establish dependencies between two COREs. a) This dependency is called CORE-DRIVE. The first argument is the driver; the driver is a verb
+//AR the embedded event is also a verb
+
+// inspect modality drivers that are finite verbs
+//a.1. CORE-DRIVE between 2 verbs
+
+if ( CORE-VERB(#1) & $1(#1,#2) & CORE-VERB(#2) & ~CORE-DRIVE(#2,#1) & #2 < #1 )
+	CORE-DRIVE(#2,#1).
+	
+if ( CORE-VERB(#1) & $1(#2,#1) & CORE-VERB(#2) & ~CORE-DRIVE(#2,#1) & #2 < #1 )
+	CORE-DRIVE(#2,#1).
+
+//Method: corrections (AR)
+if ( EMBED(#1,#2) & ^CORE-DRIVE(#1,#2))
+	~, CORE-DRIVE(#2,#1)
+
+
+// deux noyaux coordonnés ne sont pas dans une relation CORE-DRIVE
+if (^CORE-DRIVE(#1,#2) & VCOORD(#1,#2) & CORE-DRIVE(#3,#1) & ~CORE-DRIVE(#3,#2))
+	~, CORE-DRIVE(#3,#2)
+
+if (^CORE-DRIVE(#1,#2) & VCOORD(#1,#2))
+	~
+
+// X says that Y
+
+if ( CONNECTOR[complthat](#2,#3[afterdrive]) & CORE-VERB(#1[thatdriver]) & #1 < #2 )
+	CORE-DRIVE(#1,#2).
+
+if ( CORE-DRIVE(#1[thatdriver],#2) &  ^CORE-DRIVE(#1[thatdriver],#3) & #1 < #2 & #2 < #3 )
+	~.
+
+//a.2.The embedded event is a noun
+//SP régis par le verbe
+// ! sujets et objets sont traités plus bas
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pof]) & CORE-NOUN(#2) & PREPD(#2,#3[form:fof]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pagainst]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pagainst]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pwith]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pwith]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pfrom]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pfrom]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pfor]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pfor]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1[sc_pon]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pon]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-ANNEX(#1,#2)
+
+/
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3))
+	CORE-DRIVE(#1,#2)
+\
+
+//Method: establish dependencies between two COREs. b) CORE-ANNEX 
+//AR les relatives ne sont pas dans une relation CORE-DRIVE, mais CORE-ANNEX avec le verbe principal quand elles ne qualifient pas un nom d'événement.
+if (^CORE-DRIVE(#2,#1) & EMBED[relativ](#1,#2) & ~MOD[sentence](#3[evnt],#1))
+	CORE-ANNEX[rel=+](#2,#1)
+
+if (^CORE-DRIVE(#2,#1) & EMBED[relativ](#1,#2) & MOD[sentence](#3[evnt],#1))
+	CORE-DRIVE[rel=+](#3,#1)
+
+if (~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (MOD(#2,#3)|SUBJ(#2,#3)|OBJ(#2,#3)) & ANTECEDENT(#3,#4) & (MOD(#1,#4)|SUBJ(#1,#4)|OBJ(#1,#4)))
+	CORE-ANNEX[rel=+](#2,#1)
+
+if (MOD[relativ, sentence](#3,#1) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (MOD(#2,#3)|SUBJ(#2,#3)|OBJ(#2,#3)))
+	CORE-ANNEX[rel=+](#2,#1)
+
+
+//AR les conditionnelles en if
+if (^CORE-DRIVE(#2,#1) & CONNECTOR(#1,?[form:fif]))
+	CORE-ANNEX[if=+](#2,#1)
+
+// les gérondifs
+if (CORE-VERB(#1) & ~MAIN(#1) & ~VDOMAIN(#1,?) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (SUBJ(#1,#2) | SUBJ-N(#1,#2)) & (SUBJ(#3,#2) | SUBJ-N(#3,#2) | OBJ(#3,#2) | OBJ-N(#3,#2) | MOD(#3,#2)) & (#1<#3 | #3<#1) & ~NUCL(#1,#3) & ~NUCL(#3,#1) & ~CORE-ATT(#3,#1) & ~CORE-ATT(#1,#3))
+	CORE-ANNEX(#3,#1)
+
+
+// Method: establish dependency between a main verb and the attached modal auxiliary (CORE-ATT). We will have to reconsider this rule
+
+if ( VDOMAIN[modal](#1,#2) & CORE-VERB[nonf,modality](#1) )
+	CORE-ATT(#2,#1).
+
+if ( NUCL[vlink,modal](#1,#2) & CORE-VERB[modality](#2) & ~CORE-ATT(#1,#2) )
+	CORE-ATT(#1,#2).
+
+//It is necessary that | to
+if (CORE-VERB(#1[form:fbe]) & NUCL[subjcompl](#1,#2[adjmod]) & ^CORE-DRIVE(#1,#3) )
+	CORE-ATT(#1,#3).
+
+if (CORE-DRIVE(#1,#2) & CORE-ATT(#2,#3))
+	CORE-DRIVE(#1,#3)
+
+if (CORE-ANNEX(#1,#2) & CORE-ATT(#2,#3))
+	CORE-ANNEX(#1,#3)
+
+if (CORE-VERB[main](#1) &  CORE-ATT(#1,#2) & ^CORE-VERB(#2))
+	CORE-VERB[modality=~,main=+](#2)
+
+if ((^CORE-VERB(#1)|^CORE-ADJ(#1)) & CORE-ATT(#1,?))
+	~
+
+if (^CORE-ATT(#1,#2) & NUCL[subjcompl](#1,#3[adjmod]))
+	CORE-ATT(#3,#2)
+
+// Method: mark core verbs in "if" clause
+
+// modality "if" : "remains an option if it continues"
+// cette règle est-elle encore utile ?
+if (^CORE-VERB[modality,embed](#1) & CONNECTOR[subord](#2,#3[lemme:if]) & CORE-DRIVE(#1,#2) )
+	CORE-VERB[modality,embed,if=+](#1).
+
+// Method: mark the deepest embedded CORE-VERB, i.e the verb that doesn't drive anything
+
+if ( ^CORE-VERB(#1) & ~CORE-DRIVE(#1,#2) )
+	CORE-VERB[basic=+](#1).
+
+
+// Method: establish dependencies between two COREs. c) CORE-DRIVE : the driver is a noun
+
+
+if ( CONNECTOR[complthat](#2,#3[afterdrive]) & CORE-NOUN(#1[thatdriver]) & #1 < #2 )
+	CORE-DRIVE(#1,#2).
+
+if ( CORE-DRIVE(#1[thatdriver],#2) &  ^CORE-DRIVE(#1[thatdriver],#3) & #1 < #2 & #2 < #3 )
+	~.
+
+//SP régis par un nom
+// pour le moment la sous-catégorisation des noms n'est pas faite.
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pof]) & CORE-NOUN(#2) & PREPD(#2,#3[form:fof]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pagainst]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pagainst]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pwith]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pwith]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pfrom]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pfrom]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pfor]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pfor]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1[sc_pon]) & CORE-NOUN(#2) & PREPD(#2,#3[sc_pon]) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-DRIVE(#1,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1) & CORE-NOUN(#2) & PREPD(#2,#3) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-ANNEX(#1,#2)
+
+
+// Method: establish dependencies between two COREs. d) CORE-DRIVE : the driver is an adjective
+
+
+
+//AR predicative adjectives that are drivers
+if (POTMOD(#1[adj],#2) & CORE-VERB(#2))
+	CORE-DRIVE(#1,#2)
+
+// Method: corrections
+
+
+// a main verb that has a nominal drive is not a main verb
+
+if ( CORE-DRIVE(#1[thatdriver],#2) & ^CORE-VERB[main](#2) )
+	CORE-VERB[main=~,nomdrive=+](#2)
+	
+// Method: Coordinates of verbs
+
+// Method: Preparation to the coordinates of verbs: eliminate SUBJ between a subject and  "have" of present perfect and modals. To reconsider: we should rather eliminate COORDINATE[subj] of this sort and not SUBJ 
+/
+if ( NUCL[vlink,perfect](#1,#2) & ^SUBJ(#1,#3) )
+	~.
+
+if ( ^SUBJ(#1,#2) & NUCL[vlink,modal](#1,#3) )
+	~.
+\
+
+
+// Method: all CORE-VERBs, CORE-NOUNs and CORE-ADJ are COREs
+if (CORE-VERB(#1) | CORE-NOUN(#1) | CORE-ADJ(#1))
+	CORE(#1)
+
+	
+// Method: establish verbal COORDINATEs
+
+//AR je propose d'ajouter dans les deux règles suivantes la condition fictivenode:~, parce que les sujets et objets normalisés concernent aussi bien les noeuds fictifs que les autres :
+//AR on accepte aussi be et have comme CORE
+//if ( SUBJ(#1[form:~fbe,form:~fhave],#2) | SUBJ-N(#1[form:~fbe,form:~fhave, fictivenode:~],#2) )
+//	COORDINATE[subj=+](#1,#2).
+//
+//if ( OBJ(#1[form:~fbe,form:~fhave,fictivenode:~],#2) | OBJ-N(#1[form:~fbe,form:~fhave,fictivenode:~],#2) )
+//	COORDINATE[obj=+](#1,#2).
+
+if ( CORE(#1) & (SUBJ(#1,#2) | SUBJ-N(#1[fictivenode:~],#2)))
+	COORDINATE[subj=+](#1,#2).
+
+if ( CORE(#1) & (OBJ(#1[fictivenode:~, sentence:~],#2) | OBJ-N(#1[fictivenode:~],#2)) )
+	COORDINATE[obj=+](#1,#2).
+
+if(CORE(#1) & EXPERIENCER(#1,#2) & ~SUBJ-N(#1,?))
+	COORDINATE[subj=+](#1,#2).
+
+if(CORE(#1) & CONTENT(#1,#2) & ~OBJ-N(#1,?))
+	COORDINATE[obj=+](#1,#2).
+
+
+//Method: delete COORDINATEs a) with relative pronouns
+//if (^COORDINATE[obj](#1,#2) & COORDINATE[obj](#1,#3) & OBJ(#1,#2) & ~OBJ-N(#1,#2) & ~OBJ(#1,#3) & OBJ-N(#1,#3))
+//	~
+
+if ((^COORDINATE[obj](#1,#2[form:fthat])|^COORDINATE[obj](#1,#2[rel])) & COORDINATE[obj](#1,#3))
+	~
+
+//Method: delete COORDINATEs b) with auxiliaries
+if ( SUBJ(#1,#2) & NUCL[vlink,modal](#1,#3) & ^COORDINATE[subj](#1,#2))
+	~.
+if ( SUBJ(#1,#2) & NUCL[vlink,perfect](#1,#3) & ^COORDINATE[subj](#1,#2))
+	~.
+if (SUBJ(#1,#2) & NUCL[vlink,insist](#1,#3) & ^COORDINATE[subj](#1,#2))
+	~
+
+/////////////////////
+// Method: Mark subject and object COORDINATEs that contain a support verb and a nominal event
+
+if ( ^COORDINATE[subj](#1[sv],#2) | ^COORDINATE[obj](#1[sv],#2) & CORE-NOUN(#2) )
+	COORDINATE[sv=+](#1,#2).
+
+// Method: establish COORDINATE: the modifiers that are arguments of the core and are not premodifiers and are not adverbs
+
+if ( MOD[pre:~](#1,#2[adv:~]) & COORDINATE[subj](#1,#3) & ~COORDINATE[obj](#1,#4) )
+	COORDINATE[modif=+](#1,#2).
+
+
+// Method: Mark COORDINATEs with non-finite verbs
+
+if ( ^COORDINATE[subj](#1,#2) & CORE-VERB[modality](#1) )
+	COORDINATE[modality=+](#1,#2).
+
+if ( ^COORDINATE[obj](#1,#2) & CORE-VERB[modality](#1) )
+	COORDINATE[modality=+](#1,#2).
+
+if ( ^COORDINATE[modif](#1,#2) & CORE-VERB[modality](#1) )
+	COORDINATE[modality=+](#1,#2).
+
+
+// when "to" is not in the IV
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDINATE[subj](#1,#2) )
+	COORDINATE[modality=+](#1,#2).
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDINATE[obj](#1,#2) )
+	COORDINATE[modality=+](#1,#2).
+
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDINATE[modif](#1,#2) )
+	COORDINATE[modality=+](#1,#2).
+
+
+//******* [AR les coordonnées du verbe support (conséquences de la relation LIGHT pour les coordonnées de l'événement)
+
+// le nom d'événement sujet de son verbe support n'est pas l'acteur
+// Le sujet grammatical d'un verbe support n'est pas l'acteur si c'est un nom d'événement
+//if (LIGHT[subj](#1,#2) & ^COORDINATE[subj](#1,#2))
+//	~
+
+//le sujet normalisé du nom d'événement (relation Nsubj) est l'acteur du verbe support associé à ce nom
+//if(LIGHT[subj](#1,#2) & ^COORDINATE[Nsubj](#2,#3) & ~COORDINATE[subj](#1,#3))
+//	COORDINATE[subj=+, Nsubj=~](#1,#3)
+
+// Method: establish the coodinate of a support verb
+
+//nom lié à un verbe support
+if (COORDINATE[sv, subj](#1,#2) & CORE-NOUN(#2) & COORDINATE[Nsubj](#2,#3))
+	COORDINATE[subj=+](#1,#3)
+
+if (COORDINATE[sv](#1,#2) & CORE-NOUN(#2) & COORDINATE[subj, sv:~](#1,#3))
+	COORDINATE[Nsubj=+](#2,#3)
+
+//if (^COORDINATE[subj, sv](#1,#2) & COORDINATE[subj, sv:~](#1,#3))
+//	~
+
+//**** AR]
+
+/////////////////////////////
+//Method: interpret COORDINATEs a) interpret obj and subj COORDINATE as CORE-DRIVE when the coordinate is an event
+
+if ( (^COORDINATE[obj](#1,#2)|^COORDINATE[subj](#1,#2)) & CORE(#2) & ~CORE-DRIVE(#1,#2))
+	CORE-DRIVE(#1,#2).
+
+
+//Method: interpret COORDINATEs b) substitute obj and subj COORDINATE with actor and target COORDINATE
+if ((^COORDINATE[subj, sv:~](#1,#2)|^COORDINATE[Nsubj](#1,#2)) & ~CORE(#2))
+	COORDINATE[actor=+](#1,#2)
+
+if (^COORDINATE[obj, sv:~](#1,#2[entity])|^COORDINATE[Nobj](#1,#2[entity]))
+	COORDINATE[target=+](#1,#2)
+
+if ((^COORDINATE[obj, sv:~](#1,#2)|^COORDINATE[Nobj](#1,#2)) & MOD(#2,#4[entity]))
+	COORDINATE[target=+](#1,#4)
+
+//remplacer un relatif par son antécédent
+if (^COORDINATE(#1,#2) & ANTECEDENT(#3,#2))
+	COORDINATE(#1,#3)
+
+//says he wants to see : pas de relation directe entre says et see
+if (CORE-DRIVE(#1,#2) & CORE-DRIVE(#2,#3) & ^CORE-DRIVE(#1,#3) & #1<#2 & #2<#3)
+	~
+
+
+/
+// mark heads whose head is an SREL or a word given by Thales
+
+	
+if ( ^HEAD(#1[evnt,th,xrx],#3) )
+	HEAD[evnt=+,th=+,xrx=+](#1,#3).
+
+if ( ^HEAD(#1[th,evnt,xrx:~],#3) )
+	HEAD[evnt=+,th=+](#1,#3).
+
+if ( ^HEAD(#1[th:~,evnt,xrx],#3) )
+	HEAD[evnt=+,xrx=+](#1,#3).
+
+
+\
+
+

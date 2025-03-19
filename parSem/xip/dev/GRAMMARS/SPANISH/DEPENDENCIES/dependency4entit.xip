@@ -1,0 +1,164 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2008 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP grammar
+//!   filename   : dependency4entit.xip
+//!   Description: exploiting dependencies for NER
+//!		Dealing with ambiguities and metonimy
+//!   Author	 : C. Hagege
+//!   Date       : September 2008
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+DependencyRules:
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>> CORRECTING SOME NE CALCULATED BEFORE
+
+// Cumbre de Uruguay is calculated as a LOCATION (because of "cumbre" that introduces location names
+// if it is included in a PP introduced by "durante" this is an event and not a location
+if ( ^NE[geografico](#1[surface:"Cumbre %+"]) & PREPD(#1,?[lemma:durante]) )
+   NE[geografico=~,evento=+](#1)
+
+
+
+
+// Fondo XXX can be on surface both an organization or a financial product 
+// (e.g. Fondo de Garantía de Depósitos is a financial product and Fondo Monetario Internacional is an organization) 
+// if such an entity is object of verb "aumentar" then it is a financial product and not an organization
+if ( ^NE[organizacion](#1[surface:"Fondo%+"]) & OBJ(?[lemma:aumentar],#1) )
+   ~
+
+
+// Carretera/Ruta + Person Name. In this case we do not want to have the person name extracted as a NE
+// e.g. La ruta Carlos Manuel Bustos
+if ( ^NE[persona](#1) & ( MOD[pos](?[lemma:ruta],#1) | MOD[pos](?[lemma:carretera],#1)) )
+   ~
+
+
+// >>>>>>>>>>>>> GEOGRAFICO
+// MOD[post] de ciudad (ou de otra palabra [common:+,location:+]
+if ( MOD[pos](?[common:+,location:+],#1[prop]) & ~NE[geografico](#1) )
+NE[geografico=+](#1)
+
+
+// >>>>>>>>>>>>> PERSONA
+
+
+// if an untyped proper noun is the subject of a dicendi verb, then this is marked as person name
+// e.g. Xwerwer preguntó -> persona(Xerwer)
+if ( SUBJ(#1[human_activity],#2[prop]) & ~NE(#2) )
+   NE[persona=+](#2).
+
+// same as above when the name is guessed and maj
+if ( SUBJ(#1[human_activity],#2[src:guess,maj:+]) & ~NE(#2) )
+   NE[persona=+](#2)
+
+// the head of a PP[según] is a person name (if coded as prop and not typed)
+// e.g. según Xwerwer -> persona(Xerwer)
+if ( PREPD(#1[prop],?[lemma:según]) & ~NE(#1) )
+   NE[persona=+](#1)
+
+
+// object of the verb "elegir" is a person name
+// eg Xwer fue elegido, los espanoles eligieron Xwerwer
+// RAFINER preposition A introduit personne.
+if ( OBJ(#1[lemma:elegir],#2[prop]) & ~NE(#2) )
+   NE[persona=+](#2)
+
+
+// X tiene N anos (when anos is not modified - eg. El Salvador tiene 20 anos de retraso tecnologico
+if ( SUBJ(#1[lemma:tener],#2[prop]) & OBJ(#1,#3[lemma:año]) & ~NUMD(#3,?[noun]) & ~NE(#2) )
+   NE[persona=+](#2)
+
+// Using demonyms to mark person names
+// e.g. El español Xwerwer
+if ( MOD[pre](#1[prop],?[nationality]) & ~NE(#1) )
+   NE[persona=+](#1)
+
+// el Espanol Maurici Lucena
+// in this case we have another syntactic configuration
+if ( MOD[pos](?[nationality],#1[prop]) & ~NE(#1) )
+	NE[persona=+](#1)
+
+// Guessed proper noun which has a relation ATTRIB with a profession name
+// Lucena es el director
+if ( SUBJ(#2[lemma:ser],#1[prop]) & ATTRIB(#2,?[profession]) & ~NE(#1) )
+	NE[persona=+](#1)
+
+
+
+// >>>>>>>>>>>>> ORGANIZACION
+// e.g. La agencia alemana SID
+if ( MOD[pos](?[lemma:agencia],#2[acron]) & ~NE(#2) )
+   NE[organizacion=+](#2)
+
+
+// e.g. Los accionistas de Warner
+if ( MOD[pos](?[lemma:accionista],#2[prop]) & ( ~NE(#2) | ^NE[persona](#2) ) )
+	NE[persona=~,organizacion=+](#2)
+
+
+// >>>>>>>>>>>>> FECHAS
+
+
+// as apposition of the word "año"
+// el año 512
+| NP#1, NP{#2[first,last,dig]} |
+  if ( HEAD(#3[lemma:"año"],#1) & ~NE[fecha](#2) )
+  NE[fecha=+](#2)
+
+// temporada 2004-05
+| NP#1, NP{#2[first,last,dig]} |
+  if ( MOD[pos](#3[lemma:"temporada"],#2) & ~NE[fecha](#2) )
+  NE[fecha=+](#2)	
+
+
+// COORDINATION
+
+
+// Taking advantage of coordination
+if ( COORD(#1,#2) & COORD(#1,#3[maj]) & NE[!features_NE:!](#2) & ~NE(#3) )
+   NE(#3) 
+
+
+
+
+///////////////////////////////////////// CLEANING ////////////////////////////////////////
+
+
+
+
+// Cleaning rule for embedded NE of the same type
+| #1{?*,#2}; #1{?*,?{?*,#2}} |
+if ( (^NE[persona](#2) & NE[persona](#1)) | (^NE[organizacion](#2) & NE[organizacion](#1) ) )
+   ~
+
+
+// Cleaning rule for embedded geographic names
+// e.g Fidel Castro, America Latina
+| #1{?*,#2}; #1{?*,?{?*,#2}} |
+if ( ^NE[geografico](#2) & NE(#1) )
+   ~
+
+// Cleaning any kind of sub-entities within a person name
+| #1{?*,#2}; #1{?*,?{?*,#2}} |
+if ( NE[persona](#1) & ^NE(#2) )
+~
+
+
+// Cleaning rule
+// comment if we only want to have the largest NE
+| #1{?*,#2} |
+if ( ^NE(#2) & NE(#1) )
+   ~
+
+// Cleaning rule for deleting NE which consists in a single word in lower-case
+if ( ^NE(#1[surface:"c%+",mwe:~,date:~]) )
+	~

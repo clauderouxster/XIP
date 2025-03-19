@@ -1,0 +1,269 @@
+DependencyRules:
+
+/////////////////////////// missing dependencies \\\\\\\\\\\\\\\\\\\\\\\
+
+//"According to the SEC’s complaint, between May 2010 and January 2011, in what was its first year as a U.S. public company, Keyuan systematically failed to disclose in its SEC filings numerous material related party transactions, as required by U.S. Generally Accepted Accounting Principles (“GAAP”) and Commission rules and regulations. "
+//IV{to disclose} PP{in NP{its SEC filings}} NP{numerous AP{ADJ{material related}} party transactions} 
+
+| ?{?*,#1[verb,lemme:disclose]}, pp, np{?*, #2[last]} |
+    OBJ[aaer-dep=+](#1,#2).
+
+if ( ^OBJ[aaer-dep](#1,?) & OBJ(#1,?) )
+    ~.
+
+if ( ^OBJ[aaer-dep](#1,?) & OBJ-N(#1,?) )
+    ~.
+
+//The Complaint alleged that the defendants misrepresented and overstated the actual value of certain assets, known as media credits, by almost 1,000%, in an effort to bolster its balance sheet.
+//SC{BG{that} NP{the defendants} FV{misrepresented}} SC{and FV{overstated}} NP{the AP{actual} value}
+
+| sc{?+, fv{#1[fraud]}}, sc{?, fv{#2[fraud]}}, np{?*,#3[last]} |
+    OBJ[aaer-dep=+](#1,#3),OBJ[aaer-dep=+](#2,#3). 
+
+// Jiang and Xie are alleged to have knowingly failed to establish proper internal controls at UTG, caused documents to be falsified, and falsely certified to UTG's internal controls for 2010.
+//IV{to have knowingly failed} IV{to establish} NP{AP{proper} internal controls} 
+
+
+| iv{?+,#1[lemme:fail,last]}, iv{?*,#2[last]}, np{?*,#3[last]} |
+if ( ~OBJ(#2,#3) )
+    OBJ[aaer-dep=+](#2,#3).
+
+//Jiang and Xie are alleged to have knowingly failed to establish proper internal controls at UTG, caused documents to be falsified, and falsely certified to UTG's internal controls for 2010.
+//FV{caused} NP{documents} IV{to be falsified} 
+
+| ?{?*,#1[lemme:cause]}, np{?*,#2[last]}, iv{?[lemme:to],?[lemme:be],#3[last]} |
+    if ( ~OBJ-N(#3,#2) )
+    OBJ-N[aaer-dep=+](#3,#2).
+
+// The Complaint alleges that in the first three quarters of 1995, the Defendants improperly reported at least $8,589,338, $14,878,115 and $16,593,328 of purported bill and hold sales in ABS' Forms 10-Q, with the following results: 1) pre-tax income, net income and earnings per share were overstated by at least 43.90% to 129.61%; 2) sales were overstated by at least 6.46% to 21.16%; and 3) accounts receivable were overstated by at least 5.93% to 23.64%.
+//NUCL_SUBJCOMPL(were,overstated)
+//SUBJ-N_PRE(were,sales)
+//NP{sales} FV{were} NFV{overstated}
+/
+| np{#1}, fv{#2}, nfv{#3[past]} |
+if ( ^SUBJ-N(#2,#1) & NUCL(#2,#3) )
+    OBJ-N[aaer-dep=+](#2,#3).
+\
+
+//On February 4, 2014, the Court also entered a final judgment against Ulrich Bock and Stephan Signer, both former Heads of Major Projects at Siemens Aktiengesellschaft (Siemens).
+//LOCATION_SEC-SP_INSENT(Stephan)
+//NP{Stephan Signer}
+
+| np#3{#1[place],#2[maj]} |
+if ( ^LOCATION(#1) )
+    PERSON(#3).
+
+
+// Sentences that contain allegation
+/
+| #1[allege] |
+if ( ^SENT(#2) )
+    SENT[allege=+](#2).
+\
+////////////////////////// fraud words created in context  \\\\\\\\\\\\\\\\\
+
+
+//OBJ_POST_INFINIT(failed,disclose)
+
+| #1[fraud=+,fail=+] |
+if ( OBJ[post,infinit](#2[lemme:fail],#1) )
+    ~.
+
+//MOD_POST_INFINIT(failed,obtain)
+
+| #1[fraud=+,fail=+] |
+if ( MOD[post,infinit](#2[lemme:fail],#1) )
+    ~.
+
+//IV{to improperly identify}
+
+| iv#1{?*, ?[fraudadv], #2[fraud=+]} |
+    ~.
+
+// FV{began} falsely GV{reporting}
+
+| #1[fraudadv], gv{#2[fraud=+]} |
+    ~.
+
+
+/////////////////////////// parties \\\\\\\\\\\\\\\\\\\\\
+
+if ( PERSON(#1) )
+    PARTY(#1).
+
+//Securities and Exchange Commission v. Volt Information Sciences, Inc. and Debra L. Hobbs , Civil Action No. 13-CV-237 (S.D.N.Y.) and 13-CV-236 (S.D.N.Y.).
+
+if ( PREPD(#1,#2[lemme:v\.]) & ORGANISATION(#1) )
+    PARTY(#1).
+
+//SEC Charges Volt Information Sciences, Inc. and Two Former Officers with Securities Fraud.
+
+if ( OBJ(#1[lemme:charge],#2) & ORGANISATION(#2) )
+    PARTY(#2).
+
+// exception: The SEC's investigation, which is continuing, was conducted by Fuad Rana, Avron Elbaum, and Melissa A. Robertson.
+
+| #1[lemme:investigation] |
+if ( ^PARTY(#2) )
+    ~.
+
+| #1[lemme:litigation] |
+if ( ^PARTY(#2) )
+    ~.
+
+| #1[lemme:judge] |
+if ( ^PARTY(#2) )
+    ~.
+
+// The SEC's litigation continues against Neil.
+//PREPD(Neil,against)
+
+if ( PREPD(#1,#2[lemme:against]) & PERSON(#1) )
+    PARTY(#1).
+
+
+//////////// DATES \\\\\\\\\\\
+
+// XIP: DATE; TIMEX3
+
+// TIMEX3 and DATE in sentences where there is no exact date
+
+if ( TIMEX3[insent](#1) | DATE[insent](#1) )
+    PERIOD-OF-FRAUD(#1).
+
+// precise dates - containing days - are not PERIOD-OF-FRAUD
+| #1[day] |
+if ( ^PERIOD-OF-FRAUD(#1) )
+    ~.
+
+//Securities Exchange Act of 1934 
+//LAW(Securities Exchange Act)
+
+if ( ^PERIOD-OF-FRAUD(#2) & LAW(#1) )
+    ~. 
+
+// temporal adverbs are not PERIOD-OF-FRAUD -> PERIOD-OF-FRAUD should contain a digit
+
+
+| #1[dig:~] |
+if ( ^PERIOD-OF-FRAUD(#1) )
+    ~.
+
+
+// final: eliminate doubles
+
+if ( ( ^DATE(#1) | ^TIMEX3(#1) ) & PERIOD-OF-FRAUD(#1) )
+    ~.
+
+/////////////////////////// allegations \\\\\\\\\\\\\\\\\\\\\
+
+
+| #3[allege] |
+if ( OBJ[sentence:~](#1[fraud,fail],#2) & HEAD(#2,#4) )
+    ALLEGATION[fail=+](#1,#4).
+
+| #3[allege] |
+if ( MOD[pre,sentence:~](#1,#2[fraud,fail]) )
+    ALLEGATION[fail=+](#2,#1).
+
+
+| #3[allege] |
+if ( OBJ-N[sentence:~](#1[fraud,fail],#2) & ~OBJ[sentence:~](#1[fraud,fail],#4) & HEAD(#2,#4) )
+    ALLEGATION[fail=+](#1,#4).
+
+// transitive verbs
+| #3[allege] |
+if ( OBJ[sentence:~](#1[fraud,fail:~],#2) & HEAD(#2,#4) )
+    ALLEGATION(#1,#4).
+
+
+| #3[allege] |
+if ( MANNER[pre,sentence:~](#1,#2[fraudadv,fail:~]) & ~ALLEGATION(#2,#4) )
+    ALLEGATION(#2,#1).
+
+
+| #3[allege] |
+if ( HEAD(#1[fraud,fail:~],#2) & #1~:#2 & $1(#1,#4[det:~]) )
+    ALLEGATION(#2).
+
+| #3[allege] |
+if ( MOD[pre,sentence:~](#1,#2[fraud,fail:~]) & HEAD(#1,#4) )
+    ALLEGATION(#4).
+
+
+//NP{AP{improperly reclassified} expenses}
+
+| np#1{ap#4{#2[fraud,first],?+}, ?+} |
+if ( ^ALLEGATION(#4) )
+    ALLEGATION(#1).
+
+
+
+| #3[allege] |
+if ( PREPD(#1,#2[fraud,fail:~]) & HEAD(#1,#4) )
+    ALLEGATION(#4).
+
+//The SEC's complaint further alleges that from 2005 through 2008, through its Russian subsidiary Diebold Self-Service Ltd., Diebold paid bribes on the sale of ATMs to private banks in Russia.
+//OBJ-N(paid,bribes)
+
+| #3[allege] |
+if ( OBJ[sentence:~](#1,#2[noun,fraud]) )
+    ALLEGATION(#1,#2).
+
+
+| #3[allege] |
+if ( OBJ-N[sentence:~](#1[fraud,fail:~],#2) & ~OBJ[sentence:~](#1[fraud,fail:~],#4) & HEAD(#2,#4) )
+    ALLEGATION(#1,#4).
+
+
+//The SEC's complaint further alleges that PACCAR and PACCAR Financial Corp. failed to maintain accurate books and records regarding their impaired loans and leases, causing them to improperly identify and disclose loans and leases for impairment.
+//IV{to improperly identify}
+
+| ?#1{?+,#2[verb,last]} |
+if ( ^ALLEGATION(#2,#3) )
+    ALLEGATION(#1,#3).
+
+//"The SEC alleges that China MediaExpress, which purports to operate a television advertising network on inter-city and airport express buses in the People's Republic of China, began falsely reporting significant increases in its business operations, financial condition, and profits almost immediately upon becoming a publicly-traded company through a reverse merger."
+
+//falsely GV{reporting}
+
+| #1[fraudadv], gv{#2[fraud]} |
+if ( ^ALLEGATION(#2,#3) )
+    ALLEGATION(#1,#2,#3).
+
+//Further, prior to June 2011 the Commission alleges that the defendants falsely described UTG's business organization, failing to disclose that UTG had transferred certain subsidiaries to third parties pursuant to agreements designed to give UTG the economic benefits of ownership, and UTG materially overstated its revenues and profits in its quarterly reports in 2010.
+//ALLEGATION(falsely,described)
+//OBJ_POST(described,organization)
+//HEAD(organization,UTG 's business organization)
+
+| #5{#1,#2} |
+if ( ^ALLEGATION(#1,#2) & OBJ(#2,#3) & HEAD(#3,#4) )
+    ALLEGATION(#5,#4).
+
+/
+//create the false appearance 
+//ALLEGATION(the false appearance)
+//HEAD(appearance,the false appearance)
+//OBJ_POST(create,appearance)
+//OBJ-N(create,appearance)
+
+if ( ^ALLEGATION(#1) & HEAD(#2,#1) & ( OBJ(#3,#2) | OBJ-N(#3,#2) ) )
+    ALLEGATION(#3,#1).
+\
+
+// delete pp ALLEGATIONs except when the HEAD is [fraud]
+//The SEC alleges that contrary to[fraud] JPMorgan's accounting policy, Martin-Artajo instructed Grout on March 30 to wait for better prices after the close of trading in London in the hope that activity in the U.S. markets could support better marks for SCP's positions.
+
+| pp#1{#2[fraud:~],?+} |
+if ( ^ALLEGATION(#1) )
+    ~.
+
+| pp#1{#2[fraud,first],#3} |
+if ( ALLEGATION(#1) & ^ALLEGATION(#3) )
+    ~.
+
+
+//intransitive verbs
+| #3[allege] |
+if ( ^MOD[post,sentence:~](#1[fraud,verb],#2) & ~OBJ(#1,?) & ~OBJ-N(#1,?) )
+    ALLEGATION(#1).

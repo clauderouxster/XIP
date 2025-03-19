@@ -1,0 +1,304 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP normalization grammar
+//!   filename   : paraph2.xip
+//!   Date       : 09/2003
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+////////////
+// Creating a S1 that subsumes all the other S1* relations
+////////
+
+// Rule 549
+if ( S1H(#1,#2) | S1NH(#1,#2) ) 
+	S1(#1,#2)
+
+// Creating a SREL dep. that subsumes all the external relations
+if (  S1NH(#1,#2) | S0(#1,#2) | S2(#1,#2) | S3(#1,#2) | Sto(#1,#2) | NA1(#1,#2) | VA1(#1,#2)  )
+	SREL(#1,#2)
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with S1H predicate
+// S1H : Derivation +OR : The noun corresponds to the agent of the action. The noun has always c_person:+ feature
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Rule 708
+// If we have attrib relation between a noun involved in a S1H and another noun
+// Then the other noun is the agent of the verb that is the verbal counterpart of the S1H relation
+// e.g. creator - create - John is the creator, The creator is the man I met yesterday
+if (S1H(#1,#2) & ( ATTRIB[def](#3,#1) | ATTRIB[def](#1,#3) | ATTRIB(#1,#3[proper]) | ATTRIB(#1,#3[c_person]) | ATTRIB[appos](#3,#1) | ATTRIB[appos](#1,#3) ) )
+	SUBJ-N(#2,#3)
+
+
+
+
+// Rule 571
+// If we have a noun in a S1H wich is modified by another noun through a genitive or a PP[of]
+// Then the modifier of the noun is the OBJ2 of the verb in the corresponding nomin1 relation
+// e.g. the inventor of the process -> OBJ2(invent,process)
+if ( S1H(#1,#9) & ( NMODPREP(#1,#2,?[form:fof]) | NMODGEN(#1,#2) ) )
+	OBJ-N(#9,#2)
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with S0 predicate
+// S0 : The noun paraphrases the action denotated by the verb
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// Rule 710
+// abolition of slavery -> abolish slavery
+// Note the noun modifier has not the [c_person:+] feature
+if ( S0(#1,#9)  & ( NMODPREP(#1,#2[c_person:~,date:~,time:~,tempexpr:~,entite:~,proper:~],?[form:fof]) | NMODGEN(#1,#2[c_person:~,date:~,time:~,tempexpr:~,entite:~]) )  )
+	OBJ-N(#9,#2)
+
+
+
+// EN COURS : The invention of the new process by John
+// if default rule for PP attachment is used then John is attached to process
+if ( S0(#1,#9) & OBJ-N(#9,#2) & ~SUBJ-N(#9,?) & ( NMODPREP(#2,#3[c_person],?[form:fby]) | NMODPREP(#2,#3[proper,noun],?[form:fby]) ) & #2 < #3 )
+	SUBJ-N(#9,#3)
+
+
+// Rule 553
+// the abolition by John --> John abolishes
+if ( S0(#1,#9) & ( NMODPREP(#1,#2[c_person],?[form:fby]) | NMODPREP(#1,#2[proper,noun],?[form:fby]) ) & ~SUBJ-N(#9,#2) )
+	SUBJ-N(#9,#2)
+
+
+// Rule 554
+// John's abolition of XXXX --> John abolishes
+// An obj2 had already been constructed
+if ( S0(#1,#9) & NMODGEN(#1,#2[c_person]) & ( OBJ-N(#9,?) | ATTRIB(#1,?) ) )
+	SUBJ-N(#9,#2)
+
+// Rule 555
+// If we have a OF complement of a S0's noun that does not have any role by the previous rules, and if there is no agent then we give it the SUBJ-N rule
+if ( S0(#1,#9) & ~OBJ-N(#9,?) & ~SUBJ-N(#9,?) & NMODPREP(#1,#2[date:~,tempexpr:~,time:~],?[form:fof]) )
+	SUBJ-N(#9,#2)
+
+
+// Rule XXXX
+// If we have OF complement of SO noun and already a SUBJ-N that have been calculate elsewhere and if this of complement has no rule then it is an obj. (works for obj-n that are named entities or person names that have not be taken before because of the restrictions
+if ( S0(#1,#9)  & SUBJ-N(#9,#3) & ~OBJ-N(#9,?) & ( NMODPREP(#1,#2,?[form:fof]) | NMODGEN(#1,#2) ) & #2 < #3 )
+	OBJ-N(#9,#2)
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with S1NH predicate
+// Derivation +ion. The noun is the result of the action expresses by the verb and this result is the syntactic subject of the verb
+// e.g. abbreviation, satisfaction
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Rule 715
+// The noun in the nomin3_suj predicate corresponds to the subject of the action denoted by the verb
+// ABC is the abbreviation --> ABC abbreviates
+if ( S1NH(#1,#9) & ATTRIB[def](#2,#1)  )
+	SUBJ-N(#9,#2)
+
+
+// Rule 557
+// Noun modifier is a nominal pre-modifier --> OBJ-N of the corresponding verb
+// e.g. clients satisfaction --> satisfy clients
+if ( S1NH(#1,#9) & NMODGEN(#1,#2) )
+	OBJ-N[pre=+](#9,#2)
+
+// Rule 558
+// Modifier PP[of] of a noun in nomin3_suj is the OBJ-N of the verb in the same nomin3_suj IF no previous OBJ-N had been found
+// The abbreviation of Microsoft  --> abbreviate Microsoft
+// The satisfaction of Mary --> satisfy Mary
+if ( S1NH(#1,#9) & NMODPREP(#1,#2,?[form:fof]) & ~OBJ-N[pre](#9,?) )
+	OBJ-N(#9,#2) 
+
+// Rule 559
+// PP[of] and an OBJ-N in the left has been already found, then the modifier[of] is the agent
+// The clients satisfaction of John --> The clients satisfy John (checked with Aaron)
+if ( S1NH(#1,#9) & NMODPREP(#1,#2,?[form:fof]) & ^OBJ-N[pre](#9,#3) )
+	SUBJ-N(#9,#3),
+	OBJ-N(#9,#2)
+	
+
+// Rule 560
+// Modifier PP[with,about] is agent of the verb
+// satisfaction(with|about) the news
+if ( S1NH(#1,#9)  & ( NMODPREP(#1,#2,?[sc_pabout]) | NMODPREP(#1,#2,?[sc_pwith]) ) )
+	SUBJ-N(#9,#2)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with S2 predicate
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Rule 520
+// e.g. The sculpture is a creation --> create sculpture
+// e.g. Mary is the exception --> except Mary 
+if ( S2(#1,#9) & ( ATTRIB(#2,#1[noun]) | ATTRIB(#1,#2[noun]) ) )
+	OBJ-N(#9,#2)
+
+// EN COURS, revoir la notion de ATTRIB avec les NADJ e.g. The affirmation is wrong.
+
+
+// Rule 562
+// if no previous OBJ-N has been calculated
+// e.g. The exception for XXX --> X except
+// restriction on previous constructed dependencies because nomin2 is privilegied  (the latest creation of the designer was sold yesterday)
+if ( S2(#1,#9) & NMODPREP(#1,#2,?[form:ffor]) )
+	SUBJ-N(#9,#2)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with S3 predicate
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// e.g. employee, employ X is an employee of Y -> Y employs X
+
+if ( ATTRIB(#1,#2) & S3(#2,#3) )
+	OBJ-N(#3,#1)
+
+if ( ( NMODPREP(#1,#2,?[form:fof]) | NMODGEN(#1,#2) | NMODPREP(#1,#2,?[form:fby]) ) & S3(#1,#20) )
+	SUBJ-N(#20,#2)
+
+
+// the employee is X -> employ X
+if ( ATTRIB(#1,#2) & S3(#1,#3) )
+	OBJ-N(#3,#2)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with Sto predicate
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// Rule 563
+if ( Sto(#1,#9) & ( ATTRIB(#2,#1) | ATTRIB(#1,#2) ) )
+	RESULT(#9,#2)
+
+
+
+// Rule 564
+// They transformed John into a killer --> RESULT(transform,killer), PATIENT(transform,John)
+// We have to index the predicates through the verb and not only through the noun
+// Note for some cases RESULT dependency may already have been constructed (see dependency_paraph.xip))
+if (Sto(#1,#9) & ^VMODPREP(#9,#10,?[sc_pinto]) )
+		RESULT(#9,#10)
+
+if ( Sto(#1,#9) & RESULT(#9,#10) & ^OBJ-N(#9,#8) )
+	PATIENT(#9,#8)
+	.
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with NA1 Predicates
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// NA1 - reluctance-relunctant, vigilance-vigilant etc.
+
+// the boy has clairvoyance -> the boy is clairvoyant
+if ( SUBJ-N(?[lemme:have],#1) & NA1(#2,#3) )
+	QUALIF(#1,#3)
+
+// The boy's clairvoyance/the clairvoyance of the boy -> the boy is clairvoyant
+if ( ( NMODGEN(#1,#2) | NMODPREP(#1,#2,?[lemme:of]) ) & NA1(#1,#3) )
+	QUALIF(#2,#3)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Paraphrasing with VA1 Predicates
+// 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// e,g, x is tolerant -> x tolerates
+if ( ATTRIB(#1,#2) & VA1(#3,#2) )
+     SUBJ-N(#3,#1)
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Continuation normalized subjects with use of derivational morphology
+//////// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Rule XXX
+// Normalized subjects for verbs that have been introduced with sucessful-action lexical element (see framenet)
+
+// e.g. X suceeds in doing Y OR X managed in doing Y -> SUBJ-N(do,X) 
+// The success of X in doing Y
+// X was sucessful in doing Y
+| ?[lemme:in], GV{?*,#3[vprog]} |
+if (  ( SUBJ-N(#1[lemme:succeed], #2) | SUBJ-N(#1[lemme:manage],#2) ) & 
+// X succeed in V-ing
+   ( MOD[post](#1,#3) |
+// success of X in doing
+     ( MOD[post](#2,#3) & S0(?,#1) ) |
+// X was sucessful in doing
+     ( ATTRIB(#2,#4) & VA1(#1,#4) & SUBJ-N(#5,#2) & MOD[post](#5,#3) ) 
+    ) & 
+   ~SUBJ-N(#3,?) 
+)
+     SUBJ-N(#3,#2) 
+
+			 
+
+
+// Aspectual verb (accomplishment) which has for Direct Object a deverbal 
+// X finalized the acquisition of Y -> X acquired Y
+
+if (  ( SUBJ-N(#1[lemme:finalize],#2) | SUBJ-N(#1[lemme:accomplish],#2) | SUBJ-N(#1[lemme:achieve],#2) ) &
+        OBJ-N(#1,#3) &
+	S0(#3,#30) &
+	~SUBJ-N(#30,?)
+)
+	SUBJ-N(#30,#2) 
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+

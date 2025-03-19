@@ -1,0 +1,573 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Caroline HAGEGE - Octobre 2009 - Local grammar ALADIN
+//!
+//! This file : specific tokenization transformation for ALADIN 
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Section pour le marquage de certaines suites qui ont été traitées en amont par la grammaire générale et qu'il faut re-préciser
+Déduction:
+
+//////////// GENERAL
+
+#@rulespace=medecine
+
+
+// marquage combinaisons de vertebres L3-L4
+| noun[mwe,body_part=+]{noun[body_part,guessed:~], punct[hyph:+], noun[body_part,guessed:~]} |
+~
+
+
+// hyperthermie dans contexte "chimio(-)hyperthermie, hyperthermie n'est pas une indication de temperature
+| noun[lemme:chimio], (punct), noun[lemme:hyperthermie,temperature=~] |
+~
+
+// marquage anbiotique non administré dans contextes "souche adv* sensible,resistant antib
+| noun[lemme:souche], (adj), adv*, ?[lemme:sensible];?[lemme:résister], (prep[lemme:"à"]), (det), adj*, noun[antib,not_admin=+] |
+~
+
+
+Séquence:
+
+
+
+// relier comme une entree unique
+// CR (de) sortie
+1> noun[mwe=+,noun=+,sortie:+] @= noun[abr, lemme:"CR"], (prep[lemme:de]), noun[lemme:sortie];verb[lemme:sortir] .
+
+1> noun[mwe=+] @= ?[lemme:compte], ?[surface:rendu] | prep[lemme:de] | .
+
+
+// expressions temporelles spécifiques dossiers patient
+// dates complexes reliées a nom:temp_achor:t0
+// e.g. 2 jours après l'intervention chirurgicale
+1> noun[mwe=+,relative:+,date:+,temp_anchor:t0] @= noun[mwe,relative,date], prep[postdate,predate], (det), (adj), noun[temp_anchor:t0] .
+
+
+// mettre en évidence
+1> verb[avoir=+] @= verb[lemme:"mettre",v_evid=+,partpas:~], (adv[psneg:~]), prep[lemme:en], noun[lemme:"évidence"] .
+
+
+// pour les temperatures mal segmentées
+1> noun[mwe=+,unit_temper=+] @= num, punct[form:fcm], noun[unit_temper,unit_temper=~,mwe=~] .
+
+// expressions de type post_diagnostic
+// "de type + adj(post_diagnost)
+// eg de type hémorragique
+1> adj[mwe=+,post_diagnost=+] @= prep[lemme:de], noun[lemme:type], adj[post_diagnost] .
+
+
+// partie du corps
+// SOUS CUTANE sans hifen comme adj body_part (harmonisation avec version avec tiret)
+2> adj[body_part=+,mwe=+,pour_iso=superficiel] @= prep[lemme:sous], adj[lemme:"cutané"] .
+
+// prefix "péri" followed by adj[body_part] is adj[body_part]
+// e.g. péri-gastrique
+2> adj[body_part=+,mwe=+] @= prefix[surface:"péri"], punct[hyph], adj[body_part] .
+
+// sous diaphragmatique
+2>  adj[mwe,body_part=+,pour_iso] @= ?[lemme:sous], adj[body_part,!pour_iso:!] .
+
+// prefix body part followed by adj[body_part] is adj[body_part]
+2> adj[body_part=+,mwe=+] @= ?[guessed:+,lemme:"%+o"], punct[hyph,strongbreak], adj[body_part] .
+
+
+
+// prefix + body part donne body part (sans hyphen)
+// eg intramédullaire
+2> adj[body_part=+,mwe=+,pour_iso] @= prefix, adj[body_part,guessed:~,!pour_iso:!] .
+
+// on trouve prefix separe de body part sans hyphen
+// eg "intra médullaire"
+2> adj[body_part=+,mwe=+,pour_iso] @= ?[lemme:"intra"], adj[body_part,guessed:~,!pour_iso:!] .
+
+
+// body_part complexe
+// eg os de l'articulation de la hanche
+2> noun[body_part=+,mwe=+] @= noun[body_part], (prep[lemme:de];noun[body_part];det[def])+, noun[body_part].
+
+
+// périphrases pour dire "infectieux" (eg d'origine infectieuse)
+2> adj[modif_infec=+] @= prep[lemme:de], (det), noun[lemme:"origine"];noun[lemme:allure], adj[lemme:infectieux] .
+
+// signe infectieux
+2> noun[autre_infec=+,mwe=+] @= noun[lemme:"signe"], adj[lemme:"infectieux"] .
+
+
+
+// cavité abcédée/infectée
+5> noun[autre_infec=+,mwe=+] @= noun, adj[modif_infec] .
+
+
+3> noun[mwe=+,body_part=+,os=+] @= noun[lemme:col], prep, (det), noun[lemme:fémur] .
+3> noun[mwe=+,body_part=+] @= noun[lemme:glande], adj[lemme:salivaire] .
+
+3> adj[mwe=+,body_part=+] @= adj[body_part], ?[lemme:droit,maj:~];?[lemme:gauche,maj:~]; ?[lemme:antérieur,maj:~]; ?[lemme:postérieur,maj:~].
+
+// articulation de <body_part>
+3> noun[mwe=+,body_part=+,pour_iso=profond] @= noun[lemme:articulation], prep[lemme:de], (det), noun[body_part] .
+3> noun[mwe=+,body_part=+,pour_iso=profond] @= noun[lemme:articulation], adj[body_part] .
+
+// tubérosité + os -> os
+3> noun[mwe=+, body_part=+, os=+] @= noun[lemme:"tubérosité"], (prep[lemme:de], det), ?[body_part] .
+
+// lobe supérieur des bronches
+4> noun[mwe=+, body_part=+] @= noun[lemme:lobe], (adj[lemme:supérieur];adj[lemme:inférieur]), prep[lemme:de], (det), noun[body_part] .
+
+
+// hanche gauche
+4> noun[mwe=+, TraitsAladin:!] @= noun[body_part,!TraitsAladin:!], ?[lemme:droit];?[lemme:gauche];?[lemme:"antérieur"];?[lemme:"postérieur"];?[lemme:"inférieur"];?[lemme:supérieur] .
+
+
+// WEAK SIGNALS
+// signaux faibles pour detection des IN et des ISO
+
+// Si service des maladies infectieuses mentionnée dans le dossier, alors signe faible
+3> noun[mwe=+,weak_infection=+] @= noun[lemme:service], (prep[lemme:de], det), noun[lemme:maladie,pl:+], adj[lemme:infectieux] .
+
+
+///////////////////// ORTHOPEDIE et chirurgie ?
+#@rulespace=medecine.ortho
+
+// drainage sous diaphragmatique
+4> noun[mwe=+,weak_cure=+,pour_iso] @= noun[weak_cure], adj[body_part,!pour_iso:!] .
+
+4> noun[mwe=+,weak_cure=+,soins_loc=+] @= noun[lemme:lavage], punct[hyph:+], noun[lemme:parage] .
+
+// reprise de cicatrice
+4> noun[mwe=+,weak_cure=+] @= noun[lemme:reprise], prep[lemme:de], (det), noun[lemme:cicatrice] .
+
+
+// nécrose de cicatrice
+4> noun[mwe=+,weak_infection=+] @= noun[lemme:nécrose], (adj), prep[lemme:de], (det), noun[lemme:cicatrice] .
+
+4> noun[mwe=+,weak_cure=+,soins_loc=+] @= noun[lemme:nettoyage];noun[lemme:parage];noun[lemme:lavage], prep[lemme:de], (det), noun[lemme:cicatrice] .
+
+
+
+
+#@rulespace=medecine
+
+// TEMPERATURE
+// temperature composé
+5> adj[mwe=+,temperature=+] @= ?[lemme:sub], (punct[form:fhyph]), adj[lemme:fébrile] .
+//épisole <temper>
+6> noun[mwe=+,temperature=+] @= noun[lemme:"épisode"];noun[lemme:"contexte"], (prep), ?[temperature] .
+// état (tres) fébrile
+6> noun[mwe=+,temperature=+] @= noun[lemme:"état"], adv*[lemme:~non], adj[temperature] .
+
+
+//Infection precedee d'un prefixe
+
+6> noun[infection:!,mwe=+] @= ?[guessed], punct[form:fhyph], noun[!infection:!] .
+
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:maladie], adj[lemme:infectieux] .
+
+8> noun[infection:!,mwe=+] @= noun[!infection:!], ?[post_diagnost] .
+
+//// BACTERIES
+
+// Bactérie attestée dico + "%+um"
+// acholeplasma parvum
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+um"] .
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+us"] .
+// acetinobacter junii
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+ii"] .
+// pasteurella ureae
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+ae"] .
+
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+is"] .
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+ens"] .
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+ficans"] .
+5> noun[autre_bact=+,mwe=+] = noun[bacterie,guessed:~], ?[guessed:+,lemme:"%+ea"] .
+
+// <bacterie> resistant a <antibio> un seul token
+// <bacterie> sensible a <antibo> un seul token
+// e.g. un escherichia coli sensible/resistant à l'Amoxicilline.
+
+5> noun[autre_bact=+] @= noun[bacterie], adv*, adj[lemme:sensible], (prep[lemme:"à"]), (det), noun[antib,not_admin=+] .
+6> noun[autre_bact=+] @= noun[bacterie], adv*, ?[lemme:"résister"], (prep[lemme:"à"]), (det), noun[antib,not_admin=+] .
+
+// Staphylocoque Auréus Méticilline sensible . 
+6> ? @= noun[bacterie], noun[antib,not_admin=+], ?[lemme:sensible];?[lemme:résistant] .
+
+// allergie au Bactrim dans les antecedants, ne pas garder les mentions dans ce cas la comme indice
+6> ? @= noun[lemme:allergie];adj[lemme:allergique], prep, (det), noun[antib,not_admin=+] .
+
+// batonnet/bactérie + gram-positif/negatif | Ticar S + (an)aérobie
+6> noun[autre_bact=+,mwe=+] @= noun[lemme:"bâtonnet"], (prep), ?+[modif_bact] .
+6> noun[autre_bact=+,mwe=+] @= noun[lemme:"bactérie"], (prep), ?+[modif_bact] .
+6> noun[autre_bact=+,mwe=+] @= noun[bacterie,guessed:~], (prep), ?+[modif_bact] .
+
+// batonnet (non) sporogene/sporulant + modif_bact
+6> noun[autre_bact=+,mwe=+] @= noun[lemme:"bâtonnet"], (adv[lemme:"non"]), ?[guessed], (prep[lemme:"à"]), ?[modif_bact] .
+
+// bacille de Maj[tit:~]
+6> noun[autre_bact=+,mwe=+] @= noun[lemme:"bacille"], prep[lemme:de], noun[maj:+,tit:~,proper=~] .
+
+// bacille de la lèpre
+6> noun[autre_bact=+,mwe=+] @= noun[lemme:"bacille"], prep[lemme:de], (det), noun[infection] .
+
+// treponème de Kazan
+6> noun[autre_bact=+,mwe=+] @= noun[bacterie,guessed:~], prep[lemme:de], (det), noun[lieu:+,guessed:~] .
+
+// Streptococcus béta-hémolytique de groupe G
+8> noun[autre_bact=+,mwe=+] @= noun[bacterie], (prep[lemme:de]), noun[lemme:groupe], ?[lettre, toutmaj] .
+
+////// VIRUS
+6> noun[autre_vir=+,mwe=+] @= noun[virus,guessed:~], (adj[lemme:humain]), num[card] .
+
+
+/// MALADIE VIRALE
+
+// encephalite de Maj[lieu] n'est pas un lieu (contrainte a droite pas de nom propre ou rien)
+6> noun[maladie_vir:+]  @= noun[lemme:"encéphalite",maladie_vir=~], prep[form:fde], noun[maj:+, tit:~, lieu=~, pays=~, region=~] | ?[proper:~] | .
+6> noun[maladie_vir:+]  @= noun[lemme:"encéphalite",maladie_vir=~], prep[form:fde], noun[maj:+, tit:~, lieu=~, pays=~, region=~] | | .
+
+
+//// VIRUS SUITE
+// virus de la fièvre aphteuse
+8> noun[autre_vir=+,mwe=+] @= noun[virus,guessed:~], prep[lemme:"de"], (det), noun[maladie_vir,maladie_vir=~] .
+8> noun[autre_vir=+,mwe=+] @= noun[virus,guessed:~], prep[lemme:"de"], (det), noun[diagnostic:+, diagnostic=~] .
+
+
+// maladie de <prenom> enlever le trait personne sur le prenom
+6> ? = noun[lemme:"maladie"], prep[lemme:de], noun[proper=~,pren=~,person=~] .
+
+
+//// Levures complexes
+// aspergillus [fumigatus, glaucus, flavus etc...]
+6> noun[autre_lev=+,mwe=+] = noun[levure], ?[guessed:+,lemme:"%+us"] .
+6> noun[autre_lev=+,mwe=+] = noun[levure], ?[guessed:+,lemme:"%+um"] .
+
+// Candida[maj] + guessed
+6> noun[autre_lev=+,mwe=+] = noun[lemme:"Candida",proper=~,person=~,pren=~], ?[guessed] .
+
+// Levure attestee + guessed terminé par "ii"
+// trichophyton megninii
+6> noun[autre_lev=+,mwe=+] = noun[levure], ?[guessed:+, lemme:"%+ii"] .
+
+// levure attestee + "dermatitidis"
+6> noun[autre_lev=+,mwe=+] = noun[levure], ?[lemme:"dermatitidis"] .
+
+
+
+
+
+//// INFECTION
+
+// infection + nom de bacterie -> un seul terme
+// attention on gardera en sortie le marquage de la bacterie
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:infection], prep[lemme:"à"], noun[bacterie] . 
+// plus général on regroupe un mot d'infection (un seul token) + nom de bactérie
+6> noun[autre_infec=+,mwe=+] @= noun[infection, lemme:"%c+"], prep[lemme:"à"], noun[bacterie] . 
+
+6> noun[autre_infec=+,mwe=+] @= noun[infection], prep, (det), noun[body_part].
+6> noun[autre_infec=+,mwe=+] @= noun[infection], adj[body_part].
+
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:foyer], adj[body_part], (adj[lemme:basal]), (?[lemme:droit];?[lemme:gauche]) .
+
+// liquide jaune -> infection
+6> noun[autre_infec=+,mwe=+] @= (noun[lemme:écoulement], prep[lemme:de]), noun[lemme:liquide], adj[lemme:jaune] .
+
+// liquide louche -> infection
+6> noun[autre_infec=+,mwe=+] @= (noun[lemme:écoulement], prep[lemme:de]), noun[lemme:liquide], adj[lemme:louche] .
+
+// écoulement +adv purulent|sale
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:"écoulement"], (adv), adj[lemme:purulent];adj[lemme:sale];adj[lemme:"séreux"];adj[lemme:douteux] .
+
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:ascite], adj[lemme:trouble] .
+
+
+// probleme|complication (vasculaire) septique
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:problème], (adj[body_part]), adj[lemme:septique] .
+6> noun[autre_infec=+,mwe=+] @= noun[lemme:complication], (adj[body_part]), adj[lemme:septique] .
+
+// doit prendre en compte des regles complexes d'infection d'ou le numero de couche
+8> noun[autre_infec=+,mwe=+] @= noun[lemme:"signe"];noun[lemme:"aspect"], prep[lemme:de], (det), noun[infection] .
+
+#@rulespace=medecine.ortho 
+
+// cicatrice avec désunion - marquer désunion dans ce cas
+7> ? @= | noun[lemme:cicatrice], ?, (adj) | noun[lemme:"désunion",iso=+] .
+
+// désunion de la cicatrice
+7> noun[iso=+,mwe=+] @= noun[lemme:désunion];noun[lemme:disjonction];noun[lemme:bombement], prep, det, noun[lemme:cicatrice] .
+// désunion cicatricielle
+7> noun[iso=+,mwe=+] @= noun[lemme:désunion];noun[lemme:disjonction];noun[lemme:bombement];noun[lemme:"écoulement"], adj[lemme:cicatriciel] .
+
+7> noun[iso=+,mwe=+] @= noun[lemme:cicatrice], (adv), adj[lemme:"désuni"];adj[lemme:disjoint]. 
+7> noun[iso=+,mwe=+] @= noun[lemme:cicatrice], verb[lemme:"être"], (adv), verb[partpas,lemme:"désunir"];verb[partpas,lemme:disjoindre]. 
+
+7> noun[iso=+,mwe=+] @= noun[lemme:cicatrice], (adv), adj[lemme:"purulent"];verb[partpas,lemme:"infecter"];adj[lemme:"infectieux"];?[modif_infec] .
+
+7> noun[iso=+,mwe=+] @= noun[lemme:"écoulement"], (adj), (?[partpre]), prep, (det), noun[lemme:cicatrice] .
+
+
+7> noun[iso=+,mwe=+] @= noun[infection], prep[lemme:de], (det), noun[lemme:foyer];noun[lemme:site], adj[lemme:"opératoire"] .
+
+
+// noun + purulent
+// eg "matériel purulent
+8> noun[iso=+,mwe=+] @= noun, (adj[body_part]), adj[lemme:purulent] .
+
+
+// tissu infecté
+8> noun[autre_infec=+,mwe=+] @= noun[lemme:tissu], (adj[body_part]), (adv), verb[lemme:"infecter",partpas];adj[lemme:"infecté"] .
+
+// écoulement d'allure infectieuse
+7> noun[autre_infec=+,mwe=+] @= noun[lemme:écoulement], ?[modif_infec] .
+
+// infection + profond|superficiel
+8> noun[autre_infec=+,mwe=+] @= noun[infection], ?[pour_iso] .
+
+#@rulespace=medecine
+
+/// infection + body_part
+9> noun[autre_infec=+,mwe=+] @= noun[infection], adj[body_part] .
+9> noun[autre_infec=+,mwe=+] @= noun[infection], prep[lemme:de], (det), noun[body_part] .
+
+
+
+
+// CRP élevée
+9> noun[autre_infec=+,mwe=+] @= noun[lemme:"CRP"], adv*, adj[lemme:"élevé"] .
+
+
+// aggravation infectieuse
+9> noun[autre_infec=+,mwe=+] @= noun[lemme:aggravation], adj[lemme:infectieux] .
+
+
+
+//// MALADIE VIRALE
+
+// nom guesse suivi de adj viral est maladie virale
+6> noun[maladie_vir:+] @= noun[guessed:+], adj[lemme:viral] .
+
+// infection à <nom de virus> -> maladie virale
+6> noun[maladie_vir:+] @= noun[lemme:infection], prep[lemme:"à"], noun[virus] .
+
+// infection à virus + adj|guessed -> maladie virale
+6> noun[maladie_vir:+] @= noun[lemme:infection], prep[lemme:"à"], noun[lemme:virus], adj[guessed:~] .
+6> noun[maladie_vir:+] @= noun[lemme:infection], prep[lemme:"à"], noun[lemme:virus], ?[guessed:+] .
+
+// agent/medicament + adj[antib_autre] -> antib_autre
+6> noun[autre_antib=+] @= noun[lemme:"médicament"], adj[autre_antib] .
+6> noun[autre_antib=+] @= noun[lemme:"agent"], adj[autre_antib] .
+6> noun[autre_antib=+] @= noun[lemme:"traitement"], adj[autre_antib] .
+
+// antiseptiques
+// numero du couche inférieur a 4
+// eg. sérum tiède bétadiné
+3> noun[desinfect=+] @= noun[lemme:sérum];noun[lemme:solution], (adv;adj)*, adj[lemme:bétadiné] .
+
+/// DISPOSITIFS
+6> noun[mwe=+,autre_dispo=+] @= noun[dispositif], adj[body_part] .
+6> noun[mwe=+,autre_dispo=+] @= noun[dispositif], prep, det, noun[body_part] .
+
+
+// EXAMENS
+
+// examens biologiques
+// Hb de(=) 3,2 g
+5> noun[exam=bio,mwe=+] @= noun[abrev_med,lemme:Hb];noun[lemme:"plaquette"];noun[abrev_med,lemme:"TCA"];noun[abrev_med,lemme:"TP"], (prep;punct[lemme:"="]), num;?[noun:+,measure:+] .
+
+
+// cyto-bactériologique
+5> adj[type_exam:!] @= ?[guessed:+], punct[form:fhyph], adj[!type_exam:!] .
+
+// bilan hépatique
+6> noun[exam=bio,mwe=+] @= noun[lemme:bilan], (adj[lemme:fonctionnel]), adj[body_part] .
+5> noun[exam=bio,mwe=+] @= noun[lemme:bilan], prep[lemme:de], noun[lemme:coagulation] .
+
+// gaz du sang
+6> noun[exam=bio,mwe=+] @=  noun[lemme:gaz], prep[lemme:de], (det), noun[lemme:sang] .
+
+// examen bactériologique
+6> noun[exam:!,mwe=+] @= noun[lemme:examen];noun[lemme:"contrôle"], adj[!type_exam:!] .
+6> noun[exam=unknown,mwe=+] @= noun[lemme:examen], adj[body_part] .
+
+
+
+// intervention chirurgicale
+6> noun[mwe=+,intervchir=+] @= noun[lemme:transplantation], prep[lemme:de], (det), noun[body_part], (?[lemme:droit];?[lemme:gauche]) .
+6> noun[mwe=+,intervchir=+] @= noun[lemme:transplantation], adj[body_part], (?[lemme:droit];?[lemme:gauche]) .
+
+6> noun[mwe=+,intervchir=+] @= noun[lemme:prise];noun[lemme:reprise], prep[lemme:en], noun[lemme:charge], adj[lemme:chirurgical] .
+
+// ablation fils/redon
+6> noun[mwe=+,intervchir=+] @= noun[lemme:ablation], (prep), (det), noun[lemme:fil];noun[lemme:redon], (?[lemme:droit];?[lemme:gauche]) .
+
+6> noun[mwe=+,intervchir=+] @= noun[lemme:drainage], adj[lemme:pancréatique] .
+
+// plicature + body part
+6> noun[mwe=+,intervchir=+] @= noun[lemme:plicature], prep[lemme:de], (det), noun[body_part] .
+6> noun[mwe=+,intervchir=+] @= noun[lemme:plicature], adj[body_part] .
+
+// curage + body_part (hilaire axillaire etc.)
+6> noun[mwe=+,intervchir=+] @=  noun[lemme:curage], adj[body_part] .
+
+
+// cure hernie crurale hiatale etc.
+6> noun[mwe=+,intervchir=+] @= noun[lemme:cure], (adj[lemme:chirurgical]), prep[lemme:de], (det), noun[lemme:hernie], (adj) .
+
+// cure par thoratocomie
+6> noun[mwe=+,intervchir=+] @= noun[lemme:cure], prep[lemme:par], noun[intervchir] . 
+
+6> noun[mwe=+,intervchir=+] @= noun[lemme:intervention], prep[lemme:de], noun+[proper,person] .
+
+// réduction de fracture
+6> noun[mwe=+,intervchir=+] @= noun[lemme:"réduction"], prep[lemme:de], (det), noun[lemme:"fracture%?*"] . 
+
+// prefix body part + interv chir duodéno pancréatectomie
+8> noun[mwe=+,intervchir=+] @= prefix[body_part], (punct[hyph]), noun[intervchir] .
+
+// ostéotomie de Weil
+8> noun[mwe=+,intervchir=+] @= noun[lemme:"ostéotomie"], (noun), (adj), prep[lemme:de], noun[lemme:Weil].
+
+// pontage fémoral
+10> noun[mwe=+,intervchir=+] @= noun[intervchir], adj[body_part], (?[lemme:droit];?[lemme:gauche]) .
+10> noun[mwe=+,intervchir=+] @= noun[intervchir], (prep[lemme:de]), (det), noun[body_part], (?[lemme:droit];?[lemme:gauche]) .
+
+12> noun[mwe=+,intervchir=+] @= noun[intervchir], prep[lemme:par], noun[lemme:laparotomie];noun[lemme:coelioscopie];noun[lemme:laparoscopie] .
+
+12> noun[mwe=+,intervchir=+] @= noun[intervchir], adj[lemme:coelioscopique];adj[lemme:laparoscopique] .
+
+12> noun[mwe=+,intervchir=+] @= noun[intervchir], ?[lemme:gauche];?[lemme:droit];?[lemme:antérieur];?[lemme:postérieur] .
+
+13> noun[mwe=+,intervchir=+] @= noun[intervchir], prep[lemme:par], noun[exam,mwe=~] .
+
+
+////// EXAMENS
+
+// prelevement(s) bactério(s)
+6> noun[mwe=+, exam=bacterio] @= noun[exam], ?[lemme:"bactério(s)"] .
+
+
+// prélèvement bactériologique
+6> noun[mwe=+, exam:!] @= noun[exam], adj[type_exam,!type_exam:!] .
+
+// analyse + type exam
+6> noun[mwe=+, exam:!] @= noun[lemme:analyse];noun[lemme:bilan], adj[type_exam,!type_exam:!] .
+
+// <examen> post opératoire
+6> noun[mwe=+, exam:!] @= noun[exam,!exam:!], adj[lemme:"post-opératoire"] . 
+
+9> noun[mwe=+, exam:!] @= noun[exam,!exam:!], adj[body_part], (?[lemme:droit];?[lemme:gauche]) .
+
+9> noun[mwe=+, exam:!] @= noun[exam,!exam:!], prep, (det), noun[body_part], (?[lemme:droit];?[lemme:gauche]) .
+
+// prelevement de liquide 
+9> noun[mwe=+, exam=bacterio] @= noun[lemme:prélèvement], (prep), (det), ?[surface:liquide], (adj[body_part]) .
+
+// prelevents bactérios (realisés en) per operatoires
+10> noun[exam=bacterio,mwe=+,perop=+] @= noun[exam:bacterio,perop=+], (verb[lemme:réaliser];verb[lemme:effectuer]), (prep[lemme:en]), ?[lemme:"per opératoire"] .
+
+10> noun[exam=bacterio,mwe=+,perop=+] @= noun[type_exam:bacterio,perop=+], (verb[lemme:réaliser];verb[lemme:effectuer]), (prep[lemme:en]), ?[lemme:"per opératoire"] .
+
+
+
+// diagnostics
+
+4> noun[mwe=+,diagnostic=+] @= ?[lemme:Glasgow], num[card] .
+
+//3> noun[mwe=+,diagnostic=+] @= prefix[lemme:"méga"];prefix[lemme:"méga-"], noun[body_part] .
+
+
+// signe inflammatoire
+4> noun[mwe=+,diagnostic=+] @= noun[lemme:signe], adj[lemme:"inflammatoire"] .
+
+// déhiscence de cicatrice
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:"déhiscence"], prep, (det), noun[lemme:cicatrice] .
+
+// lésion métastatique
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:"lésion"], adj[lemme:"métastatique"] .
+
+// fracture/contusion/traumatisme de la hanche (gauche)
+6> noun[mwe=+,diagnostic=+] @= noun[pre_diagnost_body], (adj), prep, (det), noun[body_part].
+// parfois sans prep "fracture jambe gauche" avec contraite sur retour charriot
+6> noun[mwe=+,diagnostic=+] @= noun[pre_diagnost_body], (adj), noun[body_part,cr:~]. 
+
+
+// trouble {fonctionnel, phasique, hémodynamique}
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:trouble], adj[modif_trouble:+] .
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:trouble], prep[lemme:de], (det), noun[lemme:"mémoire"] .
+
+// insuffisance hépatique
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:insuffisance], adj[body_part] .
+
+//traumatisme cranien
+6> noun[mwe=+,diagnostic=+] @= noun[pre_diagnost_body], (adj), adj[body_part] .
+
+// foie pathologique
+6> noun[mwe=+,diagnostic=+] @= noun[body_part], ?[lemme:pathologique] .
+
+// colon hémorragique
+6> noun[mwe=+,diagnostic=+] @= noun[body_part], ?[lemme:hémorragique] .
+
+// maladie + body_part
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:maladie];noun[lemme:affection], adj[body_part] .
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:maladie];noun[lemme:affection], prep, (det), noun[body_part] .
+
+// nodules de carcinose
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:nodule], prep[lemme:de], (det), noun[diagnostic].
+
+// syndrome + proper
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:syndrome], prep[lemme:de], noun+[maj:+,toutmaj:~,proper] .
+
+// carcinome + adj[cellulaire]
+6> noun[mwe=+,diagnostic=+] @= noun[lemme:carcinome], adj[lemme:"%+cellulaire"] .
+
+// mise en oeuvre de "collection"
+// si collection n'est pas explicitement une collection de sang ou de liquide non infectieux, alors on va considerer infection
+8> noun[mwe=+,autre_infec=+] @= noun[lemme:collection], adj[body_part] .
+8> noun[mwe=+,autre_infec=+] @= noun[lemme:collection], (prep), (det), noun[body_part] .
+
+// aggravation de diagnostic
+10> noun[mwe=+,diagnostic=+] @= noun[lemme:aggravation], prep, (det), noun[diagnostic] .
+
+// diagnostic + adj-body_part
+10> noun[mwe=+,diagnostic=+] @= noun[diagnostic], adj[body_part] .
+
+
+// diagnostic + post_diagnost (aigu, congenital, hemorragique, chronique...)
+10> noun[mwe=+,diagnostic=+] @= noun[diagnostic], (adj[post_diagnost]), adj[post_diagnost] . 
+
+// diagnostic + noun[body_part] - ordre a respecter avec les 2 regles anterieurs
+// hémorragie aigue du poumon
+14> noun[mwe=+,diagnostic=+] @= noun[diagnostic], (adj[lemme:malin];adj[lemme:bénin]), (prep), (det), noun[body_part].
+
+// diagnostic + généralisé -> donne diagnostic
+16> noun[mwe=+,diagnostic=+] @= noun[diagnostic], ?[surface:"généralisé(e)"] .
+
+// Combinaisons
+
+// <diagnostique> + septique -> infection
+20> noun[autre_infec=+,mwe=+] @= noun[diagnostic], adj[lemme:septique] .
+ 
+// diagnostique + purulent -> infection
+20> noun[autre_infec=+,mwe=+] @= noun[diagnostic], adj[lemme:purulent];adj[lemme:suppuré] .
+
+// diagnostique + infectieux -> infection
+20> noun[autre_infec=+,mwe=+] @= noun[diagnostic], adj[lemme:infectieux] .
+
+// diagnostique + infecté -> infection
+20> noun[autre_infec=+,mwe=+] @= noun[diagnostic], verb[partpas,lemme:infecter];adj[modif_infec] .
+
+// episode infectieux
+20> noun[autre_infec=+,mwe=+] @= noun[lemme:épisode], adj[lemme:infectieux] .
+
+// suintement (de) liquide jaune
+20> noun[autre_infec=+,mwe=+] @= noun[diagnostic], (prep[lemme:de]), noun[autre_infec] .
+
+// Avec ajout de gradation
+
+25> noun[mwe=+,diagnostic=+,val_grad:!] @= adj[gradation,!val_grad:!], noun[diagnostic] .
+
+
+

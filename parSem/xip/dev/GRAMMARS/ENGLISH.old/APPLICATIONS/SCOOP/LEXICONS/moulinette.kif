@@ -1,0 +1,82 @@
+string nom="lexicon_restaurant.xip";
+string chemin='W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\LEXICONS\';
+file f(chemin+nom,'r');
+
+string s;
+svector v;
+
+for (s in f) {
+     if ("=" in s)
+          v.push(s.trim());
+}
+
+f.close();
+
+string subcategorie;
+string categorie;
+string traits;
+string mot;
+ssmap lesmots;
+
+function analysetrait(string traits,ssmap m) {
+     traits=traits.replace("=",":")[1:-1];
+     svector v=traits.tokenize();
+     traits='{"'+v.join('"')+'"}';
+     m=traits;
+     if (m.test("guess"))
+          m.pop("guess");
+}
+
+function modif(self s) {
+     s[0]=s[0].upper();
+     s="+"+s;
+}
+
+
+for (s in v) {
+     if (":" in s[:"["]) {
+          //On precise a la fois la categorie et les traits...
+          mot=s[:":"][:-1].trim();
+          traits=s["=":]["[":"]"];
+          categorie=s[":":"="][1:' '].trim();
+          if (categorie=="")
+               categorie=s[":":"+"][1:-1].trim();
+     }
+     else {
+          mot=s[:"="][:-1].trim();
+          categorie=s["=":"["][1:-1].trim();
+          traits=s["=":]["[":"]"];
+     }
+
+     if ("[" in categorie)
+          categorie=categorie[:"["][:-1];
+
+     categorie=categorie.upper();
+     mot=mot.replace('"','');
+     mot=mot.lower();
+     ssmap mtrait;
+     analysetrait(traits,mtrait);
+     svector val=mtrait.keys();
+     val.push(categorie);
+     val.apply(modif);
+     //mot=mot.insert(-1,' ');
+     traits=mot+"\t"+val.join(' ');
+     lesmots[traits]=mot;
+}
+
+//string nomfichier=chemin+nom[:"."][:-1]+".txt";
+//file sauvegarde(nomfichier,"w");
+//for (s in lesmots) {
+//sauvegarde.write(s+"\n");
+//sauvegarde.write(lesmots[s]+"\n\n");
+//}
+
+//sauvegarde.close();
+
+fst lexique;
+lexique.compile(lesmots,true);
+//lexique.loadspacedtext(nomfichier,false);
+
+string nomfst=chemin+nom[:"."][:-1]+".fst";
+lexique.save(nomfst);
+println(nomfst);

@@ -1,0 +1,136 @@
+<project name="" default="test" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}testInclude.xml" />
+<import file="${common.dir}${fs}taskExt.xml" />
+
+<property name="name"			value="xip" />
+<property name="root.dir"		location="${basedir}${fs}..${fs}.." />
+<property name="include.dir"		location="${root.dir}${fs}include" />
+<property name="lib.names"		value="${name}" />
+<property name="app.name"		value="sample" />
+<property name="cc.debug"		value="false" />
+<property name="root_xip.dir" 		location="..${fs}..${fs}GRAMMARS" />
+<property name="grm.file"		location="${root_xip.dir}${fs}ENGLISH${fs}GRMFILES${fs}GRAM_GEN${fs}gram_gen_entit.grm" />
+<property name="input"                  value="input.txt" />
+<property name="output"                 value="output.txt" />
+<property name="outputRef"              value="outputRef.txt" />
+
+
+<target name="test" depends="compile,testShared"> </target>
+
+<target name="valgrind" depends="cleanAll, setCommonProperties, shared">
+	<property name="valgrind.option"  value="-v --tool=memcheck --leak-check=full --leak-resolution=high" />
+	<property name="exe"  value="/home/grondeau/tools/valgrind/3.0.1/bin/valgrind" />
+	<exec  executable="${exe}" failonerror="false" resultproperty="execErrorCode" output="valgrind.out"  error="valgrind.txt" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir.used}${fs}sharedLib"/>
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+                <arg line="${valgrind.option} ${test.bin.dir.used}${fs}${app.name}D ${grm.file}" />
+	</exec>
+</target>
+
+<target name="testShared" depends="setCommonProperties, init, copyDll">
+        <exec os="SunOS" executable="${test.bin.dir.used}${fs}${app.name}D" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir.used}${fs}sharedLib:/usr/lib:/opt/gnu/lib"/>
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+              	<arg value="${grm.file}"/>
+        </exec>
+        <exec os="Linux" executable="${test.bin.dir.used}${fs}${app.name}D" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir.used}${fs}sharedLib"/>
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+              	<arg value="${grm.file}"/>
+        </exec>
+	<!-- copy the dll -->
+        <exec os="Windows 2000" executable="${test.bin.dir.used}${fs}${app.name}D" failonerror="true" >
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+              	<arg value="${grm.file}"/>
+	</exec>
+        <exec os="Windows XP" executable="${test.bin.dir.used}${fs}${app.name}D" failonerror="true" >
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+              	<arg value="${grm.file}"/>
+	 </exec>
+</target>
+
+
+<target name="copyDll" depends="" description="" if="windows">
+	<copy file="${lib.dir.used}${fs}sharedLib${fs}${name}.dll" todir="."/>
+</target>
+
+<target name="testStatic" depends="setCommonProperties, init" description=" ">
+        <exec executable="${test.bin.dir.used}${fs}${app.name}S" failonerror="true" >
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+              	<arg value="${grm.file}"/>
+        </exec>
+</target>
+
+<target name="compile" depends="static, shared" description="compile And Link (shared and static)" > </target>
+
+<!-- compile and link(shared lib)  code -->
+<target name="shared" depends="setCommonProperties,init" >
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${test.bin.dir.used}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir.used}${fs}${app.name}D" >
+		<compiler name = "${compilerCplus.name}" debug="false">
+			<fileset dir="." includes="${app.name}.cxx" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+			<defineset define="XIPLIBXML NOUNSIGNEDINT"/>
+		</compiler>
+		<linker name= "${compilerCplus.name}" debug="false">
+			<syslibset libs="${system.libCplus.names}"  />
+			<libset dir="${lib.dir.used}${fs}sharedLib" libs="${lib.names}" type="shared"/> 
+		</linker>
+	</cc>
+</target>
+
+<!-- compile and link(static lib)  code -->
+<target name="static" depends="setCommonProperties,init" >
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${test.bin.dir.used}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir.used}${fs}${app.name}S" >
+		<compiler name = "${compilerCplus.name}" debug="false">
+			<fileset dir="." includes="${app.name}.cxx" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+			<defineset define="XIPLIBXML NOUNSIGNEDINT"/>
+		</compiler>
+		<linker name= "${compilerCplus.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libCplus.names}" if="linux" />
+			<syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+			 <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+			<libset dir="${lib.dir.used}${fs}staticLib" libs="${lib.names}" type="static"/> 
+		</linker>
+	</cc>
+</target>
+
+<target name="init" depends="" >
+	<if> <istrue value="${cc.debug}" />
+	<then>
+		<property name="lib.dir.used"          location="${root.dir}${fs}lib${fs}${platform}.debug" />
+		<property name="test.bin.dir.used"     location="${test.bin.dir}" />
+	</then>
+	<else>
+		<property name="lib.dir.used"          location="${lib.dir}" />
+		<property name="test.bin.dir.used"     location="${test.bin.dir}" />
+	</else>
+	</if>
+</target>
+ 
+<target name="localClean" depends="localCleanWindows" >
+        <delete file="${output}"/>
+</target>
+
+<target name="localCleanWindows" depends="" if="windows">
+        <delete file="${name}.dll"/>
+</target>
+
+<target name="localCleanAll" depends="" >
+	<delete file="${name}.dll"/>
+</target>
+
+</project>
+

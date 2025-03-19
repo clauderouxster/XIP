@@ -1,0 +1,102 @@
+# ============================================================================
+# CONTENT:      rules for plural and genitive
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      30-Mar-2006
+# ============================================================================
+# USAGE:        xfst -utf8 -s LEX.fst -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+# identify tags (starting with a "+")
+read regex LEX;
+single char sigma net
+define SIG
+read regex [ %+ ?+ ] .o. SIG ;
+multi char sigma net
+define TAG
+
+
+# -------------------------------------------
+# plural markers:
+define PLUR	"[s]" | "[es]" | "[*]" ;
+
+# & or "and" 
+define AND	"[&]" ;
+
+# optional dot
+define DOT	"[.]" ;
+
+# trigger to convert category
+define NA	"[Adj]" ;
+
+
+define DIAC	[ NA | PLUR | AND | DOT ];
+
+# remove tags from surface side and diacritics form lexical side
+read regex [ 
+	0 <- DIAC
+.o.	"&" <- AND
+.o.	"." <- DOT 
+
+# convert category
+.o.	%+Adj <- %+Noun || _ $[NA]
+.o.	%+Gen <- %+GenS
+
+.o. 	LEX 
+
+.o.	AND	->  [ {and } | {&} | {& } ]  || .#. _
+.o.	AND	->  [ { and } | {&} | { & } ] 
+];
+define LEX
+
+
+# -------------------------------------------------------------------
+# apply some rules
+
+define CONS	[b|c|d|f|g|h|j|k|l|m|n|p|q (u)|r|s|t|v|w|x|z];
+define APOS	%';
+define SEP	%- | %  ;
+
+read regex	[
+
+	LEX
+
+# plural forms
+
+# irregular forms
+.o.	{man} "[*]" -> {men} 	|| _ $%+Pl		# Scotchman+s -> Scotchmen
+.o.	"[*]" -> {ren}		|| {child} _ $%+Pl	# child -> children
+
+# regularities
+.o.	"[s]" -> s		|| _ DOT $%+Pl		# Dr[s]. -> Drs.
+.o.	"[s]" -> "[es]"		|| [ s | x | z ] _	# box[s] -> boxes
+.o.	"[s]" (->) "[es]"	|| [ c h ] _		# bench[s] -> benches
+
+.o.	y -> {ie}  		|| CONS _ "[s]" $%+Pl	# territory[s] -> territories
+.o.	"[s]"  -> s		|| _ $%+Pl		# house[s] -> houses, cat[s] -> cats
+.o.	"[es]" -> {es}		|| _ $%+Pl 		# archipelago[es] -> archipelagoes
+
+# genitive 's 
+.o.	%+GenS (->) APOS  || [ s | x | z ] $%+Sg	_ 
+.o.	%+GenS -> APOS  || [ s | x | z ] $%+Pl	_ 
+.o.	%+GenS -> {'s}
+
+
+# some short forms (in proper names):
+.o.	{Fort} 		(->) {Ft} (%.)  || _ SEP
+.o.	{Mountain} 	(->) {Mtn} (%.)	|| _ SEP
+.o.	{Mount} 	(->) {Mt} (%.)	|| _ SEP
+.o.	{Saint} 	(->) {St} (%.)	|| _ SEP 
+.o.	{Sankt} 	(->) {St} (%.)	|| _ SEP 
+
+# clean up any remaining tags and diacritics
+.o.	DOT	->  [ %. | 0 ]
+
+.o.	[ TAG | DIAC ] -> 0
+
+];

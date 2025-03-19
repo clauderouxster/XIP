@@ -1,0 +1,974 @@
+DependencyRules:
+
+
+/////////////// Types and sub-types \\\\\\\\\\\\\\
+
+
+| #1[!investment_types:!,invtype,!investment_type_characteristics:!] |
+   INVESTMENT-TYPE[itind=+](#1).
+
+| #1[itind,!investment_table_data_indicators:!] |
+   INDICATOR[itind=+](#1).
+
+
+// If one investment type is one of the words of the other inverstment type, we delete it:
+
+| #1[OtherBonds=~,invtype=~,BondCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:bond]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[AgencyDebt=~,invtype=~,BondCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:agency]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[AgencyDebt=~,invtype=~,BondCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:Agency]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[stock=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:stock]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+if ( ^INVESTMENT-TYPE(#1[lemme:mortgage]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[ShortTermInvestments=~,invtype=~,ShortTermCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:short-term]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[MasterLimitedPartnership=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:MLP]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[MasterLimitedPartnership=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:Mlp]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[MasterLimitedPartnership=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:mlp]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[equities=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:equity]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[equities=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:Equity]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[Commodities=~,invtype=~,CommodityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:commodity]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[warrant=~,invtype=~,EquityCharacteristics=~] |
+if ( ^INVESTMENT-TYPE(#1[lemme:warrant]) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+// AGENCY + COUNTRY other than U.S. -> SovereignDebt
+// FRANCE GOVERNMENT AGENCY - GUARANTEED , SOCIÉTÉ FINANCE - 0.06%
+//INVESTMENT-TYPE_ITIND_NONIDENTIFIED(FRANCE GOVERNMENT AGENCY - GUARANTEED , SOCIÉTÉ FINANCE)
+//INVESTMENT-TYPE_ITIND_BONDCHARACTERISTICS_AGENCYDEBT(AGENCY)
+
+| #3[country] |
+if ( INVESTMENT-TYPE[nonidentified](#1) & ^INVESTMENT-TYPE[AgencyDebt](#2) )
+   INVESTMENT-TYPE[AgencyDebt=~,SovereignDebt=+,BondCharacteristics=+,nonidentified=~](#1).
+
+
+/////
+
+// if there is an identified and a nonidentified indicator, the nonidentified is eliminated
+
+
+if ( ^INVESTMENT-TYPE[nonidentified,itind](#1) & INVESTMENT-TYPE[nonidentified:~,itind](#2) )
+   ~.
+
+// starting a category: category name + %
+//Common stocks - 90.81%
+//INVESTMENT-TYPE_IT(stocks)
+//PERCENT(90.81%)
+
+
+if ( ^INVESTMENT-TYPE[itind](#1) & PERCENT(#2[endword,percent4invtype]) & ~MAIN(?) & ~PAST(?) & #1 < #2 )
+   INVESTMENT-TYPE[typestart=+](#1).
+
+//Call Options Purchased 0.0%
+
+| #3[optioncharacteristics] |
+if ( ^INVESTMENT-TYPE[itind](#1) & PERCENT(#2[endword,percent4invtype])  & #1 < #2 )
+   INVESTMENT-TYPE[typestart=+](#1).
+
+
+//Consumer Staples – 6.3% (4.4% of Total Investments)
+
+| ins[endword]{?+, ?{?[percent]}, ?+} |
+if ( ^INVESTMENT-TYPE[itind](#1) & PERCENT(#2[percent4invtype]) & ~MAIN(?) & ~PAST(?) & #1 < #2 )
+   INVESTMENT-TYPE[typestart=+](#1).
+
+| #1[lemme:total,start] |
+if ( ^INVESTMENT-TYPE[typestart](#2) )
+   INVESTMENT-TYPE[typestart=~](#2).
+
+
+// ending a category: total + category name
+
+//Total common stocks
+
+| #1[lemme:total,start] |
+if ( ^INVESTMENT-TYPE[itind](#2) & ~MAIN(?) & ~PAST(?) )
+   INVESTMENT-TYPE[typeend=+](#2).
+
+//TOTAL COMMON STOCK – (Identified cost $74,927,511)
+// {NP{TOTAL NOUN{COMMON STOCK}} – INS{( NP{AP{Identified} cost} , NP{927,511} )}}
+
+| ?{#1[lemme:total,start], #2}, (punct), ins[endword] |
+if ( ^INVESTMENT-TYPE[itind](#2) )
+   INVESTMENT-TYPE[typeend=+](#2).
+
+// Total alone in the block
+
+| #1[lemme:total,start,endword] |
+   INVESTMENT-TYPE[itind=+,typeend=+](##noun[lemme=X]).
+
+
+// Total Investments -> end of investment table
+
+| #1[lemme:total,start] |
+if ( INVESTMENT-TYPE(#2[lemme:investment]) & SENT(#3) )
+   INDICATOR[itind=+,itend=+](#3).
+
+| #1[lemme:total,start], #2[lemme:investment] |
+if ( SENT(#3) & ~INDICATOR[itind,itend](#3) )
+   INDICATOR[itind=+,itend=+](#3).
+
+//Total Investment Portfolio (Cost $434,577,431)+
+//{Total NOUN{Investment Portfolio}}
+
+| #1[lemme:total,start], ?{#2[lemme:investment],?} |
+if ( SENT(#3) & ~INDICATOR[itind,itend](#3) )
+   INDICATOR[itind=+,itend=+](#3).
+
+
+
+//Total Investments in Securities. is not the end of a table
+
+if ( ^INDICATOR[itind,itend](#1) & MOD[post](#2[lemme:investment],#3) & PREPD(#3,#4[lemme:in]) )
+   ~.
+
+// all INVESTMENT-TYPES are either typestart or typeend
+
+if ( ^INVESTMENT-TYPE[typestart](#1) | ^INVESTMENT-TYPE[typeend](#1) )
+   INVESTMENT-TYPE[real=+](#1).
+
+if ( ^INVESTMENT-TYPE[real:~](#1) )
+   ~.
+
+// if an investment type is recognized, it is not nonidentified
+
+if ( ^INVESTMENT-TYPE[nonidentified](#1) & INVESTMENT-TYPE[nonidentified:~](#2) )
+   ~.
+
+| #1[thousandfold] |
+if ( ^INVESTMENT-TYPE(#2) )
+   INVESTMENT-TYPE[thousandfold=+](#2).
+
+/////////////// Change of Subtypes by phrase-final restrictions
+
+//Development Bank of Kazakhstan - FixedIncome_GovernmentSecurities_SovereignDebt
+//NOUN{Development Bank of Kazakhstan}
+
+| #1{#2{?*, ?[country], ?*, ?[SovereignDebtIssuers:~,last]}} |
+if ( ORGANISATION(#2) & ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[nonidentified=~,SovereignDebt=+,invtype=+,BondCharacteristics=+](#1)
+
+| #1{#2{?*, ?[country,last]}} |
+if ( ORGANISATION(#2) & ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[nonidentified=~,SovereignDebt=+,invtype=+,BondCharacteristics=+](#1)
+
+
+//U.S. Government Agency - Mortgage Securities
+//INVESTMENT-TYPE_TYPESTART_ITIND_BONDCHARACTERISTICS_OTHERGOVERNMENTSECURITY(U.S. Government agency)
+//[ResidentialMortgageBackedSecurities=+,StructuredInvestmentCharacteristics=+,invtype=+,AgencyBacked=+]
+
+
+| #1[mortgage] |
+if ( ^INVESTMENT-TYPE[nonidentified](#2) )
+   INVESTMENT-TYPE[ResidentialMortgageBackedSecurities=+,StructuredInvestmentCharacteristics=+,AgencyBacked=+,nonidentified=~](#2).
+
+///////////////////////////// CHOICE BETWEEN TWO INVESTMENT TYPES \\\\\\\\\\\\
+
+// Between 2 consecutive INVESTMENT-TYPEs, we keep the second
+// Bonds & notes of U.S. government & government agencies
+//OtherGovernmentSecurity
+// INVESTMENT-TYPE_TYPESTART_ITIND_BONDCHARACTERISTICS_OTHERBONDS(Bonds)
+//INVESTMENT-TYPE_TYPESTART_ITIND_BONDCHARACTERISTICS_AGENCYDEBT(agencies)
+
+//if ( ^INVESTMENT-TYPE(#1) & INVESTMENT-TYPE(#2) & #1 < #2 )
+//   ~.
+
+
+
+//////////////////// investment types with open-class words \\\\\\\\\\\\\\\\\\
+
+// investment types with open-class words
+
+// Nonidentified funds
+
+| ?[lemme:global], ?[last] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[CorporateBonds=+,invtype=+,BondCharacteristics=+,nonidentified=~](#1).
+
+| ?[lemme:fund,last] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[OtherFundHoldings=+,FundCharacteristics=+,invtype=+,nonidentified=~](#1).
+
+// X REITs
+
+| ?[lemme:REITs] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[reit=+,invtype=+,REITCharacteristics=+,nonidentified=~](#1).
+
+
+//X Funding Agreements (Insurance Company Funding Agreements ) CorporateBonds
+
+| ?[lemme:fund], ?[lemme:agreement] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[CorporateBonds=+,invtype=+,BondCharacteristics=+,nonidentified=~](#1).
+
+
+//X Government - SovereignDebt
+
+| ?[SovereignDebtIssuers] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[SovereignDebt=+,invtype=+,BondCharacteristics=+,nonidentified=~](#1).
+
+// X notes - to ask (Consumer Notes)
+| #1{?[IndustryClassification=~], ?[lemme:note,pl,last,toask=+]} |
+if ( INVESTMENT-TYPE[nonidentified](#1) )
+   ~.
+
+// State Issuers
+
+| ?[lemme:State], ?[lemme:issuer] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[MunicipalBonds=+,invtype=+,MuniBondCharacteristics=+,nonidentified=~](#1).
+
+| ?[MunicipalBondIssuers] |
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[MunicipalBonds=+,invtype=+,MuniBondCharacteristics=+,nonidentified=~](#1).
+
+// X Bond Fund (INTERMEDIATE - TERM BOND FUNDS)
+
+
+
+
+//////////////////////////// Investment typestart not in formal patterns \\\\\\
+
+// if a noun having an investment_type feature begins block that is not a sentence, it is potentially a typestart
+
+if ( ^SENT(#1) & ( SUBJ-N(?,?) | OBJ(?,?) | SUBJ(?,?) ) ) 
+   SENT[insent=+](#1).
+
+| #1[start,!investment_types:!,invtype,!investment_type_characteristics:!] |
+if ( SENT[insent:~](#2) & ~INVESTMENT-TYPE(?) )
+   INVESTMENT-TYPE[itind=+,typestart=+](#1).
+
+// if a noun having an investment_type feature preceded by only words in capital letters (pot-invtypes) in a block that is not a sentence
+
+| ?[maj,start], ?*[maj], #1[!investment_types:!,invtype,!investment_type_characteristics:!] |
+if ( SENT[insent:~](#2) & ~INVESTMENT-TYPE(?) )
+   INVESTMENT-TYPE[itind=+,typestart=+](#1).
+
+//exception
+// if the last word of the expression is a position
+// Commodity Trading Advisor
+
+if ( ^INVESTMENT-TYPE[typestart](#1) & POSITION(#2[endword]) )
+   ~.
+
+
+////////////////////////
+
+// Assigning investment types and their characteristics
+
+/////////////// Investment Table Data Types \\\\\\\\\\\\\\
+
+// IndustryClassification
+
+
+// These fields are IT-DATA-TYPEs. Since they have the same form as INVESTMENT-TYPEs, they are recognised as INVESTMENT-TYPE_NONIDENTIFIED. If an INVESTMENT-TYPE_NONIDENTIFIED contains a word of the IndustryClassification list, it is IT-DATA-TYPE_IndustryClassification
+
+| #1[IndustryClassification] |
+if ( ^INVESTMENT-TYPE[nonidentified](#2) )
+    IT-DATA-TYPE[IndustryClassification=+,nonidentified=~](#2).
+
+// Some IndustryClassifications overwrite INVESTMENT-TYPES:
+
+// X CHEMICALS: COMMODITY CHEMICALS
+
+| #2[IndustryMarker,last] |
+if ( ^INVESTMENT-TYPE[typestart,SovereignDebt:~](#1) )
+   IT-DATA-TYPE[IndustryClassification=+,investment_types=~,investment_type_characteristics=~](#1).
+
+| #2[IndustryMarker,last] |
+if ( ^INVESTMENT-TYPE[typeend,SovereignDebt:~](#1) )
+   IT-DATA-TYPE[IndustryClassification=+,investment_types=~,investment_type_characteristics=~](#1).
+
+// Countries
+
+| #1[place] |
+if ( ^INVESTMENT-TYPE[nonidentified](#2) )
+    IT-DATA-TYPE[place=+,nonidentified=~](#2).
+
+| #1[lemme:country] |
+if ( ^INVESTMENT-TYPE[nonidentified](#2) )
+    IT-DATA-TYPE[place=+,nonidentified=~](#2).
+
+| #1[lemme:State] |
+if ( ^INVESTMENT-TYPE[nonidentified](#2) )
+    IT-DATA-TYPE[place=+,nonidentified=~](#2).
+
+// exception: when the sequence contains an orgend or orghead
+
+| #1[orgend] |
+if ( ^IT-DATA-TYPE[typestart,place](#2) )
+   INVESTMENT-TYPE[typestart=+,nonidentified=+](#2).
+
+| #1[orgend] |
+if ( ^IT-DATA-TYPE[typeend,place](#2) )
+   INVESTMENT-TYPE[typestart=+,nonidentified=+](#2).
+
+| #1[orghead] |
+if ( ^IT-DATA-TYPE[typestart,place](#2) )
+   INVESTMENT-TYPE[typestart=+,nonidentified=+](#2).
+
+| #1[orghead] |
+if ( ^IT-DATA-TYPE[typeend,place](#2) )
+   INVESTMENT-TYPE[typestart=+,nonidentified=+](#2).
+
+
+/// For nonidentified typestarts that don't have a word with the invtype feature we don't know if they are investment types of industry types
+
+| #1[toask] |
+  WORD[toask=+](#1).
+
+if ( ^INVESTMENT-TYPE[nonidentified](#1) & ~WORD[toask](#2) )
+   INVESTMENT-OR-DATA-TYPE(#1).
+
+// all unknown investment-types are OtherUnclassifiedInvestment
+
+if ( ^INVESTMENT-TYPE[nonidentified](#1) )
+   INVESTMENT-TYPE[OtherUnclassifiedInvestment=+,nonidentified=~,MiscellaneousCharacteristics=+](#1).
+
+/////////////// Investment Table Data \\\\\\\\\\\\\\
+
+// Yield
+
+// 0.13 to 0.23
+//DIG{0.13 to 0.23}
+
+| #1dig{?[dec], ?[lemme:to], ?[dec]} |
+  IT-DATA[yield=+](#1).
+
+| #1[dec] |
+if ( ~IT-DATA[yield](#2) )
+  IT-DATA[yield=+](#1).
+
+
+// CouponOrYield
+
+| #1dig{?[dec], ?[lemme:to], ?[dec]} |
+  IT-DATA[CouponOrYield=+](#1).
+
+| #1[dec] |
+if ( ~IT-DATA[CouponOrYield](#2) )
+  IT-DATA[CouponOrYield=+](#1).
+
+// CouponRate
+
+| #1dig{?[dec], ?[lemme:to], ?[dec]} |
+  IT-DATA[CouponRate=+](#1).
+
+| #1[dec] |
+if ( ~IT-DATA[CouponRate](#2) )
+  IT-DATA[CouponRate=+](#1).
+
+//PreferredDividendRate
+
+| #1dig{?[dec], ?[lemme:to], ?[dec]} |
+  IT-DATA[PreferredDividendRate=+](#1).
+
+| #1[dec] |
+if ( ~IT-DATA[PreferredDividendRate](#2) )
+  IT-DATA[PreferredDividendRate=+](#1).
+
+
+// Issuer
+
+if ( ORGANISATION(#1) )
+   IT-DATA[issuer=+](#1)
+
+// Security Name
+
+if ( ORGANISATION(#1) )
+   IT-DATA[SecurityName=+](#1)
+
+// FundName
+
+if ( ORGANISATION(#1) )
+   IT-DATA[FundName=+](#1)
+
+// InvestmentName
+
+if ( ORGANISATION(#1) )
+   IT-DATA[InvestmentName=+](#1)
+
+// UnderlyingAsset
+
+if ( ORGANISATION(#1) )
+   IT-DATA[UnderlyingAsset=+](#1)
+
+///////////////// DATES \\\\\\\\\\\\\\\\\\\
+
+
+// MaturityDate
+
+// due 4/4/11 
+
+| #1[lemme:due], #2[dig] |
+if ( DATE(#2) )
+   IT-DATA[MaturityDate=+,withind=+](#2).
+/
+// dated 10/29/10
+//FV{dated}} NP{DIG{10 / 29 / 10}
+
+| ?{?*, fv{#1[lemme:date]}}, np{#2dig} |
+if ( ^DATE(#2) )
+   IT-DATA[MaturityDate=+,withind=+](#2).
+\
+// 4/4/11 to 6/7/11
+//TEMP_POST_T_ABSOLUT(4 / 4 / 11,6 / 7 / 11)
+//PREPD(6 / 7 / 11,to)
+
+if ( TEMP(#1,#2) & DATE(#1) & DATE(#2) & PREPD(#2,#3[lemme:to]) )
+   IT-DATA[MaturityDate=+](#1,#3,#2)
+
+
+if ( DATE(#1) & ~IT-DATA[MaturityDate](?,?,?) )
+   IT-DATA[MaturityDate=+](#1).
+
+
+
+//Duration
+
+if ( TEMP(#1,#2) & DATE(#1) & DATE(#2) & PREPD(#2,#3[lemme:to]) )
+   IT-DATA[Duration=+](#1,#3,#2)
+
+
+if ( DATE(#1) & ~IT-DATA[Duration](?,?,?) )
+   IT-DATA[Duration=+](#1).
+
+
+
+//ExpirationDate
+
+//NOUN{Expiration Date} DIG{11 / 25 / 2011}
+//DATE_SEC-OFF-DIR(11 / 25 / 2011)
+// INDICATOR_EXPIRATIONDATEIND_ITIND(Expiration Date)
+
+| #1noun, #2dig |
+if ( INDICATOR[ExpirationDateind](#1) & DATE(#2) )
+   IT-DATA[ExpirationDate=+,withind=+](#2).
+
+if ( DATE(#1) & ~IT-DATA[ExpirationDate](#1) )
+   IT-DATA[ExpirationDate=+](#1).
+
+
+
+//// Precedence of dates with indicators over other dates
+
+
+// if there is an indicated MarurityDate, and there are other dates in the block, they are not MaturityDates
+
+if ( ^IT-DATA[MaturityDate,withind:~](#1) & IT-DATA[MaturityDate,withind](#2) )
+   ~.
+
+if ( ^IT-DATA[MaturityDate,withind:~](#1,#2,#3) & IT-DATA[MaturityDate,withind](#4) )
+   ~.
+
+// if there is an indicated ExpirationDate, and there are other dates in the block, they are not ExpirationDates
+
+if ( ^IT-DATA[ExpirationDate,withind:~](#1) & IT-DATA[ExpirationDate,withind](#2) )
+   ~.
+
+
+// if a date is indicated, it will not be another type of date
+
+if ( IT-DATA[withind](#1) & ^IT-DATA[withind:~](#1) )
+   ~.
+
+
+
+//////////////// Quantitative and monetary values \\\\\\\\\\\\\\\\\\\
+
+if ( NUMBER[dig](#1) )
+   NUMBER[quantval=+,monval=+](#1).
+
+| ?{#1[currency]}, np{#2} |
+  NUMBER[monval=+](#2).
+
+if ( MONEY(#1) )
+   NUMBER[monval=+](#1).
+
+
+// Amount
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[Amount=+](#1)
+
+// PrincipalAmount
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[PrincipalAmount=+](#1)
+
+// CurrentValue
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[CurrentValue=+](#1)
+
+// NotionalAmount
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[NotionalAmount=+](#1).
+
+// UnrealizedAppreciation
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[UnrealizedAppreciation=+](#1).
+
+
+// ExercisePrice
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[ExercisePrice=+](#1)
+
+| #1[dec] |
+if ( ~IT-DATA[ExercisePrice](#1) )
+  IT-DATA[ExercisePrice=+](#1)
+
+//ReferenceAmount
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[ReferenceAmount=+](#1)
+
+// StrikePrice
+
+if ( NUMBER[monval](#1) )
+   IT-DATA[StrikePrice=+](#1)
+
+| #1[dec] |
+if ( ~IT-DATA[StrikePrice](#1) )
+  IT-DATA[StrikePrice=+](#1)
+
+
+
+
+//// Precedence of monetary values with indicators over other monetary values
+
+//NOUN{Strike Price} 129.0
+
+| #1[StrikePriceind], #2 |
+if ( ^IT-DATA[StrikePrice](#2) )
+   IT-DATA[StrikePrice,withind=+](#2).
+
+if ( IT-DATA[StrikePrice,withind](#1) & ^IT-DATA[StrikePrice,withind:~](#2) )
+   ~.
+
+if ( IT-DATA[StrikePrice,withind](#1) & ^IT-DATA[withind:~](#1) )
+   ~.
+
+// Quantities \\
+
+// NumberofShares
+
+if ( NUMBER[quantval](#1) )
+   IT-DATA[NumberofShares=+](#1)
+
+
+//NumberofContracts
+
+if ( NUMBER[quantval](#1) )
+   IT-DATA[NumberofContracts=+](#1)
+
+/
+// numerical expressions that cannot be monetary values or quantitative values
+// 0.13 to 0.23
+
+| #1[lemme:to] |
+if ( ^$1[monval](#1) )
+   ~.
+
+| #1[lemme:to] |
+if ( ^$1[quantval](#1) )
+   ~.
+
+| #1[zeropoint] |
+if ( ^$1[monval](#1) )
+   ~.
+
+| #1[zeropoint] |
+if ( ^$1[quantval](#1) )
+   ~.
+
+\
+
+
+//Currency
+
+| #2{?+, #1[currency]} |
+   IT-DATA[currency=+](#2).
+
+| #1[currency,first] |
+   IT-DATA[currency=+](#1).
+
+//CreditRating
+
+| #1[CreditRating] |
+  IT-DATA[CreditRating=+](#1).
+
+
+// Tranche
+
+
+| #1[tranche] |
+   IT-DATA[tranche=+](#1).
+
+
+//OriginalCost
+
+//AssetName
+
+//IndustryClassification
+
+// CallOption
+
+| #1[CallOption] |
+   IT-DATA[CallOption=+](#1).
+
+//PutOption
+
+| #1[PutOption] |
+   IT-DATA[PutOption=+](#1).
+
+// Bought
+
+| #1[bought] |
+   IT-DATA[Bought=+](#1).
+
+// Sold
+
+| #1[sold] |
+   IT-DATA[Sold=+](#1).
+
+
+// Counterparty
+
+
+
+//Description
+//Name of Security Being Held as Collateral
+
+// Collateral
+
+//BankName
+
+| #2{?*,#1[lemme:bank],?*} |
+if ( ORGANISATION(#2) )
+   IT-DATA[BankName=+](#2).
+
+//LenderName
+
+| #2{?*,#1[lemme:bank],?*} |
+if ( ORGANISATION(#2) )
+   IT-DATA[LenderName=+](#2).
+
+// REIT types
+
+| #1[mortgage] |
+  IT-DATA[mortgage=+](#1).
+
+| #1[residential] |
+  IT-DATA[residential=+,reittype=+](#1).
+
+| #1[hybrid] |
+  IT-DATA[hybrid=+,reittype=+](#1).
+
+| #1[office] |
+  IT-DATA[office=+,reittype=+](#1).
+
+| #1[diversified] |
+  IT-DATA[diversified=+,reittype=+](#1).
+
+//TreasuryObligations types
+
+| #1[TreasuryBills] |
+  IT-DATA[TreasuryBills=+](#1).
+
+| #1[TreasuryBonds] |
+  IT-DATA[TreasuryBonds=+](#1).
+
+| #1[TreasuryNotes] |
+  IT-DATA[TreasuryNotes=+](#1).
+
+// CommodityName
+
+| #1[CommodityName] |
+   IT-DATA[CommodityName=+](#1).
+
+// AgencyBacked
+
+| #1[AgencyBacked] |
+   IT-DATA[AgencyBacked=+](#1).
+
+| #1[FreddieMac] |
+if ( ^IT-DATA[AgencyBacked](#1) )
+   IT-DATA[FreddieMac=+](#1).
+
+| #1[FannieMae] |
+if ( ^IT-DATA[AgencyBacked](#1) )
+   IT-DATA[FannieMae=+](#1).
+
+/////////////// Restrictions \\\\\\\\\\\\\\\\
+
+// If there is a company and a bank, the company is the issuer Florida Timber Finance III LLC Taxable VRDN, LOC Wells Fargo Bank NA
+
+if ( ^IT-DATA[issuer](#1) & IT-DATA[bankname](#1) & IT-DATA[issuer](#2) )
+   ~.
+
+
+
+/////////////// associate data with characteristics \\\\\\\\\\\\\\
+
+if ( ^IT-DATA[Amount](#1) )
+   IT-DATA[MiscellaneousCharacteristics=+](#1).
+
+
+if ( ^IT-DATA[AssetName](#1) )
+	IT-DATA[ShortTermCharacteristics=+](#1).
+
+if ( ^IT-DATA[BankName](#1) )
+	IT-DATA[MiscellaneousCharacteristics=+](#1).
+
+if ( ^IT-DATA[Bought](#1) )
+	IT-DATA[OptionCharacteristics=+](#1).
+
+if ( ^IT-DATA[CallOption](#1) )
+	IT-DATA[OptionCharacteristics=+](#1).
+
+if ( ^IT-DATA[Collateral](#1) )
+	IT-DATA[SecuritiesLendingTransactionsCharacteristics=+](#1).
+
+if ( ^IT-DATA[CommodityName](#1) )
+   IT-DATA[CommodityCharacteristics=+](#1).
+
+if ( ^IT-DATA[Counterparty](#1) )
+	IT-DATA[DerivativeCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+](#1).
+
+if ( ^IT-DATA[CouponOrYield](#1) )
+	IT-DATA[ConvertibleBondCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,MuniBondCharacteristics=+](#1).
+
+if ( ^IT-DATA[CouponRate](#1) )
+	IT-DATA[EquityLinkedSecuritiesCharacteristics=+](#1).
+
+if ( ^IT-DATA[CreditRating](#1) )
+	IT-DATA[BondCharacteristics=+,ConvertibleBondCharacteristics=+,MuniBondCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+](#1).
+
+if ( ^IT-DATA[Currency](#1) )
+	IT-DATA[DerivativeCharacteristics=+,BondCharacteristics=+,ConvertibleBondCharacteristics=+,EquityCharacteristics=+,MiscellaneousCharacteristics=+,MoneyMarketFundCharacteristics=+,OptionCharacteristics=+,ShortTermCharacteristics=+,WarrantCharacteristics=+,REITCharacteristics=+,LoanCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[CurrentValue](#1) )
+	IT-DATA[CommodityCharacteristics=+,ConvertibleBondCharacteristics=+,EquityCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,FundCharacteristics=+,MuniBondCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,StructuredInvestmentCharacteristics=+,BondCharacteristics=+,MoneyMarketFundCharacteristics=+,ShortTermCharacteristics=+,TreasuryCharacteristics=+,WarrantCharacteristics=+,REITCharacteristics=+,LoanCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[Description](#1) )
+	IT-DATA[SecuritiesLendingTransactionsCharacteristics=+](#1).
+
+if ( ^IT-DATA[Duration](#1) )
+	IT-DATA[TreasuryCharacteristics=+,BondCharacteristics=+,ConvertibleBondCharacteristics=+,LoanCharacteristics=+](#1).
+
+if ( ^IT-DATA[Duration](#1,#2,#3) )
+	IT-DATA[TreasuryCharacteristics=+,BondCharacteristics=+,ConvertibleBondCharacteristics=+](#1,#2,#3).
+
+if ( ^IT-DATA[ExercisePrice](#1) )
+	IT-DATA[WarrantCharacteristics=+](#1).
+
+if ( ^IT-DATA[ExpirationDate](#1) )
+	IT-DATA[OptionCharacteristics=+,DerivativeCharacteristics=+,WarrantCharacteristics=+](#1).
+
+if ( ^IT-DATA[FairValue](#1) )
+	IT-DATA[OptionCharacteristics=+](#1).
+
+if ( ^IT-DATA[FundName](#1) )
+	IT-DATA[FundCharacteristics=+,MoneyMarketFundCharacteristics=+](#1).
+
+if ( ^IT-DATA[FundType](#1) )
+	IT-DATA[FundCharacteristics=+](#1).
+
+if ( ^IT-DATA-TYPE[IndustryClassification](#1) )
+	IT-DATA-TYPE[BondCharacteristics=+,ConvertibleBondCharacteristics=+,EquityCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,MiscellaneousCharacteristics=+,WarrantCharacteristics=+,LoanCharacteristics=+](#1).
+
+if ( ^IT-DATA[InvestmentName](#1) )
+   IT-DATA[MiscellaneousCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[Issuer](#1) )
+	IT-DATA[ConvertibleBondCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,ShortTermCharacteristics=+,MuniBondCharacteristics=+,TreasuryCharacteristics=+,BondCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[LenderName](#1) )
+	IT-DATA[LoanCharacteristics=+](#1).
+
+if ( ^IT-DATA[MaturityDate](#1) )
+	IT-DATA[ConvertibleBondCharacteristics=+,StructuredInvestmentCharacteristics=+,BondCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,ShortTermCharacteristics=+,TreasuryCharacteristics=+,LoanCharacteristics=+](#1).
+
+if ( ^IT-DATA[MaturityDate](#1,#2,#3) )
+	IT-DATA[ConvertibleBondCharacteristics=+,StructuredInvestmentCharacteristics=+,BondCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,ShortTermCharacteristics=+,TreasuryCharacteristics=+,LoanCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1,#2,#3).
+
+if ( ^IT-DATA[NotionalAmount](#1) )
+	IT-DATA[DerivativeCharacteristics=+](#1).
+
+if ( ^IT-DATA[NumberofContracts](#1) )
+	IT-DATA[OptionCharacteristics=+,DerivativeCharacteristics=+](#1).
+
+if ( ^IT-DATA[NumberofShares](#1) )
+	IT-DATA[EquityCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,FundCharacteristics=+,MoneyMarketFundCharacteristics=+,WarrantCharacteristics=+,REITCharacteristics=+](#1).
+
+if ( ^IT-DATA[OriginalCost](#1) )
+	IT-DATA[FundCharacteristics=+](#1).
+
+if ( ^IT-DATA[PrincipalAmount](#1) )
+	IT-DATA[ConvertibleBondCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,MuniBondCharacteristics=+,StructuredInvestmentCharacteristics=+,BondCharacteristics=+,MoneyMarketFundCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,ShortTermCharacteristics=+,TreasuryCharacteristics=+,LoanCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[ReferenceAmount](#1) )
+	IT-DATA[CommodityCharacteristics=+](#1).
+
+if ( ^IT-DATA[reittype](#1) )
+   IT-DATA[REITCharacteristics=+](#1).
+
+if ( ^IT-DATA[SecurityName](#1) )
+	IT-DATA[EquityCharacteristics=+,StructuredInvestmentCharacteristics=+,WarrantCharacteristics=+,REITCharacteristics=+](#1).
+
+if ( ^IT-DATA[Sold](#1) )
+	IT-DATA[OptionCharacteristics=+](#1).
+
+if ( ^IT-DATA[StrikePrice](#1) )
+	IT-DATA[OptionCharacteristics=+](#1).
+
+if ( ^IT-DATA[Tranche](#1) )
+	IT-DATA[StructuredInvestmentCharacteristics=+](#1).
+
+if ( ^IT-DATA[TreasuryBills](#1) )
+   IT-DATA[TreasuryCharacteristics=+](#1).
+
+if ( ^IT-DATA[TreasuryNotes](#1) )
+   IT-DATA[TreasuryCharacteristics=+](#1).
+
+if ( ^IT-DATA[TreasuryBonds](#1) )
+   IT-DATA[TreasuryCharacteristics=+](#1).
+
+if ( ^IT-DATA[UnderlyingAsset](#1) )
+	IT-DATA[DerivativeCharacteristics=+,EquityLinkedSecuritiesCharacteristics=+,OptionCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+](#1).
+
+if ( ^IT-DATA[UnrealizedAppreciation](#1) )
+	IT-DATA[DerivativeCharacteristics=+](#1).
+
+if ( ^IT-DATA[Yield](#1) )
+	IT-DATA[StructuredInvestmentCharacteristics=+,BondCharacteristics=+,MoneyMarketFundCharacteristics=+,SecuritiesLendingTransactionsCharacteristics=+,ShortTermCharacteristics=+,TreasuryCharacteristics=+,LoanCharacteristics=+,ShortTermBankInvestmentCharacteristics=+](#1).
+
+
+
+
+////////////////////////  Testing \\\\\\\\\\\\\\\\\\\\\\\\\\
+/
+if ( INVESTMENT-TYPE(#1) & ^SENT(#2) )
+   SENT[ittest=+](#2).
+\
+
+
+////////////////////// Mark investment table titles \\\\\\\\\\\\\\\\\\\
+
+// Potential Investment Table titles are marked up
+// Table titles are not in sentences
+// sentences have subj, obj 
+
+
+// Patterns where the indicator is not marked up:
+
+//Investments February 28, 2011
+
+| noun#1[lemme:investment,start] |
+if ( TIMEX3(#2) | DATE(#2) & ~INDICATOR[itind,table](#1) )
+   INDICATOR[itind=+,table=+](#1).
+
+// Marking the indicator
+
+| #1[table] |
+if ( SENT[insent:~](#2) & ^INDICATOR[itind](#1) )
+   INDICATOR[itind=+,table=+](#1).
+
+
+
+
+
+////////////////////// Mark continued tables \\\\\\\\\\\\\\\\\
+
+// we mark every block when it has cont in it
+
+| #1[cont] | 
+if ( SENT(#2) )
+   BLOCK[cont=+](#2).
+
+if ( BLOCK[cont](?) & ^INVESTMENT-TYPE(#1) )
+   INVESTMENT-TYPE[cont=+](#1)
+
+if ( BLOCK[cont](?) & ^IT-DATA-TYPE(#1) )
+   INVESTMENT-TYPE[cont=+](#1)
+
+if ( BLOCK[cont](?) & ^INDICATOR(#1) )
+   INDICATOR[cont=+](#1)
+
+if ( ^BLOCK[cont](?) & IT-DATA-TYPE[cont](?) )
+   ~.
+
+if ( ^BLOCK[cont](?) & INVESTMENT-TYPE[cont](?) )
+   ~.
+
+if ( ^BLOCK[cont](?) & INDICATOR[cont](?) )
+   ~.
+
+/////////////////// End of Investment tables \\\\\\\\\\\\\\\\\\\\\\\
+
+| #1[itind,tableend] |
+  INDICATOR[itind=+,tableend=+](#1).
+
+if ( INDICATOR[itind,tableend](#1) & ^INDICATOR[tableend:~](?) )
+   ~.
+
+// in almost all tables "total investments" signals the end of a table. A few times it is "net assets"
+
+| #1[itind,pot-tableend] |
+  INDICATOR[itind=+,pot-tableend=+](#1).
+
+if ( INDICATOR[itind,pot-tableend](#1) & ^INDICATOR[pot-tableend:~](?) )
+   ~.
+
+//Consumer Staples – 6.3% (4.4% of Total Investments) - only IT-DATA-TYPE
+
+if ( ^INDICATOR[tableend](#1) & IT-DATA-TYPE[typestart](?) )
+   ~.
+
+if ( ^INDICATOR[tableend](#1) & INVESTMENT-TYPE[typestart](?) )
+   ~.
+
+if ( ^INDICATOR[pot-tableend](#1) & IT-DATA-TYPE[typestart](?) )
+   ~.
+
+if ( ^INDICATOR[pot-tableend](#1) & INVESTMENT-TYPE[typestart](?) )
+   ~.
+

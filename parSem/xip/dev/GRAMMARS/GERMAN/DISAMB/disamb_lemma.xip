@@ -1,0 +1,207 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb_lemma.xip
+//! Content:	Disambiguation rules for lemmas
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	06-Jul-2006
+//! Updated:	06-Jul-2006
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Initial:
+
+pythonfulllexical(1);
+
+ 
+
+Tagging: 
+
+// -----------------------------------------------------------------------------
+// spelling variants
+// prefer new readings
+
+1> ?[newspell,oldspell] = ?[oldspell:~].
+
+
+// Eliminate elision reading (if there is also a "full" reading in the set)
+// e.g.  "sein" 
+//  [ok] 	verb[pred:+,inf:+,verb:+]
+//  [del]	verb[elid:+,pred:+,pres:+,subjc:+,finite:+,...]  == "seien" 
+
+2> ?<elid:+>, ?<elid:~> = ?[elid:~] . 
+
+// restrict s-Elision : only possible within context "'s"
+// :: was kostet 's ?
+3> ?[elid_s:+] = ?<elid_s:~> ~| ?[lemma:es, elid:+] | .
+
+// consider present participles always as adjectives
+8> ?<verb,ppres> = ?<verb,ppres:~>, ?<verb:~>.
+
+// ==================================================
+// word based filters
+// take preferred readings (except at beginnging of sentence)
+// :: Alternative/adja Lösungen sind die Alternative/noun.
+10> ?<prefer,firstword:~> = ?[prefer:+].
+
+
+
+// ==================================================
+// proper names
+
+// overwrite compound analysis
+15> ?[noun,proper:~,rank,nom] = | noun[firstname,guessed:~] | 
+	noun[nom,proper=+,lastname=+,invar=+,nagr=~,case=~,gender=~,number=~].
+
+
+// ==================================================
+// Some word based rules to choose lemmas
+
+// conjunction or preposition
+// :: Ob/conj er kommt, weiss ich nicht
+// :: Er grübelt ob/prep dieser Sache (*archaic*)
+21> ?<lemma:ob,firstword> = conj .
+21> ?<lemma:ob> = | punct;?[coord] | conj .
+
+// verb lassen vs. adjective lass
+22> ?<lemma:lassen,finite>, ?<adj> = | ?[det:~] | ?[adj:~].
+
+// remove predicative adjective reading for "wollen"
+// except for context  "ist wollen
+23> ?[adjp,modal] = | ?[aux,lemma:sein] | adjp .
+23> ?[adjp,modal] = adjp  | ?[aux,lemma:sein] |.
+23> ?[adjp,modal] =  ?[adjp:~] .
+
+
+
+// word  "Es" (symbol or pronoun)
+// :: eine Fuge in/prep es/symbol
+// :: er spielt die Note es/symbol
+24> ?[symbol,pron] = | ?[lemma:Note];prep[conj:~];det[pron:~] | ?[symbol] .
+24> ?[symbol,pron] = ?[symbol:~].
+
+// word  "Des" (symbol or determiner)
+// :: eine Fuge in/prep des/symbol
+// :: er spielt die Note des/symbol
+25> ?[symbol,det] = | ?[lemma:Note] | ?[symbol] .
+25> ?[symbol,det] = | prep | ?[symbol] | punct;conj |.
+25> ?[symbol,det] = ?[symbol:~].
+
+// word "erst"
+26> ?[ord,pred,adv] = adv.
+
+// word "während"
+27> ?[conj,prep,ppres] = ?[ppres:~].
+
+// word "äußer"
+28> adja<lemma:äußer>, verb<inf> = ?[adja:~] .
+
+// word "heute"
+29> adv<lemma:heute> = ?[verb:~].
+
+// ==================================================
+// double conjunctions
+// :: weder ... noch ...
+30> ?[conj,coord2,lemma:noch] = | ?[coord1,lemma:weder], ?* |  ?[coord2] .
+30> ?[conj,coord2,lemma:noch]  = adv .
+
+
+// nicht (nur) ..., sondern (auch)   ##CHECK
+31> ?[lemma:sondern,conj] = | ?[lemma:nicht], ?*[comma:~,semicolon:~], ?[comma] | ?[verb:~].
+31> ?[lemma:sondern,conj] = | ?*[comma:~,semicolon:~]  | ?[conj:~].
+
+// ==================================================
+// :: zur selben Zeit, das *selbe Kleid
+40> ?<lemma:selbe> = | ?[det:~] |  ?[adj:~] .
+
+// ==================================================
+// adverbial or preposition mit 
+// CHECK other similar ambiguities (e.g. je)
+// :: Er kommt mit/prep uns 
+// :: Er kommt mit/prep seinen Freunden
+50> ?<lemma:mit> = ?[adv:~] | (det), ?*[pre_noun], noun |.
+50> ?<lemma:mit> = ?[adv:~] | pron |.
+// :: Er ist mit/adv dabei.
+// :: Er kommt mit/adv nach Hamburg.
+50> ?<lemma:mit> = adv | prep;adv[pronom] |.
+
+// ==================================================
+// prepositions
+// :: namens/prep[gen] der Regierung
+// :: Ein Mann namens/prep[nom] Maier
+60> ?<lemma:namens,prep> = ?[gen:~] ~| det[gen] |.
+
+61> ?[noun,proper,common] = | prep[lemma:namens] | noun[proper].
+
+// ==================================================
+// circumpositions
+
+// um ... willen
+101> ?<lemma:um> = prep[crc] | (?[gen];?[invar])*, postp[lemma:willen] |.
+101> ?<lemma:um> = ?[crc:~].
+
+// von ... ab/an/aus/auf
+101> postp[crc] = | prep#1, (det), ?*[pre_noun], noun |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+101> postp[crc] = | prep#1, (adv;adjp)+ |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+
+102> postp[crc2:~] = ?[crc:~].
+
+// ==================================================
+// MULTI-WORDS
+
+// ab und zu; ab und an
+110> ?<lemma:ab> = adv | ?[lemma:und], ?[lemma:zu,lastword] |.
+110> ?<lemma:ab> = adv | ?[lemma:und], ?[lemma:zu], ?*[finite:~], ?[ finite:~,lastword] |.
+110> ?<lemma:ab> = adv | ?[lemma:und], ?[lemma:an,lastword] |.
+110> ?<lemma:ab> = adv | ?[lemma:und], ?[lemma:an], ?*[finite:~], ?[ finite:~,lastword] |.
+
+111> ?<lemma:zu, lastword> = | adv[lemma:ab], ?[lemma:und] | adv.
+111> ?<lemma:zu> = | adv[lemma:ab], ?[lemma:und] | adv | ?*[finite:~], ?[ finite:~,lastword]|.
+
+112> ?<lemma:an, lastword> = | adv[lemma:ab], ?[lemma:und] | adv.
+112> ?<lemma:an> = | adv[lemma:ab], ?[lemma:und] | adv | ?*[finite:~], ?[ finite:~,lastword]|.
+
+
+// :: Wenn der Bart ab ist ...
+115> ?[adv,prefadv,crc:~] = adv | ?[lemma:sein,det:~,inf:~] |.
+// :: Die Tür ist schon lange zu.
+// CHECK: Die Tür muss zu sein. 	vs. ... ohne da zu sein
+115> ?[prefadv, lastword] = | ?[lemma:sein, det:~, inf:~], ?*[finite:~] | adv .
+// :: Das Licht ist aus und wir gehen.
+115> ?[prefadv] = | ?[lemma:sein,det:~], ?*[finite:~] | adv | ?[coord] |.
+// otherwise "ab", "an", "aus", "zu" cannot be adverb
+115> ?[prefadv] = ?[adv:~].
+
+
+// :: ein oder zwei Dinge
+// :: ein, zwei Flaschen
+120> ?<lemma:ein> = ?<card> | punct[comma]; conj[coord]; punct[slash] , ?[card] |.
+120> ?<lemma:ein> = ?[card:~].
+
+// ein/det[neut] wenig, (k)ein bisschen, ein paar
+// BUT: ein wenig angenehmer Zeitgenosse
+
+
+130> ?<lemma:ein> = det[neut] | ?[lemma:wenig], ?[masc:~] |.
+130> ?<lemma:ein> = det[neut,sg] | ?[lemma:wenig,end] |.
+130> ?<lemma:ein> = det[neut,sg] | ?[lemma:bisschen] | .
+130> ?<lemma:ein> = det[neut,sg] | ?[lemma:paar] | .
+130> ?<lemma:kein> = det[neut,sg] | ?[lemma:bisschen] | .
+
+// :: Soll und Haben
+140> ?<lemma:Soll>,verb = noun | conj[coord], noun[lemma:haben] |.
+// otherwise: notfirst
+
+// viel
+// :: ein viel/adv besserer Test
+150> ?[quant,adj,adv,pos]  = adv | adja[comp] | .
+// er spielt viel/adv besser
+150> ?[quant,adjp,adv,pos]  = adv | adjp, ?<lemma:als>;?[sent_sep] |.
+
+// :: viel zu gut
+150> ?[quant,adj,adv,pos]  = adv | ptcl[pos], ?[adj,pos] | .

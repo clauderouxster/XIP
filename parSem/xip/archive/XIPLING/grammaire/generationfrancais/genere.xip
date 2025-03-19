@@ -1,0 +1,124 @@
+
+dependencyrules:
+
+
+
+generation:
+//On cree nos blocs sujet
+1> if (subj(#1,#2[pron:~])) P(#1){GN(#2){Noun(#2)},GV(#1){Verb(#1)}}.
+
+1> if (subj(#1,#2[pron:+])) P(#2,#1){GN[pron=+](#2){Pron(#2)},GV(#1){Verb(#1)}}.
+
+//Puis les blocs PP
+1> if (pmod(#1,#2)) PP(#1){Prep(#2),GN(#1){Noun(#1)}}.
+
+//Puis les COD
+1> if (obj(#1,#2[pron:~]) & ^GV(#1)) GN(#2){Noun(#2)}.
+//Avec pronom relatif dans une phrase
+5> if (obj(#1,#2[pron:+]) & ^P(#1)) GN[$=0,pron=+](#2){Pron(#2)}.
+
+5> if (obj(#1,#2[pron:+]) & P$#1(#1)) $#1(#2,#1).
+
+//Dans le cas d'un nmod lie a un PP (hundeta iniars...), si le GN n'existe pas, on le cree
+10> if (nmod(#1,#2) & pmod(#2,#3) & ~GN(#1)) GN(#1){Noun(#1)}.
+
+//Notre GN existe, il a deja ete cree, on place alors le PP juste apres lui
+20> if (nmod(#1,#2) & pmod(#2,#3) & ^GN(#1) && PP$#1(#2)) $#1.
+
+//Le simple complement du nom, il faut introduire
+25> if (nmod(#1,#2) & ~pmod(#2,?) & ^GN(#1)) PP(#2){prep(prep[lemme=de]),GN(#2){Noun(#2)}}.
+
+//Traitement de l'adjectif
+30> if (amod(#1,#2) & ^GN(#1)) AP(#2){adj(#2)}.
+
+//L'antecedent d'un pronom relatif
+40> if (antecedent(#1,#2) & ^GN(#2) & P$#1(#1,?)) $#1.
+
+//Rajout du mod
+40> if (mod(#1,#2) & ^GV(#1) & PP$#1(#2)) $#1.
+
+//Traitement du determinant present dans la grammaire
+45> if (determ(#1,#2) & ^GN(#1) & #1[det=+] ) det(#2).
+
+//Traitement du determinant au depart de la phrase. On met un "le"
+50> if (^GN(#1[det:~,start])) det(det[det=+,lemme="le"]).
+
+//Traitement du determinant ailleurs
+50> if (^GN(#1[pron:~,det:~,start:~])) det(det[det=+,lemme="un"]).
+
+
+//Traitement de l'accord entre le verbe et son sujet, cas de base...
+100> if (subj(#1,#2) & #2[pers:~] & #1[pers=3] & #2[number:~] & #1[sg=+]) ~.
+
+//Rajout de la virgule a la fin de la relative
+140> if (^P(#2,#1[rel])) punct(punct[lemme="%,"]).
+
+//Creation des tokens
+300> if (^noun(#1)) token(#1).
+300> if (^verb(#1)) token(#1).
+300> if (^prep(#1)) token(#1).
+300> if (^punct(#1)) token(#1).
+
+//Traitement de la negation
+350> if (neg(#1) & ^Verb(#1)) negavant(adv[lemme=ne]),negfin(adv[lemme=pas]).
+
+//Initialisation des traits et du lemme
+400> if (token(#1) & initlookdown(#1)) ~.
+
+//Echange de traits entre nom et determinant
+430> if (GN(#1){det(#2) } & #2[accordgen]={#1} ) ~.
+
+//On s'occupe de la forme de surface de notre determinant apres, pour pouvoir recuperer les traits du nom associe
+450> if (^det(#1) & initlookdown(#1)) token(#1).
+
+
+470> if (words("que","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"qu'")) ~.
+
+470> if (words("de","un") & cleanword(1) & setword(0,"du")) ~.
+470> if (words("te","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"t'")) ~.
+470> if (words("se","[h,a,e,i,o,u,é,è,ê,â]?+") &setword(0,"s'")) ~.
+470> if (words("ne","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"n'")) ~.
+470> if (words("de","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"d'")) ~.
+470> if (words("le","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"l'")) ~.
+470> if (words("la","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"l'")) ~.
+
+470> if (words("de","les") & setword(0,"des") & cleanword(1)) ~.
+470> if (words("de","des") & setword(0,"des") & cleanword(1)) ~.
+470> if (words("de","le") & setword(0,"du") & cleanword(1)) ~.
+
+470> if (words("à","les") & setword(0,"aux") & cleanword(1)) ~.
+470> if (words("à","le") & setword(0,"au") & cleanword(1)) ~.
+
+470> if (words("en","le") & setword(0,"dans")) ~.
+470> if (words("en","la") & setword(0,"dans")) ~.
+
+order:
+
+//Dans la construction du COD, on veut que le GN soit apres le verbe
+1> Verb < GN.
+
+
+//Pour le rajout d'un PP, il faut qu'il soit place APRES notre noeud N
+20> Noun < PP.
+
+Noun<AP(#1[position:~]).
+AP(#1[position:avant])<Noun.
+
+AP<PP.
+
+40> PP < GV.
+
+350> negavant< token.
+350> token<negfin.
+//Le determinant vient se placer avant le nom
+
+Det<AP.
+Det<Noun.
+
+
+Script:
+500> SetSentence(@generated);
+
+
+
+

@@ -1,0 +1,239 @@
+# ============================================================================
+# FILE:		/opt/Mltt/lingdata/pol/lex/src/guesser.xfst
+# CONTENT:	(x)fst script for inflectional guesser
+#
+# LANGUAGE:	POLISH (ISO-8859-2)
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	29-Jul-1999
+#
+# ============================================================================
+# USAGE:	xfst -l [ThisFile]
+# ============================================================================
+
+# --------------------------------------------------------------------
+echo >>> define character sets
+define	UPP	[ A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z
+		| Ą|Ć|Ę|Ł|Ń|Ó|Ś|Ź|Ż ];
+define	LOW	[ a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z
+		| ą|ć|ę|ł|ń|ó|ś|ź|ż ];
+
+define Cons	[ b|c|d|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|z
+		| ć|ł|ń|ś|ź|ż ];
+
+define Cons1	Cons - ć ;
+
+define Vowel	[ a|e|i|o|u|ą|ę|ó|y ];
+
+define DIGIT	[ %0|1|2|3|4|5|6|7|8|9 ] ;
+
+define SPEC	[ %- | %/ | %. | %: | %@ | %* | %& ];
+
+
+define PREF	[[UPP|LOW|DIGIT]+ %-]+ ;
+
+define NUMSEP	[ %. | %, ] ;
+define NUMOP	[ %- | %+ | %/ | %* | %: | %= | %< | %> ] ;
+define PAREN	[ %( | %) | %[ | %] ] ;
+
+define CARD	[ DIGIT [NUMSEP DIGIT+]* ] ;
+define ORD	[ DIGIT+ %.]+ ;
+
+define MATH	[ DIGIT | NUMSEP | NUMOP | PAREN ]+ & $DIGIT ;
+define MATH1	[ MATH - [CARD|ORD] ];
+
+# --------------------------------------------------------------------
+echo >>> numerals ...
+define ROMAN [	
+ [ m^<4 
+  ([c m|d|c d|(d) c^<4]) 
+  ([x c|l|x l|(l) x^<4]) 
+  ([i x|v|i v|(v) i^<4]) ]
+| [ M^<4 
+  ([C M|D|C D|(D) C^<4])
+  ([X C|L|X L|(L) X^<4]) 
+  ([I X|V|I V|(V) I^<4]) ]
+] - [] ;
+
+# acronyms
+define ACRON	[ UPP  [ UPP | LOW ]+ ] & $[UPP ?* UPP ];
+
+# propername initials
+define INIT	[ UPP %.]+ ;
+
+echo >>> define categories and features ...
+regex	[ 
+  ROMAN 	%+Num:0 %+Rom:0 %+Card:0 "+hmm_NUM":0 
+| ROMAN %. 	%+Num:0 %+Rom:0 %+Ord:0  "+hmm_ORD":0 
+| CARD		%+Num:0 %+Dig:0 %+Card:0 "+hmm_NUM":0  
+| ORD		%+Num:0 %+Dig:0 %+Ord:0  "+hmm_ORD":0 
+| MATH		%+Num:0 %+Dig:0 %+Expr:0 "+hmm_NUM":0 
+
+| (PREF) ACRON	%+Prop:0 %+Abbr:0 %+InvNum:0 %+InvCase:0 "+hmm_NOUN":0 
+| INIT		%+Prop:0 %+Abbr:0 %+InvNum:0 %+InvCase:0 "+hmm_NOUN":0 
+];
+define GUESS1
+
+
+
+# --------------------------------------------------------------------
+echo >>> adjectives
+ 
+define AdjStem	 [ (PREF) LOW+ Cons ];
+
+define AdjSuffix [
+  [y|i]			[ %+Adj %+Masc	%+Sg %+NomVoc ]:0
+| [y|i]			[ %+Adj %+M3	%+Sg %+NomAccVoc ]:0
+| [y:0|i]	0:a	[ %+Adj %+Fem	%+Sg %+NomVoc ]:0
+| [y:0|i]	0:e	[ %+Adj %+Neut	%+Sg %+NomAccVoc ]:0
+| [y:0|i]	0:{ego}	[ %+Adj %+MN	%+Sg %+Gen ]:0
+| [y:0|i]	0:{ego}	[ %+Adj %+M12	%+Sg %+GenAcc ]:0
+| [y:0|i]	0:{ej}	[ %+Adj %+Fem	%+Sg %+GenDatLoc ]:0
+| [y:0|i]	0:{emu}	[ %+Adj %+MN	%+Sg %+Dat ]:0
+| [y:0|i]	0:ą	[ %+Adj %+Fem 	%+Sg %+AccIns ]:0
+| [y|i]		0:m	[ %+Adj %+MN	%+Sg %+InsLoc ]:0
+| [y:i|i]		[ %+Adj %+M1	%+Pl %+NomVoc ]:0
+| [y:0|i]	0:e	[ %+Adj %+M23FN %+Pl %+NomAccVoc ]:0
+| [y|i]		0:{ch}	[ %+Adj %+M1	%+Pl %+GenAccLoc ]:0
+| [y|i]		0:{ch}	[ %+Adj %+MFN   %+Pl %+GenLoc ]:0
+| [y|i]		0:m	[ %+Adj %+MFN	%+Pl %+Dat ]:0
+| [y|i]		0:{mi}	[ %+Adj %+MFN	%+Pl %+Ins ]:0
+];
+
+
+define ADJ	[ AdjStem AdjSuffix "+hmm_ADJ":0];
+
+# NOTE: phonological rules could be added!
+
+
+# --------------------------------------------------------------------
+echo >>> common nouns
+
+
+define NounStem	 [ (PREF) LOW+ Cons ];
+
+define NounSuffix [
+		[ %+Noun %+M3	%+Sg %+NomAcc ]:0
+|		[ %+Noun %+M12	%+Sg %+Nom ]:0
+|	0:[a|u]	[ %+Noun %+M3	%+Sg %+Gen ]:0
+|	0:a	[ %+Noun %+M12	%+Sg %+GenAcc ]:0
+|	0:{owi} [ %+Noun %+Masc %+Sg %+Dat ]:0
+|	0:{em}	[ %+Noun %+Masc %+Sg %+Ins ]:0
+|	0:{ie}	[ %+Noun %+Masc %+Sg %+LocVoc ]:0
+|	0:{u}	[ %+Noun %+Masc %+Sg %+LocVoc ]:0
+|	0:{y}	[ %+Noun %+M3   %+Pl %+NomAccVoc ]:0	0:%^1
+|	0:{y}	[ %+Noun %+M12  %+Pl %+NomVoc ]:0	0:%^1
+|	0:{ów}	[ %+Noun %+M3   %+Pl %+Gen ]:0
+|	0:{ów}	[ %+Noun %+M12  %+Pl %+GenAcc ]:0
+|	0:{om}	[ %+Noun %+Masc %+Pl %+Dat ]:0
+|	0:{ami}	[ %+Noun %+Masc %+Pl %+Ins ]:0
+|	0:{ach}	[ %+Noun %+Masc %+Pl %+Loc ]:0
+
+| 	o	[ %+Noun %+Neut	%+Sg %+NomAccVoc ]:0
+| 	o:{a}	[ %+Noun %+Neut	%+Sg %+Gen ]:0
+|	o:{u}	[ %+Noun %+Neut %+Sg %+Dat ]:0
+|	o:{em}	[ %+Noun %+Neut %+Sg %+Ins ]:0
+|	o:{ie}	[ %+Noun %+Neut %+Sg %+Loc ]:0
+|	o:{a}	[ %+Noun %+Neut %+Pl %+NomAccVoc ]:0
+|	o:0	[ %+Noun %+Neut %+Pl %+Gen ]:0
+|	o:{om}	[ %+Noun %+Neut %+Pl %+Dat ]:0
+|	o:{ami}	[ %+Noun %+Neut %+Pl %+Ins ]:0
+|	o:{ach}	[ %+Noun %+Neut %+Pl %+Loc ]:0
+
+| 	a	[ %+Noun %+Fem	%+Sg %+Nom ]:0
+| 	a:{y}	[ %+Noun %+Fem	%+Sg %+Gen ]:0 0:%^2
+|	a:{ie}	[ %+Noun %+Fem  %+Sg %+DatLoc ]:0
+|	a:{ę}	[ %+Noun %+Fem  %+Sg %+Acc ]:0
+|	a:{ą}	[ %+Noun %+Fem  %+Sg %+Ins ]:0
+|	a:{o}	[ %+Noun %+Fem  %+Sg %+Voc ]:0
+|	a:{y}	[ %+Noun %+Fem  %+Pl %+NomAccVoc ]:0 0:%^1
+|	a:0	[ %+Noun %+Fem  %+Pl %+Gen ]:0
+|	a:{om}	[ %+Noun %+Fem  %+Pl %+Dat ]:0
+|	a:{ami}	[ %+Noun %+Fem  %+Pl %+Ins ]:0
+|	a:{ach}	[ %+Noun %+Fem  %+Pl %+Loc ]:0
+
+];
+
+define NOUN1	[NounStem 0:%+ NounSuffix "+hmm_NOUN":0 ];
+
+define NOUN [ NOUN1
+.o.
+	[..] -> i || [g|k] %+ _ e m .#.
+.o.
+	r %+ i -> r z  ,
+	d %+ i -> d z i ,
+	ł %+ i -> l i ,
+	t %+ i -> c i 
+.o.	
+	y -> i || [g|k] %+ _ [%^1 | %^2], j %+ _ %^2 
+.o.
+	y -> e || [ c | z | l | ż ] %+_ [ %^1 ]
+.o.
+	[ %^1 | %^2 | %+ ] -> 0 
+];
+
+# --------------------------------------------------------------------
+echo >>> adjectival proper names
+ 
+define PropStem	 [ (PREF) UPP LOW+ Cons ];
+
+define PropSuffix [
+  [y|i]			[ %+Prop %+Masc	%+Sg %+NomVoc ]:0
+| [y:0|i]	0:a	[ %+Prop %+Fem	%+Sg %+NomVoc ]:0
+| [y:0|i]	0:{ego}	[ %+Prop %+Masc	%+Sg %+GenAcc ]:0
+| [y:0|i]	0:{ej}	[ %+Prop %+Fem	%+Sg %+GenDatLoc ]:0
+| [y:0|i]	0:{emu}	[ %+Prop %+Masc	%+Sg %+Dat ]:0
+| [y:0|i]	0:ą	[ %+Prop %+Fem 	%+Sg %+AccIns ]:0
+| [y|i]		0:m	[ %+Prop %+Masc	%+Sg %+InsLoc ]:0
+| [y:i|i]		[ %+Prop %+Masc	%+Pl %+NomVoc ]:0
+| [y:0|i]	0:e	[ %+Prop %+Fem 	%+Pl %+NomAccVoc ]:0
+| [y|i]		0:{ch}	[ %+Prop %+Masc	%+Pl %+GenAccLoc ]:0
+| [y|i]		0:{ch}	[ %+Prop %+Fem	%+Pl %+GenLoc ]:0
+| [y|i]		0:m	[ %+Prop 	%+Pl %+Dat ]:0
+| [y|i]		0:{mi}	[ %+Prop 	%+Pl %+Ins ]:0
+];
+
+
+define PROP	[ PropStem PropSuffix "+hmm_NOUN":0 ];
+
+# NOTE: phonological rules could be added!
+
+
+
+# --------------------------------------------------------------------
+echo >>> verbs
+
+define VerbStem 	[ LOW+ Cons ];
+
+define INF	[ {wać}:{j} | {ąć}:0 ];
+define VerbSuffix [
+  INF.1			[ %+Verb %+Imperf %+Infinit "+hmm_VINF" ]:0
+| INF	0:{ę}		[ %+Verb %+Imperf %+Ind %+Pres %+1P %+Sg "+hmm_VFIN" ]:0
+| INF	0:{esz}		[ %+Verb %+Imperf %+Ind %+Pres %+2P %+Sg "+hmm_VFIN" ]:0
+| INF	0:{e}		[ %+Verb %+Imperf %+Ind %+Pres %+3P %+Sg "+hmm_VFIN" ]:0
+| INF	0:{emy}		[ %+Verb %+Imperf %+Ind %+Pres %+1P %+Pl "+hmm_VFIN" ]:0
+| INF	0:{ecie}	[ %+Verb %+Imperf %+Ind %+Pres %+2P %+Pl "+hmm_VFIN" ]:0
+| INF	0:{ą}		[ %+Verb %+Imperf %+Ind %+Pres %+3P %+Pl "+hmm_VFIN" ]:0
+
+];
+
+define VERB [ VerbStem VerbSuffix ];
+
+# NOTE: phonological rules could be added!
+
+
+# --------------------------------------------------------------------
+echo >>> union
+regex GUESS1 | ADJ | NOUN | PROP | VERB ;
+
+define G1
+
+echo >>> rudimentary proper names
+define G2 [
+	UPP [UPP|LOW|DIGIT|SPEC]+ 		%+Prop:0 %+InvNum:0 %+InvCase:0 "+hmm_NOUN":0
+	];
+
+
+echo >>> priority union
+regex G1 .p. G2 ;

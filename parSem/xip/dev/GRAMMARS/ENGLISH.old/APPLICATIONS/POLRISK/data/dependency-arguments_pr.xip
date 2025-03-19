@@ -1,0 +1,345 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-arguments_pr.xip
+//!   Date       : January 2007
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// ce fichier a pour but d'établir les arguments régis par les noyaux d'événements ; ces relations ARGUMENTS seront interprétées par la suite comme COORDINATE (actor, target), comme CORE-DRIVE et serviront à construire les CORE_EXT
+
+DependencyRules:
+
+//********** sujets et objets
+
+//******************* NOUNS *************************
+
+// a. sujets et objets normalisés des noms 
+
+// ************* Subject *************************
+
+// SUBJ-N
+
+
+// ********** subject of the verb whose nominalization is the event noun  *********
+
+// statements by officials
+// This rule is never good when the preposition in front of the NSubj is "for"
+
+if (SREL(#1[fictivenode:~,ofobj:~],#2) & SUBJ-N(#2,#3) & CORE-NOUN(#1) & ~PREPD(#3,#4[form:ffor]) & ~ARGUMENT[Nsubj](#1,#3) )
+	ARGUMENT[Nsubj=+](#1,#3).
+
+
+
+// exceptions: we exclude 
+// a) CORE-NOUNs that are OBJ of support verbs: the army takes control of nukes.
+if ( ^ARGUMENT[NSubj](#1,#2) & ( SUPPORT(#3,#1) ) )
+	~.
+
+// b) nouns that are preceded by a personal pronoun: their negotiations
+
+if ( ^ARGUMENT[NSubj](#1,#2) & ( DETD(#1,#4[pron,personal]) ) )
+	~.
+
+//***************** N[ofsubj] of N *****************
+
+// attitude of X 
+
+if ( MOD[post](#1[evnt,ofsubj],#2) & PREPD(#2,#3[form:fof]) & ~ARGUMENT[NSubj](#1?) )
+	ARGUMENT[NSubj=+](#1,#2).
+
+//************** POSSPRON N ******************
+
+// its negotiations
+
+if ( DETD(#1,#2[pron,personal]) & CORE-NOUN(#1) & ~ARGUMENT[NSubj](#1,?) )
+	ARGUMENT[NSubj=+](#1,#2).
+
+//************** N's N************************
+
+// foreign enemies' threats
+
+if ( PARTICLE(#1[human],#2[poss,gen,part]) & MOD[pre](#3,#1) & CORE-NOUN(#3) & ~ARGUMENT[NSubj](#3,?) )
+	ARGUMENT[NSubj=+](#3,#1).
+
+
+//*************entity N***********************
+
+//Iranian nuclear activities
+//MOD_PRE(activities,Iranian)
+
+if ( MOD[pre](#1,#2[human]) & CORE-NOUN(#1) & ~ARGUMENT[NSubj](#1,?) )
+	ARGUMENT[NSubj=+](#1,#2).
+
+
+//************** N's N************************
+
+//Hersh's allegation
+|#2[ human=+, Nentity=+]|
+if (CORE-NOUN(#1) & NMODGEN(#1,#2[proper, place:~]) & ~ARGUMENT[Nsubj](#1,#2))
+	ARGUMENT[NSubj=+](#1,#2).
+
+//****************OBJECT******************************
+
+//********** object of the verb whose nominalization is the event noun  *********
+
+//control of nukes
+//MOD_SUBCAT_XRX_EVNT_TH_POST(control,nukes)
+if ( MOD[subcat](#1[ofobj],#2) & CORE-NOUN(#1) & ~ARGUMENT[NSubj](#1,#2) )
+	ARGUMENT[Nobj=+](#1,#2).
+
+
+//***************propagation of subjects********************
+
+//**************** SUBJ SV NOUN******************
+
+// the #1army #2takes[sv] #3control of nukes ARGUMENT[NSubj](control,army)
+//OBJ_XRX_EVNT_TH_POST(#2takes[sv],#3control)
+//SUBJ-N_PRE(#2takes,#1army)
+//CORE-NOUN(#3control)
+
+if ( OBJ-N(#2[sv],#3) & SUBJ-N(#2,#1) & CORE-NOUN(#3) & ~ARGUMENT[NSubj](#3,?) )
+	ARGUMENT[NSubj=+](#3,#1).
+
+
+// Iran#1 does not wish to get#2 into conflict#3 ARGUMENT[NSubj](conflict,Iran)
+//SUBJ-N(get,Iran)
+//MOD_SUBCAT(get,conflict)
+
+
+if ( SUBJ-N(#2[sv],#1) & MOD[subcat](#2[sv],#3) & CORE-NOUN(#3) & ~ARGUMENT[NSubj](#3,?) )
+	ARGUMENT[NSubj=+](#3,#1).
+
+
+//***************NSUBJ N prep N*********************
+
+// Propagation of NSubj to the modifier of the event: Russian insistence on payment NSubj(payment,Russian)
+
+//Tehran's suspension of uranium enrichment activities
+//MOD_SUBCAT_XRX_EVNT_TH_POST(suspension,activities)
+//ARGUMENT_NSUBJ(suspension,Tehran)
+
+
+if ( MOD[subcat](#1,#2) & CORE-NOUN(#2) & ARGUMENT[NSubj](#1,#3) & ~ARGUMENT[Nsubj](#2,?) )
+	ARGUMENT[NSubj=+](#2,#3).
+
+//There will, in fact, be no negotiations meeting on August 31 since the Iranians have decided to suspend application of the Paris Agreement, Minister Mattei adds.
+//MOD_SUBCAT_XRX_EVNT_TH_POST(application,Paris Agreement)
+//CORE-NOUN(Paris Agreement)
+//ARGUMENT_NSUBJ(application,Paris Agreement)
+
+
+//****************SUBJ N[subjt] N******************************
+// Propagation of Subj: if an event is the object of another event, it takes its subject
+// Russia's civil nuclear industry negotiates commercial agreements to re-import and dispose of spent fuel sold to clients. NSubj(agreements,industry)
+
+if ( SUBJ-N(#1[subjt],#2) & OBJ-N(#1,#3) & CORE-NOUN(#3) & ~ARGUMENT[NSubj](#3,#4) )
+	ARGUMENT[Nsubj=+](#3,#2).
+
+
+//****************SUBJ BE ATTRIBUTE*****************
+// Inspectors are on standby[attribute]
+
+if ( MOD[post](#1,#2) & SUBJ-N(#1,#3) & CORE-NOUN[attribute](#2) )
+	ARGUMENT[Nsubj=+](#2,#3).
+
+
+//*************VERBS*****************************
+
+if ( CORE(#1) & (SUBJ(#1,#2) | SUBJ-N(#1[fictivenode:~],#2)))
+	ARGUMENT[subj=+](#1,#2).
+
+
+if ( CORE(#1) & (OBJ[sentence:~](#1[fictivenode:~],#2) | OBJ-N[sentence:~](#1[fictivenode:~],#2)) )
+	ARGUMENT[obj=+](#1,#2).
+
+
+if(CORE(#1) & EXPERIENCER(#1,#2) & ~SUBJ-N(#1,?) & ~ARGUMENT[subj](#1,#2))
+	ARGUMENT[subj=+](#1,#2).
+
+if(CORE(#1) & CONTENT(#1,#2) & ~OBJ-N(#1,?))
+	ARGUMENT[obj=+](#1,#2).
+
+//**************NSUBJ N INF****************
+
+// les sujets des verbes non finis qui dépendent de noms d'événements
+
+
+//Adeli stressed #2Iran's #1right to develop nuclear technology while accusing the United States of false accusations.
+//ARGUMENT_NSUBJ(#1right,#2Iran)
+//MOD_POST_INFINIT(#1right,#3develop)
+
+//Iranian plans to build nuclear power plants
+
+if ( ARGUMENT[NSubj](#1,#2) &  ( MOD[post,infinit](#1,#3) | SUBJ[pre,nfinit](#3,#1 ) ) & ~ARGUMENT[subj](#3,?) )
+	ARGUMENT[subj=+](#3,#2).
+
+//a request by the IAEA to access a suspected military site 
+|#1[noun], PP, IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & ARGUMENT[Nsubj](#3,#5) & ~VDOMAIN[passive](#4,?) & ~SUBJ-N(#4,#5) & ~ARGUMENT[subj](#4,#5))
+	ARGUMENT[subj=+](#4,#5)
+
+//**************SUBJ is ADJ INF*******************
+// his #2country is #1willing to #3give #4concessions
+
+//NUCL_GRPR(willing#1,give#2)
+//SUBJ-N_PRE(willing#1,country#3)
+
+if ( NUCL(#1,#2[verb]) & SUBJ-N(#1,#3) & ~ARGUMENT[subj](#2,?) )
+	ARGUMENT[subj=+](#2,#3).
+
+
+//*************SUBJATTR*********************
+
+if ( NUCL[subjcompl](#1,#2) & CORE-VERB(#1) )
+	ARGUMENT[attribute=+](#1,#2).	
+
+
+//********** prepositional complements of verbs*********************<
+
+if ( MOD[subcat](#1,#2) & CORE-VERB(#1) )
+	ARGUMENT[compl=+](#1,#2).
+	
+// RCP_XRX_EVNT_TH_POST(sent,Clinton)
+
+if ( RCP(#1,#2) )
+	ARGUMENT[compl=+](#1,#2).
+
+// to be / remain on standby / in Iran
+if (MOD[post](#1[cop],#2) & ~ARGUMENT[subj:~](#1,?) & ~ARGUMENT(#1,#2))
+	ARGUMENT[compl=+](#1,#2)
+
+
+// ********** prepositional complements of nouns*********************
+if ( MOD[subcat](#1[ofobj:~],#2) &  CORE-NOUN(#1) )
+	ARGUMENT[compl=+](#1,#2).
+
+if ( MOD[subcat](#1[ofobj:~],#2) &  CORE-ADJ(#1) )
+	ARGUMENT[compl=+](#1,#2).
+
+
+//******************ADJECTIVES***********************
+
+
+//It would be meaningless for Iran to smuggle.-> ARGUMENT[ASubj,infinit](meaningless,smuggle)
+//SUBJATTR(It#1,meaningless_PROBA:+#2)
+//MOD_POST_INFINIT(Iran#3,smuggle#4)
+//PREPD(Iran#3,for#5)
+
+if ( SUBJATTR(#1,#2) & MOD[post,infinit](#3,#4) & PREPD(#3,#5[form:ffor]) & ~ARGUMENT[ASubj](#2,#4) )
+	ARGUMENT[ASubj=+,infinit=+](#2,#4).
+
+
+// the rest
+
+if ( ( SUBJATTR(#1,#2) | ATTRIB(#1,#2) ) & CORE-ADJ(#2) & ~ARGUMENT[ASubj](#2,?) )
+	ARGUMENT[ASubj=+](#2,#1).
+
+// ********** prepositional complements of adjectives*********************
+
+if ( MOD[subcat](#1,#2) &  CORE-ADJ(#1) )
+	ARGUMENT[ACompl=+](#1,#2).
+
+
+
+// *********** support verbs***********************
+
+// Method: Mark subject and object ARGUMENTs that contain a support verb and a nominal event
+
+if ( ^ARGUMENT[subj](#1[sv],#2) | ^ARGUMENT[obj](#1[sv],#2) & CORE-NOUN(#2) )
+	ARGUMENT[sv=+](#1,#2).
+
+
+if ( ^ARGUMENT(#1,#2) & CORE-NOUN(#2) & SUPPORT(#1,#2) )
+	ARGUMENT[sv=+](#1,#2).
+
+
+//The report reports
+if (^ARGUMENT[subj](#1[say],#2[say]))
+	ARGUMENT[sv=+](#1,#2).
+
+
+///////////////////////////////
+// final
+//////////////////////////////
+
+//*************several subjects*******************
+// choix entre plusieurs sujets
+// à l'intérieur d'un même NP
+// Russian-Iranian Energy Cooperation
+|NP#4{#1, (?), #2,#3}|
+	if (HEAD2(#3,#4) & ARGUMENT[Nsubj](#3,#1) & ^ARGUMENT[Nsubj](#3,#2) & ~LOCATION(#2) & ~LOCORG(#2) & ~PERSON(#2))
+	~
+
+|NP#4{#1,#2,#5,#3}|
+	if (HEAD2(#3,#4) & ARGUMENT[Nsubj](#3,#1) & ^ARGUMENT[Nsubj](#3,#2) & ~ARGUMENT[Nsubj](#3,#5) & ~LOCATION(#2) & ~LOCORG(#2) & ~PERSON(#2))
+	~
+
+//choix entre plusieurs sujets qui ne sont pas dans le même NP
+if (^ARGUMENT[Nsubj, pre](#1,#2) & ARGUMENT[Nsubj, pre](#1,#3) & #2<#3)
+	~
+
+//le sujet du nom d'événement n'est plus un autre argument de ce nom
+if (ARGUMENT[Nsubj](#1,#2) & ^ARGUMENT[Nsubj:~](#1,#2))
+	~
+
+
+
+// coordinated elements should have the same subjects and objects: We are not afraid of foreign enemies' threats and sanctions,
+
+if ( NCOORD(#1,#2) & ARGUMENT[nsubj](#1,#3) & CORE-NOUN(#2) )
+	ARGUMENT[nsubj=+](#2,#3).
+
+
+if ( NCOORD(#1,#2) & ARGUMENT[nobj](#1,#3) & CORE-NOUN(#2) )
+	ARGUMENT[nobj=+](#2,#3).
+
+
+
+//*************further propagation of subjects
+
+//les noms ont les mêmes arguments que leurs verbes supports et verbes de phase 
+//negotiations begin between Iran and Russia
+if ((ARGUMENT[subj](#1[sv],#2) |  ARGUMENT[subj](#1[phase],#2)) & CORE(#2) & ARGUMENT[obj](#1,#3))
+	ARGUMENT[NObj=+](#2,#3)
+
+	
+//remplacer la profession par le nom de personne
+if (^ARGUMENT(#1,#2) & (PROFESSION(#3,#2,?) | PROFESSION(#3, #2)))
+	ARGUMENT(#1,#3)
+
+//Method: delete ARGUMENTs a) with relative pronouns
+
+if ((^ARGUMENT[obj](#1,#2[form:fthat])|^ARGUMENT[obj](#1,#2[rel])) & ARGUMENT[obj](#1,#3))
+	~
+
+//Method: delete ARGUMENTs b) with auxiliaries
+if ( SUBJ(#1,#2) & NUCL[vlink,modal](#1,#3) & ^ARGUMENT[subj](#1,#2))
+	~.
+if ( SUBJ(#1,#2) & NUCL[vlink,perfect](#1,#3) & ^ARGUMENT[subj](#1,#2))
+	~.
+if (SUBJ(#1,#2) & NUCL[vlink,insist](#1,#3) & ^ARGUMENT[subj](#1,#2))
+	~
+
+
+
+
+////////////////////////////////
+//***********COORD
+
+//ARGUMENT_NSUBJ(#1agreement,#2Russian Federation)
+//COORD_PROBA_GRPR(and,#3Iran)
+//COORD_PROBA_GRPR(and,#2Russian Federation)
+
+//if ( ARGUMENT[nsubj](#1,#2) & COORD(?,#3) & COORD(?,#2) & ~ARGUMENT[nsubj](#1,#3) )
+//   ARGUMENT[nsubj=+](#1,#3).
+
+
+
+

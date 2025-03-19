@@ -1,0 +1,918 @@
+
+
+/############################## DEDUCTION   ################################################\
+
+Déduction:
+
+
+<zones: *>
+
+/*** REGLE DEDUCTION 0 ***\
+1> if (prepobj(#1[det:+],#2[noun,closed:~])) closedNP[det=+,def=+,noun=+](#2)
+
+/*** REGLE DEDUCTION 1 ***\
+1> if (#closedNP(#1) 
+   & DETERM[!det:!,!def:!,!num:!,!poss:!,!dem:!,!indef:!,!quant:!,!int:!](#2,#1)) 
+closedNP(#1)
+
+/*** REGLE DEDUCTION 2 ***\
+/  une partie de la population: NMOD[partit] \
+1> if (#NMOD[indir,nominal,posit1,partit:~](#1[partit],#2[form:fde],#3)) 	 NMOD[partit=+](#1,#2,#3) 
+
+
+
+
+
+
+/---------------------------------------------------------------------------------------\
+/											\
+/ 			TRANSFERRING/SWITCHING ARGUMENTS FOR SOME RELATIONS             \
+/                                                                                       \
+/---------------------------------------------------------------------------------------\
+
+/*** REGLE DEDUCTION 3 ***\
+/la societe d'origine francaise Tartarin & Assoc.: NN between societe and Tartarin i/o origine,Tartaring\
+1> if (#NN(#2,#3) & ~closedNP(#2) & closedNP(#1) & NMOD(#1,#[form:fde],#2) & NMOD[adj](#2,#))  NN(#1,#3)
+
+
+
+/*** REGLE DEDUCTION 4 ***\
+/STRAYNP -> subj if no subj: cette année est prometteuse\
+1> if (#straynp(#1[p3],#2) & ~subj(#1,#))   SUBJ(#1,#2).
+
+
+
+/*** REGLE DEDUCTION 5 ***\
+/STRAYNP -> subj if no subj: : cette année a été prometteuse\
+1> if (#straynp(#1[partpas],#2) & auxil(#1,#3[p3]) & ~subj(#1,#) & (#2 < #1) )   SUBJ(#1,#2).
+
+
+/*** REGLE DEDUCTION 6 ***\
+/STRAYNP -> obj if no COD: : il leur souhaite une bonne annee \
+/ on bloque toutefois lundi COD dans : il travaille le lundi\
+1> if (#straynp(#1[sn,snfacult:~],#2) & ~varg[dir](#1,#) )   VARG[dir=+,noun=+](#1,#2).
+
+
+
+
+/*** REGLE DEDUCTION 7 ***\
+/ambiguite datif-accusatif: il nous donne vs. il nous le donne: datif -> accusatif if no COD\
+1> if (#VARG[indir,pron,left](#1,#2[dat,acc]) & ~VARG[dir](#1,#))  VARG[indir=~,dir=+](#1,#2)
+
+
+
+/---------------------------------------------------------------------------------------\
+/ ------------------------------  SUJETS/OBJET DE VERBES COORDONNES -----------------------------\
+
+/*** REGLE DEDUCTION 8 ***\
+/ Jean mange et boit\
+1> if (SUBJ(#2,#1) & COORDITEMS[sc](#2,#3))     SUBJ(#3,#1) 
+
+
+/*** REGLE DEDUCTION 9 ***\
+/ Jean epluche et mange une pomme\
+#VARG-CC
+1> if ( COORDITEMS[sc](#1[sn:+],#2) & VARG[dir](#2,#3) & ~VARG(#1,?) & ~VMOD(#1,?) )     VARG[dir=+](#1,#3) 
+
+
+/*** REGLE DEDUCTION 10 ***\
+/eliminate subject in some cases (coordination)\
+/ l'accord entre le chat, le loup et le chien est valide: CHIEN not subject\
+1> if (SUBJ[coord](#1,#2) & COORDITEMS[noun,prep:~](#3,#4) & ~SUBJ(#1,#3) & #SUBJ(#1,#4)) ~
+
+/*** REGLE DEDUCTION 11 ***\
+/ ajout du trait coord si arguments coordonnes\
+1> if (COORDITEMS[noun,prep:~](#1,#2) & subj(#3,#1) & #subj(#3,#2)) subj[coord=+](#3,#2)
+
+/*** REGLE DEDUCTION 12 ***\
+/ ajout du trait coord si arguments coordonnes\
+1> if (COORDITEMS[noun,prep:~](#2,#1) & subj(#3,#1) & #subj(#3,#2)) subj[coord=+](#3,#2)
+
+/*** REGLE DEDUCTION 13 ***\
+/ ajout du trait coord si arguments coordonnes\
+1> if (COORDITEMS[noun,prep:~](#1,#2) & varg[dir](#3,#1) & #varg[dir](#3,#2)) varg[coord=+](#3,#2)
+
+/*** REGLE DEDUCTION 14 ***\
+/ ajout du trait coord si arguments coordonnes\
+1> if (COORDITEMS[noun,prep:~](#2,#1) & varg[dir](#3,#1) & #varg[dir](#3,#2)) varg[coord=+](#3,#2)
+ 
+
+/---------------------------------------- ANTECEDENT RELATIVES ------------------\
+
+/*** REGLE DEDUCTION 15 ***\
+/ANTECEDENT du RELATIF SUJET\
+/ selection antecedent relative en 2eme position, si accord preferentiel en nombre avec le verbe\
+/ e.g. les habitants de la ville qui preferent... \
+1> if (#COREF[rel](#1[pl:~],#2) & SUBJ(?[sg:~],#2)) COREF[rel=+,disagr=+](#1,#2)
+
+/*** REGLE DEDUCTION 16 ***\
+/ selection antecedent relative en 2eme position, si accord preferentiel en nombre avec le verbe \
+1> if (#COREF[rel](#1[sg:~],#2) & SUBJ(?[pl:~],#2)) COREF[rel=+,disagr=+](#1,#2)
+
+/*** REGLE DEDUCTION 17 ***\
+/ selection antecedent relative en 2eme position, si accord preferentiel en nombre avec le pronom \
+/ les gens de bonne compagnie avec lesquels \
+1> if (#COREF[rel](#1[sg:~],#2[sg:+,pl:~])) COREF[rel=+,disagr=+](#1,#2)
+
+
+/*** REGLE DEDUCTION 18 ***\
+/ selection antecedent relative en 2eme position, si accord preferentiel en nombre avec le pronom \
+/ l'ensemble de grenouilles avec lequel \
+1> if (#COREF[rel](#1[pl:~],#2[sg:~,pl:+])) COREF[rel=+,disagr=+](#1,#2)
+
+/*** REGLE DEDUCTION 19 ***\
+/ selection antecedent relative en 2eme position, si accord preferentiel en genre avec le pronom \
+1> if (#COREF[rel](#1[masc:~],#2[fem:~,masc:+])) COREF[rel=+,disagr=+](#1,#2)
+
+/*** REGLE DEDUCTION 20 ***\
+/ selection antecedent relative en 2eme position, si accord preferentiel en genre avec le pronom \
+1> if (COREF[rel,posit1:+](#1[fem:~],#2[fem:+,masc:~])) COREF[rel=+,disagr=+](#1,#2)
+
+/*** REGLE DEDUCTION 21 ***\
+/ selectionne antecedent en deuxieme position, si toujours meilleur candidat apres controle accord \
+1> if (#COREF[rel,posit1:+,disagr:+](#1,#2) & COREF[rel=+,posit2:+,disagr:~](?,#2)) ~
+
+/*** REGLE DEDUCTION 22 ***\
+/ selectionne antecedent en premiere position, si meilleur candidat apres controle accord \
+1> if (#COREF[rel,posit2:+,disagr:+](#1,#2) & COREF[rel,posit1:+,disagr:~](?,#2)) ~
+
+/*** REGLE DEDUCTION 23 ***\
+/ selectionne antecedent deuxieme position si absence de determinant en premiere position\
+/ sauf: "prep-determinant amalgame" la parole aux personnes qui...\
+/ sauf: un millier de personnes qui...\
+
+1> if (#COREF[rel,posit1:+](#1,#2) 
+    & ~closedNP(#1)
+    & ~NMOD[posit1,partit](?,?,#1) 
+    & COREF[rel,posit2:+](?,#2)) ~
+
+/*** REGLE DEDUCTION 24 ***\
+/ selectionne antecedent deuxieme position si premiere position est en relatin de type NN\
+1> if (#COREF[rel,posit1:+](#1,#2) & NN(?,#1) & COREF[rel,posit2:+](?,#2)) ~
+/if (#COREF[rel,posit1:+](#1,#2) & NN(#3,?) & COREF[rel,posit2:+](#3,?)) ~\
+
+/*** REGLE DEDUCTION 25 ***\
+/ selectionne antecedent en premiere position si toujours present\
+1> if (COREF[rel,posit1:+](#1,#2) &  #COREF[rel,posit2:+](?,#2)) ~
+
+
+
+/*** REGLE DEDUCTION 26 ***\
+/ antecedent du relatif sujet \
+//1> if (COREF[rel](#1,#2) &  #SUBJ(#3,#2)) SUBJ[noun=+,pron=~,coref=+,rel=+](#3,#1)
+
+
+
+/--------------------------------------------------------------------------------\
+
+/ RATTACHEMENT DES ADJECTIFS \
+/*** REGLE DEDUCTION 27 ***\
+/Si accord avec le plus proche NP est rejete, et si le second est OK, alors choisir le second \
+1> if (#NMOD[adj,right,posit1:+](#2[sg:~],#1[pl:~]) & NMOD[adj,right,posit2:+](#3[sg:+],#1)) ~
+
+
+/*** REGLE DEDUCTION 28 ***\
+1> if (#NMOD[adj,right,posit1:+](#2[pl:~],#1[sg:~]) & NMOD[adj,right,posit2:+](#3[pl:+],#1)) ~
+
+
+/*** REGLE DEDUCTION 29 ***\
+1> if  (NMOD[adj,right,posit1:+](#2,#1) & #NMOD[adj,right,posit2:+](#3,#1)) ~
+
+
+
+/*** REGLE DEDUCTION 30 ***\
+/ PP postposé: rattachement  au 2eme NP le plus proche:  NP PP PP ;  \
+/* e.g. le gout pour les fleurs de la voisine *\
+/ s'applique aux NP et PP *\
+
+1> if (NMOD[indir,noun,posit1:+](#1[pron:~],#2,#3) & NMOD[indir,noun,posit1:+](#3,#4,#5))   
+                NMOD[indir=+,noun=+,posit2=+](#1,#4,#5)
+ 
+
+/*** REGLE DEDUCTION 31 ***\
+/ PP postposé: rattachement  au 3eme NP le plus proche:   NP PP de NP PP \
+/* e.g. l'annonce par le maire de Montpellier de son intention *\
+/ s'applique aux NP et PP *\
+
+1> if (NMOD[indir,noun,posit1:+](#1,#2,#3) & 
+    NMOD[indir,noun,posit1:+](#3,#4[form:fde],#5) &
+    NMOD[indir,noun,posit1:+](#5,#6,#7))   
+NMOD[indir=+,noun=+,posit3=+](#1,#6,#7)
+
+
+
+/*** REGLE DEDUCTION 32 ***\
+/  VMOD of second order:  VP PP PP \
+1> if ( VMOD[indir,noun,left:~](#1,#2,#3) & NMOD[indir,noun,posit1:+](#3,#4,#5[fvpp:~]) )    
+	VMOD[indir=+,noun=+,posit2:+](#1,#4,#5)
+
+
+/*** REGLE DEDUCTION 33 ***\
+/  VMOD of second order:  VP NP PP where NP is VARG[dir]\
+1> if ( VARG[dir,pron:~](#1,#2) & NMOD[indir,noun,posit1:+](#2,#3,#4[fvpp:~]) )    
+	VMOD[indir=+,noun=+,posit2:+](#1,#3,#4)
+
+/*** REGLE DEDUCTION 34 ***\
+/  VMOD of second order:  VP NP PP where NP is straynp\
+1> if ( STRAYNP(#1,#2) & NMOD[indir,noun,posit1:+](#2,#3,#4[fvpp:~]) )    
+	VMOD[indir=+,noun=+,posit2:+](#1,#3,#4)
+
+
+/*** REGLE DEDUCTION 35 ***\
+/ interrogative indirecte: il demande quand il vient\
+1> if (#VMOD[subord,posit1:+](#1[sip],#2) & ~VARG[dir](#1,?))    VARG[dir=+,prop=+](#1,#2)
+
+
+
+/----------------------------- VERBES IMPERSONNELS -----------------------------------------\
+
+/ FT section sur impersonnels \
+
+/*** REGLE DEDUCTION 36 ***\
+/ il faut; il pleut \
+1> if ( ^SUBJ(#1[il:+,copule:~],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]))
+SUBJ[imperso=+](#1,#2).
+
+
+/*** REGLE DEDUCTION 37 ***\
+/ il s'agit \
+1> if ( ^SUBJ(#1[ilse:+,quep:~,form:~fetre],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & reflex(#1,#3))
+SUBJ[imperso=+](#1,#2) 
+
+/*** REGLE DEDUCTION 38 ***\
+/il se peut que\
+1> if ( ^SUBJ(#1[ilse:+,quep:+,form:~fetre],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & reflex(#1,#3) & VARG[propque](#1,#4) )
+SUBJ[imperso=+](#1,#2) 
+
+
+/*** REGLE DEDUCTION 39 ***\
+/ il est tôt, il est trop tard. PB il a été longtemps favorable. \
+1> if ( ^SUBJ(#1[form:fetre],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & (VMOD[adv](#1,#3[time:+]) | VARG[spred](#1,#3[time:+]))
+   )
+SUBJ[imperso=+](#1,#2) 
+
+
+/*** REGLE DEDUCTION 40 ***\
+/ FT: "Il va falloir s'employer". "Il pourrait s'agir d'un ennui." \
+1> if ( ^SUBJ(#1,#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & VARG[inf:+](#1,#3[il:+, form:~fetre]) )
+SUBJ[imperso=+](#1,#2) 
+
+/*** REGLE DEDUCTION 41 ***\
+/ idem avec reflexif \
+1> if ( ^SUBJ(#1,#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & VARG[propque:+](#1,#3[ilse:+, form:~fetre]) 
+     & reflex(#3,#4) )
+SUBJ[imperso=+](#1,#2) 
+
+
+
+/*** REGLE DEDUCTION 42 ***\
+/ il y a \
+1> if (^SUBJ(#1[ily:+],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) & VMOD[pron](#1,#3[loc:+]) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 43 ***\
+/il en va de ... \
+1> if (^SUBJ(#1[ilen:+],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) & VMOD[pron,left](#1,#3[gen:+]) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 44 ***\
+/ "il est important de, il est important que".\
+1> if (VARG[spred](#1,#2[imperso:+]) 
+   & ^SUBJ(#1,#3[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+   & ADJARG(#2,?[verb:+]))
+SUBJ[imperso=+](#1,#3)
+
+/*** REGLE DEDUCTION 45 ***\
+/ il semble que; il reste à faire cela \
+1> if ( ^SUBJ(#1[copule:+],#3[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) & VARG(#1,#2[verb:+]) )
+SUBJ[imperso=+](#1,#3)
+
+/*** REGLE DEDUCTION 46 ***\
+/ FT verbe intransitif au passif: il sera procédé à une analyse \
+1> if ( ^SUBJ[passive:+](#1[sn:~],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 47 ***\
+/ FT verbes qui admettent queP et présence d'une infinitive ou conjontive \
+/ pour robustesse, pas d'exigence sur ce à quoi est rattachée la proposition \
+1> if ( ^SUBJ[passive:+](#1[quep:+],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) & VARG[inf](#3,#4) | VARG[propque](#3,#4) )
+SUBJ[imperso=+](#1,#2)
+
+
+/*** REGLE DEDUCTION 48 ***\
+/ FT verbes transitifs au passif mais qui ont un objet direct \
+/ "il n'est guère envisagé une hause d'une telle proportion" \
+1> if ( ^SUBJ[passive:+](#1,#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) & VARG[dir](#1,#3) )
+SUBJ[imperso=+](#1,#2)
+
+
+
+
+
+
+
+
+/ FT suite impersonnels \
+
+
+/*** REGLE DEDUCTION 49 ***\
+/ FT semble-t-il \
+1> if ( ^SUBJ[pron,right](#1[lemme:sembler],#2[lemme:il]) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 50 ***\
+/ FT sans doute faut-il ...\
+1> if ( ^SUBJ[pron,right](#1[il:+],#2[lemme:il]) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 51 ***\
+/ FT que se passe-t-il ...\
+1> if ( ^SUBJ[pron,right](#1[ilse:+, form:~fetre],#2[pron:+,nom:+,p3:+,sg:+,masc:+,lemme:il]) 
+     & reflex(#1,#3) )
+SUBJ[imperso=+](#1,#2) 
+
+
+/*** REGLE DEDUCTION 52 ***\
+/ FT tout clitique sujet après copule s'il n'y a pas un sujet à gauche \
+1> if ( ^SUBJ[pron,right](#1[copule],#2[lemme:il]) & ~SUBJ[right:~](#1,#3) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 53 ***\
+/ FT  "il en est ainsi de X" "il en est tout autrement"\
+1> if ( ^SUBJ(#1[form:fetre],#2[lemme:il]) & VMOD[pron,left](#1,#3[gen]) & VMOD[adv](#1,#4) )
+SUBJ[imperso=+](#1,#2)
+
+/*** REGLE DEDUCTION 54 ***\
+/ idem avec aller \
+1> if ( ^SUBJ(#1[lemme:aller],#2[lemme:il]) & VMOD[pron,left](#1,#3[gen]) & VMOD[adv](#1,#4) )
+SUBJ[imperso=+](#1,#2)
+
+
+
+
+
+
+
+/------------------------  SUBJECT CONTROL ------------------------------------------------\
+
+/*** REGLE DEDUCTION 55 ***\
+/ subject control: il ordonne aux enfants de manger\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[infind:+],#2) 
+	& VMOD[indir](#1,?[form:fa],#3) & closedNP(#3)) 
+   SUBJ(#2,#3)
+
+
+
+/*** REGLE DEDUCTION 56 ***\
+/ subject control: il ordonne de manger à son chien\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[infind:+],#2) 
+	& ~VMOD[indir](#1,?[form:fa],?) 
+	& VMOD[indir](#2,?[form:fa],#3) 
+	& closedNP(#3)) 
+    SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 57 ***\
+/ subject control: il lui ordonne de manger\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[infind:+],#2) & VARG[indir,pron](#1,#3) )     SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 58 ***\
+/ subject control: il incite les enfants à manger\
+/ control of infcod may not be necessary if VARG is around\
+1> if (VARG[inf:+,dir:+,!passive:!,!reflexive:!](#1,#2) & VARG[dir,noun](#1,#3)) SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 59 ***\
+/ subject control: il les incite à manger\
+/ control of infcod may not be necessary if COMP is around\
+
+1> if (VARG[inf:+,dir:+,!passive:!,!reflexive:!](#1,#2) & VARG[dir,pron](#1[form:~ffaire],#3)) SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 60 ***\
+/ subject control: il veut plaire, il commence à parler, il promet de partir\
+/ mais pas : il convient de manger, il faut manger \
+/ on bloque: le plus difficile reste a faire: pb avec: les invites restent a manger \
+/ bloquer : il demande au serveur de partir"\
+/CBRUN: SNdeINF_SO2:~ \
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[infind:~,infcod:~,sadj1:~,form:~ffaire,aSNdeINF_SO2:~,SNINF_SO:~],#2) 
+	& ~SUBJ(#2,?) & SUBJ[imperso:~](#1,#3) ) 
+    SUBJ(#2,#3)
+
+
+/*** REGLE DEDUCTION 61 ***\
+/ subject control: elle est fiere de partir, mais pas: il est important de partir.\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1,#2) & VARG[spred](#3,#1) & SUBJ[imperso:~](#3,#4) ) SUBJ(#2,#4)
+
+
+/---------------------  SUBJECT CONTROL: CAUSATIVE CONSTRUCTION ------------------------------\
+
+/*** REGLE DEDUCTION 62 ***\
+/ subject control: il fait réparer la voiture par son oncle\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2) & ~SUBJ(#2,?) 
+	& VMOD[indir](#2,?[form:fpar],#3) & closedNP(#3)) 
+    SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 63 ***\
+/ subject control: il fait manger la soupe aux enfants\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2)   & ~reflex(#1,?) &
+	~SUBJ(#2,?) & VMOD[indir](#2,?[form:fa],#3) & closedNP(#3))
+    SUBJ(#2,#3)
+
+
+/*** REGLE DEDUCTION 64 ***\
+/ subject control: il fait manger les enfants\
+/ CBRUN: attention: il fait lire le roman !\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2)  & ~reflex(#1,?) &
+    ~SUBJ(#2,?) & ~VARG[pron,indir](#1,?) 
+    & #VARG[dir:+](#2,#3)
+    & closedNP(#3)) 
+  SUBJ(#2,#3)
+
+
+/*** REGLE DEDUCTION 65 ***\
+/ subject control: il fait dormir les enfants\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2) 
+	& ~SUBJ(#2,?) & #straynp(#2,#3) & closedNP(#3)) 
+    SUBJ(#2,#3)
+
+/*** REGLE DEDUCTION 66 ***\
+/ subject control: il les fait dormir\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2) 
+	& ~SUBJ(#2,?) & #VARG[dir,pron](#1,#3)  & ~VARG[pron,indir](#1,?)) 
+   SUBJ(#2,#3)
+
+
+/*** REGLE DEDUCTION 67 ***\
+/ subject control: il le lui fait manger: le est complement de manger\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2) 
+	& varg[indir,pron](#1,#3) & #VARG[dir,pron](#1,#4)) 
+  VARG[dir=+,pron=+,left=+](#2,#4)
+
+
+/*** REGLE DEDUCTION 68 ***\
+/ subject control: il lui fait manger la soupe: lui est sujet de manger\
+1> if (VARG[inf:+,!passive:!,!reflexive:!](#1[form:ffaire],#2) 
+	& ~SUBJ(#2,?) & #VARG[indir,pron](#1,#3) & VARG[dir](#2,?)) 
+  SUBJ(#2,#3)
+
+
+
+
+/*** REGLE DEDUCTION 69 ***\
+1> if ( #reflex(#1,#2)  &  ( SUBJ(#1,#3) | SUBJCLIT(#1,#3) )  & #2[pers]:#3[pers] ) reflex[agree=+](#1,#2)
+
+
+/*** REGLE DEDUCTION 70 ***\
+1> if (#reflex[agree:~](?,?)) ~ 
+
+
+
+
+/----------------------------------- INTERROGATIVES -------------------------\
+
+/*** REGLE DEDUCTION 71 ***\
+/ interrogative: quel chat dort?  quel morceau as-tu mangé\
+1> if (determ[int:+](#1,#2))    interrog(#1)
+
+
+
+/*** REGLE DEDUCTION 72 ***\
+/ interrogative: qui dort? \
+1> if (SUBJ(#1,#2[int:+]) & ~COREF[rel](?,#2))    interrog(#2)
+
+/*** REGLE DEDUCTION 73 ***\
+/ interrogative: que voit-il \
+1> if (VARG[dir](#1,#2[conjque:+]) & 
+	~COREF[rel](?,#2) & 
+	SUBJCLIT(#1,?) | SUBJ[right:+](#1,?))    
+interrog(#2)
+
+
+
+/*** REGLE DEDUCTION 74 ***\
+/ interrogative: quand dort-il \
+1> if (connect(#2,#1[int:+]) &  ~interrog(#1) & SUBJCLIT(#2,?))    interrog(#1)
+
+
+
+
+
+/------------------------  DEEP SUBJECT/OBJECT  in PASSIVE CONSTRUCTIONS ------------------------\
+
+
+/*** REGLE DEDUCTION 75 ***\
+/ sujet passif: la souris est mangée par le chat  \
+/if (SUBJ[passive:+](#1,#2) & #VMOD[indir,left:~](#1,#3[form:fpar],#4) & closedNP(#4))  \
+1> if (AUXIL[passive](#1,?) & #VMOD[indir,left:~](#1,#3[form:fpar],#4) & closedNP(#4))  
+DEEPSUBJ(#1,#4)
+
+/*** REGLE DEDUCTION 76 ***\
+/ objet passif \
+/if (SUBJ[passive:+](#1,#2)) DEEPOBJ[dir=+](#1,#2)\
+1> if (AUXIL[passive](#1,?) & SUBJ(#1,#2))  DEEPOBJ[dir=+](#1,#2)
+
+
+
+/*** REGLE DEDUCTION 77 ***\
+/ sujet passif: cas des participes passés: mangée par le chat, la souris danse  \
+1> if (VMOD[indir,left:~](#1[partpas],#2[form:fpar],#3) & closedNP(#3) & ~SUBJ(#1,?) )  
+DEEPSUBJ(#1,#3)
+
+/*** REGLE DEDUCTION 78 ***\
+/ il est facile de plaire\
+1> if (SUBJ[imperso](#1,?) & VARG[adj,spred](#1,?) & PREPOBJ(#[form:fde],#2) & #ADJARG[indir,inf](?,#2) )
+DEEPSUBJ(#1,#2)
+
+/*** REGLE DEDUCTION 79 ***\
+/ il est possible que je vienne\
+1> if (SUBJ[imperso](#1,?) & VARG[adj,spred](#1,?) & #ADJARG[propque](?,#2) )
+DEEPSUBJ(#1,#2)
+
+
+
+
+/------------------------  End OF DEEP SUBJECT/OBJECT  in PASSIVE CONSTRUCTIONS ------------------------\
+
+
+
+
+
+/---------------------------------------------------------------------------------------\
+/											\
+/ 			RENAMING SOME RELATIONS						\
+/ This section must remained at the end of the file, as relation names are used all	\
+/ over the place in the other deduction rules above					\
+/											\
+/  However, rules based on renamed relations (e.g. conflict between VMOD and varg  	\
+/ are to be found below									\
+/---------------------------------------------------------------------------------------\
+
+
+
+/*** REGLE DEDUCTION 80 ***\
+/ VARG renamed as VARG[spred] if verb subcat allows it \
+1> if (#VARG[dir,nominal](#1[sadj1:+],#2))   VARG[dir=+,SPRED=+](#1,#2)
+
+
+/*** REGLE DEDUCTION 81 ***\
+/ VERB ARGUMENTS: VMOD -> VARG \
+/VMOD renamed as VARG if verb subcat and prep allows it: only if PP is located after the verb\
+  
+1> if 
+	(
+	#VMOD[indir,nominal,left:~](#1[subcatform],#2,#3) 
+	& ~NMOD[posit1](?,#[form:fde],#3)
+	& #1[subcatform]:#2[subcatform]
+	)   
+VARG[indir=+,noun=+](#1,#2,#3) 
+
+
+
+/*** REGLE DEDUCTION 82 ***\
+/ NOUN ARGUMENTS: NMOD -> NARG \
+/NMOD renamed as NARG if noun subcat and prep allows it: only if PP is located after the noun\
+
+1> if (#NMOD[indir,nominal,posit1](#1[asn:+],#2[form:fa],#3))   NARG[indir=+,noun=+](#1,#2,#3) 
+
+/*** REGLE DEDUCTION 83 ***\
+1> if (#NMOD[indir,nominal,posit1](#1[desn:+],#2[form:fde],#3))   NARG[indir=+,noun=+](#1,#2,#3)
+
+/*** REGLE DEDUCTION 84 ***\
+1> if (#NMOD[indir,nominal,left:~](#1[subcatform],#2[form:~fa,form:~fde],#3) & #1[subcatform]:#2[subcatform])   
+                 NARG[indir=+,noun=+](#1,#2,#3)
+
+
+
+/*** REGLE DEDUCTION 85 ***\
+/ resolve conflict between NARG & VARG: il assure la desserte de la ville\
+/ also removes NARG and VARG \
+1> if (NARG(#1,#2,#3) & #VARG(?,#2,#3) )  ~
+
+/*** REGLE DEDUCTION 86 ***\
+/ resolve conflict between NARG & nmod \
+1> if (NARG(#1,#2,#3) & #nmod(?,#2,#3) ) ~
+
+/*** REGLE DEDUCTION 87 ***\
+/ resolve conflict between NARG & VMOD \
+1> if (NARG(#1,#2,#3)  & #VMOD(?,#2,#3) )  ~ 
+
+
+/*** REGLE DEDUCTION 88 ***\
+/ if VARG removes nmod  & NARG\
+1> if (VARG(#1,#2,#3)  & #nmod(?,#2,#3) )  ~
+
+/*** REGLE DEDUCTION 89 ***\
+/ if VARG removes nmod  & NARG\
+1> if (VARG(#1,#2,#3)  & #NARG(?,#2,#3) )  ~
+
+/*** REGLE DEDUCTION 90 ***\
+/ if VARG removes VMOD \
+1> if (VARG(#1,#2,#3)  &  #VMOD(?,#2,#3) )  ~ 
+
+
+/*** REGLE DEDUCTION 91 ***\
+/ il voit le chien de la voisine: remove VMOD (unless the np is straynp) \
+1> if (NMOD[posit1](#1,#2[form:fde],#3)  & ~straynp(?,#1) &  #VMOD[posit2](?,#2,#3) )  ~ 
+
+
+/*** REGLE DEDUCTION 92 ***\
+/il le rejoint et se fait ecraser: if verb is VARG[inf], then remove other VARG\
+1> if (VARG[inf](?,#2) & #VARG[dir,inf:~](?,#2) )  ~
+
+
+
+/*** REGLE DEDUCTION 93 ***\
+/STRAYNP -> VMOD[ADV] if time expression\
+1> if (#straynp(#1,#2[time]))   VMOD[adv=+,time=+](#1,#2)  
+
+
+
+/*** REGLE DEDUCTION 94 ***\
+/SUBJCLIT -> SUBJECT if no other subject: cf. le chat vient-il vs. vient-il\
+1> if (#SUBJCLIT(#1,#2) & ~SUBJ(#1,?))   SUBJ[right=+,pron=+](#1,#2)  
+
+/*** REGLE DEDUCTION 95 ***\
+/ subject predicate: la mer est bleue -> NMOD(mer,bleue)\
+1> if (SUBJ(#1,#2) & VARG[spred,!adj:!,!noun:!](#1,#3))   NMOD[spred=+](#2,#3)  
+
+/*** REGLE DEDUCTION 96 ***\
+/ il a souvent dormi: VMOD(Dormi,souvent) \
+1> if (AUXIL(#2,#1) & ~AUXIL(#,#2) & #VMOD[adv](#1,#3))  VMOD[adv=+,left=+](#2,#3)
+
+
+/*** REGLE DEDUCTION 97 ***\
+/ il a souvent été vu -> VMOD(vu,souvent) \
+1> if (AUXIL(#2,#1) & AUXIL(#3,#2) & #VMOD[adv](#1,#4))  VMOD[adv=+,left=+](#3,#4)
+
+
+
+
+
+
+/**********************************************************************\
+   / TRANSLATING AND CLEANING FOR THE EVALUATION by Salah\
+/**********************************************************************\
+
+//<zones:2>
+// changing order and name : the head should be the first element
+// in the dependency
+#r-198
+1> if ( ^DETERM(#1,#2) ) DETERM(#2,#1)
+1> if ( ^PREPOBJ(#1,#2) ) PREPOBJ(#2,#1)
+
+// delete the incorrect PREPOBJ that links the prep to the
+// noun premodifiers if any, keep only the PREPOBJ link with the NP head
+1> if ( PREPOBJ(#1,#2) & ^PREPOBJ(#3,#2) & (#3 < #1) ) ~
+
+// delete incorrect OBJ when the verb does not subcategorize
+#r-201
+1> if ( ^VARG[dir](#1[sn:~],?[noun:+]) ) ~
+
+
+//////////////// CORRECTING SOME ERRORS 
+
+/*** REGLE DEDUCTION 98 ***\
+// Remove posit3 dependencies because most of the time they are incorrect
+1> if ( ^NMOD[posit3:+](?,?,?) ) ~
+1> if ( ^NMOD[posit3:+](?,?) ) ~
+1> if ( NARG(#1,?,#2) & ^NARG[posit3:+](#1,?,#3) & (#2 < #3) ) ~
+
+// same for SEQNP
+//1> if ( ^SEQNP(?,?) ) ~
+
+
+// Remove SUBJ_PROP because it is almost always incorrect
+1> if ( ^SUBJ[prop:+](?,?) ) ~
+
+
+// remove SUBJ_COORD if verb is not plural
+1> if ( SUBJ(#1,#2) & ^SUBJ[coord:+](#1,#3) & (#2 < #3)
+    & (#1[inf:~,partpas:~,sg] | AUXIL(#1,#4[inf:~,partpas:~,sg]) ) ) ~ 
+
+
+// remove feature coord in SUBJ if there is no other SUBJ
+//if ( ^SUBJ[coord:+](#1,#2) & ~(SUBJ(#1,#3) & (#3 < #2) ) ) SUBJ[coord=~](#1,#2)
+
+
+
+// Remove SUBJ(x,y) if y is also dependent on a preceding element
+// (as an OBJ or a VMOD or etc.)
+1> if ( ^SUBJ(#1,#2) & ?(#3,#2) & (#3 < #2) & (#2 < #1) ) ~ 
+
+// Remove SUBJ(x,y) if x has a SUBJCLIT z and y is on the left
+// OR if y is the subject of another preceding verb
+#r-210
+1> if ( ^SUBJ(#1,#2) & SUBJCLIT(#1,#3) & (#3 < #2) ) ~ 
+1> if ( SUBJ(#1,#2) & ^SUBJ(#3,#2) & (#1 < #3) & SUBJCLIT(#3,?) ) ~
+
+
+// Remove feature IMPERSO from SUBJ if the subject is not "il"
+// or the verb does not subcategorise "il" nor "ilse" nor "ily" 
+1> if ( ^SUBJ[imperso:+](#1,#2) & ( #1[il:~] &  #1[ilse:~] & #1[ily:~] |  ~(#2[pron,nom,sg,p3]) ) )
+   SUBJ[imperso=~](#1,#2)
+
+// Remove VARG[dir,prop] dependencies because most of the time they are incorrect
+1> if ( ^VARG[dir:+,prop](?,?) ) ~
+
+// Remove INTERROG() dependencies because most of the time they are incorrect
+1> if ( ^INTERROG(?) ) ~
+
+// if #1 and #2 coordinated with comma, and #1 is not coordinated
+// with another element using a COORD (et, ou, etc.), then delete
+// the comma-coordinations
+//if ( ^COORDITEMS(#1,#2) & ~COORDITEMS(#1,#3[coordlast]) ) ~
+
+
+// if a PP is coordinated with 2 different PPs: one wich is an argument
+// of a noun and another that follows, then erase the coordination with
+// the following PP
+1> if ( NARG(#1,#2,#3) & COORDITEMS(#3,#4) & ^COORDITEMS(#5,#4)
+    & (#3[closed]::#4[closed]) & (#5 < #4) ) ~ 
+
+
+// if #1 #3 #2, and #2 coord with both #1 and #3 then select coord with
+// the nearest #3
+// if ( ^COORDITEMS(#1,#2) & COORDITEMS(#3,#2) & (#1 < #3) ) ~
+
+// if #2 is coordinated and is also an nmod then delete nmod
+1> if ( COORDITEMS(#1,#2) & ^NMOD(?,?,#2) ) ~
+
+1> if ( NARG(#1,?,#2) & ^NMOD(#1,?,#3) & (#2 < #3) ) ~
+
+
+//  "Un choix important que Jean refuse de faire."
+//  Si un adj modifie un nom, il ne peut pas avoir un modifieur de type PROPQUE
+//
+1> if ( NMOD(#1,#2) & ^ADJARG[propque:+](#2,?) ) ~
+
+// remove VMOD_SUBORD(#1,#2) if #2 is a clause starting with "que"
+// and #1 does not subcategorize queP
+1> if ( ^VMOD[subord:+](#1[quep:~],#2) & CONNECT(#2,#3[conjque]) ) ~
+
+
+////////////////////////////////////////////////////////////////
+//////////////// MODIFICATIONS FOR COHERENCE AND OUTPUT FORMAT
+////////////////////////////////////////////////////////////////
+
+// Remove NMOD[pred] because it is redundant with other dep
+#r-220
+1> if (^NMOD[spred:+](?,?)) ~
+
+// Remove MWEHEAD
+1> if (^MWEHEAD(?,?)) ~
+
+
+// Translate NN into NMOD[nn:+]
+1> if (^NN(#1,#2)) NMOD[nn=+](#1,#2)
+
+// remove binary STRAYNP
+1> if (^STRAYNP(?,?)) ~
+
+
+// Translate VARG_INDIR into VMOD (do not distinguish between PP ADJUNCTS
+// and PP arguments), and transform the ternary vmod relation into
+// BINARY relations
+// and call OBJ the Direct VARG relation
+
+//modif by G Jacquet
+#r-224OOOO
+1> if (^VARG[indir:+](#1,#2[!form_prep:!],#3)) VMOD[arg=+,indir=+](#1,#3)
+1> if (^VARG[indir:+](#1,#2)) VMOD[arg=+,indir=+](#1,#2)
+1> if (^VARG[dir:+](#1,#2)) OBJ[dir=~](#1,#2)
+#r-227OOO
+1> if (^VARG[spred:+](#1,#2)) OBJ(#1,#2)
+
+1> if (^VMOD(#1,#2[!form_prep:!],#3)) VMOD(#1,#3)
+
+// Translate NARG into NMOD (do not distinguish between PP ADJUNCTS
+// and PP arguments)
+1> if (^NARG[indir:+](#1,#2[!form_prep:!],#3)) NMOD[arg=+,indir=+](#1,#3)
+1> if (^NARG(#1,#2)) NMOD[arg=+](#1,#2)
+1> if (^NMOD(#1,#2[!form_prep:!],#3)) NMOD(#1,#3)
+
+// Translate ADJARG into ADJMOD (do not distinguish between PP ADJUNCTS
+// and PP arguments)
+#r-232
+1> if (^ADJARG(#1,#2[!form_prep:!],#3)) ADJMOD[arg=+](#1,#3)
+1> if (^ADJARG(#1,#2)) ADJMOD[arg=+](#1,#2)
+//end of modif by G Jacquet
+
+// REMOVING features: noun, coref, dir, indir, posit1, posit2
+// adv, left, right, reflexive, prep...
+#r-234
+1> if ( ^SUBJ[prd:+](#1,#2)) SUBJ[prd=~](#1,#2)
+1> if ( ^SUBJ[dem:+](#1,#2)) SUBJ[dem=~](#1,#2)
+1> if ( ^SUBJ[indir:+](#1,#2)) SUBJ[indir=~](#1,#2)
+1> if ( ^SUBJ[reflexive:+](#1,#2)) SUBJ[reflexive=~](#1,#2)
+1> if ( ^SUBJ[rel:+](#1,#2) & ~CONNECT[rel](#1,?) ) SUBJ[rel=~](#1,#2)
+
+
+
+1> if ( ^SUBJCLIT[rel:+](#1,#2)) SUBJCLIT[rel=~](#1,#2)
+1> if ( ^SUBJCLIT[reflexive:+](#1,#2)) SUBJCLIT[reflexive=~](#1,#2)
+
+// in the SUBJ dep, the feature "passive" means the verb head is passive
+// hence, it should be erased in VARG (because the verb head is not passive)
+
+1> if ( ^OBJ[passive:+](#1,#2)) OBJ[passive=~](#1,#2)
+1> if ( ^OBJ[imperso:+](#1,#2)) OBJ[imperso=~](#1,#2)
+1> if ( ^OBJ[rel:+](#1,#2)) OBJ[rel=~](#1,#2)
+1> if ( ^OBJ[prd:+](#1,#2)) OBJ[prd=~](#1,#2)
+1> if ( ^OBJ[posit1:+](#1,#2)) OBJ[posit1=~](#1,#2)
+1> if ( ^OBJ[dem:+](#1,#2)) OBJ[dem=~](#1,#2)
+1> if ( ^OBJ[reflexive:+](#1,#2)) OBJ[reflexive=~](#1,#2)
+1> if ( ^OBJ[coord:+](#1,#2) & OBJ[coord:+](#1,#3)
+     & (#2 < #3) & ~OBJ[coord:~](#1,?)  )       OBJ[coord=~](#1,#2)
+
+
+1> if ( ^VMOD[passive:+](#1,#2)) VMOD[passive=~](#1,#2)
+1> if ( ^VMOD[indir:+](#1,#2)) VMOD[indir=~](#1,#2)
+1> if ( ^VMOD[rel:+](#1,#2)) VMOD[rel=~](#1,#2)
+1> if ( ^VMOD[reflexive:+](#1,#2)) VMOD[reflexive=~](#1,#2)
+1> if ( ^VMOD[imperso:+](#1,#2)) VMOD[imperso=~](#1,#2)
+
+
+1> if ( ^NMOD[indir:+](#1,#2)) NMOD[indir=~](#1,#2)
+1> if ( ^NMOD[imperso:+](#1,#2)) NMOD[imperso=~](#1,#2)
+1> if ( ^NMOD[passive:+](#1,#2)) NMOD[passive=~](#1,#2)
+1> if ( ^NMOD[reflexive:+](#1,#2) ) NMOD[reflexive=~](#1,#2)
+1> if ( ^NMOD[rel:+](#1,#2) ) NMOD[rel=~](#1,#2)
+1> if ( ^NMOD[partit:+](#1,#2) ) NMOD[partit=~](#1,#2)
+
+1> if ( ^ADJMOD[indir:+](#1,#2)) ADJMOD[indir=~](#1,#2)
+1> if ( ^ADJMOD[passive:+](#1,#2)) ADJMOD[passive=~](#1,#2)
+1> if ( ^ADJMOD[rel:+](#1,#2)) ADJMOD[rel=~](#1,#2)
+1> if ( ^ADJMOD[imperso:+](#1,#2)) ADJMOD[imperso=~](#1,#2)
+1> if ( ^ADJMOD[reflexive:+](#1,#2) ) ADJMOD[reflexive=~](#1,#2)
+
+1> if ( ^DEEPSUBJ[indir:+](#1,#2) ) DEEPSUBJ[indir=~](#1,#2)
+1> if ( ^DEEPSUBJ[posit1:+](#1,#2) ) DEEPSUBJ[posit1=~](#1,#2)
+1> if ( ^DEEPSUBJ[posit2:+](#1,#2) ) DEEPSUBJ[posit2=~](#1,#2)
+1> if ( ^DEEPSUBJ[rel:+](#1,#2) ) DEEPSUBJ[rel=~](#1,#2)
+1> if ( ^DEEPSUBJ[reflexive:+](#1,#2) ) DEEPSUBJ[reflexive=~](#1,#2)
+1> if ( ^DEEPSUBJ[imperso:+](#1,#2) ) DEEPSUBJ[imperso=~](#1,#2)
+
+1> if (^CONNECT[imperso:+](#1,#2)) CONNECT[imperso=~](#1,#2)
+1> if (^CONNECT[dem:+](#1,#2)) CONNECT[dem=~](#1,#2)
+1> if (^CONNECT[passive:+](#1,#2)) CONNECT[passive=~](#1,#2)
+
+1> if (^DETERM[imperso:+](#1,#2)) DETERM[imperso=~](#1,#2)
+
+1> if (^COORDITEMS[imperso:+](#1,#2)) COORDITEMS[imperso=~](#1,#2)
+1> if (^COORDITEMS[rel:+](#1,#2)) COORDITEMS[rel=~](#1,#2)
+1> if (^COORDITEMS[reflexive:+](#1,#2)) COORDITEMS[reflexive=~](#1,#2)
+1> if (^COORDITEMS[passive:+](#1,#2)) COORDITEMS[passive=~](#1,#2)
+1> if (^COORDITEMS[prep:+](#1,#2)) COORDITEMS[prep=~](#1,#2)
+
+1> if (^COREF[imperso:+](#1,#2)) COREF[imperso=~](#1,#2)
+1> if (^COREF[dem:+](#1,#2)) COREF[dem=~](#1,#2)
+1> if (^COREF[posit1:+](#1,#2)) COREF[posit1=~](#1,#2)
+1> if (^COREF[posit2:+](#1,#2)) COREF[posit2=~](#1,#2)
+
+1> if ( ^STRAYNP[indir:+](#1)) STRAYNP[indir=~](#1)
+1> if ( ^STRAYNP[imperso:+](#1)) STRAYNP[imperso=~](#1)
+1> if ( ^STRAYNP[passive:+](#1)) STRAYNP[passive=~](#1)
+1> if ( ^STRAYNP[reflexive:+](#1) ) STRAYNP[reflexive=~](#1)
+1> if ( ^STRAYNP[rel:+](#1) ) STRAYNP[rel=~](#1)
+
+1> if (^PREPOBJ[imperso:+](#1,#2)) PREPOBJ[imperso=~](#1,#2)
+1> if (^PREPOBJ[passive:+](#1,#2)) PREPOBJ[passive=~](#1,#2)
+
+
+// Some coordinated subject and object dependencies are not marked COORD
+// sometimes the first SUBJ is marked coord, others the second one is
+// and the arguments are not linked with COORDITEMS
+
+// so, first delete all feat coord from SUBJ
+1> if ( ^SUBJ[coord:+](#1,#2) ) SUBJ[coord=~](#1,#2)
+// then add it only if preceded by another SUBJ
+1> if ( ^SUBJ(#1,#2) & SUBJ(#1,#3) & (#3 < #2) & (#2 < #1) ) SUBJ[coord=+](#1,#2)
+
+// so, first delete all feat coord from OBJ
+1> if ( ^OBJ[coord:+](#1,#2) ) OBJ[coord=~](#1,#2)
+// then add it only if preceded by another OBJ
+1> if ( ^OBJ(#1,#2) & OBJ(#1,#3) & (#3 < #2) & (#3 > #1) ) OBJ[coord=+](#1,#2)
+
+
+//#CONNER
+//1> if (  ( (SUBJ[coord:~](#1,#2) & SUBJ[coord](#1,#3)) |
+//        (OBJ[coord:~](#1,#2) & OBJ[coord](#1,#3) ) )
+//     &  ~COORDITEMS(#2,#3) & ~COORDITEMS(#3,#2) )
+//  COORDITEMS(#2,#3)
+
+
+// remove feature INF wherever it occurs
+1> if ( ^$1[inf:+](#1,#2) ) $1[inf=~](#1,#2)
+
+
+
+
+
+
+
+
+
+

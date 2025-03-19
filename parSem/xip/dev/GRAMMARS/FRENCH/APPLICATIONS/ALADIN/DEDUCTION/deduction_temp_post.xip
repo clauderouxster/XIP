@@ -1,0 +1,230 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! M. Ehrmann Juillet 2008 - C Hagege - juin 2009
+//! traitement des expressions temporelles 
+//! devant intervenir après la syntaxe
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+// Il est trois heures 
+|NP#4{NOUN#3}|
+if ( SUBJ[imperso](#1,#2) & OBJ(#1,#3[tempexpr,heureambig]) & ^HEUREPOT[heureambig](#3) )
+      HEURE[heureambig=~,heure=+,tempexpr=+](#4).
+
+|NP#4{NOUN#3}|
+if ( OBJ(#1[lemme:"être"],#3[tempexpr,heureambig]) & ^HEUREPOT[heureambig](#3) )
+      HEURE[heureambig=~,heure=+,tempexpr=+](#3)
+
+
+
+// Il est un peu plus de trois heures
+|NP#4{DET,NOUN#3}|
+if ( SUBJ[imperso](#1,#2) & OBJ(#1,#3[heure]) & ^DUREEMOD[heure](#4) )
+      HEURE[heure=+,dureemod=~](#4)
+
+
+
+//faire attention ici qd on voudra récupérer les données:
+// le noeud a toujours le trait heureambig
+
+if ( OBJ(#1[vtemp_dur],#2[heureambig]) & ^HEUREPOT[heureambig](#2))
+     DUREE[heure=+,heureambig=~](#2)
+
+// PB. La guerre qui se poursuit aujourd'hui à partir de 10h 
+// CH 06/09 rajout de la contrainte sur preposition. 
+|PP#3{PREP[ancrage_heure:~],NP{NOUN#2}}|
+if ( VMOD(#1[vtemp_dur],#2[heure]) & ^HEURE(#3))
+     DUREE[heure=+,heureambig=~](#3)
+
+
+
+// France Inter, 7 heures et 8 minutes
+|NP{NOUN#1},?*[punct],NP{NOUN#2}|
+if (^HEUREPOT(#2) & ORG(#1))	
+   HEURE(#2).
+
+
+
+// il est condamné à trois ans de prison vs. il est parti à trois jours de la fin
+|NP#1{NOUN#2}|
+if(^DATE[relative](#1) & VMOD(#3[lemme:"condamner"],#2))
+	DUREE(#1),
+	~.	  
+
+
+
+
+
+
+// CH rajouts Juin
+
+
+
+// transformation heurepot en heure 
+// e.g. départ 8 h 30 (avec espaces)
+if ( ^HEUREPOT(#1) & ~HEURE(#1)  & ( NMOD(#2[lemme:départ],#1) | NMOD(#2[lemme:arrivée],#1) | NMOD(#2[lemme:RV],#1) | NMOD(#2[lemme:"rendez-vous"],#1) ) )
+	HEURE(#1)
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////
+// CH - juin 2009 - HEADTEMP
+////////////////////////////////////////////////////////////
+
+// Calcul d'une tete des expressions temporelles afin de faciliter le lien entre proces et TE
+
+| ?[tempexpr:~]{?*,PP#1[tempexpr]{prep, NP{?*, #3[last,empty_introd:~]}} } |
+	HEADTEMP(#3,#1).
+
+| ?[tempexpr:~]{?*,NP#1[tempexpr,set:~]{?*,#3[last,empty_introd:~]} } |
+	HEADTEMP(#3,#1).
+
+| ?[tempexpr:~]{?*,NP#1[tempexpr,set,empty_introd:~]}  |
+	HEADTEMP(#1,#1).
+
+
+//cas de tete constitue par mwe nominal ayant trait empty_introd
+// e.g. les mois de juins
+| ?[tempexpr:~]{?*,NP#1[tempexpr,set:~]{?*,#3[last,empty_introd:+]{?*, #4[last,noun]}} } |
+	if ( ~HEADTEMP(?,#1) )
+	HEADTEMP(#4,#1)
+
+| ?[tempexpr:~]{?*,adv#1[tempexpr]} |
+	HEADTEMP(#1,#1).
+
+// dans le cas des expressions complexes HEADTEMP est l'expression toute entiere
+// tous les matins de mai
+| ?[tempexpr:~]{?*,NP#1[tempexpr,complex_et]} |
+	if ( ~HEADTEMP(?,#1) )
+	HEADTEMP(#1,#1)
+
+
+ 
+
+/////////////////////////////////////
+//
+// CORRECTIONS D'ERREURS - CH juin 2009
+//
+/////////////////////////////////
+
+
+// condamner à deux mois de détention vs. à deux mois des élections
+// durée vs date
+// dans les règles précédantes, pris comme date. Prendre comme durée quand necessaire
+
+
+
+// 1er cas le verbe sous-categorise un PP[a] et la tempexpr se trouve en posit1
+// e.g. il est condamné à deux mois de réclusion
+// attention, contrainte sur le nombre do nom modifieur de tempexpr (singulier obligatoire) 
+// ET restriction sur le fait que le nom ne peut pas etre déterminé.
+| PP#1[tempexpr,form:fa] |
+if ( ( ^DATE[relative](#1) | ^HEURE(#1) ) & HEADTEMP(#2,#1) & VMOD[posit1](?[sfa:+],#2) & NMOD[posit1](#2,#3[tempexpr:~,sg:+]) & ~DETERM(#3,?) )
+	DUREE[relative=~](#2),
+	TEMPLINK[relative=~](#3,#2).
+
+
+// il a bénéficié de 10 minutes de silence
+| PP#1[tempexpr,form:fde] |
+if ( ( ^DATE[relative](#1) | ^HEURE(#1) ) & HEADTEMP(#2,#1) & VMOD[posit1](?[sfde:+],#2) & NMOD[posit1](#2,#3[tempexpr:~,sg:+]) & ~DETERM(#3,?) )
+	DUREE[relative=~](#2),
+	TEMPLINK[relative=~](#3,#2).
+
+
+// Correction du la DUREE et creation du TEMPLINK pour les cas des nondate, duree (voir lexique_temps)
+// à deux mois de prison
+| PP#1[tempexpr] |
+if ( ^DUREE(#1) & HEADTEMP(#2,#1) & NMOD[posit1](#2,#3[sg:+]) & ~DETERM(#3,?) )
+	DUREE[date=~](#2),
+	TEMPLINK(#3,#2).
+
+
+
+// leurs|leur 50 ans de mariage|vie commune
+// Apres verification des contextes en general, les <num> ans + de + art0 + n<qui n'est pas entite nommee> alors on a duree
+// plut que age. 
+// eg. 50 ans d'Air France (age), 50 ans de Madonna (age) vs. 50 ans de paix (duree)
+| NP#1[time,tempexpr:~]{(det), num, noun#2[periode,last]} |
+if ( NMOD[posit1](#2,#3) & ~DETERM(#3,?) & ~ORG(#3) & ~PERSONNE(#3) )
+	DUREE(#1),
+	TEMPLINK(#3,#1).
+
+
+
+// Correction pour l'expression <n> periode d'avance/de retard
+// Cet enfant a deux ans d'avance ou "deux ans d'avance" est pris comme date relative
+// Si une telle expression avec n de 1 a 3 et periode "an" et obj de "avoir" alors on supprime 
+// l'annotation de tempexpr
+if ( ^DATE[relative](#1[lemme="%d an de avance"]) &  HEADTEMP(#2,#1) & OBJ(?[lemme:avoir],#2) )
+	~
+
+
+
+
+
+
+// CH
+//////////////////////// CORRECTION POUR DES SUITES QUI NE SONT NI ET, NI GENERIQUES
+
+// eg : le tatami des Avrils (salle de Sport) - ni ET, ni generique
+// Regle: si nom de mois au pluriel tete de PP[de] qui modifie un nom en posit1, alors pas ET
+if ( NMOD[posit1](?[noun],#1[mois,pl:+]) & PREPOBJ(#1,?) & HEADTEMP(#1,#2) & ^DATE(#2) )
+	~
+
+
+
+
+
+
+//////////////////////// CORRECTION POUR LES GENERIQUES PRIS COMME DES ET
+
+
+// Supprimer le marquage ET durée dans les cas ou la durée est sujet d'un verbe
+// Une journée qui restera marquée
+if ( ^DUREE[date](#1) & HEADTEMP(#2,#1) & SUBJ(?,#2) )
+	~
+
+
+// e.g. Il parle du 11 septembre
+| SC{?*,FV{?*,#1[last]}};IV{?*, #1[last]};GV{?*,#1[last]};verb#1, PP#3[tempexpr,date]{prep[lemme:de], NP{?*,noun#4[last]}} |
+if ( ^VMOD(#1[sfde:+], #4) & ^DATE(#3) )
+	~
+
+// CH
+// nom de mois au pluriel comme tete de chunk et determiné, alors generique
+// les avrils rieurs de mon enfance
+if ( ^DATE[relative](#1) & HEADTEMP(#2[mois,pl:+],#1) & DETD(#2,?[det:+,def:+]) & ~QUANTD(#2,?) )
+	~
+
+// nous avons déjà eu des juins plus ensoleillés ici générique
+// Regle: si DATE relative avec tete nom de mois au pluriel qui est complt objet direct alors on supprime le lien date
+if ( ^DATE[relative](#2) & HEADTEMP(#1[mois,pl],#2) & ( OBJ(?,#1) | (OBJ(?,#4) & mother(#1,#4)) ) )
+	~ 
+
+
+//////////////////////// CORRECTION DES AGES PRIS COMME DUREE
+
+// si duree prise comme post-modifieur de "retraité" alors age
+// Jean Martin, retraité de 65 ans,...
+| PP#1{prep[lemme:de]} |
+if ( ^DUREE(#1) & HEADTEMP(#2,#1) & ADJMOD(?[lemme:"retraité"],#2) )
+	~
+
+
+
+
+
+// CLEANING
+if ( ^DUREE[date](#1) )
+	DUREE[date=~](#1)
+
+if ( ^HEADTEMP(#1,#2) & ~DATE(#2) & ~DUREE(#2) & ~SET(#2) )
+	~

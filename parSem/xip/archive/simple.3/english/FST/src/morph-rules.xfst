@@ -1,0 +1,338 @@
+######################################################################
+#  rules.xfst
+#
+#  Description: Morphotactic rules for the English morphological analyzer
+#
+#  Author: Ágnes Sándor
+#
+#  Date: September 2002
+#
+#  Updated: march 2006 (by Anne Schiller)
+#
+#  Copyright (c) 2002 Xerox Corporation.  All Rights Reserved.
+#
+######################################################################
+
+# USAGE:	fst -s RawLex.fst -l [ThisFile]
+
+define LEX
+
+
+
+# ------------------------------------------------------------------------------
+# basic defintions 
+
+define APOS		%' ;	# *TOD DO* extend for Unidoce !
+
+define vowel		[a|e|i|o|u] ;
+
+define cons		[b|c|d|f|g|h|k|l|m|n|p|q|r|s|t|v|w|z|x] ;
+
+define diacr		[%^ATION|%^DOUBLE|%^PARTDOUBLE|%^TION|%^ABLE|%^IS%-ES
+			|%^IAL|%^OUS|%^ION|%^ITY|%^IOUS|%^ATIC|%^TRDR|%^TIAL
+			|%^UAL|%^YAL|%^OES|%^AT|%^PARTAT]+;
+
+define morphbound	[%>|%}] (diacr) ;
+
+define vowelderiv	[ [i n g %}] | [ i t ] | [ i [s|z|f|c|t] ] | a | e | o | y | u ] ;
+
+define ideriv		[ [i s ] | [ i c (a l) %} ] | [ i [v|z|n] (e) %}] 
+			| [i t [y|e] (s) %}] | [i t i e s %}] | [ e e %} ] | [ i f ] ]   ;
+
+define doubler		[ [ i n g %}] | [ e d %}] | [ [e|o] r %}] 
+			| [ [a|e] n (morphbound) [t|c]] | [ a l ] | [ a b ] | [ e e %} ] 
+			| [ a g e %}] | [ e r ] | [ e s t ] | [y %}] | [ i c ] | [ i s h ] 
+			| [ [i|e] n ] | [ o i d ] | [ i e ] ] ;
+
+
+# ------------------------------------------------------------------------------
+# genitive rule :
+# singular:	girl^GenSg -> girl's
+# 		man^GenSg -> man's
+# 		bus^GenSg -> bus's or bus'
+# plural:	girls^GenPl -> girls'
+# 		men^GenPl  -> men's
+
+read regex [
+	LEX
+.o.	%^GenSg (->) APOS ||  s (morphbound) _ 
+.o.	%^GenSg -> APOS s
+.o.	%^GenPl -> APOS ||  s _
+.o.	%^GenPl -> APOS s 
+];
+
+define LEX
+
+
+# ------------------------------------------------------------------------------
+echo >>> rules ...
+
+define RULES1 [
+### words marked woith ^AT are words ending in "-a" that get a "t" in front of certain suffixes: 
+### -ic, -ion, -ism, -ist, -ize, -ise, -ograph, -ose, -ous and their plural is -ata
+	a -> a t || _ morphbound %^AT [[i c]|[i o n]|[i s m]|[i s t]|[i [z|s] e]|o]
+.o.	s -> t a || morphbound %^AT _ %}
+.o.	%^AT -> 0
+
+### words marked with ^PARTAT are words ending in "-a" that get a "t" in front of certain suffixes: 
+### -ic, -ion, -ism, -ist, -ize, -ise, -ograph, -ose, -ous, but they don't have an irregular plural
+.o.	a -> a t || _ morphbound %^PARTAT [[i c]|[i o n]|[i s m]|[i s t]|[i [z|s] e]|o]
+.o.	%^PARTAT -> 0 
+
+.o.	s e -> t || _ morphbound i c		# se+ic=tic
+.o.	s y -> t || _ morphbound i c		# sy+ic=tic
+.o.	s i s -> t || _ morphbound i c		# sis+ic=tic
+.o.	i a -> 0 || _ i c			# ia+ic=ic
+.o.	i -> a t i || %^ATIC _ c		# ^ATIC+ic=atic
+.o.	%^ATIC -> 0
+.o.	a -> a t || m _ morphbound i c		# ma+ic=matic
+.o.	i s m -> 0 || _ morphbound i c 		# ism+ic=ic
+
+.o.	c l -> c u l || _ e morphbound a [r|t]	# cle+ar=cular, cle+ate=culate
+.o.	b l -> b u l || _ e morphbound a r 	# ble+ar=bular
+
+.o.	i o u s -> 0 || [a|o|i] c _ morphbound i t y	# acious+ity=acity, ocious+ity=ocity, icious+ity=icity,
+.o.	o u s morphbound -> 0 || n e _  i t y	# neous+ity=neity
+.o.	o u s -> 0 || _ morphbound %^ITY i t y	# ous^ITY+ity=ity
+.o.	%^ITY -> 0 
+.o.	o u s -> 0 || u _ morphbound i t y 	# all the other words: ous+ity=osity
+.o.	u -> 0 || o _ s morphbound i t y 
+
+.o.	y -> 0 || g r a p h _ morphbound e r	# graphy+er=grapher
+.o.	c -> c k || _ morphbound e [r|d]	# c+er=cker
+.o.	c -> c k || _ morphbound i n g		# c+ing=cking
+.o.	c -> c k || _ morphbound y		# c+y=cky
+ ];
+
+
+define LEX	RULES1.i .o. LEX .o. RULES1 ;
+
+# ------------------------------------------------------------------------------
+
+define RULES2 [
+
+### verbs ending in -ie: ie+ing=ying
+ 	i e -> y || _ morphbound i n g 
+
+### doubling of last consonant in front of doubler suffixes
+.o.	b -> b b || _ %> (diacr) %^DOUBLE doubler
+.o.	c -> c c || _ %> (diacr) %^DOUBLE doubler
+.o.	d -> d d || _ %> (diacr) %^DOUBLE doubler
+.o.	f -> f f || _ %> (diacr) %^DOUBLE doubler
+.o.	g -> g g || _ %> (diacr) %^DOUBLE doubler
+.o.	h -> h h || _ %> (diacr) %^DOUBLE doubler
+.o.	k -> k k || _ %> (diacr) %^DOUBLE doubler
+.o.	l -> l l || _ %> (diacr) %^DOUBLE doubler
+.o.	m -> m m || _ %> (diacr) %^DOUBLE doubler
+.o.	n -> n n || _ %> (diacr) %^DOUBLE doubler
+.o.	p -> p p || _ %> (diacr) %^DOUBLE doubler
+.o.	r -> r r || _ %> (diacr) %^DOUBLE doubler
+.o.	s -> s s || _ %> (diacr) %^DOUBLE doubler
+.o.	t -> t t || _ %> (diacr) %^DOUBLE doubler
+.o.	v -> v v || _ %> (diacr)  %^DOUBLE doubler
+.o.	w -> w w || _ %> (diacr) %^DOUBLE doubler
+.o.	z -> z z || _ %> (diacr) %^DOUBLE doubler
+.o.	%^DOUBLE -> 0 
+
+#  ment+ive=mentative, ment+ion=mentation
+.o.	{ment} -> {mentat} || _ morphbound [ ideriv | i o n ] 
+
+.o.	i z e -> 0 || _ morphbound i s [t|m] 	# ize/ise+ist=ist, yze+ist=ist
+.o.	i s e -> 0 || _ morphbound i s [t|m] 
+.o.	i z e -> 0 || _ morphbound i c 
+.o.	i s e -> 0 || _ morphbound i c 
+.o.	y z e -> 0 || _ morphbound i s [t|m]
+.o.	y z e -> 0 || _ morphbound i c 
+
+.o.	y -> 0 || _ morphbound %^OUS o u s %}	# y^OUS+ous=ous
+.o.	e t y -> 0 || _ morphbound o u s	# ety+ous=ous
+.o.	o n -> 0 || i _ morphbound o u s	# ion+ous=ous
+.o.	%^OUS -> 0 
+.o.	e -> i || _ morphbound %^IOUS o u s	# e^IOUS+ous=ious
+.o.	%^IOUS -> 0
+.o.	e -> i n || u [d|m] _ morphbound o u s 	# ume+ous=uminous, ude+ous=udinous	
+
+.o.	a t e -> 0 || _ morphbound %^ABLE a b 	# ate^ABLE+able=able
+.o.	a t e -> 0 || _ morphbound %^ABLE a n	# ate^ABLE+ant=an
+.o.	a t e -> 0 || _ morphbound %^ABLE e e 	# ate^ABLE+ee=ee
+.o.	%^ABLE -> 0 
+];
+
+define LEX	RULES2.i .o. LEX .o. RULES2 ;
+
+
+# ------------------------------------------------------------------------------
+define RULES3 [
+	t e -> 0 || a _ morphbound c [y|[i e]] %} 	# ate+cy=acy 
+.o.	a t e -> 0 || _ morphbound a n 		# ate+ant=ant
+
+.o.	l e -> 0 || cons _ morphbound l y %}	# le+ly = ly
+.o.	l -> 0 || l _ morphbound l y %}		# ll+ly = ly
+
+.o.	u m -> 0 || _ morphbound a l 		# um+al=al
+.o.	u m -> 0 || _ morphbound o u s 
+.o.	c e -> t i || _ morphbound %^TIAL a l	# ce^TIAL+al=tial
+.o.	%^TIAL -> 0
+.o.	a -> i a || morphbound %^IAL _ [l|t|n]	# e^IAL+al=ial, e^IAL+ate=iate, e^IAL+an=ian
+.o.	e -> 0 || _ morphbound %^IAL i a [l|t|n]
+.o.	%^IAL -> 0
+.o.	e -> i n || t u d _ morphbound a l	# tude+al=tudinal
+.o.	a -> u a || morphbound %^UAL _ l	# ^UAL+al=ual
+.o.	%^UAL -> 0
+.o.	y -> 0 || _ morphbound %^YAL a l	# y^YAL+al=al
+.o.	%^YAL -> 0 
+
+.o.	i s -> e || _ %> (diacr) %^IS%-ES s %}	#is+Pl=es (non-derived forms)
+.o.	o -> o e || _  morphbound %^OES s %}	# o^OES+s=oes
+.o.	%^OES -> 0
+
+
+.o.	z e -> s || y _ %> (diacr) (%^IS%-ES) i s %}	# yze+is=ysis
+.o.	e -> 0 || o s _ %> (diacr) (%^IS%-ES) i s %}	# ose+is=osis
+.o.	i z e -> 0 || s _  %> (diacr) (%^IS%-ES) i s %}	# size+is=sis
+.o.	t i z e -> s || _ %> (diacr) (%^IS%-ES) i s %}	# tize+is=sis
+.o.	t e -> s || _ %> (diacr) (%^IS%-ES) i s %}	# te+is=sis
+.o.	i s -> e || %^IS%-ES _ %} s %}	# is+Pl=es (derived forms)
+.o.	z e -> t || y _ morphbound %^IS%-ES i c %}	# yze+ic=ytic
+.o.	y z e -> 0 || _ morphbound %^IS%-ES i s t %}	# yze+ist=ist
+.o.	%^IS%-ES -> 0 
+];
+
+define LEX 	RULES3.i .o. LEX .o. RULES3 ;
+
+# ------------------------------------------------------------------------------
+define RULES4 [
+	e -> 0 || m e t _ r morphbound i c 
+.o.	e -> 0 || m e t _ r morphbound i s t
+.o.	e -> 0 || m e t _ r morphbound y 
+
+### words marked by ^TRDR ending in -der or -ter lose the "e" in front of certain suffixes
+.o.	e -> 0 || [d|t] _ r morphbound %^TRDR [a|y|o]
+.o.	e -> 0 || [d|t] _ r morphbound %^TRDR i c
+.o.	e -> 0 || [d|t] _ r morphbound %^TRDR i o n
+.o.	%^TRDR -> 0 
+
+.o.	t -> 0 || _ morphbound c [e|y] %} # t+ce->ce,t+cy->cy  
+
+.o.	e -> 0 || \e _ morphbound e 
+#.o.	a -> 0 || _ morphbound a 
+
+.o.	l e -> 0 || i b _ morphbound l y %} # ible+ly=ibly
+];
+
+
+define LEX	RULES4.i .o. LEX .o. RULES4 ;
+
+# ------------------------------------------------------------------------------
+define YSUFF 	[ l y %} | n e s s ( e s ) %} | e r %} | e s t %} | a n %} 
+		| m e n t | l e | f ];
+
+define RULES5 [
+	e d e -> e s s ||  _ morphbound i v # ede+ive=ssive, de+ive=sive
+#.o.	d e -> s || _ morphbound i v  
+
+# plural after s, x, ch, cz, sh, sch, z
+.o.	s -> e s || [s|z|x|X|[s h]|[(s) c h]|[c z]] morphbound _ 
+
+.o.	l e -> i l || [i|a|u] b _ morphbound ideriv 
+
+# ify+or=ificator, ify+ive=ificative, ify+ion=ification
+.o.	y -> i c a t || i f _ morphbound [[o r]|[i v]|[i o n]] 
+
+.o.	y -> 0 || cons (morphbound) _ morphbound [ ideriv | [e t i c] ]
+.o.	%> -> 0 || cons (morphbound) y _ i n g %}
+.o.	%} -> 0 || cons (morphbound) y _ i n g %}
+.o.	e %> y -> i || cons _ morphbound [ vowelderiv | YSUFF ]
+.o.	e %} y -> i || cons _ morphbound [ vowelderiv | YSUFF ]
+.o.	y -> i || cons (morphbound) _ morphbound [ vowelderiv | YSUFF | s o m e  ]
+
+.o.	t -> s s || m i _ morphbound i b	# it+ible=issible
+.o.	t -> s s || m i _ morphbound i o n %} 	# it+ion=ission
+.o.	t -> s s || m i _ morphbound i v 
+];
+
+define LEX	RULES5.i .o. LEX .o. RULES5 ;
+
+# ------------------------------------------------------------------------------
+
+define RULES6 [
+	e -> 0 || c i s  _ morphbound i o n %}	# cise+ion=cisio
+.o.	e -> 0 || v i s  _ morphbound i o n %}	# vise+ion=vision
+.o.	e -> a t || [i|y] z _ morphbound i o n %}	# yze+ion=yzation
+.o.	e -> a t || [i|y] s _ morphbound i o n %}	# ise+ion=isation
+.o.	e -> 0 || a t _ morphbound i o n %}	# ate+ion=ation
+.o.	i -> a t i || morphbound %^ATION _ [ o n | v e]	# ^ATION+ion=ation
+.o.	o -> a t o || morphbound %^ATION _ r 	# 
+.o.	e -> 0 || _ morphbound %^ATION [ a t i o n %} | a t o r ]	# 
+.o.	%^ATION -> 0 
+.o.	s h -> t || _ morphbound %^TION i o n %} 	#  sh+ion=tion
+.o.	%^TION -> 0
+.o.	e d e -> e s s || _  %> (diacr) i o n %}	# ede+ion=ession, de+ion=sion
+.o.	e -> 0 || a t _ morphbound i o n %}	# ate+ion=ation
+.o.	e -> 0 || _ morphbound %^ION i o n %}	# e^ION+ion=ion
+.o.	%^ION -> 0
+.o.	e -> p t || u m _ morphbound i o n %}	#  ume+ion=umption
+.o.	e -> p t || u m _ morphbound i v
+.o.	d e -> s || _ %> (diacr) i o n %} 
+.o.	d e -> s || _ %> (diacr) i v
+.o.	a i m -> a m a t || _ morphbound [[i o n] | [ o r ]]	# aim+ion=amation
+.o.	a i n -> a n a t || _ morphbound [[i o n] | [ o r ]]	# ain+ion=anation
+.o.	e -> t || u c _ morphbound i o n	# ce+ion=uction
+.o.	e -> t || u c _ morphbound i v e	# uce+ive=uctive
+.o.	e -> i t || p o s _ morphbound i o n	# pose+ion=position
+.o.	t -> s || v e r _ morphbound i o n	# vert+ion=version
+.o.	i v e -> p t || e _ morphbound i o n	# eive+ion=eption
+.o.	i v e -> p t || e _ morphbound i v	# eive+ive=eptive
+.o.	o u n c e -> u n c i a t || _  morphbound i o n	# ounce+ion=unciation
+.o.	o u n c e -> u n c i a t || _  morphbound i v e	# 
+
+.o.	e -> 0 || c _ morphbound y %} # ce+y=cy
+
+.o.	t -> 0 || a n _ morphbound c (e) %}	# ant+ce=ance
+.o.	t -> 0 || e n _ morphbound c (e) %} 	# ent+ce=ence
+
+.o.	i a -> 0 || _ morphbound i c	# ia+ic=ic
+.o.	n -> m || %{ e _ %< [b|p]	# en+b... -> emb...
+.o.	n -> r || %{ i _ %< r 		# in+r... -> irr...
+.o.	n -> m || %{ i _ %< [m|p] 	# in+m... -> imm...
+.o.	n -> l || %{ i _ %< l 		# in+l... -> ill...
+.o.	a -> a t || _ morphbound i z	# a+ize -> atize
+.o.	i o n -> 0 || _ morphbound i v	# ion+ive=ive
+.o.	i o n -> 0 || _ morphbound o	# ion+ory=ory
+
+.o.	%> -> 0 || [g|c] e _ a b	# e+able=geable
+.o.	%} -> 0 || [g|c] e _ a b	# 
+.o.	%> -> 0 || [g|c] e _ o u s %}	# ge+ous=geous
+.o.	%} -> 0 || [g|c] e _ o u s %}	# 
+.o.	%> -> 0 || o e _ [[i n g ] | [ a b ] | [ f u ] | [ l e ]]	
+.o.	e -> 0 || [ cons | [q u] ] _  morphbound [ vowelderiv | ideriv ]
+.o.	e -> 0 || \e _ morphbound [[[a|i] [b|l]] | [i n ] ]
+.o.	e -> 0 || u _ morphbound [a|i|[o u s]|[u m]]
+.o.	e e -> e || _ morphbound e	# agree+ed=agreed
+.o.	l e -> 0 || a b _ morphbound l y %} 
+.o.	a -> 0 || _ morphbound a 
+
+.o.	y -> i e || [cons|[q u]] (morphbound) _ morphbound s %} 
+
+### singular genitive of words ending in "s" can optionally be "s'"
+.o.	%^S -> 0 || s (morphbound) %' _
+.o.	%^S -> s
+.o.	s (->) 0 || s morphbound %' _ 
+];
+
+
+define LEX	RULES6.i .o. LEX .o. RULES6 ;
+
+# ------------------------------------------------------------------------------
+echo >>> final cleanup
+
+define MARK	[ %} | %> | %{ | %< ];
+
+read regex	[
+	%  <- %_
+.o.	0 <- MARK
+.o.	LEX
+.o.	MARK -> 0
+.o.	%_ -> %  
+];
+

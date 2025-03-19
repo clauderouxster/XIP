@@ -1,0 +1,66 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! CH Mai 2011 - fichier permettant de faire nettoyage final
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+| PP#2{?*,NP#4} |
+if ( HEAD(#3,#2) & ^HEAD(#3,#4) )
+~
+
+// SI a la fois VARG et VMOD[temp] alors on supprime VARG
+// eg les méfaits ont été commis mardi
+if ( ^VARG(#1,#2) & VMOD[temp](#1,#3) & HEADTEMP(#2,#3) )
+~
+
+
+///////////// COSMETIQUE PAR RAPPORT AUX SORTIES DEFINIES PAR MAUD
+
+// DATEMOD devient DATE (e.g. fin septembre 2010)
+// les traits de modifications sont présents sur les noeuds donc inutile de faire distinction (supprimé pour date mais existe pour duree et set)
+if ( ^DUREEMOD(#1) )
+   DUREE(#1)
+
+if ( ^SETMOD(#1) )
+   SET(#1)
+
+// HEURE devient DATE
+if ( ^HEURE(#1) )
+   DATE[relative=+,t_granul=H](#1)
+
+// redondance
+if ( DUREE[heure](#1) & ^DUREE(#1) )
+~
+
+// les heures non spécifiées ont été transformées en date relative
+| #1{?*,#2} | 
+if ( DUREE[heure:~](#2) & ^DATE[relative](#1) )
+DUREE[traits=~,heure=+](#1)
+| #1 {?*,#2} |
+if ( DUREE(#1) & ^DUREE(#2) ) 
+~
+
+// Si a la fois VMOD[temp] entre V et ET et VMOD entre V et sous noeud de ET, on supprime la deuxieme relation
+| #1{?*,#4} |
+if ( (DATE(#1) | DUREE(#1)) & VMOD[temp](#3,#1) & ^VMOD(#3,#4) )
+~
+
+
+// Remonter des traits qui nous interessent au niveau des dépendances
+
+// DATE relatives
+| #1[!temp_ref:!] |
+if ( ^DATE[relative](#1) )
+DATE(#1)
+
+| #1[!val_ref:!] |
+if ( ^DATE[relative](#1) )
+DATE(#1)
+
+| #1[!delta_t:!] |
+if ( ^DATE[relative](#1) )
+DATE(#1)

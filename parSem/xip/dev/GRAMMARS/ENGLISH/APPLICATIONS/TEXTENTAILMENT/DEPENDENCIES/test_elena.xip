@@ -1,0 +1,109 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : 
+//!   filename   
+//!   Date       : 
+//!   Author	 :     TEST ELENA
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Variables:
+int id_node;
+
+
+Procedures:
+TestCreateDependency(#1,#2){
+    id_node=Nodenumber(#1);
+    while (id_node>0 & #1[isindependency:~]) {
+    	id_node=id_node-1;
+    	Node(#3,id_node);
+    	if(#3[isindependency:+]){
+	    if(#3::#2){
+	    	SetFeature(#1,"isindependency","+");
+	    	Return(1);
+	    }else{
+		Return(0);
+	    }
+    	}
+    }
+    Return(0);
+}
+
+Script: 
+// identifying the unused nodes
+if ($1(#1,#2)) {
+	#1[isindependency=+];
+	#2[isindependency=+];
+}
+
+|#1{#2[isindependency:+]}|
+{#1[asc_treated=+];}
+
+|#1{?*,#2[asc_treated:+]}|
+{#1[asc_treated=+];}
+
+|#1[isindependency:+]{?*,#2}|
+{#2[desc_treated=+];}
+
+|#1[desc_treated:+]{?*,#2}|
+{#2[desc_treated=+];}
+
+
+
+DependencyRules:
+//la radice ha come feature TOP, percio` marchiamo come radice il nodo che ha quella caratteristica. 
+|TOP#1|
+  ROOT(#1).
+
+
+//create a "bydefault" depedency between all unused node and the root
+|Noun#1[desc_treated:~,asc_treated:~,isindependency:~]| 
+  if(ROOT(#2))
+     ROOT-LINK(#2,#1).
+
+|Nadj#1[desc_treated:~,asc_treated:~,isindependency:~]| 
+  if(ROOT(#2))
+     ROOT-LINK(#2,#1).
+
+|ADJ#1[desc_treated:~,asc_treated:~,isindependency:~]| 
+  if(ROOT(#2))
+     ROOT-LINK(#2,#1).
+
+|VERB#1[desc_treated:~,asc_treated:~,isindependency:~]| 
+  if(ROOT(#2))
+     ROOT-LINK(#2,#1).
+
+|ADV#1[desc_treated:~,asc_treated:~,isindependency:~]| 
+  if(ROOT(#2))
+     ROOT-LINK(#2,#1).
+
+
+
+DependencyRules:
+//When the unused node is not in any dependency, replacing the ROOT-LINK by ARTIF-LINK
+|#2[isindependency:+]|
+if(^ROOT-LINK(#3,#1[isindependency:~]) & Nodenumber(#2) < Nodenumber(#1) & TestCreateDependency(#1,#2))
+    ARTIF-LINK(#2,#1).
+
+Script: 
+//se una dipendenza e` binaria, attribuisci la feature "arg2" a tutti i nodi che compaiono come secondo argomento della dipendenza. Stiamo cercando il nodo che non dipende mai dagli altri, cioe` che non e` mai in seconda posizione.
+if ($1(#1,#2)) {
+    setfeature(#2,"arg2","+");
+}
+
+DependencyRules:
+//dato il nodo che non e` stato taggato con la feature "arg2", crea la dipendenza ROOT-LINK con la radice. Siccome questo genera un sacco di altre dipendenze, viene detto di mantenere solo quella il cui secondo argomento e` apparso in una relazione di dipendenza binaria.
+|#1[arg2:~]|
+  if(ROOT(#2) & $1(#1,#3) & ~ROOT(#1))
+     ROOT-LINK(#2,#1).
+
+
+Script: 
+if ($1(#1,#2)) {
+	#1[isindependency=+];
+	#2[isindependency=+];
+}
+
+
+

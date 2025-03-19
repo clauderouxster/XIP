@@ -1,0 +1,133 @@
+Mining PubMed for relevant biomedical abstracts with concept-matching
+
+1. Relevance
+
+The aim of this text-mining tool is to select PubMed abstracts that are likely to be relevant due to the fact that they convey substantial change in knowledge. Every article conveys new knowledge, however not all new knowledge has equal weight in the development of a domain. What we are trying to capture here is the description of substantial new knowledge or contradiction in a model, which needs to be solved in order that progress can be made.Our underlying assumption is that when such new or controversial information is conveyed, the author very often--though of course not in every case--explicitly indicates that the information is new or controversial. Our tool - by matching linguistic patterns - detects expressions of substantially new or contradictory knowledge. 
+
+The following sentences illustrate what kinds of expressions are detected. These sentences are highlighted by our system by being assigned the feature _VIS ("very important sentence"): 
+
+o	First appearance of evidence:
+Altogether, these data provide the first evidence of the participation of proteasomes in the control of mammalian mitochondrial inheritance and suggest a new role of the ubiquitin-proteasome pathway in mammalian fertilization. (PMID: 12606393)
+
+o	Emerging trend:
+Growing evidence indicates that aldehydic products of lipid peroxidation play an important role in the pathophysiology of neurodegenerative disorders such as Parkinson 's disease. (PMID: 12644268)
+
+o	Contradiction of conventional knowledge:
+In contrast with previous hypotheses, compact plaques form before significant deposition of diffuse A beta, suggesting that different mechanisms are involved in the deposition of diffuse amyloid and the aggregation into plaques. (PMID: 12697936)
+
+o	Identification of controversy, debate, contradiction:
+Presenilin 1 (PS1) regulates beta-catenin stability; however, published data regarding the direction of the effect are contradictory. (PMID: 11606587)
+
+This approach is different from and complementary to traditional text mining tools that aim at capturing relevance by extracting relevant subject matter, i.e. entities and relationships between entities. In these tools the frequency of the extracted contents is used as an indicator of relevance, whereas we try to capture it through its explicit expression by the author. However, frequency of relevant subject matter terms is also taken into consideration: the results returned are ranked with respect to the frequency of important keywords defined by the user.
+
+2. Validation of the approach
+
+In order to validate our assumption concerning the authors' writing practice we have examined an important collection of abstracts of new findings in biology, which is entirely compiled by experts: "Faculty of 1000 biology" (http://www.f1000biology.com/start.asp), published by BioMed Central. Faculty of 1000 biology has a free-access page called "Hidden Jewels Top 10" (http://www.f1000biology.com/top10/jewels) that contains the updated top of the list. We have been continuously collecting this updated list and now we have a collection of 70 abstracts that have been selected by experts with the same purpose as our tool. We have analyzed the 70 abstracts in our possession, and we have found that 49 (70%) of them contain expressions of newness or controversiality like those those detected by our tool.It is of course possible that the kind of argumentation that we find in these selected abstracts is used in less relevant documents. We have not been able to carry out any study to measure that, so at this time we rely on the "honesty" of the authors. The proportion of 70% percent is considerable. We can compare it to the widely-cited proportion of 80% of knowledge contained in free texts in contrast to 20% in data-bases. The most developed knowledge acquisition methods are data-mining methods since they handle highly structured data. However, they are only applicable on just 20% of stored information, and on the rest of the information only once it is turned into databases. The small but high-quality sample of "Hidden Jewels" shows that for our special task of mining relevant research results, in 70% of the cases, we can in theory identify that a paper is relevant through detecting particular general-language expressions without resorting to traditional information extraction.
+
+3. Tests
+
+We tested our system on this collection of 70 abstracts from "Hidden Jewels Top 10." Out of the 49 abstracts that contain expressions of relevant knowledge 36 are detected by the system. Detection means highlighting at least one VIS in the abstract, i.e. a sentence that expresses relevant knowledge according to the definition given in section 1. This means that the coverage from a linguistic point of view is 73% and from a factual point of view 50%. This result is complemented by our previous tests that show that our system returns very few results on a collection of papers retrieved with Boolean keyword search. We carried out a test on a collection of 3300 abstracts of which 175 (5%) are selected by the system with high precision - as far as linguistic expression is concerned. No exact precision numbers are given, since relevance was evaluated using a range of relevance values rather than a simple relevant/irrelevant rating. In this test we did not examine coverage. It is possible to assess the two results together: half of the high-quality abstracts selected by human evaluators are also selected by our system, and at the same time we know from the second test that the system is highly selective. 
+
+4. The output of the system
+
+As we have described, the final goal of our tool is to select relevant abstracts that explicitely say that the new knowledge conveyed is substantial or a major controversy is revealed. Such descriptions can be concentrated in one sentence, which we mark as VIS (very important sentence) but can span over several - and not necessarily consecutive - sentences. Besides highlighting VIS, our system highlights several kinds of sentences by assigning them a number of features that reflect their meaning. This highlighting is intended to have two functions: 1. Guide the reader in his process of representing the knowledge conveyed by the abstract. 2. Based on these various semantic types of highlighted sentences, we are also making and effort to detect relevant abstracts through multiple sentences, but this functionality needs further refinement. We also use the semantic typing of sentences to arrange abstracts into four semantic classes. Besides highlighting and typing, our system ranks the abstracts selected by the user's pubmed query.
+
+In this section we give the list and the definition of sentence and abstract types, and describe the ranking component. 
+
+4.1. Marking of sentence types
+
+4.1.1. SUMMARY
+
+SUMMARYs (=summary sentences) are highlighted in yellow. These are sentences that have special roles in the abstract: they can provide a summary of the abstract. There are three kinds of SUMMARYs: title (SUMMARY_TITLE), "contribution sentence" (SUMMARY_CONTRIBUTION) and "last sentence" (SUMMARY_LASTSENT). Highlighting these sentences is meant to direct the reader's attention to the essential information conveyed by any abstract (not just the ones we identify as VIS). Titles and last sentences are highlighted without using any linguistic rules: Titles are marked up based on the xml markup of the PubMed documents, and last sentences based on a general sentence pattern. The _LASTSENT markup may be erroneous when the last sentence in the abstract has some typographical peculiarity, which is relatively rare. _CONTRIBUTION marks sentences that sum up the article's contribution to the development of the domain:
+
+Here we present ...
+In this work , ...  are presented 
+This article assesses ...
+
+Contribution sentences are highlighted using linguistic rules like the ones that detect all the other sentence types.
+
+SUMMARYs may have several other features besides _TITLE, _CONTRIBUTION and _LASTSENT. They are the following:
+
+_POSTAT: expresses a possibility (this can also be a feature of "important sentences", see below)
+
+(SUMMARY_TITLE_POSTAT) The pleiotropic role of the 26S proteasome subunit RPN10 in Arabidopsis growth and development supports a substrate-specific function in abscisic acid signaling.
+
+_QUESTION: an open issue
+
+(SUMMARY_LASTSENT_QUESTION) However, the physiological relevance of these findings remains to be further established.
+
+_STAT: a statement without any special indication
+
+(SUMMARY_LASTSENT_STAT_CONTRIBUTION) In this essay, I discuss the implications of these problems for the conduct and interpretation of research.
+
+_NEGATIVE: a feature for the last sentence meaning that the last sentence negates some statement. This is a strong indication of relevance:
+
+(SUMMARY_LASTSENT_NEGATIVE) Cytokine pro-inflammatory genetic variants do not influence the increased inflammatory profile of ACS patients.
+
+4.1.2. LOGIC
+
+Sentences that express a logical contradiction. They are colored in yellow:
+
+(LOGIC_CONTR) Co-inoculation of LV-APP(Sw) with each of the HSV vectors showed that either HSV-APP/shRNA or HSV-neprilysin inhibited Abeta accumulation in this model, whereas an HSV control vector did not.
+
+4.1.3. IMPSENT
+
+IMPSENTs ("important sentences") are sentences that are indicators of new or controversial information. An IMPSENT may contain all the necessary elements of content for relevance. These sentences - like the ones in section 1 - are assigned the feature _VIS ("very important sentence"). They are colored in purple. If an IMPSENT does not contain all the necessary indicators of novelty or contrast, it may belong to different semantic types, and it is colored blue. If a sentence is both SUMMARY and IMPSENT, it is marked as IMPSUMMARY. IMPSUMMARY sentences if they do not have the feature _VIS, are green. If they do, they are purple like the IMPSENTs. 
+
+IMPSENTs that do not have the feature _VIS are marked in order that we might explore co-occurrences of such sentences that convey the relevant contents, which sentences marked _VIS convey. We have begun to set up a few co-occurrence rules, and they yield also the semantic typing of the abstracts (see below).
+
+IMPSENTs may have the following features besides _VIS. In case you find these useful, here are their descriptions:
+
+_FIRST: knew knowledge for the first time:
+
+(IMPSUMMARY_STAT_VIS_CONTRIBUTION_FIRST) These findings provide the first demonstration of cytoskeletal-based active transport of SMN in neuronal processes and the function of exon -7 in cytoplasmic localization.
+
+_GROW: new knowledge is accumulating
+
+(IMPSENT_GROW_VIS) It is not, however, all that is required for hemostasis, and growing evidence is emerging that the perpetuation of a stable hemostatic plug requires additional intracellular signaling.
+
+_TEMPSTAT: a temporal statement about knowledge 
+
+(IMPSENT_TEMPSTAT) Recent research has revealed multiple roles for various sphingolipids in the heat shock responses of both yeast and mammalian cells.
+
+_OLD: _TEMPSTAT + the knowledge is old:
+
+(IMPSENT_TEMPSTAT_OLD) The co-occurrence of these clinical and neuropathological changes suggests shared pathogenic mechanisms in these diseases, previously assumed to be distinct.
+
+_NOSTAT: a statement about the lack of knowledge:
+
+(IMPSENT_NOSTAT_CONTR) However, the expression profile of SOD isoforms in NP remains unclear.
+
+_STATKNOW: a statement about knowledge, not necessarily in a temporal framework:
+(IMPSENT_STATKNOW_TEMPSTAT) Cell density is monitored via an acylated homoserine lactone (acyl HSL) signalling molecule, which is thought to diffuse between Erwinia cells in a process commonly known as 'quorum sensing'.
+
+_WEAKCONTR, _CONTR, _CONTRAST: growing degrees of contrast:
+
+(IMPSENT_WEAKCONTR) However, some evidence indicates that the fibril itself may not be the pathogenic species.
+
+(IMPSENT_NOSTAT_CONTR) However, the expression profile of SOD isoforms in NP remains unclear.
+
+(IMPSENT_CONTRAST_VIS) Conflicting evidence exists for supplementation with antioxidant and immunonutrition in the critically ill.
+
+_NOVSTAT: new knowledge:
+
+(IMPSUMMARY_LASTSENT_STAT_NOVSTAT_VIS) These results provide new insights on the regulatory mechanisms by which the ()NO-mediated immunoproteasome signaling pathway affords cytoprotection in endothelial cells.
+
+_ATTITUDE: surprising result:
+
+(IMPSENT_ATTITUDE) Surprisingly, we failed to observe an increase in either c-Jun NH2-terminal kinase or p38alpha and beta MAPK activation.
+
+4.2. Marking of abstract types
+
+This is an exploratory functionality, which we have not had the occasion to test and refine. The underlying idea is that the co-occurrence of various sentence types may indicate relevance in the same way as it is conveyed in single VISs. Moreover, once such co-occurrence is found, we try to give a semantic type to the abstracts. Thus abstracts getting a semantic type might be relevant in our sense, even if they do not contain a VIS. Up to now the following abstract types have been determined:
+
+Reconsider: the abstract reconsiders old results
+First/extension: the abstract contains knowledge that is described for the first time, or the knowledge described is an extension of old knowledge
+First/new: the abstract contains knowledge that is described for the first time, or the knowledge described is new
+Split: up to now unique research direction is split into two
+Next: the abstract sets out plans for future research
+
+4.3. Ranking
+
+Ranking relies on a list of relevant keywords chosen by the user. These may be the same as the keywords used for the query or different from them. The ranking is based on the frequency of the keyword tokens in the abstract. The score that is printed after the PMID is the number of occurrences of these keywords in the abstracts. The same keyword is counted as many times as it occurs in the abstract.
+

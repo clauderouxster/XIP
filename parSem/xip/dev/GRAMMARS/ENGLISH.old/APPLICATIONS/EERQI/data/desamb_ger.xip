@@ -1,0 +1,926 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : desamb_ger.xip
+//!   Date       : 10/02/2003
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// General disambiguation rules 
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Tagging:
+
+
+// Before an adverbial posthour:+, if we have a digit that is not hour:+, we add this feature
+//2> dig %= dig[card:+,hour:+,
+
+
+
+// After a definite article or article at the beginning the ambiguity noun/verb disapears 
+// restriction in order to avoid (the general won a battle with won as a noun
+2> noun[vprog:~,ord:~], verb = | det[def:+];det[indef:+] ,(nadj;adj) | noun | ?[det:~,noun:~,quant:~] | .
+
+2> noun[vprog:~,ord:~], verb = | det[startbis:+] | noun .
+
+2> noun, num<ord>, verb = | det | num | noun[verb:~] | .
+
+2> nadj, verb = | det[def:+];det[indef:+] | nadj .
+
+2> nadj, verb = | det[startbis:+] | nadj .
+
+// CB 
+// remove ambiguity noun/verb after verbal form "let's"
+// ex:: let's kick
+//2> noun, verb = |verb[surface:"let's"]| verb.
+
+
+
+// Ambiguity noun-plural, verb, p3 singular just after a cardinal that is not one
+// e.g. three books
+3> noun<pl:+>, verb = | num[lemme:~one] | noun .
+3> noun<sg:+>, verb = | num[lemme:one] | noun .
+
+// converse of this rule when a cardinal is followed by an ambiguous singular noun-plural verb form
+// e.g. three book (the house)
+3> noun<sg:+>, verb = | ?[det:~], num[lemme:~one] | verb |?[verb:~] |.
+3> noun<pl:+>, verb = | ?[det:~], num[lemme:one] | verb | ?[verb:~] |.
+
+
+// Noun-verb just after a possessive just after another noun
+3> noun, verb = | noun[proper:+], part[gen:+] | noun .
+3> noun, verb = | noun[person:+], part[gen:+] | noun .
+
+
+// Proper nouns and entities...
+
+// For locations
+// if we have an ambiguous word Noun/Adj one of them having the feature modloc (e.g. southern) followed by a noun that has feature Proper, Place then we only keep the word which is modloc
+5> adj<modloc>, noun = adj | ?[proper:+, place:+] | .
+
+
+// ambiguous adj/proper noun in capital letters just before another proper noun is a proper noun. Checked in the lexicon
+5> adj<maj:+>, noun<proper:+> = noun | noun[proper:+] | .
+
+
+// ambiguous nadj[country:+]/proper noun in capital letter preceeding something in capital letter and following something that have no capital letter or just starting the sentence.
+// e.g. Welsh National Farmers Union
+5> nadj<country:+,maj:+,toutmaj:~>, noun<proper> = | | nadj | ?[maj:+] | .
+
+// The Welsh man (see with Claude does not work)
+5> nadj<country:+,maj:+>, noun<proper> = | ?[det:+] | nadj .
+
+5> nadj<country:+,maj:+>, noun<proper> = | ?[maj:~] | nadj | ?[maj:+] | .
+
+// ambiguous adj/past-part starting with capital letter, following BE or HAVE form with no capital and followed by something with noun:+ and having capital is not a past participle
+//e.g. The company is Allied Signal Corp.
+5> adj<maj:+>, verb<partpas:+> = | verb[lemme:be, maj:~] | adj | ?[noun:+,maj:+] |.
+
+
+
+// If something starting with a capital letter is unambiguously tagged as Verb
+// If its preceeded by a title (starting with a capital letter)
+// If its followed by an unambiguous proper noun
+// The we change the verb tag to a Proper noun tag.
+// e.g. President Budge(*verb) Widman is a nice person.
+5> verb[maj:+,toutmaj:~,changed:~] %= | noun[title:+,maj:+,toutmaj:~] | noun[proper=+] | noun[verb:~,maj:+,toutmaj:~] | .
+
+
+// If we have an ambiguous proper noun(person)/verb (with uppercase) following "to" and if somewhere in the left there is the verb "give", then it is a noun and not a verb
+// e.g. Mary gave a book to Peter (Peter is a noun and not a verb)
+5> verb[maj:+,toutmaj:~] %= | ?[lemme:give], ?*, ?[lemme:to,maj:~] | noun[proper:+,c_person:+,maj:+] | ?[pronpers:~] | .
+
+// More general rule for proper nouns.
+// If something is ambiguous proper-noun verb, and if this word is just followed by a word in small letters and preceeded by another word (.e.g it is not a the beginning of a sentence), then we destroy the verb interpretation
+// e.g ...told Israel RADIO it will ....
+5> ?<noun:+>, verb<maj:+,toutmaj:~> = | ? | noun | ?[maj:~,pron:~] | .
+
+
+
+// After a personal pronoun we have a verb if this personal pronoun is not preceeded by a verb
+
+5> aux = | ?[pronpers,nom] | aux .
+
+5> verb, adv = | ?[pronpers,nom] | adv | ?[verb:+,nadj:~,adj:~,noun:~] | .
+// e.g. We further report that ....
+5> verb, adv = | ?[pronpers,nom] | adv | ?[verb:+,indspeech:+], ?[lemme:that] | .
+
+5> verb = | ?[pronpers,nom,obl:~] | verb[changed=+] .
+
+// // // // // // // // // // // // Disambiguation in expressions containing a strong hyphen
+
+// If there is a ing-form followed by strong-hyphen followed by noun, then the ing-form is an adjective
+5> noun, adj, verb<vprog> = adj | punct[form:fhyph,left,right], ?[noun] | .
+
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+// After a Subject pronpers, followed by be-form, followed possibly by adverb followed by ambiguous -ED form, this ED form is a past participle
+// It is also called
+5> verb<partpas>, adj = | pron[startbis], ?[lemme:be], (adv) | verb .
+
+// At the beginning of a sentence an ambiguous -ED form followed by unambiguous noun followed by a PP (preposition determiner) is an adjective and not a verb
+5> verb<partpas>, adj = | | adj | noun[verb:~], prep, det | .
+
+
+
+// ADJ or NOUN after How and before a verb in an interrogative sentence
+// e.g. How rich is he ?
+5> noun<pl:+>, adj = | ?[form:fhow] | adj | verb[noun:~];aux | .
+
+
+// // // // // // // // // // // // NOUN/INFINITIVE VERB Ambiguity 
+
+// After the form "to"
+// It is always a noun if we have ambiguity finite-verb (sg,p3) and plural noun
+// e.g. to plans (noun)
+5> noun<pl:+>, verb<nfin:~> = | ?[form:finfto] | noun .
+
+
+// We have a TO + ambiguous infinitive[trans:+]/something else followed by one or more elements that can be nouns followed by AND followed by TO followed by non ambiguous infinitive verb, then it is infinitive verb
+// e.g. the algorithme to SELECT search terms and to represent the relationships...
+5> verb = | prep[lemme:to] | verb | ?[noun:+], (?[noun:+]), ?[coord:+], prep[lemme:to], verb[noun:~,adj:~] | .
+
+
+//5> nadj<sg:+>, verb = | ?[lemme:from], nadj, ?[form:finfto] | nadj .
+
+// // // // // // // // // // // // ADVERB/INFINITIVE VERB Ambiguity 
+
+// After the form "to"
+// If we have an ambiguous verb/adverb followed by a verb[p3:~], then it is a verb
+// e.g. to better understand the situation....
+// Note, adding a feature nfin on the non finite verb on the right of the adverb.
+5> verb<p3:~>, adv, adj, noun = | ?[form:finfto] | adv | verb[p3:~,nfin=+] | .
+
+
+
+
+// // // // // // // // // // // // NOUN/VERB Ambiguity 
+
+// if we have a proper noun at the beginning of a sentence followed by ambiguous singular verb-plural noun followed by a singular noun then it is a verb and not a noun
+// e.g. Peter drinks wine
+5> noun<pl:+>, verb<sg:+> = | noun[fam:+,proper:+,adj:~] | verb | noun[sg:+] | .
+
+
+// if we have a preposition that is not "to" followed by ambiguous noun,verb which is not a ING form, then the verb interpretation is not possible.
+5> noun<vprog:~>, verb<vprog:~> = | prep[form:~finfto] | noun .
+
+// If we have something which only can be sing. noun or plural verb at the begining of a sentence, followed by (adj;nadj)*, followed by a plural noun, then it is a verb (imperative)
+// e.g. Substitute black beans for the split peas ....
+6> noun<sg:+,adj:~>, verb = | | verb | (adj;nadj)*, noun[pl:+], prep;conj | .
+
+// If we have a form of "be" followed by "no" followed by an ambiguous Noun/Verb then it is a noun and not a verb
+// There have been no studies(noun)
+5> noun, verb = | ?[form:fbe], ?*[adv:+], quant[form:fno] | ?[noun] .
+
+
+// Imperative verb versus noun (or nadj)
+// If ambiguous noun/verb starts a sentence followed by determiner followed by nonambiguous nominal then the ambiguous noun/verb is a verb
+5> verb, ?<noun:+,startbis:+> = verb | det, ?[verb:~] | .
+
+
+
+// NOUN/VERB ambiguity
+// If a verb ambiguous with noun that subcategorizes a certain particle is followed by this particle, then it is a verb and not a noun
+// ON NE PEUT PAS TRAVAILLER AVEC DES VARIABLES A CE NIVEAU...
+// WE HAVE TO DETAIL ALL THE POSSIBLE COMBINATIONS...
+
+5> noun<sc_pto:~>, verb<sc_pto:+> = | noun;conj[coord];adv[notly:~] | ?[verb] | (adv), (pron[pronpers:+,obl:+]), prep[lemme:to] | .
+//5> noun<sc_pto:+>, verb<sc_pto:~> = | noun;conj[coord];adv[notly:~] | ?[noun] | (adv), (pron[pronpers:+,obl:+]), prep[lemme:to] | .
+
+5> noun<sc_pfrom:~>, verb<sc_pfrom:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:from] | .
+
+5> noun<sc_pbetween:~>, verb<sc_pbetween:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:between] | .
+
+5> noun<sc_pout:~>, verb<sc_pout:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:out] | .
+
+5> noun<sc_pabout:~>, verb<sc_pabout:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:about] | .
+
+5> noun<sc_pagainst:~>, verb<sc_pagainst:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:against] | .
+
+5> noun<sc_pas:~>, verb<sc_pas:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:as] | .
+
+
+5> noun<sc_pat:~>, verb<sc_pat:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:at] | .
+
+5> noun<sc_pdown:~>, verb<sc_pdown:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:down] | .
+
+
+
+5> noun<sc_pwith:~>, verb<sc_pwith:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:with] | .
+5> noun<sc_pwith:+>, verb<sc_pwith:~> = noun | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:with] | .
+
+
+5> noun<sc_pfor:~>, verb<sc_pfor:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:for] | .
+
+5> noun<sc_pon:~>, verb<sc_pon:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:on] | .
+
+5> noun<sc_pinto:~>, verb<sc_pinto:+> = ?[verb] | (adv[notly:~]), (pron[pronpers:+,obl:+]), prep[lemme:into] | .
+
+5> noun<sc_pin:~>, verb<sc_pin:+> = ?[verb] | (adv[notly:~]), (pron[pronpers:+,obl:+]), prep[lemme:in] | .
+
+5> noun<sc_pthrough:~>, verb<sc_pthrough:+> = ?[verb] | (adv[notly:~]), (pron[pronpers:+,obl:+]), prep[lemme:through] | .
+
+5> noun<sc_pover:~>, verb<sc_pover:+> = ?[verb] | (adv[notly:~]), (pron[pronpers:+,obl:+]), prep[lemme:over] | .
+
+// same as above with particle and not preposition
+5> noun, verb<p_out:+> = verb | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:out] | .
+
+
+
+// NOUN/VERB ambiguity
+// If something which have one or more verbal tags with p_up:+ feature and is followed by "up" then we keep the verbal interpretation and destroy any nominal or adjectival interpretation
+5> noun, verb<p_up> = ?[noun:~] | (adv[notly:~]), (punct[form:fhyph,left:+,right:+]), (pron[pronpers:+,obl:+]), ?[lemme:up] | .
+
+// Same as above - down
+5> noun, verb<p_down> = ?[noun:~] | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:down] | .
+
+
+// Same as above - on
+5> noun, verb<p_on> = ?[noun:~] | (adv[notly:~]), (pron[pronpers:+,obl:+]), ?[lemme:on] | .
+
+
+// Noun/verb ambig
+// if the word "this" or "that" are starting a sentence, and are followed by ambiguous noun[sg:+], verb[p3:~], then the ambiguous item is a noun
+// e.g. This review analyses
+5> noun<sg:+>, verb<p3:~> =  | det, pron[sg:+,startbis] | noun . 
+
+// if an ambiguous noun[pl], verb[p3:+] is preceeded by a non-ambiguous noun and followed by a non ambiguous adj then it is a verb and not a noun
+5> noun<pl:+>, verb<p3:+,sg:+> = | noun[verb:~] | verb | adj[noun:~,verb:~] | .
+
+// NOUN/VERB ambiguity
+// manner adverb, adjective, ambiguous noun[pl]|verb[3p,sg] -> noun[pl]
+// e.g. environmentally responsible designs
+5> noun<pl:+>, verb<p3:+,sg:+> = | adv[notly:~], adj | noun .
+
+// NOUN/VERB
+// If we have a that followed by an ambiguous noun/verb followed by a non-ambiguous noun followed by no verbs until the end of the sentence, then the ambiguous noun/verb is a verb
+// e.g. They use a pesticide that controls(*noun,verb) algae
+5> noun, verb = | ?[lemme:that] | verb | ?[verb:~], ?*[verb:~], ?[endbis] | .
+
+// Ambiguous noun/verb preceeded by no verbs and followed by no verbs is a verb. This is true when the verb is not started by a capital letter
+5> noun, verb<maj:~> = |?[startbis,det:~,prep:~], ?*[verb:~,prep:~,det:~] | verb | ?[verb:~], ?*[verb:~], ?[endbis] | .
+
+// Same as above but the ambiguous noun verb is followed by no verbs until an infinitive or another embedded clause
+5> noun, verb = |?[startbis], ?*[verb:~], ?[noun:+] | verb | ?*[verb:~], ?[lemme:to], verb | .
+5> noun, verb = |?[startbis], ?*[verb:~], ?[noun:+]  | verb | ?*[verb:~], ?[rel] | .
+
+// CB addition: same as previous rule but in case of a single proper noun
+// e.g. France hopes to solve the problem : hopes --> verb
+
+5> noun, verb = |?[startbis,proper,noun:+] | verb | ?*[verb:~], ?[lemme:to], verb | .
+
+// NOUN/VERB
+// When a verb is taken as a noun in expressions like COMMA AS NP NOUN[pl:+] END_OF_SENTENCE
+// e.g. ..., as Mary Smith reports(noun*)
+5> noun<pl:+>, verb<p3:+,sg:+,indspeech:+> = | punct[comma], ?[lemme:as], ?*[verb:~,prep:~,conj:~], noun+[proper:~,sg:+];noun+[proper] | verb .
+
+
+// NOUN/VERB
+// on the right of a indspeech verb and on the left of a prep, noun[pl]/verb<p3> if there is a following verb
+// He said conditions in Kuwait are deteriorating
+5> noun<pl:+>, verb<p3:+> = | verb[indspeech], (adv;noun[tempexpr]) | noun | prep, ?*[verb:~], verb[noun:~] | . 
+
+// Ambiguous noun[pl]/verb preceede by country name preceeded by preposition and not followed by NP is noun
+// dependent on US aids
+5> noun, verb<vprog:~> = | prep, noun[proper:+] | noun | ?[det:~,noun:~,adj:~] | .
+
+
+// NOUN/VERB
+// In a sequence of ambiguous noun-verbs, if we have an non-ambiguous noun[sg:+] followed by an ambiguous noun[pl],verb[sg], followed by a non-ambiguous noun[sg:+], then the ambiguous noun/verb is a verb
+// e.g. An organization uses (Nouns/Verb) computer message archives
+5> noun<pl:+>, verb<sg:+,pres:+,p3:+> =  | ?[prep:~], ?[noun:+,sg:+,verb:~,adj:~] | verb | ?[noun:+,sg:+,verb:~] | .
+
+
+// NOUN/VERB
+// with a hyphenation + noun after, not a verb
+// e.g. Earlier staff-reduction moves have trimmed about 300 jobs
+5> noun, verb = noun | punct[form:fhyph,left,right], noun |.
+
+
+// PAST-PART/ADJ/VERB
+// If we have an ambiguous past-part, adj, verb just on the right of a noun that is a temporal expression (tempexpr:+) (e.g. yesterday, monday) and just on the left of something which cannot be noun and cannot be verb, then it is a finite verb in preterit
+// e.g. That he arrived monday surprised me
+//5> verb<vpast>, verb<partpas>, adj = | noun[tempexpr] | verb<past> | ?[noun:~,verb:~] | .
+
+
+// if we have an ambiguous ED form that just follows a manner adverb which has directly on its left a form of "have" then it is a past participle
+
+5>  verb<partpas>, adj = | verb[lemme:have], (adv) | verb  .
+
+
+// // // // // // // // // // // // PREP/ADVERB Ambiguity
+// XT  prep + about => about is an adverb
+5> prep<p_about>, adv = | prep | adv.
+
+
+// // // // // // // // // // // // PREP/ADVERB(for particle) Ambiguity
+
+// If we have something that is tagged as verb and followed by an ambiguous prep/adv.
+// If the verb admits a particle which corresponds to the form of the following ambiguous item
+// Then it is an adverb and not a preposition
+// NOTE: We cannot use here variables and have to put all the cases
+
+5> prep<p_off>, adv = | verb[p_off] | adv  .
+5> prep<p_about>, adv = | verb[p_about] | adv .
+5> prep<p_across>, adv = | verb[p_across] | adv .
+5> prep<p_up>, adv = | verb[p_up] | adv .
+5> prep<p_around>, adv = | verb[p_around] | adv .
+5> prep<p_apart>, adv = | verb[p_apart] | adv .
+5> prep<p_back>, adv = | verb[p_back] | adv .
+5> prep<p_over>, adv = | verb[p_over] | adv .
+
+
+// // // // // // // // // // // // PREP/CONJUNCTION Ambiguity
+
+// Before and After except etc. mistagged as conjunction
+// If before or after are at the beginning of a sentence, if they are followed by an NP and no verbs until a comma,
+// Then it is to be considered as a preposition and not as a conjunction
+// e.g. Before*CONJ adjournment Monday afternoon, the Senate is expected to approve the study.
+5> prep, conj<sub:+> = ?[conj:~,sub:~] | (?[det:+]), ?*[adj:+], noun, ?*[verb:~], punct[comma] |.
+
+
+// Same as above when instead the comma we find a wh- introducing a sentence
+5> prep, conj<sub:+> = ?[conj:~,sub:~] | (?[det:+];?[quant:+]), ?*[adj:+], noun, ?*[verb:~], ?[wh:+], ?*[verb:~], ?[verb] |.
+
+
+// Prep/Conj ambiguity
+// If after and before are tagged as prep when they are conjunctions 
+// e.g. After he left ....
+5> prep, conj<sub:+> = conj | pron[nom,obl:~,pronpers], verb[noun:~] |.
+
+5> prep, conj<sub:+> = | | conj | (?[det:+];?[quant:+]), ?*[adj:+], noun+, ?[aux];?[verb:+,noun:~] | .
+
+
+// Prep/Conj
+// If ambiguity between conj and prep preceeded by a verb and followed by something that can be an NP followed by a verb that is not preceeded by any wh, or conjunction then it is a conj and not a prep
+5> prep, conj<sub:+> = | ?[verb,nfin];?[verb:+,noun:~] | conj | (?[det:+];?[quant:+]), ?*[adj:+], noun+, ?[aux];?[verb:+,noun:~] | .
+
+
+// When we have an NP preceeded by AS and followed by a FINITE VERB, then AS is a conjunction and not a PREPOSITION
+// Note: Disambiguation NOUN/VERB have to preceed 
+// (Search "As Mary Smith reports", "As the global competition (for capital) heats up, ..." )
+5> prep, conj<sub:+> = conj | ?*[verb:~,prep:~,conj:~], noun;nadj, ?*[verb:~], verb[verb:+,pres:+,p3:+,sg:+,hmmselection:~], (adv), punct | .
+
+
+
+// // // // // // // // // // // // ED Forms
+
+// Confirmation rule
+// An ED form having feature indspeech and followed by THAT is a verb
+5> verb<indspeech:+,lemme:"%+ed"> = verb[changed=+] | ?[lemme:that] | .
+
+ 
+// CH - Bad disambiguation of a past-participle which is tagged as a verb when it is between a determiner and a noun and if there is a verb on the right at the same level of embedment
+5> verb<past:+>, adj, verb = | det, (quant[sup]), (adv[notly:~]), adj*[verb:~], (?[prefix:+], punct[form:fhyph,left,right]) | adj[vpap=+,changed=+] | ?[noun], (?[noun,verb:~]), verb[noun:~,adj:~] |.
+
+
+// Past participle tagged as verb when it is after a preposition[of] preceded by a nominal and before a non-ambiguous noun
+// e.g. fragance of brewed(*verb) tea
+5> verb[past:+,partpas:+] %= | ?[noun], prep[lemme:of] | adj[vpap=+,changed=+] | ?[noun,verb:~] | .
+
+
+// When there is a sentence starting with noun, then adverb, then ambiguous ED-form and no verbs until the end
+// it is a verb and not an adv
+5> verb<past:+>, adj = | ?*[verb:~],  noun, adv;noun[tempexpr:+] | verb | ?[noun:+];det  | .
+
+
+// CH if an ambiguous verb-adj (ED-form) bears a feature subcat that just matches with a following prepositon (and the adjective does not have this feature, then it is not an adjective
+//5> verb<past:+,sc_pwith:+>, adj<sc_pwith:~>, verb = verb[changed=+] | prep[sc_pwith] | .
+//5> verb<past:+,sc_pfrom:+>, adj<sc_pfrom:~>, verb = verb[changed=+] | prep[sc_pfrom] | .
+
+// EN COURS - toutes les combinaisons
+// ATTENTION Strawberries served with cream are delicious... we don't want SERVED as finite verb.
+
+
+// // // // // // // // // // // // ING Forms
+
+// ING-form that is ambiguous adj,noun,verb,prep (regarding, concerning,including...)
+// Just at the beginning of a sentence if we have this kind of ing-forms just followed by (det) (adj)* noun this is a preposition
+// Using feature startbis (FT)
+5> noun<vprog>,verb,adj,prep = prep[startbis, changed=+,vprog=+] | (det;pron[det,gen];quant), adj*, noun | .
+
+5> noun<vprog>,verb,adj,prep = | punct[comma];punct[form:fopar] | prep[changed=+,vprog=+] | (det;pron[det,gen];quant), adj*, noun, ?*, punct[comma] | .
+
+// ING-form that is ambiguous adj,noun,verb,prep 
+// At the end of the sentence if no verbal form follows
+5> noun<vprog>, verb, adj, prep =  | ?[det:~,prep:~,conj:~] | prep[changed=+,vprog=+] |@ (det;pron[det,gen];quant), adj*, ?*[verb:~] | .
+
+
+
+// ING-form that just preceeds a determiner is a verb
+5> noun<vprog>, verb, adj,prep = |@ ?*[verb:~,indspeech:~] | prep[changed=+] | det | .
+
+
+// When an ing-form has a capital letter and is between two proper nouns, it is a proper noun. 
+// Feature changed:+ avoid the application of later disambiguation rules.
+// Delete after integration of FT work on proper nouns
+// period:~ added by CB : for "Year Ending Group"
+5> noun[vprog] %= | noun[maj:+,toutmaj:~,let:~,period:~] | noun[changed=+,proper=+,maj=+] | noun[maj:+,toutmaj:~] | .
+
+
+// When a ing-form follows a form of "be" then it is a verb
+5> noun<vprog>, adj<vprog>, verb = | ?[form:fbe] | verb[changed=+] .
+
+// Disambiguation between a noun and a verb in the progressive form when we have a coordination in between.
+5> noun<vprog>, adj, verb = | verb[vprog,changed], (det), ?*[verb:~], conj[coord] | verb[changed=+] |@ (det), ?*[verb:~] | .
+
+
+// CH 11th July
+// Bad disambiguation of ING-FORM taken as a verb when it is in fact an adjective in the context
+// QUANTIFIER PREP[of] ING-FORM NOUN[plural]
+// (hundreds of interesting books)
+5> verb<vprog>, noun, adj = | ?[noun,numer], prep[form:fof] | adj[changed=+] | ?[noun,pl] |.
+
+
+// If an ing-form is in the plural, then it is necessarily a noun
+5> noun<vprog:+,pl:+> = noun[changed=+].
+
+// Ing-form after adjectives/noun and just before a verb in a finite form
+5> noun<vprog>, adj, verb = | adj[startbis];nadj[startbis], ?*[verb:~,det:~,prep:~] | noun[changed=+] | verb[pers] | .
+
+5> noun<vprog,changed:~>, adj, verb = | det;quant;pron[det,gen], adv*, dig*, ?*[adj] | noun[changed=+] | ?[noun:~] | .
+
+5> noun<vprog,changed:~,maj:~>, adj, verb = | det;quant;pron[det,gen], adv*, dig*, ?*[adj] | adj[changed=+] | ?[noun:+] | .
+
+// // // // // // // // // // // // Ambiguity in interrogative forms // // // // // // // // // //
+
+// Verb-Adjective ambiguity in interrogative form between a form of DO and a Personal pronoun
+// e.g. How do I clean(adj/transitive_verb) teapots
+
+5> adj, verb<trans> = | verb[lemme:do];?[lemme:can];?[lemme:will], ?[pron,pers,nom] | verb | noun, ?*[verb:~], punct[form:fquest] | .
+
+//ASSIGNING THE FEATURE "PROPER" TO NOUNS THAT ARE NOT TAGGED AS SUCH\\
+
+//This rule must precede other Proper noun rules so that the second noun "Badran" is assigned the feature proper!
+//{AP{Prime} Minister+TITLE Mudar+MAJ Badran+MAJ}
+14> noun[maj:+,proper:~,guess:+] = | noun[title] | noun[proper=+].
+
+
+
+// Verb-Adjective
+// After a copula followed by an adverb[degree], followed by ambiguous verb/?[adj:+] then it is an adjective
+// e.g. It has become increasingly clear that it is a problem
+15> ?<adj:+>, verb<p3:~> = | ?[cop:+], adv[degree:+] | ?<adj:+> . 
+
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// For HMMSELECTION
+18> ? = ?[hmmselection:+] .
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+//***********************************************DEFINITE VPAPS***********************************************
+
+
+//These rules remove the feature "past" from PastBoth verb forms that are unambiguously past participles
+
+
+//Rule removes "past" feature from pastboth verbs that begin sentence
+//1210>GROUP{SC{Completed PP{in NP{1560}, its brilliantly FV{colored},
+20> verb[past:+,partpas:+] = verb[startbis, past=~].
+
+
+//Rule removes "past" feature from pastboth verbs that follow "those"
+//those jailed for life were released
+20> verb[past:+,partpas:+] = |?[form:fthose]| verb[past=~].
+
+
+//Rule removes "past" feature from pastboth verbs preceded by a comma and optional close quotation marks
+//627>GROUP{NP{Labor}, headed PP{by NP{Vice Premier Shimon Peres}}, FV{responded}
+//FV{should} NP{the Iran-Iraq war} , FV{halted} by an NP{August} NP{1988 cease-fire} , 
+20> verb[past:+,partpas:+] = |?[comma:+], (?[form:fcquotes])|  verb[past=~]  |prep[form:fby]|.
+
+
+//its FV{brilliantly colored} , fanciful onion domes are a world-famous symbol
+//5> verb[past:+,partpas:+] = |?[gen:+], (?[adv:+])|  verb[past=~].
+
+
+//All pastboths that are preceded by a pastboth are VPAPS
+//He ordered freed+VPAP all those who
+20> verb[partpas:+,past:+] = |?[partpas:+,past:+]| ?[past=~].
+
+
+//Pastboths that follow the past tense of "have" are VPAPS
+//NP{Noriega} FV{had}} NP{himself} named 
+//NP{Ceausescu} FV{had}} PP{in NP{AP{recent} years}} exported
+//The Kleene plus is used instead of star to ensure verbs followding "had" are 
+//picked up as NFVs 
+20> verb[partpas:+,past:+] = |?[form:fhave,past:+], ?+[verb:~,punct:~,conj:~,rel:~,wh:~]| ?[past=~].
+
+
+//************************************************************VPAP ADJs*************************************************
+
+
+//CHECK THIS RULE AGAIN!!
+//THIS TAGGING ERROR CAN BE RECTIFIED BY RULES WHICH SHOULD ALLOW A VPAP VERB
+//TO BE INCLUDED IN A NOUN PHRASE.  
+//Hoosier FV{United} Methodist Church about an hour before the program began - Tagging Error
+//NP{Hoosier United Methodist Church}
+20> verb[past:+,partpas:+] = |?+|  verb[maj:+,past=~].
+
+
+//the plane 's emergency locator signal
+20> nadj %=   noun |part|.
+
+
+
+
+// CH May 2002
+// Bad disambiguation of "since" which is taken as a conjunction when it has to be a preposition
+// Same rule the other way round (no verbs following)
+20> conj[form:fsince] %= prep[form:fsince,temp_rel:starts_with] |@ ?+[verb:~,conj:~,wh:~], ?[endbis] | .
+// XT January 2007, Same rule with a "to" verb
+20> conj[form:fsince] %= prep[form:fsince,temp_rel:starts_with] |@ ?*[verb:~,conj:~,wh:~], prep[form:finfto], verb, ?*[verb:~,conj:~,wh:~], ?[endbis] | .
+
+// CH 24th October 2001
+// Bad disambiguation of the word "place" which is taken as a Verb when an adverb occurs between one form of "take" and this word "place"
+// e.g. This event took usually place in Atlanta. 
+20> verb[form:fplace,pres] %= | verb[form:ftake], adv | noun[sg:+,noun:+,form:fplace] .
+
+
+// CH 28th September 2001
+// Bad disambiguation between noun and verb. 
+// There is no finite verbs in the whole sentence and the word before the infitinitve introduced by to can also be a verb and is preceeded by a noun
+// | | 
+20> noun[hmm_verb] %= | noun[proper:~,title:~] | verb[verb:+,pres:+] | (punct[form:fquotes]), prep[form:finfto] , verb, ?[verb:~] | .
+
+
+
+// CH 26th October 2001
+// Bad disambiguation between noun and infinitive form of a verb.
+// HMM error due to the presence of quotes.
+// When we find a TO, followed by a noun[sg:+]  which can be a verb
+// Which is followed by a quote that is followed by a NP and this NP is followed by no verbs until the end of the sentence
+// THEN this lexical item is a verb in the infinitive form and not a noun
+// e.g. It urges that the city "take steps to REMEDY" this problem.
+20> noun[sg:+,hmm_verb,changed:~] %= | prep[form:finfto], (punct[quote:+]) | verb[verb:+,pres:+] | (?[det:+]), (quant), adj*, (?[noun:+]), ?*[verb:~], punct[sent] | .
+
+
+// Bad disambiguation between adjective and infinitive 
+// When we found a form of DO followed by an adverb followed by an adjective (that is hmm_verb) followed by something that is not a noun, then we give the tag infinitive verb to this form
+// The jury did not elaborate(*adj), but ....
+20> adj[hmm_verb:+] %= | verb[form:fdo], adv | verb[verb:+, pres:+] | ?[noun:~] | .
+
+
+
+
+// CH 14th September 2001
+// Bad disambiguation adjective/verb[past] when it is preceeded by an adverb that is just preceeded by a personal pronoun
+// e.g. They also voiced(verb) support
+20> adj[adj:+] %= | pron[personal, nom], adv | verb[past:+] | ?[noun:+] | .
+
+
+// CH 26th October 2001
+// Bad disambiguation adjective/past-participle.
+// When we have something tagged as an adjective in a very near context from a BE-FORM (with some restrictions
+// of what can occur between the BE-FORM and this adjective
+// Then we tagged it as a Past-Participle.
+20> adj[adj:+,hmm_vpap:+] %= | verb[form:fbe,auxbh:+], (adv*), (punct[form:foquotes]), (punct[form:fcquotes]) | verb[partpas:+, VPap:+,adj:+] .
+
+
+// CH 12th September 2001
+// Bad disambiguation verb[pastpart]/adjective when it is in the following context
+// DET ADJ COMMA verb[pastpar]/adjective NOUN
+20> verb[partpas:+] %= | det, adj, punct[comma] | adj[VPap:+,partpas:+] | ?[noun:+] | .
+
+
+
+
+
+// CH 8th November
+// Bad disambiugation between adjective and verb in preterite form
+// When an ambiguous partpas-adj/verb just follows a preposition (in or of) that follows a gerund that follows a form of be
+// and is followed by something nominal (adj, nadj or noun), then it is an adjective and not a finite verb
+// e.g He is lacking in experienced (*Verb/but adj) personnel.
+// CHECK if no undesirable side-effects !!!!
+20> verb[partpas:+] %= | verb[form:fbe], verb[vprog:+], prep[form:fin];prep[form:fof] | adj[VPap:+,partpas:+] | (adj), ?[noun:+] |.
+
+
+// CH
+// Bad disamb adj/verb (ed form) in a coordination and within a NP
+// e.g. On hot toasted and *buttered(VERB) French bread.
+// Check that the head of NP is not determined and is not in plural in order to avoid bad side effects 
+20> verb[partpas:+] %= | prep, (det), adj, adj[partpas:+], conj[coord:+] | adj[partpas:+] | adj*, (nadj[country:+]), noun[sg:+] | .
+
+
+// CH - Bad disamb ED form. It is an adjective when non verbal elements from the beginning and then ED followed by NP, PP* then followed by VERB
+// e.g. Fresh strawberries *served(verb) with cream are delicious
+20> verb[partpas:+] %= | (prep), (det), adj*, noun | adj[partpas:+] | prep, (det), adj*, noun, verb[vprog:~] | . 
+
+
+// CH 4th September 2001
+// Both before a verb that is not followed by the word AND (they both play and smile)
+// then both is not a conjunction but a quant (Both decided to leave)
+20> conj[form:fboth] %= quant[form:fboth,predet:+,quant:+] | verb, adv*, ?[coord:~] | .
+
+// CH 16th August
+// Correcting a bad disambiguation of WHAT when it is followed by a verbal finite form.
+20> det[wh:+] %= pron[wh:+] | verb |.
+
+
+// CH 24th August
+// Consider that we have a wh determiner before a cardinal that is followed by a noun, if this wh is an interrogative (wh at the beginning of the sentence)
+20> pron[wh:+,first] %= det[wh:+] | ?[card:+], adj*, noun+ |.
+
+20> pron[wh:+] %= | prep[first] | det[wh:+] | ?[card:+], adj*, noun+ |.
+
+// CH 12nd October
+// If the word which is followed by a noun (possibly preceeded by adjective(s) )
+// Then its a determiner and not a pronoun, if this wh is an interrogative. (wh at the beginning of the sentecne
+20> pron[wh:+,first] %= det[wh:+] | adj*, noun |.
+
+20> pron[wh:+] %= | prep[first] | det[wh:+] | adj*,noun | .
+
+
+
+// ================================= ADJ/VERB or NOUN/VERB disambiguation errors ============================
+// ================================= trying to limit them ===================================================
+
+// CH 15th October.
+// Adj-Verb disambiguation 
+// If we have an adj (which is possibly a verb) that follows an NP that follows a WH 
+// If this adj is followed by a PP and a question mark
+// Then this adjective is badly disambiguated and is in fact a verb
+// E.g. How many inhabitants live(*adj) in Paris ?
+20> adj[hmm_verb] %= | ?[wh], quant*, adj*, noun | verb[verb:+, pres:+] |@ prep, ?*[verb:~] | .
+
+
+// Same rule as above for a NOUN-VERB bad disambiguation
+20> noun[hmm_verb] %= | ?[wh], quant*, adj*, noun | verb[verb:+, pres:+] |@ prep, ?*[verb:~] | .
+
+
+// Same rule as above for a nadj-VERB bad disambiguation
+20> nadj[hmm_verb] %= | ?[wh], quant*, adj*, noun | verb[verb:+, pres:+] |@ prep, ?*[verb:~] | .
+
+
+
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// DISAMBIGUATION ERRORS  -- Need a very large context and can not be dealt in previous stages
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// Rule XXXXX
+// Bad tagging NOUN-VERB 
+// Starting NP in which there is a plural noun and a sing noun[hmm_verb:+] followed by anything but verb or if it is verb it must be in an embedded clause (trying to save some dependencies that will not be calculated otherwise)
+// e.g. The legislators work(*NOUN) with official to pass enabling the new legislation.
+20> noun[hmm_verb:+,sg:+] %= | ?[startbis,verb:~], ?*[verb:~], det;pron[det,gen];quant, adj*, noun[pl] | verb[pl:+,verb:+,pres:+,p3:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+20> nadj[hmm_verb:+,sg:+] %= | ?[startbis,verb:~], ?*[verb:~], det;pron[det,gen];quant, adj*, noun[pl] | verb[pl:+,verb:+,pres:+,p3:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+
+20> noun[hmm_verb:+,sg:+] %= |det[startbis];pron[det,gen,startbis];quant[startbis], (adj;nadj)*, noun[pl:+] | verb[pl:+,verb:+,pres:+,p3:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+20> nadj[hmm_verb:+,sg:+] %= |det[startbis];pron[det,gen,startbis];quant[startbis], (adj;nadj)*, noun[pl:+] | verb[pl:+,verb:+,pres:+,p3:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+
+20> noun[hmm_verb:+,pl:+] %= | det[startbis];pron[det,gen,startbis];quant[startbis], (adj;nadj;noun)*, noun[sg:+] | verb[sg:+,pres:+,p3:+,verb:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+20> nadj[hmm_verb:+,pl:+] %= | det[startbis];pron[det,gen,startbis];quant[startbis], (adj;nadj;noun)*, noun[sg:+] | verb[sg:+,pres:+,p3:+,verb:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+20> noun[hmm_verb:+,pl:+] %= | noun[sg:+,proper:+,startbis] | verb[sg:+,pres:+,p3:+,verb:+] |@ (?[verb:~];?[nfin];?[vprog])*, ?[verb:~,endbis] | .
+
+
+// 20> noun[hmm_verb:+,sg:+] %= | ?*[verb:~], (det), (adj)*, noun[pl] | verb[pl:+,verb:+,pres:+,p3:+] | ?*[verb:~], ?[last,verb:~]| .
+
+// CH 8th October
+// Noun-Verb disambiguation
+// If something is tagged as a noun and is ambiguous noun-verb and appears in an interrogative sentence just after a NP that follows the DO auxiliary, and 
+// if no other verbs are present in the sentence then the word is a verb
+// e.g. When did Nixon visit(*noun) China ?
+// e.g. What day of the week did Christmas fall(*noun) on ?
+// e.g. How many consecutive games did Lou Gerhit play(noun*) ?
+20> noun[hmm_verb:+] %= | ?[wh:+], ?*[verb:~], verb[form:fdo], (det), (adj;nadj)*, (noun[proper]), noun | verb[inf=+] |@ ?*[verb:~], ?[verb:~,endbis] | .
+
+20> noun[hmm_verb:+] %= | ?[wh:+], ?*[verb:~], aux, (det), (adj;nadj)*, noun[proper] | verb[inf=+] |@ ?*[verb:~], ?[verb:~,endbis] | .
+
+20> noun[hmm_verb:+] %= | ?[wh:+], ?*[verb:~], verb[form:fdo], pron | verb[inf=+] |@ ?*[verb:~], ?[verb:~,endbis] | .
+
+20> noun[hmm_verb:+] %= | ?[wh:+], ?*[verb:~], verb[form:fdo], pron | verb[endbis, inf=+]  .
+
+
+// CH, Jan, 2002
+// Noun-Verb disambiguation
+// If we found an introducer of an embedded sentence (that, wh-pronoun etc.) that is followed by a NP only in which the last 
+// element is ambiguous noun/verb and is preceeded by something which has the feature noun
+// Then this last element is a verb and not a noun
+// e.g. I think that Republicans leave (noun*).
+20> noun[hmm_verb:+] %= | ?[form:fthat], ?*[verb:~], ?[noun] | verb[pres:+, verb:+] | punct[sent] | .
+
+20> noun[hmm_verb:+,endbis:+] %= | ?[form:fthat], ?*[verb:~], ?[noun] | verb[pres:+, verb:+] .
+
+
+// CH
+// Noun-Verb disambiguation
+// There are companies in the United States that produce(*noun) antimony
+//20> noun[hmm_verb:+] %= | ?[verb:~], ?[form:fthat] | verb[pres:+,verb:+] | (noun)+
+
+// CH, Jan 2002
+// Noun-Verb disambiguation
+// If a sentence starts with a wh:+ and if between this wh and a following comma (,) no verb is found
+// And if the last element before the comma is a noun which also could be a verb, then we choose the verb
+// e.g. When the gubernatorial campaign starts(noun:*), Caldwell is expected ....
+20> noun[hmm_verb:+] %= | ?[wh,startbis], ?*[verb:~], ?[noun] | verb[pres:+,verb:+] | punct[comma] |.
+
+
+// CH, March 2002
+// Noun-Verb disamb.
+// Same as above when the sentence starts with a that (completive)
+// e.g. That the gubernatorial campaign starts(noun:*), I knew that.
+20> noun[hmm_verb:+] %= | ?[form:fthat,startbis], ?*[verb:~], ?[noun] | verb[pres:+,verb:+] | punct[comma] |.
+
+
+// CH, March 2002
+// Same as above (Sentence starting with a THAT-clause, when the verb of the embedded sentence is followed by a non-ambiguous finite verb
+// e.g. That the gubernatorial campaign starts(noun:*) was a good news.
+20> noun[hmm_verb:+] %= | ?[form:fthat,startbis], ?*[verb:~], ?[noun] | verb[pres:+,verb:+] | verb[hmm_feat:~] |.
+
+
+// CH 29th November
+// Noun-Verb ambiguity
+// If at the very beginning of a sentence we have a lexical unit ambiguous VERB/Plural-noun tagged as a noun
+// AND if it is followed by an ambiguous VERB/Singular-Noun tagged as a Noun
+// AND if it is followed either by a facultative adjective followed by a plural noun
+// THEN we decide that the second item is not a noun but a verb
+// e.g. Changes offer new possibilities
+20> noun[hmm_verb,sg:+]  %= | noun[noun,hmm_verb,pl,startbis] | verb[verb:+,pres:+] | (adj), ?[noun:+,pl:+] |.
+
+
+// CH, 29th April
+// non-ambiguous verb followed by comma, followed by badly tagged noun(in fact a verb) followed either by another comma or a coordinator
+// e.g. The lady eats, plays(*noun) and drinks
+20> noun[hmm_verb,pl:+] %= | verb[p3:+,sg:+,pres:+] , punct[comma] | verb[verb:+,pres:+,p3:+,sg:+] | punct[comma] |.
+
+20> noun[hmm_verb,pl:+] %= | verb[p3:+,sg:+,pres:+] , punct[comma] | verb[verb:+,pres:+,p3:+,sg:+] | conj[coord:+] |.
+
+
+// CH, 29th April
+// bad disambiguated noun-pl/verb-sg followed by coordination followed by safe verb in singular
+// e.g. The lady plays and eats
+20> noun[hmm_verb,pl:+] %= | noun[sg:+] | verb[verb:+,pres:+,p3:+,sg:+] | conj[coord], verb[p3,sg,pres] | .
+
+
+
+// CH, 29th April
+// Noun-Verb ambiguity
+// If we have a verb in a singular form followed by "AND" followed an ambiguous Noun-plural/Verb-singular and just followed buy another noun,
+// Then, the noun is bad disambiguated and is a verb
+// e.g. The lady eats and plays(*noun) cards.
+20> noun[hmm_verb,pl:+] %= | verb[p3:+,sg:+,pres], conj[coord:+] | verb[verb:+,pres:+,p3:+,sg:+] | noun | .
+
+// CH, 29th April
+// Same as above when the second bad disambiguated noun is followed by the end of a sentence
+20> noun[hmm_verb,pl:+] %= | verb[p3:+,sg:+,pres], conj[coord:+] | verb[verb:+,pres:+,p3:+,sg:+] | punct | .
+
+
+
+
+// When a noun is taken as a verb after a be form followed by an adverb
+// Note: sg:+, p3:+ ensures that the ambiguous noun/verb form has a final "S"
+// e.g. They are not partners for peace
+20> verb[hmm_noun,sg:+,p3:+] %= | verb[form:fbe], adv | noun[noun:+,pl:+] .
+ 
+20> verb[hmm_noun,sg:+,p3:+] %= | verb[form:fbe], noun[tempexpr] | noun[noun:+,pl:+] .
+
+
+// No verb since the beginning of the sentence, then ambiguous noun/verb followed by possible noun(s) followed by unambiguous verb, then this is a noun and not a verb
+// eg. US oil(N/V)  operations are based in ..."
+20> verb[hmm_noun:+, aux:~, auxbh:~,changed:~] %= | ?[startbis], ?*[verb:~,aux:~,conj:~] | noun[sg:+,noun:+] | ?*[noun:+], verb[hmm_noun:~] | .
+
+
+// EN COURS
+
+
+// Noun/infinitive verb (without to) ambiguity
+// In the expression XXX see NP V-inf when NP+V-inf is taken as a single NP
+// e.g. They saw an Israeli missile strike(*Noun) Abu Zeid's home.
+20> noun[hmm_verb,sg:+] %= | verb[lemme:see], (det), ?*[adj], ?[noun] | verb[trans:+,verb:+,nfin=+,bf=+] .
+
+
+// CH 16th August
+// Transform a bad disambiguation noun/infinitive verb into verb in the case of interrogative sentences with DO that have no other finite verb
+// eg What does the company manufacture(*noun) ? or When does your brother leave(*noun)
+// or  What products did Qintex group manufacture ?
+20> noun[hmm_verb] %= | ?[wh], (noun), verb[form:fdo], (det;quant), adj*, noun |  verb[trans:+,verb:+,pres:+] | ?*[verb:~,noun:~], punct[form:fquest] |.
+
+
+
+
+// CH 23 August
+// Same as previous for a proper noun or pronoun
+20> noun[hmm_verb] %= | ?[wh], (noun), verb[form:fdo], noun[proper];pron, noun* |  verb[inf=+] | ?*[verb:~,noun:~], punct[form:fquest] |.
+
+
+// CH 16th August
+// Similar as previous rule in case of a bad disambiguation adj/verb
+// eg. Where does NP live ?
+20> adj[hmm_verb] %= | ?[wh], verb[form:fdo], det;quant, adj*, noun |  verb[inf:+] | ?*[verb:~,noun:~], punct[form:fquest] |.
+
+
+// CH 23 August. Same as above for proper nouns or personal pronouns
+20> adj[hmm_verb] %= | ?[wh], verb[form:fdo], noun[proper];pron |  verb[inf:+] | ?*[verb:~,noun:~], punct[form:fquest] |.
+
+
+// CH July 2002
+// What strait separates(noun*) North America from Asia ?
+20> noun[hmm_verb] %= | ?[wh], (adj), ?[noun] | verb[trans:+,verb:+,pres:+] | ?*[verb:~], punct[form:fquest] |. 
+
+
+// CH 24 August. Correction of the bad disambiguation of LAST (considered as nadj when it is a verb) in the case of a sentence that started with "How long" just followed by an auxiliary
+// NOTE: The feature inf:+ is not well done but it is the only way I found to have then the VLINK relation between DO-FORM and LAST. The feature partpas:+ will build a FV in the chunker.
+20> nadj %= | adv[wh,form:flong], ?[form:fdo], ?*| verb[inf:+] | ( punct ) | .
+
+// CH 24th August
+// Same as above for auxiliaries verbs
+20> nadj %= | adv[wh,form:flong], ?[aux], ?*| verb[inf:+] | ( punct ) | .
+
+// CH 28th August
+// Correcting a bad disambiguation of BEFORE, AFER taken as CONJ when they're in fact PREP
+//20> conj %= || prep | (det), (dig), adj*, ?[noun:+], punct[comma:+], (det), (dig), adj*, ?[noun:+], ?[verb:+] | .
+// CHECK
+
+// CH 29th Augst
+// If the word ONE si followed by a PP and starts the NP, then it is a num and not a pronoun
+// In the BC, 578 "one of" with one as numeral agains 25 "one of" with one as pronoun
+20> pron[form:fone] %= | | num[sg=+] | ?[form:fof] | .
+20> pron[form:fone] %= |?[det:~,adj:~,noun:~,pron:~,quant:~,prep:~] | num[sg=+] | ?[form:fof] | .
+
+
+
+
+// ING-FORMS (vprog feature)
+
+
+
+// CH 19th September
+// Bad disambiguation between a noun and a verb in the progressive form when we have a coordination in between.
+//20> noun[vprog:+] %= | verb[vprog:+], conj[coord:+] | verb[verb:+,vprog:+,prog:+,changed=+] | ?[noun:~,adj:~] | .
+
+// CH 28th Nov.
+// Bad disambiguation between a noun and a verb in the progressive form when we have a coordination in between.
+// e.g He is eating bread and drinking.
+//20> noun[vprog:+] %= | verb[vprog:+], (det), (adj), (noun), conj[coord] | verb[verb:+,vprog:+,prog:+,changed=+] | (det), (adj), (noun) |.
+
+// CH 19th sept.
+// Bad disambiguation between an ADJ and Verb in a progressive form
+// e.g. For influencing debates and promoting policies
+// The HMM takes promoting as an ADJ because of the coordination and the previous noun.
+// e.g. He is eating bread and drinking(*ADJ) milk
+//20> adj[vprog:+] %= | verb[vprog:+], (det), (adj), (noun), conj[coord] | verb[verb:+,vprog:+,prog:+,changed=+] | (det), (adj), noun |.
+
+
+// CH, 26th October
+// NOTE: SOME PARTIAL DISAMBIGUATION RULES ARE DONE AT THE BEGINNING OF THE FILE
+// Bad disambiguation VERB/ADJ (ING-FORM)
+// When we are in the context of adjective coordination and one of the coordinated is tagged as a VERB and is a ING-FROM, then we choose the ING-FORM
+//20> verb[vprog:+,hmm_adj] %= | (adv), adj[hmm_verb:~], (punct[comma]), (adv), (adj[hmm_verb:~]), (conj[coord:+]), (adv) | adj[vprog:+,changed=+] | conj[coord:+], (adv), adj | .
+
+// CH 21st September
+// Bad disambiguation between a verb in a progressive form and a noun
+// e.g. "``That ending is 1976 and it's now 14 years later." 
+// The rule stipulates that if we have a THAT at the beginning of a sentence followed by a ING-form that can be a noun, followed by a finite verb and if there is no other finite verb somewhere in the right, then the ING-form is a noun
+20> verb[vprog:+,prog:+,hmm_noun:+] %= | ?[form:fthat,maj] | noun[vprog:+,changed=+] |@ verb[verb:+,p3], ?*[verb:~], ?[endbis] |. 
+
+
+// CH 21st September
+// If the above rule has been used, then the THAT is not a conj but a determiner
+20> conj[form:fthat] %= det[form:fthat] | noun[vprog:+,changed=+] | .
+
+
+
+// CH 13th December
+// Bad disambiguation between verb/adj (ing-form)
+// If we have a verb with feature sc_ing that is just followed by an ING-FORM tagged as adjective, then this tagging is an error and will be changed to verb
+// e.g. He likes fishing(*adj)
+20> adj[vprog:+] %= | verb[sc_ing] | verb[vprog:+,prog:+,verb:+,changed=+] | ?[noun:~] | .
+
+// OK
+// CH
+// If an ing-form has been changed as a noun (feature changed:+) but is preceeded by a determiner and followed by a noun, then we tagged it as an adjective
+// e.g Sequence analysis of the corresponding(*noun) gene.
+//20> noun[vprog:+,changed:+] %= | det;quant | adj[vprog:+,changed:+,prog:+] | ?[noun:+] | .
+// XT added sg feature (does not work when plural)
+20> noun[vprog:+,changed:+,sg] %= | det;quant | adj | ?[noun:+] | .
+
+

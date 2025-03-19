@@ -1,0 +1,292 @@
+string wcpath='W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\Corpus\SemEval\Restaurants\Restaurants\';
+string lcpath='/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/Corpus/SemEval/Restaurants/Restaurants/';
+
+string wgpath='W:\users\Roux\xip\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\GRMFILES\';
+string lgpath = '/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/';
+
+string cpath;
+string path;
+
+if (_sep=='/') {
+     cpath=lcpath;
+     path=lgpath+'scoop-restaurant.grm';
+}
+else {
+     cpath=wcpath;
+     path=wgpath+'scoop-restaurant.grm';
+}
+
+
+parser p(path);
+
+//Variables
+vector before,after,noterms;
+vector sentences;
+
+sitreemap allthewords;
+ismap alltheindexes;
+
+function storewords(string s) {
+     int i;
+     if (allthewords.test(s)==false) {
+          i=allthewords.size()+1;
+          alltheindexes[i]=s;
+          allthewords[s]=i;
+          return(i);
+     }
+     return(allthewords[s]);
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------Parsing stuff----------------------------------------------------------------------------
+map noeuds;
+vector vnoeuds;
+
+
+function vider() {
+     noterms.clear();
+     before.clear();
+     after.clear();
+     vnoeuds.clear();
+     noeuds.clear();
+}
+
+function concatenatenode(node n) {
+     int left,right;
+
+     n.offset(left,right);
+     string key=left+":"+right;
+     noeuds[key]=vnoeuds.size();
+     vnoeuds.push(n);
+}
+
+function addfeatures(int debut,string bs,svector features) {
+     if (debut<0 || debut>=vnoeuds.size())
+          return;
+
+     node n=vnoeuds[debut];
+     if (n==null || n.pos()=="PUNCT")
+          return;
+
+     features.push(bs+n.surface());
+     features.push(bs+n.pos());
+     string s;
+     for (s in n.features())
+          features.push(bs+s);
+}
+
+
+function enrichiravant(ivector courant,int debut,int dernier) {
+     node n=vnoeuds[debut];
+     if (n==null || n.pos()=="PUNCT")
+          return;
+
+     svector thefeatures;
+     addfeatures(debut,"",thefeatures);
+     //On prend les deux precedents...
+     addfeatures(debut-1,"1_",thefeatures);
+     addfeatures(debut-2,"2_",thefeatures);
+     addfeatures(dernier+1,"11_",thefeatures);
+     addfeatures(dernier+2,"22_",thefeatures);
+     string s;
+     for (s in thefeatures)
+          courant.push(storewords(s));
+}
+
+//We need to keep track of all nodes in term, with the previous categories...
+function evaluenoeudstermes(self echange) {
+     //echange is a map
+     string s,key,u;
+     int i,debut,dernier;
+     ivector iv;
+     svector sv;
+     ivector wrds=[-1,-1];
+     svector thefeatures;
+     node n;
+     ivector vbef;
+
+     for (s in echange) {
+          iv=echange[s];
+          if (iv.size()==1)
+               continue;
+          key=iv.join(":");
+          if (noeuds.test(key)==true) {
+               debut=noeuds[key];
+               dernier=noeuds[key];
+          }
+          else {
+               sv=s.split(' ');
+               key=iv[0]+":"+(iv[0]+sv[0].size());
+               debut=noeuds[key];
+               dernier=debut+sv.size()-1;
+          }
+          
+          vbef.clear();
+          for (i in <debut,dernier+1,1>)
+               enrichiravant(vbef,i,i);
+
+          for (i in <debut,dernier+1,1>)
+               vnoeuds[i]=null;
+          before.push(vbef);
+
+     }
+}
+
+
+function evalueautresnoeuds() {
+     self n;
+     string s;
+     svector thefeatures;
+     ivector noter;
+     int debut=-1;
+     for (n in vnoeuds) {
+          debut++;
+          if (n==null)
+               continue;
+          noter.clear();
+          enrichiravant(noter,debut,debut);
+          noterms.push(noter);
+     }
+}
+
+string rule=@"
+
+script:
+
+vider();
+
+|#1[terminal]|{
+     concatenatenode(#1);
+}
+
+//kif_echange_data is the second parameter passed through p.parse(...)
+//It contains the terms we are interested in...
+evaluenoeudstermes(kif_exchange_data);
+evalueautresnoeuds();
+
+"@;
+
+p.addendum(rule,true);
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+function selectsentence(xml n, self data){
+     if(n.name()=='sentence')
+          sentences.push(n);
+}
+
+
+xmldoc inputxml with selectsentence;
+inputxml.load(cpath+'Restaurants_Train.xml');
+
+xml n,nsub,nnsub;
+string c,sent;
+ssmap props;
+ivector cats;
+
+map termboundaries={"before":[],"after":[],"noterms":[],"category":[]};
+
+primemap terms;
+ivector vi;
+for(n in sentences){
+     nsub=n.child();
+     terms.clear();
+     while (nsub!=null) {
+          c=nsub.name().trim();
+          if (c=="aspectTerms") {
+               nnsub=nsub.child();
+               while (nnsub!=null) {
+                    if (nnsub.name()=="aspectTerm") {
+                         props=nnsub.properties();
+                         terms[props["term"]]=[props["from"],props["to"]];
+                    }
+                    nnsub=nnsub.next();
+               }
+               p.parse(sent,terms);
+
+               for (vi in before)
+                    termboundaries["before"].push(vi);
+               for (vi in noterms)
+                    termboundaries["noterms"].push(vi);
+          }
+          else {
+               if (c=="aspectCategories") {
+                    if (terms.size()) {
+                         cats.clear();
+                         nnsub=nsub.child();
+                         while (nnsub!=null) {
+                              if (nnsub.name()=="aspectCategory") {
+                                   props=nnsub.properties();
+                                   cats.push(storewords(props["category"]));
+                              }
+                              nnsub=nnsub.next();
+                         }
+                         termboundaries["category"].push(cats);
+                    }
+                    break;
+               }
+               else {
+                    if (nsub!=null) {
+                         c=nsub.content().trim();
+                         if (c!="")
+                              sent=c;
+                    }
+               }
+          }
+          nsub=nsub.next();
+     }
+     if (termboundaries["category"].size()!=termboundaries["before"].size()) {
+          termboundaries["category"].push([]);
+     }
+
+     printerr(".");
+}
+
+
+function savethemodel(string filename,bool bef) {
+     filename=_paths[1]+_sep+filename;
+     file modelprice(filename,"w");
+
+     vector v;
+     int i;
+     iitreemap frequences;
+     string ligne;
+     ivector iv;
+     string c;
+     simap categories={"noterms":0,"before":1};
+
+     for (c in categories) {
+          println("Sauvegarde:",c);
+          //Plusieurs categories: debut, fin et pasterms: 1,2,0
+          for (v in termboundaries[c]) {
+               if (v.size()==0)
+                    continue;
+               ligne=categories[c]+" ";
+               frequences.clear();
+               for (i in v)
+                    frequences[i]++;
+               for (i in frequences) {
+                    if (c=="noterms")
+                         ligne+=i+":0.1 ";
+                    else
+                         ligne+=i+":1 ";
+               }
+               modelprice.writeln(ligne);
+          }
+     }
+     modelprice.close();
+}
+
+println("Sauvegarde");
+
+savethemodel("termbefore.dat",true);
+//savethemodel("termafter.dat",false);
+
+println("Sauvegarde dictionnaire");
+file dico(_paths[1]+_sep+"terms.kif","w");
+dico.writeln("sitreemap allthewords="+allthewords+";");
+dico.close();
+
+kif analyse(_paths[1]+_sep+"trainingterms.kif");

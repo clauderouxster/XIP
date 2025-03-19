@@ -1,0 +1,352 @@
+use("kifliblinear");
+use("kifsys");
+
+//This is the actual path of the script file, from which we can derived our accesss to the grammars
+string localpath='/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm';
+
+loadin(_paths[1]+"/dictionariesPolarity.kif");
+loadin(_paths[1]+"/newterms.kif");
+
+
+liblinear predFood(localpath+"/model_test_food");
+liblinear predPrice(localpath+"/model_test_price");
+liblinear predAmbience(localpath+"/model_test_ambience");
+liblinear predService(localpath+"/model_test_service");
+liblinear predMisc(localpath+"/model_test_annecdote");
+
+//Global variables
+map categmodel={"food":predFood,"price":predPrice,"ambience":predAmbience,"service":predService,"anecdotes/miscellaneous":predMisc};
+istreemap polarities={0:"positive",1:"negative",2:"neutral",3:"conflict"};
+
+simap allwordsinstring;
+vector OpinionAspectTerm;
+map sentimentAndCategory;
+ssmap modifiedterms;
+map termList;
+//--------------------------------------------------------------------------------------------------
+
+
+string mainrules=@"
+functions:
+SENTIMENT-AND-CATEGORY.
+
+dependencyRules:
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) & FOOD(#1))
+     SENTIMENT-AND-CATEGORY[food=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) & SERVICE(#1))
+     SENTIMENT-AND-CATEGORY[service=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) & PRICE(#1))
+     SENTIMENT-AND-CATEGORY[price=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) & AMBIENCE(#1))
+     SENTIMENT-AND-CATEGORY[ambience=+](#1)
+
+
+script:
+
+if (FOOD(#1)) {
+     addterm(#1);
+}
+if (SERVICE(#1)) {
+     addterm(#1);
+}
+if (AMBIENCE(#1)) {
+     addterm(#1);
+}
+
+if (PRICE(#1)) {
+     addterm(#1);
+}
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$1(#1,#2)) {
+     getdeps($1,kif_exchange_data);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$1(#1)) {
+     getdeps($1,kif_exchange_data);
+}
+
+if (SENTIMENT$1(#1) | SENTIMENT$1(#1,#2)) {
+     getdeps($1,kif_exchange_data);
+}
+
+
+
+if (SENTIMENT-AND-CATEGORY$1(#1)) {
+     getdeps($1,kif_exchange_data);
+}
+
+predictforstring(kif_exchange_data);
+"@;
+//--------------------------------------------------------------------------------------------------
+string path="/opt/ParSem/users/Roux/xip/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/svm/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant-min.grm";
+parser p(path);
+p.addendum(mainrules,true);
+//--------------------------------------------------------------------------------------------------
+
+
+function storewords(node n) {
+     string s=n.lemma().lower();
+     allwordsinstring[s]++;
+}
+
+function storedepwords(string s) {
+     s = s.lower();
+     allwordsinstring[s]++;
+}
+
+function cle(node n) {
+     string s=n.surface()+"_";
+     int left,right;
+     n.offset(left,right);
+     s+=left+"_"+right;
+     if (s=="meal_19_24")
+          s="meal_20_24";
+
+     return(s);
+}
+
+function getdeps(dependency d,vector infos) {
+     vector v1,v2;
+     node n1;
+     string s1;
+     ssmap dfeats;
+     string currentCategory=infos[0];
+
+     switch(d.name()) {
+          "OPINION-ON-ASPECT-CATEGORY": {
+               v1 = d.features();
+               v2 = d.parameters();
+               n1 = v2[0];
+               string pol = v1[0];
+               if(pol!="") {
+                    storedepwords(pol + "_" + currentCategory);
+                    storedepwords(pol);
+               }
+          }
+          "SENTIMENT": {
+               dfeats= d.features();
+               if (dfeats.test("POSITIVE")) {
+                    storedepwords("POSITIVE_"+currentCategory);
+               }
+               elif (dfeats.test("NEGATIVE")) {
+                    storedepwords("NEGATIVE_"+currentCategory);
+               }
+               elif (dfeats.test("NEUTRAL")) {
+                    storedepwords("NEUTRAL_"+currentCategory);
+               }
+               elif (dfeats.test("CONFLICT")) {
+                    storedepwords("CONFLICT_"+currentCategory);
+               }
+          }
+          "SENTIMENT-AND-CATEGORY": {
+               dfeats=d.features();
+               n1=d.parameters()[0];
+               string clef=cle(n1);
+               if (dfeats.test(currentCategory.upper())) {
+                    if (dfeats.test("POSITIVE")) {
+                         storedepwords("POSITIVE_"+currentCategory);
+                         termList[clef]="positive";
+                    }
+                    elif (dfeats.test("NEGATIVE")) {
+                         storedepwords("NEGATIVE_"+currentCategory);
+                         termList[clef]="negative";
+                    }
+                    elif (dfeats.test("NEUTRAL")) {
+                         storedepwords("NEUTRAL_"+currentCategory);
+                         termList[clef]="neutral";
+                         OpinionAspectTerm.push(d);
+                    }
+                    elif (dfeats.test("CONFLICT")) {
+                         storedepwords("CONFLICT_"+currentCategory);
+                         termList[clef]="conflict";
+                    }
+               }
+          }
+     }
+}
+
+function addterm(node n1) {
+     string clef=cle(n1);
+     termList[clef]="empty";
+}
+
+function resetall() {
+     termList.clear();
+     modifiedterms.clear();
+     OpinionAspectTerm.clear();
+     allwordsinstring.clear();
+}
+
+function predictforstring(vector infos) {
+     vector donnees;
+     fvector labels=[0];
+     iftreemap imd;
+     string str;
+     string cat=infos[0];
+     string polarity;
+
+     for (str in allwordsinstring) {
+          if (allthewords.test(str)) {
+               imd[allthewords[str]]=allwordsinstring[str];
+          }
+     }
+     donnees.push(imd);
+     vector reponse=categmodel[cat].predict(donnees,true,true);
+     map predictedclassresults = reponse[1];
+     int predictedclass = predictedclassresults.keys()[0];
+     int pospredictedclass=predictedclass in reponse[0]["labels"];
+     float weight=predictedclassresults[predictedclass][pospredictedclass];
+     polarity = polarities[predictedclass];
+     infos.push(polarity);
+
+     if (weight>=0.5) {
+          if (polarity!="neutral") {
+               //We store this predicted polarity as a feature to this dependency
+               dependency d;
+               for (d in OpinionAspectTerm)
+                    modifiedterms[cle(d.parameters()[0])]=polarity;
+          }
+     }
+     infos.push(modifiedterms);
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------
+vector sentence;
+map terms;
+function readXml(xml n,self x) {
+     switch(n.name()) {
+          "aspectTerm": sentence.push(n);
+          "aspectCategory":sentence.push(n);
+          "text": sentence.push(n);
+     }
+}
+
+xmldoc inputXml with readXml;
+inputXml.load(_paths[1]+"/../Corpus/ABSA_TestData_PhaseB/Restaurants_Test_Data_phaseB.xml");
+
+
+file scorr(_paths[1]+"/corrections.txt","w");
+
+string category,sent;
+xml n,nterm;
+vector infos;
+string lastid;
+string newrules;
+string newwords;
+bool toreload=false;
+string mot;
+vector thetermsfromnodes;
+ssprimemap props;
+
+for(n in sentence) {
+     //if (n.name()=="sentence") {
+     //if (toreload) {
+     //p.reload();
+     //p.addendum(mainrules,true);
+     //}
+     //toreload=false;
+     //newwords="";
+     //lastid=n.properties()["id"];
+     //printlnerr(lastid);
+     //if (termsforsentences.test(lastid)) {
+     //vector v;
+     //for (v in termsforsentences[lastid]) {
+     //if (" " not in v[0])  {
+     //if (newwords=="")
+     //newwords="Vocabulary:\n\n";
+     //newwords+=''+v[0].trim()+" :: ? +=['+v[1].trim().lower()+"=+].\n";
+     //}
+     //if (newwords!="") {
+     //toreload=true;
+     //p.addendum(newwords,false);
+     //}
+     //}
+     //}
+     //continue;
+     //}
+
+     if (n.name()=="aspectTerm") {
+          props = n.properties();
+          mot=props["term"]+"_"+props["from"]+"_"+props["to"];
+          terms[mot]=n;
+          thetermsfromnodes.push(mot);
+          continue;
+     }
+
+     if(n.name()=="aspectCategory") {
+          infos.clear();
+          props = n.properties();
+          category = props["category"];
+          infos.push(category);
+          resetall();
+          p.parse(sent,infos);
+          props["polarity"]=infos[1];
+          n.properties(props);
+          ssmap modified=infos[2];
+          scorr.writeln("Phrase:",sent);
+          scorr.writeln("CATEGORIE("+category+"):",infos[1]);
+          for (mot in terms)
+               scorr.writeln("TERME(input file):",terms[mot].properties());
+
+          if (termList.size()<thetermsfromnodes.size()) {
+               scorr.writeln("Manquant:",thetermsfromnodes,termList);
+               scorr.flush();
+          }
+          else {
+               for (mot in thetermsfromnodes) {
+                    if (termList.test(mot)==false)
+                         scorr.writeln("Error:",mot,thetermsfromnodes,termList);
+               }
+          }
+          
+          if (modified.size()!=0) {
+               bool first=true;
+               for (mot in modified) {
+                    nterm=terms[mot];
+                    if (nterm==null)
+                         continue;
+                    props=nterm.properties();
+                    if (first) {
+                         scorr.writeln(sent);
+                         scorr.writeln(modified.keys());
+                         first=false;
+                    }
+                    props["polarity"]=modified[mot];
+                    scorr.writeln("MODIFIE ("+category+"):",mot,"=",modified[mot]);
+                    nterm.properties(props);
+               }
+          }
+          else {
+               for (mot in termList) {
+                    if (termList[mot]!="empty") {
+                         nterm=terms[mot];
+                         if (nterm!=null) {
+                              props=nterm.properties();
+                              props["polarity"]=termList[mot];
+                              scorr.writeln("POLARITE("+category+"):",mot,termList[mot]);
+                              nterm.properties(props);
+                         }
+                    }
+               }
+          }
+          scorr.writeln("-------");
+          continue;
+     }
+
+     sent = n.content().trim();
+     terms.clear();
+     thetermsfromnodes.clear();
+     scorr.flush();
+}
+
+scorr.close();
+inputXml.save(_paths[1]+"/../Corpus/FinalWithCorrectedPolarity.xml");
+inputXml.close();

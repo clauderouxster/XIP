@@ -1,0 +1,295 @@
+# ============================================================================
+# TYPE:		fst script
+# CONTENT:      modifying morph. lexicon (for NTM and POS tagger)
+#
+# LANGUAGE:     DUTCH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      06-Mar-2007     
+# ============================================================================
+# USAGE:        xfst -s <LexFST> -l [ThisFile]
+# ============================================================================
+
+
+echo >>> boundary definitions
+define DBD	"^|" ;	 # derivation boundary
+define CBD	"^#" ;	 # compound boundary
+define GBD	%^%\ ;	 # "glue" boundary
+define SPC	"^_" ;	 # white space
+
+define DOT	%. ;
+define DIG	[%0|1|2|3|4|5|6|7|8|9] ;
+
+
+define LEX
+
+
+
+# remove compounds with spaces or periods
+# e.g. admiraal+NC^#Goede^_Vrijdag+Noun+M+Sg
+
+read regex [ ~$[ CBD ?* [ SPC | DOT ] ] .o. LEX ];
+define LEX 
+
+
+# simplify multi-words (for NTM)
+read regex [ ~$[%+Price|%+Percent|%+Postal] .o. LEX ];
+
+
+
+
+# ----------------------------------------------------------------
+echo >>> tag name changes 
+
+define PRESIND	[ %+Ind %+Pres];
+define PASTIND	[ %+Ind %+Past];
+
+substitute defined PRESIND for %+PresInd
+substitute defined PASTIND for %+PastInd
+
+# redundant tag name
+substitute symbol %+MN for %+NM 
+
+define LEX
+
+# ----------------------------------------------------------------
+echo >>> removals
+regex 	[
+	$[%+Punc]		# redefined below!
+|	$[%+WordPart]		# handled by tokenizer
+|	$[%+For]		# ignore Foreign Words (too much noise!)
+
+|	$[{ander} %+AC CBD {half}]	# keep only lexical 'anderhalf'	#AS#
+
+|	?* %+VC CBD {baar} %+Noun "+F(m)" %+Sg		# exclude compound; prefer dervation -baar!
+|	{gel} %+NC CBD {eed} %+Noun ?*			# prefer "geleed+Adj"
+|	{geleed}  %+Adj %+Decl DBD %+Noun %+MFCon %+Pl	# prefer Adj/Adv reading
+
+|	{alvorens} %+SubConj	# only "+Prep"	(-> +INFCON)
+|	{na} %+SubConj		# only "+Prep"	(-> +INFCON)
+|	{om} %+SubConj		# only "+Prep"	(-> +INFCON)
+
+|	{eens} %+Adj (%+Neg) (DBD %+Noun %+Sg)	# only Adv ??
+|	{natuurlijk} %+Adj DBD	%+Adv		# only Adv, see below
+
+|	{gratis} %+Adj DBD %+Noun %+N %+Sg
+|	{broos} %+Adj DBD %+Noun %+N %+Sg
+|	{e.o.} %+Abbr %+Sg
+|	{e.a.} %+Prep %+Abbr
+|	{o.a.} %+Adv
+|	{a.u.b.} %+Abbr %+Sg
+|	{c.q.} %+Prep %+Abbr
+
+|	{zelden} %+Adj		# only Adv ??
+|	{aan} %+Adj		# only Adv ??
+|	{op} %+Adj (DBD %+Adv)	# only Adv ??
+|	{een} %+Art %+Indef %+Gen %+MN %+Sg
+|	{min} %+Adj %+Sup [ %+Basic | DBD %+Adv ]
+|	{meer} %+Adj ( [%+Comp %+Basic | DBD %+Adv ] )
+|	{dan} %+Adv
+|	{weinig} %+Num %+Card %+Indef %+Comp %+Decl
+	# "mindere", but "meerdere" = meerder+Adj+Decl 
+
+#|	{zowel} %+Adv		# was removed, but appears in corpus:
+
+];
+define REMOVE
+
+
+regex ~[REMOVE] .o. LEX;
+
+# ----------------------------------------------------------------
+# add +Noun for abbreviations
+define LEX 
+
+define WAdv	[ {hoe} ({zo}) | {waar} ({heen} ) ] ;
+define PRON	[ %+Indef | %+Poss | %+Rec | %+Refl | %+Dem | %+Interrog | %+Rel ];
+define DET	~[ {niks} | {niets} | {niemand} | {eenieder} 
+		| {menigeen} | {iets} | {iedereen} | {alles}
+		| {alleman} ] ;
+
+
+read regex [ 
+	%+Noun <- [..] || \[%+Prop|%+Prep|%+Adj|%+Adv] _ %+Abbr 
+.o.	%+Adjv <- %+Adv || DBD _ 
+
+# pronouns vs. determiner
+.o.	0 <- DBD %+Noun ?* || $[%+Pron|%+Det] _ .#. 
+.o.	%+Det (<-) %+Pron || .#. DET _ %+Indef (%+Pl) (%+Emph) .#.
+.o.	%+Det (<-) %+Pron || _ %+Poss 
+.o.	%+Det <- %+Pron || _ %+Poss ~$[%+Noun] .#.
+.o.	%+Det (<-) %+Pron || _ %+Dem ~$[%+Noun] .#.
+.o.	%+Adv <- %+Pron %+Dem || .#. {zelf} _ 
+
+.o.	%+Det <- %+Pron || .#. [ {wat} SPC {voor} (SPC {een}) ] _ %+Interrog 
+
+# "wier", "wiens" , "welke"
+.o.	%+Det %+Interrog <- %+Pron %+Rel || .#. [ {wier} | {wiens} | {welk} (e) ] _ 
+# "wie", "welk" , "wat"
+.o.	%+Interrog <- %+Rel || .#. [ {wie} | {welk} | {wat} ] %+Pron _
+
+
+# indefinite pronouns
+.o.	%+Pers <- [..] || %+Pron _ \[PRON] 
+.o.	%+Indef <- [..] || .#. [ {men} | {het} | {andermans}] %+Pron  _ \[PRON]
+.o.	%+Det %+Poss (<-) %+Pron (PRON) %+Gen 
+
+.o.	%+Dem <- [..] || .#. {deze} [e|r|s|n]* %+Pron _ %+Gen 
+.o.	%+Interrog <- [..] || .#. {welk} [e|r|s|n]* %+Pron _ %+Gen 
+
+.o.	0 <- %+Pron (%+Interrog) || _ %= 
+.o.	%+PronAdv <- %+Adv || %+Pron %= ?* _
+.o.	%+WAdv <- %+Adv || %+Pron %+Interrog %= ?* _
+.o.	%+WAdv <- %+Adv || .#. WAdv _ 
+
+.o.	0 <- %+Num || %+Dig _
+
+# postmodifying adjective
+.o.	%+PostMod <- [ (%+Comp) DBD %+Noun %+N %+Sg] || %+Adj _ .#. 
+
+
+
+.o. 	LEX
+];
+
+# ----------------------------------------------------------------
+echo >>> additions
+define AdjFlex	[ %+Basic:0 | 0:e %+Decl:0 ];
+define NOUNMASC [%+Noun:0 %+M:0 %+Sg:0 | %+Noun:0 %+M:0 %+Pl:s] ;
+
+regex	[	
+
+	1 [%0]+ s t e	%+Dig:0 %+Num:0 %+Ord:0 %+Def:0
+
+|	{e.o.} 		%+Adj:0 %+Abbr:0
+|	{a.u.b.}	%+Interj:0 %+Abbr:0
+|	{a.g.v.}	%+Prep:0 %+Abbr:0
+|	{e.a.}		%+Adv:0 %+Abbr:0
+|	{o.a.}		%+Adv:0 %+Abbr:0
+|	{c.q.}		%+Conj:0 %+Abbr:0
+|	{zg.}		%+Adj:0 %+Abbr:0
+
+|	{eens}		%+Adv:0
+|	{even}		%+Adv:0
+|	{op}		%+Adv:0
+|	{weg}		%+Adv:0
+
+|	n u (u (u))		%+Interj:0
+|	n e e (e (e))		%+Interj:0
+|	j a (a (a)) (h)		%+Interj:0
+|	[h|H] a [h a]*		%+Interj:0
+
+# "het [meest]"
+|	{het}		%+Ptcl:0 %+Sup:0 
+
+# from D. van der Ende's file "AddLex"
+#	- modified and using morphological features instead of POS only!
+# [ ** to be checked ** ]
+
+|	{achter}	%+Adv:0
+|	{af en toe}	%+Adv:0
+|	{ten laste}	%+Adv:0 
+|	{en bloc}	%+Adv:0
+|	{cum suis}	%+Adv:0		# ???
+
+|	%&		%+Conj:0
+| 	%' t 		%+Art:0 %+Def:0 %+N:0 %+Sg:0
+|	{minder} 	%+Adv:0
+|	{minder} 0:e	%+Adj:0 %+Decl:0 ([DBD %+Noun %+MFCon %+Sg]:0)
+|	{binnen}	%+Adv:0
+|	{geleden}	%+Adv:0
+|	{natuurlijk}	%+Adv:0 
+|	{meer} 		%+Adv:0
+|	{uit}		%+Adv:0
+|	{veel}		%+Adv:0
+|	{verder}	%+Adv:0
+|	{véél}		%+Adv:0 %+Emph:0
+
+|	[{zuid}|{noord}] [{west}|{oost}]	%+Adv:0
+
+#|	{baren}:{geboren}	%+Verb:0 %+PastPart:0 AdjFlex
+|	{baren}:{geboren}	%+Verb:0 %+PastPart:0
+|	{zoveel}:{zovele} 	%+Num:0 %+Card:0 %+Indef:0 %+Decl:0
+
+|	{aanhang}	%+Noun:0 %+N:0 [ %+Sg:0 | 0:{en} %+Pl:0 ]
+|	{Rotterdams}	%+Adj:0  AdjFlex
+
+|	{subsidieren}	%+Verb:0 [ %+Inf:0 | %+Ind:0 %+Pres:0 %+Pl:0 ]
+
+# some compounds
+|	[ {procureur} | {secretaris} ] %- {generaal} %+Noun:0 %+M:0 %+Sg:0
+
+|	[ {au pair} ]	%+Noun:0 %+F:0 %+Sg:0	
+
+# Added by KF 11/05/2002
+|	[ {e-mail} | {email} ] NOUNMASC
+
+# added 06-Mar-2007
+
+# infinitive conjunctions
+|	[ {alvorens} | {door} | {middels} | {om} | {zonder} 
+	| {door middel van} | {in plaats van} ] %+InfConj:0
+
+# post-positions
+ 
+|	[ {langs} | {door} | {in} | {uit} | {rond} (o m) | {over}
+	| {op} | {onder} ({langs}) | {om} | {na} | {binnen} 
+	| {bij} | {achter} | {aan} | {voorbij} ] %+Postp:0
+
+# separated parts of prepositions, e.g. "tot Arnhem toe"
+| 	[ {mee} | {toe} | {af} | {heen} | {aan} | {langs} | {na}
+	| {door} | {uit} ]  %+Circp:0
+
+# Separated parts of verb or adverb, e.g. "[hij belde er veel] op"
+| 	[ {aan} | {af} | {bovenop} | {heen} | {langs} | {mee} 
+	| {na} | {neer} |  {om} | {tegen} | {toe} 
+	| {voor} | {weg} 
+	| {achter} | {bij} | {binnen} | {buiten} | {door} | {in}
+	| {naar} | {naast} | {op} | {ober} | {over} | {rond}  
+	| {uit} | {van} | {voorbiij} ] %+Ptcl:0 %+Sep:0
+
+
+];
+
+# -------------------------------------------------------------------------
+echo >>> punctuations
+
+define QUOTE	[ %" | %' | %` |  %« | %» ];
+define Sent     [ %. | %! | %? | %; ] ;
+define Comma    [ %, ] ;
+
+regex
+[
+ %( | %) | %{ | %} | %[ | %] | %< | %> | %« | %» |
+ %" | %' | %` | %~ | %= | %- | %_ |
+ %+ | %= | %^ | %/ | %¿ | %¡ | %:
+];
+define NonSent
+
+define AnyPunct [ Sent | Comma | NonSent ] ;
+
+define OtherPunct	AnyPunct+ - [ QUOTE* [Sent|Comma] QUOTE* ];
+
+regex
+[
+  Sent                  %+Punct:0 %+Sent:0
+| Comma                 %+Punct:0 %+Comma:0
+| OtherPunct		%+Punct:0
+];
+
+union net
+
+
+define LEX
+
+echo >>> add alternatives for apostrophes and hyphens
+define APO	[ "\u2018" 	# LEFT SINGLE QUOTATION MARK
+		| "\u2019" 	# RIGHT SINGLE QUOTATION MARK
+		];
+define DASH	[ "\u2013"	# EN DASH
+		| "\u2014" 	# EM DASH 
+		];
+
+regex [ LEX .o. [ %' (->) APO ] .o. [ %- (->) DASH ] ] ;
+

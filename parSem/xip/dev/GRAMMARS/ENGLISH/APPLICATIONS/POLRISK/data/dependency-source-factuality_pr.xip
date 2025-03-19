@@ -1,0 +1,766 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency_source-factuality_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, ‡§•Ågnes S‡§•‡§Åndor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+
+// on caract‡§ºrise chaque relation CORE-DRIVE ou CORE-ANNEX selon le rapport entre la source et la factualit‡§º des deux COREs qu'elle associe :
+// - pas de trait (cas par d‡§ºfaut) : le CORE emboˆÄÅçt‡§º est possible ; il a la m‡•§me source que le CORE emboˆÄÅçtant
+// - factual : le CORE emboˆÄÅçt‡§º est factuel ; il a la m‡•§me source que le CORE emboˆÄÅçtant
+// - counter-factual : le CORE emboˆÄÅçt‡§º est contre-factuel ; il a la m‡•§me source que le CORE emboˆÄÅçtant
+// - facttrans : le CORE emboˆÄÅçt‡§º a la m‡•§me factualit‡§º et la m‡•§me source que le CORE emboˆÄÅçtant
+
+// - say : si le CORE emboˆÄÅçtant est factuel, le CORE emboˆÄÅçt‡§º est factuel et il a pour source l'acteur du CORE emboˆÄÅçtant ; sinon, le CORE emboˆÄÅçt‡§º est possible et il a la m‡•§me source que le CORE emboˆÄÅçtant (= cas par d‡§ºfaut)
+// - deny : si le CORE emboˆÄÅçtant est factuel, le CORE emboˆÄÅçt‡§º est countre-factuel et il a pour source l'acteur du CORE emboˆÄÅçtant ; sinon, le CORE emboˆÄÅçt‡§º est possible et il a la m‡•§me source que le CORE emboˆÄÅçtant (= cas par d‡§ºfaut)
+
+if (^CORE-DRIVE(#1,#2) & ARGUMENT[subj](#1[say],#2[say]))
+	CORE-DRIVE[identical=+](#1,#2)
+
+if (^CORE-ATT[neg](#2,#1) & CORE-NOUN(#1) & (ARGUMENT[subj](#3,#1) | ARGUMENT[obj](#3,#1)))
+	CORE-ATT[neg=+](#2,#3)
+
+
+// Chaque noyau ne doit avoir qu'un driver (CORE-DRIVE ou -ANNEX) ; si ce n'est  pas le cas (probl‡§•‡§âme en amont dans la grammaire), ces r‡§•‡§âgles permet d'attribuer une factualit‡§º sans r‡§ºsoudre le probl‡§•‡§âme.
+if (CORE-DRIVE[second:~, identical:~](#1,#2) & ^CORE-DRIVE[second:~, identical:~](#3,#2) )
+	CORE-DRIVE[second=+](#3,#2)
+
+if (CORE-DRIVE[second:~, identical:~](#1,#2) & ^CORE-ANNEX[second:~, identical:~](#3,#2))
+	CORE-DRIVE[second=+](#3,#2)
+
+if (CORE-ANNEX[second:~, identical:~](#1,#2) & ^CORE-ANNEX[second:~, identical:~](#3,#2))
+	CORE-ANNEX[second=+](#3,#2)
+
+
+// 1. caract‡§ºrisation des relations CORE-DRIVE et ANNEX selon la source et la factualit‡§º des deux COREs
+
+// 1.0 COREs qui auront toujours la m‡•§me source et la m‡•§me factualit‡§º que leur driver : ‡§ºv‡§ºnements cor‡§ºf‡§ºrents
+// ajout d'une d‡§ºpendance CORE-DRIVE qui ignore les ‡§ºv‡§ºnements cor‡§ºf‡§ºrents (attributs du sujet, verbes supports)
+// are afraid of threats
+
+//if (CORE-DRIVE[identical](#1,#2) & CORE-DRIVE(#2,#3))
+//	CORE-DRIVE(#1,#3)
+
+// deux ‡§ºv‡§ºnements identiques ont les m‡•§mes CORE-ATT
+if ((CORE-DRIVE[identical](#1,#2)| CORE-ANNEX[identical](#1,#2)) & CORE-ATT[modal](#3,#2))
+	CORE-ATT[modal=+](#3,#1)
+
+if ((CORE-DRIVE[identical](#1,#2)| CORE-ANNEX[identical](#1,#2)) & CORE-ATT[neg](#3,#2))
+	CORE-ATT[neg=+](#3,#1)
+
+// 1.1.COREs qui seront factuels si leur driver l'est
+
+// 1.1a ‡§ºv‡§ºnements d‡§ºpendant directement de verbes de parole
+if (^CORE-DRIVE(#1[say, deny:~],#2) & ~ARGUMENT[subj](#1,#2))
+	CORE-DRIVE[say=+](#1,#2)
+
+
+// 1.1b avec la m‡•§me source que leur driver
+
+// sujet d'un verbe (sauf si le pr‡§ºdicat verbal exprime une modalit‡§º)
+if (CORE-NOUN(#1) & ^CORE-DRIVE[identical:~](#2[presupp:~],#1) & ARGUMENT[subj](#2,#1) & ~SUBJATTR(#1,?[modaladj]) & ~SUBJATTR(#1,?[modalnoun]))
+	CORE-DRIVE[facttrans=+](#2,#1)
+
+// compl‡§ºments de verbes de phase
+if (^CORE-DRIVE[identical:~](#2[phase, presupp:~],#1))
+	CORE-DRIVE[facttrans=+](#2,#1)
+
+// objets d‡§ºfinis
+if (CORE-NOUN(#1) & (DETD(#1,#4[def]) | NMODGEN(#1,?)) & ^CORE-DRIVE[identical:~](#2[say:~, deny:~],#1) & ARGUMENT[obj](#2,#1))
+	CORE-DRIVE[facttrans=+](#2,#1)
+
+//over Russian insistence : factuel
+if( ^CORE-ANNEX[identical:~](#1,#2) & ~SRC(#2,?) & PREPD(#2,?[p_over]))
+	CORE-ANNEX[facttrans=+](#1,#2)
+
+// g‡§ºrondifs
+if (^CORE-ANNEX[ger](#1,#2) & CORE(#2))
+	CORE-ANNEX[facttrans=+](#1,#2)
+
+if( ^CORE-ANNEX[temp, logic:~](#1,#2) & ~PAST(#2))
+	CORE-ANNEX[facttrans=+](#1,#2)
+
+// 1.2 CORE qui seront contre-factuels si leur driver est factuel
+// ‡§ºv‡§ºnement d‡§ºpendant directement d'un ‡§ºv‡§ºnement d'‡§ºnonciation (type deny)
+if (^CORE-DRIVE(#1[lemme:deny],#2) & ~CORE-NOUN(#2))
+		CORE-DRIVE[deny=+](#1,#2)
+
+// 1.3 CORE qui seront factuels quelle que soit la factualit‡§º de leur driver (avec transmission de la source)
+// relatives (‡§•† affiner)
+if( ^CORE-ANNEX[rel](#1,#2))
+	CORE-ANNEX[factual=+](#1,#2)
+
+// to know
+if (^CORE-DRIVE(#1[lemme:know],#2))
+	CORE-DRIVE[factual=+, facttrans=~](#1,#2)
+
+// subordonn‡§ºes temporelles quand elles ne r‡§ºf‡§•‡§ârent pas ‡§•† l'avenir
+if( ^CORE-ANNEX[temp, logic:~](#1,#2) & PAST(#2))
+	CORE-ANNEX[factual=+](#1,#2)
+
+// subordonn‡§ºes logiques ou argumentatives (because, although)
+if( ^CORE-ANNEX[logic](#1,#2))
+	CORE-ANNEX[factual=+](#1,#2)
+
+
+// verbes de phase qui impliquent un pr‡§ºsuppos‡§º (continue doing : doing a d‡§ºj‡§•† commenc‡§º)
+if (^CORE-DRIVE(#1[presupp:fact],#2))
+	CORE-DRIVE[factual=+, facttrans=~](#1,#2)
+
+
+//1.4 relations CORE-DRIVE qui ne seront prises en compte que dans un deuxi‡§•‡§âme temps car elles portent sur un CORE qui est le 2nd ‡§ºl‡§ºment de plusieurs relations CORE-DRIVE ou -ANNEX
+if (^CORE-DRIVE[rel](#1,#2) | ^CORE-DRIVE[ger](#1,#2))
+	CORE-DRIVE[second=+](#1,#2)
+
+// 2. correction par la n‡§ºgation et la modalit‡§º attach‡§ºe
+//n‡§ºgation
+if (^CORE-DRIVE(#1,#2) & MOD[neg](#2,?))
+	CORE-DRIVE(#1,#2)
+
+if (^CORE-DRIVE[facttrans, identical:~](#1,#2) & CORE-ATT[neg](?,#2) )
+	CORE-DRIVE[facttrans=~](#1,#2)
+
+if (^CORE-ANNEX[facttrans, identical:~](#1,#2) & CORE-ATT[neg](?,#2) )
+	CORE-ANNEX[facttrans=~](#1,#2)
+
+if (^CORE-DRIVE[say](#1,#2) & CORE-ATT[neg](?,#2) )
+	CORE-DRIVE[say=~, deny=+](#1,#2)
+
+if (^CORE-DRIVE[factual](#1,#2) & CORE-ATT[neg](?,#2) )
+	CORE-DRIVE[factual=~, counter-factual=+](#1,#2)
+
+if (^CORE-ANNEX[factual](#1,#2) & CORE-ATT[neg](?,#2))
+	CORE-ANNEX[factual=~, counter-factual=+](#1,#2)
+
+
+//temporalit‡§º des noms
+if (CORE-NOUN(#1) & MOD(#1,#2[lemme:current]) & ^CORE-DRIVE(#5,#1))
+	CORE-DRIVE[facttrans=~, counter-factual=~, possible=~, factual=+](#5,#1)
+if (CORE-NOUN(#1) & MOD(#1,#2[lemme:current]) & ^CORE-ANNEX(#5,#1))
+	CORE-ANNEX[facttrans=~, counter-factual=~, possible=~, factual=+](#5,#1)
+if (CORE-NOUN(#1) & MOD(#1,#2[lemme:future]) & ^CORE-DRIVE(#5,#1) )
+	CORE-DRIVE[facttrans=~, counter-factual=~, possible=+, factual=~](#5,#1) 
+if (CORE-NOUN(#1) & MOD(#1,#2[lemme:future]) & ^CORE-ANNEX(#5,#1) )
+	CORE-ANNEX[facttrans=~, counter-factual=~, possible=+, factual=~](#5,#1)
+|NP#1, AP#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & MOD[pre](#4,?[lemme:currently]) & ^CORE-DRIVE(#5,#3))
+	CORE-DRIVE[facttrans=~, counter-factual=~, possible=~, factual=+](#5,#3)
+|NP#1, AP#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & CORE-NOUN(#3) & MOD[pre](#4,?[lemme:currently]) & ^CORE-ANNEX(#5,#3))
+	CORE-ANNEX[facttrans=~, counter-factual=~, possible=~, factual=+](#5,#3)
+// modalit‡§º attach‡§ºe
+/
+if (^CORE-DRIVE(#1,#2) & CORE-ATT(#1,#2) )
+	CORE-DRIVE(#1,#2)
+
+if (^CORE-ANNEX(#1,#2) & CORE-ATT(#1,#2) )
+	CORE-ANNEX(#1,#2)
+\
+
+if (^CORE-DRIVE[factual](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-DRIVE[factual=~](#1,#2)
+
+if (^CORE-DRIVE[counter-factual](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-DRIVE[counter-factual=~](#1,#2)
+
+if (^CORE-ANNEX[factual](#1,#2) & (CORE-ATT[modal](?,#2)) )
+	CORE-ANNEX[factual=~](#1,#2)
+
+if (^CORE-ANNEX[counter-factual](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-ANNEX[counter-factual=~](#1,#2)
+
+if (^CORE-DRIVE[facttrans, identical:~](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-DRIVE[facttrans=~](#1,#2)
+
+if (^CORE-ANNEX[facttrans, identical:~](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-ANNEX[facttrans=~](#1,#2)
+
+
+if (^CORE-DRIVE[say](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-DRIVE[possible=+](#1,#2)
+
+if (^CORE-DRIVE[deny](#1,#2) & CORE-ATT[modal](?,#2) )
+	CORE-DRIVE[possible=+, say=+, deny=~](#1,#2)
+
+
+
+// 3. application des r‡§•‡§âgles
+//3.a traitement des CORE non d‡§ºpendant d'une relation DRIVE ou ANNEX
+
+// les ‡§ºv‡§ºnements dont la source n'est pas exprim‡§ºe par un emboˆÄÅçtement (ex. according to)
+
+
+
+//le PP est rattach‡§º (MOD) au verbe, ou n'a pas de rattachement
+if (CORE[main](#1) & PREPD(#2,#3[say]) & (MOD(#1,#2)|~MOD(?,#2)))
+	SRC[factual=+](#1,#2)
+
+
+//le PP est rattach‡§º ‡§•† un CORE emboˆÄÅçt‡§º => il qualifie sans doute le verbe principal
+if (CORE[main](#1) & PREPD(#2,#3[say]) & MOD(#4[nfin],#2))
+	SRC[factual=+](#1,#2)
+
+// adverbes (purportedly)
+if (CORE[main](#1) & (MOD(#1,?[adv,say]) | MANNER(#1,?[adv,say]) ) & ~SRC(#1,?))
+	SRC[factual=+](#1,##noun[lemme=SOURCE])
+
+// pb d'analyse : le CORE n'est ni verbe principal, ni rattach‡§º ‡§•† un autre CORE
+//=> factuel si c'est un verbe fini
+if (CORE[main:~](#1) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & HEAD2(#1[nfin:~],?[fin]) & PREPD(#2,#3[say]) & (MOD(#1,#2)|~MOD(?,#2)) & ~SRC(#1,?))
+	SRC[factual=+](#1,#2)
+
+
+if (CORE[main:~](#1) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & PREPD(#2,#3[say]) & (MOD(#1,#2)|~MOD(?,#2)) & ~SRC(#1,?))
+	SRC[possible=+](#1,#2)
+
+// les ‡§ºv‡§ºnements sans source exprim‡§ºe
+if (CORE[main](#1) & ~SRC(#1,?))
+	SRC[factual=+](#1,##noun[lemme=0])
+
+if (CORE[main:~](#1) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & HEAD2(#1[nfin:~],?[fin]) & ~SRC(#1,?) )
+	SRC[factual=+](#1,##noun[lemme=0])
+
+
+if (CORE[main:~](#1[cont-act:~]) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & ~SRC(#1,?)  & ~NUCL[vlink,progress](?,#1) )
+	SRC[possible=+](#1,##noun[lemme=0])
+
+// phrases nominales
+if (CORE-NOUN(#1) & ~CORE-DRIVE(#2,#1) & ~CORE-ANNEX(#2,#1) & ~SRC(#1,?))
+	SRC[possible=+](#1,##noun[lemme=0])
+
+// correction de la factualit‡§º par la n‡§ºgation et la modalit‡§º attach‡§ºe (COREs ind‡§ºpendants)
+
+if (^SRC[factual](#1,#2) & (CORE-ATT[neg](?,#1)| MOD[neg](#1,?)))
+	SRC[factual=~, counter-factual=+, neg=+](#1,#2)
+
+if (^SRC[counter-factual, neg:~](#1,#2) & MOD[neg](#1,?))
+	SRC[counter-factual=~, factual=+, neg=+](#1,#2)
+
+
+if (^SRC[factual](#1,#2) & CORE-ATT[modal](?,#1))
+	SRC[factual=~, possible=+](#1,#2)
+
+if (^SRC[counter-factual](#1,#2) & CORE-ATT[modal](?,#1))
+	SRC[counter-factual=~, possible=+](#1,#2)
+
+//3.b traitement des CORE d‡§ºpendants
+
+//La s‡§ºrie de r‡§•‡§âgles est r‡§ºp‡§ºt‡§ºe pour traiter les emboˆÄÅçtements successifs
+
+//1e s‡§ºrie
+
+
+if (SRC(#1,#2))
+	DONE(#1,#2)
+
+
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if (CORE-DRIVE[second:~, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[possible=+](#2,#4).
+
+
+if (CORE-DRIVE[second:~,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+if ((CORE-DRIVE[second:~,factual](#1,#2)| CORE-ANNEX[second:~, factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, counter-factual](#1,#2)| CORE-ANNEX[second:~, counter-factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) |CORE-ANNEX[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) ) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// le cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#4).
+
+if (CORE-DRIVE[second, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#4).
+
+if (CORE-DRIVE[second,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second, factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3).
+
+if (CORE-DRIVE[second, counter-factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3).
+
+if (CORE-DRIVE[second, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2)  & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+//2e s‡§ºrie
+
+if (SRC(#1,#2))
+	DONE(#1,#2)
+
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if (CORE-DRIVE[second:~, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[possible=+](#2,#4).
+
+
+if (CORE-DRIVE[second:~,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+if ((CORE-DRIVE[second:~,factual](#1,#2)| CORE-ANNEX[second:~, factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, counter-factual](#1,#2)| CORE-ANNEX[second:~, counter-factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) |CORE-ANNEX[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) ) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+// le cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#4).
+
+if (CORE-DRIVE[second, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#4).
+
+if (CORE-DRIVE[second,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second, factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3).
+
+if (CORE-DRIVE[second, counter-factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3).
+
+if (CORE-DRIVE[second, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2)  & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+//3e s‡§ºrie
+
+if (SRC(#1,#2))
+	DONE(#1,#2)
+
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if (CORE-DRIVE[second:~, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[possible=+](#2,#4).
+
+
+if (CORE-DRIVE[second:~,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+if ((CORE-DRIVE[second:~,factual](#1,#2)| CORE-ANNEX[second:~, factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, counter-factual](#1,#2)| CORE-ANNEX[second:~, counter-factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) |CORE-ANNEX[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) ) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+// le cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#4).
+
+if (CORE-DRIVE[second, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#4).
+
+if (CORE-DRIVE[second,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second, factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3).
+
+if (CORE-DRIVE[second, counter-factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3).
+
+if (CORE-DRIVE[second, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2)  & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+//4e s‡§ºrie
+
+if (SRC(#1,#2))
+	DONE(#1,#2)
+
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if (CORE-DRIVE[second:~, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[possible=+](#2,#4).
+
+
+if (CORE-DRIVE[second:~,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+if ((CORE-DRIVE[second:~,factual](#1,#2)| CORE-ANNEX[second:~, factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, counter-factual](#1,#2)| CORE-ANNEX[second:~, counter-factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) |CORE-ANNEX[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) ) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+// le cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#4).
+
+if (CORE-DRIVE[second, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#4).
+
+if (CORE-DRIVE[second,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second, factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3).
+
+if (CORE-DRIVE[second, counter-factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3).
+
+if (CORE-DRIVE[second, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2)  & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+//5e s‡§ºrie
+
+if (SRC(#1,#2))
+	DONE(#1,#2)
+
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~, identical](#1,#2) | CORE-ANNEX[second:~, identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second:~,facttrans](#1,#2) | CORE-ANNEX[second:~, facttrans](#1,#2)) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3)
+
+if (CORE-DRIVE[second:~, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[possible=+](#2,#4).
+
+
+if (CORE-DRIVE[second:~,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second:~,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+if ((CORE-DRIVE[second:~,factual](#1,#2)| CORE-ANNEX[second:~, factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, counter-factual](#1,#2)| CORE-ANNEX[second:~, counter-factual](#1,#2)) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[counter-factual=+](#2,#3).
+
+if ((CORE-DRIVE[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) |CORE-ANNEX[second:~, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2) ) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC[possible=+](#2,#3).
+
+// le cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[counter-factual](#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3)
+
+if ((CORE-DRIVE[second, identical](#1,#2) | CORE-ANNEX[identical](#1,#2)) & SRC[possible](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual](#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3)
+
+if (CORE-DRIVE[second,facttrans](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3)
+
+if (CORE-DRIVE[second, say, possible:~](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#4).
+
+if (CORE-DRIVE[second, say, possible](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#4).
+
+if (CORE-DRIVE[second,say](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual](#1,#3) & COORDINATE[actor](#1,#4) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#4).
+
+if (CORE-DRIVE[second,deny](#1,#2) & SRC[factual:~](#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+if (CORE-DRIVE[second, factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[factual=+](#2,#3).
+
+if (CORE-DRIVE[second, counter-factual](#1,#2) & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[counter-factual=+](#2,#3).
+
+if (CORE-DRIVE[second, say:~, facttrans:~, factual:~, counter-factual:~](#1,#2)  & SRC(#1,#3) & ~DONE(#2,?))
+	SRC2[possible=+](#2,#3).
+
+
+if (^DONE(#1,#2))
+	~
+
+//3.c traitement des cas o‡§•‡§õ les CORE qui n'ont pas pu recevoir de factualit‡§º (d‡§•‡§ù ‡§•† des erreurs dans l'‡§ºtablissement des CORE-DRIVE et CORE-ANNEX)
+
+
+// les CORE qui n'ont pas pu recevoir de factualit‡§º (d‡§•‡§ù ‡§•† des erreurs dans l'‡§ºtablissement des CORE-DRIVE et CORE-ANNEX)
+if (CORE(#1) & ~SRC(#1,?) & NUCL[vlink,progress](?,#1) )
+	SRC[factual=+](#1,##noun[lemme=0])
+
+
+//if (CORE(#1[cont-act]) & ~SRC(#1,?))
+//	SRC[factual=+](#1,##noun[lemme=0])
+
+
+if (CORE(#1) & ~SRC(#1,?))
+	SRC[possible=+](#1,##noun[lemme=0])
+
+
+
+// ajout d'une seconde source
+//X denies Y's allegation that P
+// SRC[factual](P,Y) et SRC[counter-factual](P,X)
+if ((CORE-DRIVE(#1[lemme:deny],#2) |CORE-DRIVE(#1[lemme:refute],#2) ) & (CORE-DRIVE[say](#2,#3) | CORE-DRIVE[deny](#2,#3)) & COORDINATE[actor](#1,#4))
+	SRC[counter-factual=+](#3,#4)
+
+// cas des relatives et g‡§ºrondifs dont l'ant‡§ºc‡§ºdent est un nom d'‡§ºv‡§ºnement : comparaison des deux sources de factualit‡§º
+if ((SRC[factual](#1,?)|SRC[counter-factual](#1,?)) & ^SRC2[possible](#1,?))
+	~
+
+if (SRC2[factual](#1,?) & ^SRC[possible](#1,#2))
+	SRC[factual=+, possible=~](#1,#2)
+
+if (SRC2[counter-factual](#1,?) & ^SRC[possible](#1,#2))
+	SRC[counter-factual=+, possible=~](#1,#2)
+
+if (^SRC2[factual](#1,#2) & SRC[counter-factual](#1,#3))
+	SRC(#1,#2)
+
+if (^SRC2[counter-factual](#1,#2) & SRC[factual](#1,#3))
+	SRC(#1,#2)
+
+if (^SRC2(?,?))
+	~
+
+// transmission de la source et de la factualit‡§º aux ‡§ºv‡§ºnements identiques : attributs du sujet, adjectifs pr‡§ºdicatifs
+//(par s‡§ºcurit‡§º : normalement les r‡§ºg‡§•‡§âles pr‡§ºc‡§ºdentes ont d‡§•‡§ù meur attribuer la m‡•§me factualit‡§º)
+
+if (CORE-DRIVE[identical](#1,#2) & SRC[factual](#1,#3) & ^SRC(#2,?))
+	SRC[factual=+, possible=~, counter-factual=~](#2,#3)
+
+if (CORE-DRIVE[identical](#1,#2)  & SRC[possible](#1,#3) & ^SRC(#2,?))
+	SRC[factual=~, possible=+, counter-factual=~](#2,#3)
+
+if (CORE-DRIVE[identical](#1,#2) & SRC[counter-factual](#1,#3) & ^SRC(#2,?))
+	SRC[factual=~, possible=~, counter-factual=+](#2,#3)
+
+
+

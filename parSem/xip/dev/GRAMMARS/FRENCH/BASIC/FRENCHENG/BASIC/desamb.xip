@@ -1,0 +1,1513 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+Tagging:
+
+
+/*** REGLE DESAMB 0 ***\
+/Dummy rule to account for desambiguation rules in localgram.fic (rule numbering)
+
+/*** REGLE DESAMB 1 ***\
+/Dummy rule to account for desambiguation rules in localgram.fic (rule numbering)
+
+/*** REGLE DESAMB 2 ***\
+/Dummy rule to account for desambiguation rules in localgram.fic (rule numbering)
+
+
+/********** Desamb specifique a quelques lemmes*************\
+/CBRUN\
+verb<lemme:"lire",inf:+>, noun = noun | adj[lemme:"italien"] | .
+
+
+
+/*** REGLE DESAMB 3 ***\
+/ desamb nouns within titles (using "balise" <titre>\
+/ l'absence de numero de couche equivaut a couche 0\
+1> (verb)[titre,startbis,inf:~] = ?[verb:~].
+
+
+
+/------------------AJOUT FT - Traitement des mots en majuscule -----------------------------\
+
+
+
+/*** REGLE DESAMB 4 ***\
+/ 0.1 Francois Trouilleux\
+/ a guessed noun with a capital is a proper noun \
+
+1> noun[guessed:+,maj:+,pren:~] %= noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+,guessed=+,noun=+].
+
+1> noun[guessed:+,maj:+,pren:+] %= noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+,guessed=+,pren=+, noun=+].
+
+
+/*** REGLE DESAMB 5 ***\
+/0.2  Francois Trouilleux\
+/ ambiguous word with capital: remove verb reading if not start of sentence \
+//1> verb[maj:+,start:~,startbis:~] = ?[verb:~].
+
+
+ 
+/*** REGLE DESAMB 6 ***\
+/0.5  Francois Trouilleux\
+/ initial capitalized words following proper noun is a proper noun except for prep, det or particle \
+
+2> ?[noun:~, maj:+,prep:~,det:~,partic:~, coord:~, proper:~,punct:~, firme2:~, CR:~, phrasemaj:~, toutmaj:~, aadj:~,clit:~] %= | noun[proper:+] | noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+].
+
+/*** REGLE DESAMB 7 ***\
+/ 0.6  Francois Trouilleux\
+/ similar to 0.2, except that the verb has no alternate reading \
+//2> verb[maj:+,toutmaj:~,start:~,startbis:~] %= |?[sent:~,punct:~]]| noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+].
+
+/*** REGLE DESAMB 8 ***\
+/0.7  Francois Trouilleux\
+/ similar to 0.6, for adverbs with the qualification that a prep or det be present \
+1> adv[maj:+,start:~,startbis:~] %= |prep;det| noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+].
+
+/----------------- FIN AJOUT FT ------------------------------------------------------------\
+
+/------------- --------------------------- LAYER 1 -----------------------------------------\
+
+/*** REGLE DESAMB 9 ***\
+/un - une; son ;   prefer det if followed by noun: does not apply to tout \
+1> det[def:~,dat:~,quant:~] = ?[noun:~,pron:~]  |adj*,noun|. 
+
+
+/*** REGLE DESAMB 10 ***\
+/  tout is det if followed by a noun (not adv, not verb) \
+1> det<quant>,pron = ?[noun:~,pron:~]  |adj*,noun[verb:~,adv:~]|. 
+
+/*** REGLE DESAMB 11 ***\
+/coordinated numerals\
+1> num = num   |coord*, num%|.
+
+/*** REGLE DESAMB 12 ***\
+/coordinated determiners: should not apply if coord is "or" or "soit"\
+1> det = det   |coord%[noun:~,verb:~], det%|. 
+
+/*** REGLE DESAMB 13 ***\
+/ cas residuel pour "un": eliminer numeral\
+1> num, det = ?[num:~].
+
+
+/*** REGLE DESAMB 14 ***\
+/ de is a prep if preceded by PRON: quelqu'un de bien; celui de Michel\
+1> det,prep<masc:~> = |pron[rel];pron[dem];pron[indef];pron[int]|  prep |adv*%,adj%|.
+
+/*** REGLE DESAMB 15 ***\
+/ de is a prep if preceded by PRON: quelqu'un de bien; celui de Michel\
+1> det,prep =  |pron[rel,adv:~];pron[dem];pron[indef];pron[int,adv:~]| prep |det*%,num*%,adj*,noun|.
+
+/*** REGLE DESAMB 16 ***\
+1> det,prep = prep |num|. 
+
+
+/*** REGLE DESAMB 17 ***\
+/ la is a noun if preceded by det (ideally left context should include preposition en)\
+/ should apply to un son\
+1> det,noun = |det[prep:~; quant:~]| noun . 
+
+/*** REGLE DESAMB 18 ***\
+/ la is not a noun unless preceded by det or prep (see rule above) \
+1> det,noun =  ?[noun:~] . 
+
+
+/*** REGLE DESAMB 19 ***\
+/le DET-PC : prefer det if beg. of sentence\
+/ should not apply to tout \
+1> (det,pron)[startbis,int:~,def] = det |noun[inf:~]|.
+
+
+/*** REGLE DESAMB 20 ***\
+/tel est: prefer adj verb\
+1> (det,adj)[indef] = adj |verb%[sadj]|.
+
+/*** REGLE DESAMB 21 ***\
+/pour is prep if followed by infinitive; same with de\
+/ should not apply to en \
+/1> prep<prepinf>,noun = prep |neg*,pron*,verb[inf]|.\
+1> prep<prepinf> = prep |neg*,adv*,pron*,verb[inf]|.
+
+/*** REGLE DESAMB 22 ***\
+/le pour, le passé\
+1> prep,noun = |?[def]| noun.
+
+
+/*** REGLE DESAMB 23 ***\
+/pour is prep if followed by NP or inf\
+/should not apply to "passé"\
+1> prep,noun = ?[noun:~] |det*,adj*,noun|.
+
+
+
+/*** REGLE DESAMB 24 ***\
+/should not apply to "passé"\
+1> det,prep = |prep%[noun:~,verb:~]| det.
+
+/*** REGLE DESAMB 25 ***\
+/ il voit de beaux lapins\
+1> det<form:fde>,prep = |verb[noun:~,sn,desn:~],pron*,adv*| det   |adv*,adj+,noun|.
+
+/*** REGLE DESAMB 26 ***\
+/il ne voit pas de lapins \
+/det,prep = |verb[sn,desn:~],negpas,adv*| det   |adv*,adj*,noun|.\
+1> det<form:fde>,prep = |verb[sn,desn:~],adv[psneg],adv*| det   |adv*,adj*,noun|.
+
+/*** REGLE DESAMB 27 ***\
+/ne pas voir de lapins \
+1> det<form:fde>,prep = |neg,verb[inf,sn,desn:~],adv*| det   |adv*,adj*,noun|.
+
+
+
+/*** REGLE DESAMB 28 ***\
+/d' ici, d'aujourd'hui\
+1> det,prep<masc:~> = prep |adv, ?[adj:~]|.
+
+/*** REGLE DESAMB 29 ***\
+/differents acteurs, divers modeles\
+1> (det,adj)[startbis] = det |noun|.
+
+
+/*** REGLE DESAMB 30 ***\
+/differents acteurs, divers modeles, certains acteurs\
+1> (det,adj) = |?[strongbreak];prep;conj;conjque| ?[adj:~] |noun|.
+
+
+
+/*** REGLE DESAMB 31 ***\
+/differents acteurs, divers modeles\
+1> (det,adj) = ?[det:~].
+
+
+/*** REGLE DESAMB 32 ***\
+/ verb followed by hyphenated nominative clitic pronoun: a-t-il\
+/ accusative clitic are problematic because of ambiguity: Garges-les-Oies \
+1> verb = verb |pron[hyph, acc:~]|.
+
+
+/*** REGLE DESAMB 33 ***\
+/ no finite verb after prep\
+1> noun,verb<inf:~,partpre:~,partpas:~> = |prep[pron:~], (pron[ton]), (det)| ?[verb:~].
+
+/*** REGLE DESAMB 34 ***\
+/ no past participle after clit pronoun\
+// 1> verb<partpas> = |pron[clit,det:~]| ?[partpas:~].
+
+
+// EASY
+/*** REGLE DESAMB 34 ***\
+/ no past participle after clit pronoun (non hyph)\
+1> verb<partpas> = |pron[clit,hyph:~,det:~]| ?[partpas:~].
+
+
+/*** REGLE DESAMB 35 ***\
+/ prefer verb if preceded by neg\
+1> verb = |neg, adv*%, pron*%[clit]|    verb[partpas:~]. 
+
+/*** REGLE DESAMB 36 ***\
+/0.3  Francois Trouilleux\
+/ remove indicative and subjonctive reading of verb at beginning of sentence \
+1> verb[start:+] = verb[partpas:+],verb[partpre:+],verb[imp:+],verb[inf:+],verb[copule:+],?[verb:~].
+
+/*** REGLE DESAMB 37 ***\
+/0.4  Francois Trouilleux\
+/ same as 0.3 , except for 'startbis' feature \
+1> verb[startbis:+] = verb[partpas:+],verb[partpre:+],verb[imp:+],verb[inf:+],verb[copule:+],?[verb:~].
+
+
+
+
+/*** REGLE DESAMB 38 ***\
+/prefer noun if preceded by unambiguous det\
+1> noun,verb = |det[pron:~,prep:~,adj:~],adj*[adj2]|    ?[verb:~].
+
+/*** REGLE DESAMB 39 ***\
+/ il parle de la logique, feru de logique\
+1> det,prep = |?[desn],?*[noun:~,verb:~,adj:~,strongbreak]| prep.
+
+
+
+
+/*** REGLE DESAMB 40 ***\
+/ambiguous dets and preps following transitive verbs \
+/1> det<form:fdes>,prep = |?[sn],adv*;verb[partpas:~], adv*|  det .\
+1> det<form:fdes>,prep = |?[sn,desn:~,partpas:~,noun:~],adv*|  det .
+
+/*** REGLE DESAMB 41 ***\
+/ambiguous dets and preps following transitive verbs \
+1> det<form:fdes>,prep = |?[sn,desn:~,partpas:~],adv*;verb[aux], adv*,verb[sn,desn:~,partpas], adv*|  det .
+
+
+/*** REGLE DESAMB 42 ***\
+/ il tient des meeting   vs. il tient de son père\
+1> det<form:~fde,form:~fdu>,prep = |verb[sn,desn:~,noun:~,partpas:~],pron*,adv*[noun:~]| det.
+
+/*** REGLE DESAMB 43 ***\
+/ il mange de la salade\
+1> det<form:fde>,prep = |?[det:~,prep:~],verb[sn,partpas:~,noun:~],adv*| det |det|.
+
+
+/*** REGLE DESAMB 44 ***\
+/ manger de la salade\
+1> det<form:fde>,prep = |verb[startbis,sn,partpas:~,noun:~],adv*| det |det|.
+
+
+
+/*** REGLE DESAMB 45 ***\
+/ il a tenu des meeting   vs. il tient de son père\
+/ presence du participe facultative -> il a des ennuis \
+1> det<form:~fde>,prep = |verb[aux], adv*, verb*[sn,desn:~,partpas],adv*| det.
+
+/*** REGLE DESAMB 46 ***\
+/ il sont devenus des modeles\
+1> det,prep = |verb[sadj],adv*| det.
+
+/*** REGLE DESAMB 47 ***\
+/ il a mangé de la salade\
+/ presence du participe facultative -> il a de la salade \
+1> det<form:fde>,prep = |verb[form:favoir], adv*, verb*[sn,partpas],adv*| det |det|.
+
+
+/*** REGLE DESAMB 48 ***\
+/de la province: prep par defaut\
+1> det,prep = prep |det|.
+
+
+/*** REGLE DESAMB 49 ***\
+/ bien des gens\
+1> det,prep = |adv%[form:fbien]| det.
+
+
+
+
+/*** REGLE DESAMB 50 ***\
+/en EN faisant, EN faire\
+1> prep,pron = |prep%| pron |verb%|.
+
+/*** REGLE DESAMB 51 ***\
+/EN chantant, en en chantant\
+/ couvre aussi : tout en faisant \
+1> prep,pron = |@(adv%[form:ftout])| prep   |pron*, neg*, verb%[partpre]|.
+
+/*** REGLE DESAMB 52 ***\
+/en faire\
+1> prep,pron= pron |verb[partpas:~,partpre:~,noun:~]|.
+
+/*** REGLE DESAMB 53 ***\
+/en cumulé\
+1> prep,pron= prep |verb[partpas, p1:~, p2:~,p3:~]|.
+
+/*** REGLE DESAMB 54 ***\
+/en fer\
+1> prep,pron = prep | ?[pron:~,verb:~]|.
+
+/*** REGLE DESAMB 55 ***\
+/ d'ouest en est: en is prep\
+1> prep,pron = |prep[form:fde],noun| prep | noun[inf:~]|.
+
+
+/*** REGLE DESAMB 56 ***\
+1> prep,pron = prep | adj+[verb:~],noun|.
+
+/*** REGLE DESAMB 57 ***\
+1> prep,pron = prep | det%|.
+
+/*** REGLE DESAMB 58 ***\
+/il prend en compte\
+1> prep,pron = |verb[coord:~],adv*| prep | noun%[inf:~]|.
+
+/*** REGLE DESAMB 59 ***\
+/ un seul homme, le même jour\
+1> pron,adj = adj |noun|.
+
+/*** REGLE DESAMB 60 ***\
+/ un seul, le même\
+1> pron,adj = |det%, num*| ?[adj:~].
+
+
+
+
+/*** REGLE DESAMB 61 ***\
+/  plus\
+1> adv<compar> = adv |adj;verb[partpas];verb[partpre];conjque|.
+
+/*** REGLE DESAMB 62 ***\
+/  le droit, le bien\
+1> adv,noun = |det[adv:~];prep[verb:~], num*| ?[adv:~].
+
+/*** REGLE DESAMB 63 ***\
+/  l'or\
+1> coord,noun = |det;prep| ?[coord:~].
+
+
+/*** REGLE DESAMB 64 ***\
+/  même le chien; bien souvent\
+1> adj,adv = ?[adj:~] |det[noun:~,prep:~];adj[noun:~];verb[partpas];verb[partpre]|.
+
+
+/*** REGLE DESAMB 65 ***\
+/  le jour même \
+1> adj,adv = |noun[verb:~]| ?[adv:~].
+
+/*** REGLE DESAMB 66 ***\
+/qui lui prouva: lui is not dative: warning! should not apply to elle\
+1> (pron)[nom,dat,fem:~] = |pron;noun;prep| ?[nom:~].
+
+/*** REGLE DESAMB 67 ***\
+/qui lui assura: lui is not dative: warning! should not apply to elle, or quel\
+1> (pron)[nom,dat,ton,fem:~] =  ?[nom:~] |?[asn]|.
+
+/*** REGLE DESAMB 68 ***\
+/  même lui\
+1> adj,adv = adv |pron[noun:~]|.
+
+
+/*** REGLE DESAMB 69 ***\
+/entre dans: entre is a verb only if followed by prep \
+/ne s'applique pas a pendant, etc.\
+1> prep, verb<pre:~> = verb |adv*,prep|.
+
+/*** REGLE DESAMB 70 ***\
+/prep,verb[part] = |verb[aux],adv*,negpas*| verb.\
+1> prep,verb<partpas> = |verb[aux],adv*| verb[pre:~,p3:~,p2:~].
+
+/*** REGLE DESAMB 71 ***\
+1> prep,verb<partpas> = verb,noun,adj.
+
+/*** REGLE DESAMB 72 ***\
+1> prep,verb = prep.
+
+/*** REGLE DESAMB 73 ***\
+/selon lui \
+1> pron = |prep%| pron,det. 
+
+
+/*** REGLE DESAMB 74 ***\
+/auxiliary verbs: les avions volent vs. nous les avions; les sommes investies\
+1> verb<aux,inf:~>,noun = |?[nom:~,neg:~], det[def]| noun.
+
+/*** REGLE DESAMB 75 ***\
+/auxiliary verbs: should not apply to: il a lui aussi\
+1> verb<aux> = verb    |adv*%, verb%[pron:~,partpas]|.
+
+
+
+/*** REGLE DESAMB 76 ***\
+/auxiliary verbs\
+/block lui part. passe: il est, lui, favorable...\
+1> verb<aux> = verb    |adv*%, conjque*, punct*, verb%[pron:~,partpas]|.
+
+/*** REGLE DESAMB 77 ***\
+/auxiliary verbs\
+1> verb<aux> = |pron%[det:~]|	verb.
+
+/*** REGLE DESAMB 78 ***\
+/past participe vs. present: e.g. il le rejoint\
+/ attention de ne pas eliminer autres POS: e.g le produit\
+1> (verb)[partpas,pre] = |pron[hyph:~]|	?[partpas:~].
+
+/*** REGLE DESAMB 79 ***\
+/ s' CONJ vs. PRON \
+1> conj,pron<refl> = conj |pron%[p3,nom]|.
+
+/*** REGLE DESAMB 80 ***\
+1> conj,pron<refl> = pron.
+
+
+/*** REGLE DESAMB 81 ***\
+/le si vs. si les poules\
+1> conj,noun = |det[def]| noun.
+
+/*** REGLE DESAMB 82 ***\
+/le si vs. si les poules\
+1> conj,noun =  ?[noun:~].
+
+
+
+/*** REGLE DESAMB 83 ***\
+/je chante, je souris\
+1> verb<p1,sg> = |@ pron%[p1,sg,hyph:~], neg*,pron*|    verb[p1,sg].
+
+/*** REGLE DESAMB 84 ***\
+/dis-je\
+1> verb<p1,sg> = verb[p1] |pron%[p1,sg,nom]|.
+
+/*** REGLE DESAMB 85 ***\
+/tu chantes\
+1> verb<p2,sg> = |@ pron%[p2,sg,nom,hyph:~], neg*,pron*|        verb[p2,sg,imp:~].
+
+/*** REGLE DESAMB 86 ***\
+/dis-tu\
+1> verb<p2,sg> = verb[p2,sg,imp:~]            |pron%[p2,sg,nom]|.
+
+/*** REGLE DESAMB 87 ***\
+/Il chante\
+1> verb<partpas:~,partpre:~,inf:~> = |@ pron%[p3,nom,dat:~,hyph:~], neg*,pron*|        verb[p1:~,p2:~].
+
+/*** REGLE DESAMB 88 ***\
+/ certains d'entre vous chantent\
+1> (pron)[ton] =  |prep| pron[ton] |?[inf:~, partpre:~] |.
+
+/*** REGLE DESAMB 89 ***\
+/ vous donne-t-il: vous not nominative\
+1> (pron)[dat,nom] = ?[nom:~] |verb, pron<hyph>|.
+
+
+
+/*** REGLE DESAMB 90 ***\
+/nous chantons, nous ne nous le chanterons pas\
+1> pron<p1,pl,nom>= ?[ton]    | neg*,pron*,verb[p1,pl]|.
+
+/*** REGLE DESAMB 91 ***\
+/vous chantez, vous ne nous le chanterez pas\
+1> pron<p2,pl,nom> = ?[ton:~]   | neg*,pron*, verb[p2,pl]|.
+
+
+/*** REGLE DESAMB 92 ***\
+/Lui chante\
+1> (pron)[nom,dat,startbis,det:~] = pron[nom] |neg*, pron*%, verb|.
+
+/*** REGLE DESAMB 93 ***\
+/et lui bondit\
+1> (pron)[nom,dat] = |coord| pron[nom] |neg*, pron*%, (verb[aux]), verb[asn:~]|.
+
+/*** REGLE DESAMB 94 ***\
+/je lui donne\
+1> (pron<clit,dat>)[nom,p3] = pron[clit,nom:~],?[clit:~].
+
+/*** REGLE DESAMB 95 ***\
+/il vous donne: vous PC\
+1> (pron)[dat,ton] = |pron| ?[ton:~].
+
+
+/*** REGLE DESAMB 96 ***\
+/avec nous\
+1> (pron)[ton] =  |prep| pron[ton] |?[verb:~,pron:~]|.
+
+/*** REGLE DESAMB 97 ***\
+/le chien nous le donne: nous PC\
+1> (pron)[ton] =  pron[ton:~] |neg*,pron*,punct*[form:fquotes],verb|.
+
+
+/*** REGLE DESAMB 98 ***\
+/qui en compte \
+1> pron<clit,nom:~,acc:~> = |pron[nom,hyph:~],neg*|    pron[clit,nom:~]   |verb%|.
+
+/*** REGLE DESAMB 99 ***\
+1> pron<clit,nom:~> = |?[prep:~],pron[nom,hyph:~],neg*|    pron[clit,nom:~] |verb%|.
+
+
+
+/*** REGLE DESAMB 100 ***\
+/le chat en fait foi\
+1> prep,pron = |noun| pron |verb,det*[prep:~], num*, noun|.
+
+
+
+/*** REGLE DESAMB 101 ***\
+/prend le chat en tenaille: by default select prep \
+1> prep,pron = prep.
+
+
+/*** REGLE DESAMB 102 ***\
+/vous vous le donnez \
+1> pron = |pron[nom,rel:~,hyph:~],neg*,pron*|    pron[nom:~]   |pron*,verb|.
+
+
+
+/*** REGLE DESAMB 103 ***\
+/nous et vous: ambiguite datif-tonique: cas residuel\
+1> (pron)[ton] =  ?[ton].
+
+
+
+/*** REGLE DESAMB 104 ***\
+/c'est\
+1> verb<partpre:~,partpas:~,inf:~> = |@ pron%[dem], neg*,pron*,neg*|        verb[p1:~,p2:~]. 
+
+/*** REGLE DESAMB 105 ***\
+/dit-elle\
+1> verb = verb[p1:~,p2:~,partpre:~,partpas:~,imp:~]        |pron%[p3,nom,hyph]|.
+
+/*** REGLE DESAMB 106 ***\
+/est-ce\
+1> verb = verb[p1:~,p2:~,partpre:~,partpas:~,imp:~]        |pron%[dem,hyph]|.
+
+/*** REGLE DESAMB 107 ***\
+/ select verb forms that agrees with nominative pronoun\
+1> verb<p1,pl> =  |pron%[nom,p1,pl],neg*,pron*| verb[p2:~,p3:~].
+
+/*** REGLE DESAMB 108 ***\
+/ select verb forms that agrees with nominative pronoun\
+1> verb<p2,pl> =  |pron%[nom,p2,pl],neg*,pron*| verb[p1:~,p3:~].
+
+
+
+/*** REGLE DESAMB 109 ***\
+/ plus is not a verb if not recognised earlier as such\
+
+1> verb<p1,imp:~> = ?[p1:~].
+
+
+/*** REGLE DESAMB 110 ***\
+/ plus is not a verb if not recognised earlier as such\
+1> verb<p2,imp:~> = ?[p2:~].
+ 
+
+
+
+/*** REGLE DESAMB 111 ***\
+/les uns\
+1> det = det,prep |pron[indef]| .
+
+/*** REGLE DESAMB 112 ***\
+/ tout: prefer adv if adv follows\
+1> det[adv:~],adv = adv   |adv|.
+
+
+/*** REGLE DESAMB 113 ***\
+/ tout: prefer adv if adj follows\
+1> det,adv = |?[det:~,prep:~]| adv   |adj%|.
+
+/*** REGLE DESAMB 114 ***\
+/ tout: prefer noun if det before\
+1> noun<form:ftout> = |?[det],adj*|  noun.
+
+/*** REGLE DESAMB 115 ***\
+/ tout: prefer pron by default\
+1> pron<form:ftout> = pron |?[det:~,adj:~,noun:~]|.
+
+
+/*** REGLE DESAMB 116 ***\
+/prefer pron if followed by infinitve\
+1> pron = pron        |pron*,verb[inf,noun:~]|.
+
+/*** REGLE DESAMB 117 ***\
+/prefer pron if followed by unambiguous verb\
+1> pron = pron        |pron*, verb[noun:~,adj:~]|.
+
+
+/*** REGLE DESAMB 118 ***\
+/ prefer nouns if sequence of proper nouns\
+1> noun<proper, phrasemaj:~> = noun |noun%[proper]|.
+/*** REGLE DESAMB 119 ***\
+1> (noun)[maj, phrasemaj:~] = noun |noun%[proper]|.
+
+/*** REGLE DESAMB 120 ***\
+//1> (noun)[maj, phrasemaj:~] = |noun%[proper]| noun.
+
+
+
+
+/*** REGLE DESAMB 121 ***\
+/prefer noun if beg of sentence det noun\
+1> noun,verb<inf:~> = |det%[def,start], adj%*[noun:~]|    noun.  
+
+
+
+/*** REGLE DESAMB 122 ***\
+/infinite vs. noun: le pouvoir, du pouvoir\
+1> verb<inf>,noun = |prep[prepinf:~,pron:~],det*; det[pron:~]| noun.
+
+/*** REGLE DESAMB 123 ***\
+/infinite vs. noun: le pouvoir, du pouvoir\
+1> verb<inf>,noun = |?[parsvinf:~],prep[form:fpar],det*; det[pron:~]| noun.
+
+
+/*** REGLE DESAMB 124 ***\
+/infinite constructions: il devrait être\
+1> verb<inf> = |?[svinf],adv*,prep*%[pron:~],pron*%|    verb.
+
+/*** REGLE DESAMB 125 ***\
+/infinite constructions: pour le faire\
+1> verb<inf>,noun = |prep%[prepInf],neg*,adv*,pron*%|    verb.
+
+/*** REGLE DESAMB 126 ***\
+/infinite constructions: pour pouvoir : rule does not apply to pour le pouvoir\
+1> (verb,noun)[inf] = |prep%[prepInf],neg*,adv*,pron*%[det:~]|    verb.
+
+/*** REGLE DESAMB 127 ***\
+/infinite constructions: pour le pouvoir \
+1> verb<inf>,noun = |prep%, det%|    noun.
+
+/*** REGLE DESAMB 128 ***\
+/infinite constructions: pour le pouvoir \
+1> (verb<inf>,noun)[startbis, pren:~] = ?[noun:~].
+
+
+/*** REGLE DESAMB 129 ***\
+/auxiliary\
+1> verb<aux> = verb |(punct),adv*%,(punct),verb%[partpas]|.
+
+
+/*** REGLE DESAMB 130 ***\
+/ Reste at beg of sentence\
+1> (verb<p3,il,quep>)[maj] = verb[p3]. 
+
+/*** REGLE DESAMB 131 ***\
+/prefer singular verb if preceded by plur num and followed by det\
+1> (noun,verb)[sg] = |num|    ?[noun:~] |det|.
+
+/*** REGLE DESAMB 132 ***\
+/prefer noun if preceded by unambiguous det\
+1> noun,verb = |det[pron:~,prep:~,adj:~]|    ?[verb:~].
+
+/*** REGLE DESAMB 133 ***\
+/prefer noun if time expression: la nuit\
+1> noun<time>,verb = |det[dat:~]|    ?[verb:~].
+
+
+
+/*** REGLE DESAMB 134 ***\
+/prefer noun  at beg. of sentence\
+1> noun,verb<inf:~> = |?[start,noun:~,verb:~,pron:~,adv:~],?*[noun:~,verb:~,pron:~,adv:~]|     ?[verb:~].
+
+/*** REGLE DESAMB 135 ***\
+/prefer verb if followed by det \
+1> noun,verb =   |@ (pron%)| ?[noun:~] |det[form:~fde,form:~fdu,pron:~],?[compar:~]|.
+/noun,verb = verb |det|.\
+
+/*** REGLE DESAMB 136 ***\
+/ prefer noun if possibly object: inclure dans un projet la reforme\
+1> noun,verb =  |?[verb,sn,noun:~],?*[verb:~,conj:~,coord:~,conjque:~,punct:~], 	
+                 det%[def,prep:~]|  noun.
+
+
+
+/*** REGLE DESAMB 137 ***\
+/prefer verb if sequence: Noun Pron Verb \
+1> noun,verb =  |noun[verb:~,adv:~,conj:~], pron%[prep:~]|  verb.
+
+
+
+/*** REGLE DESAMB 138 ***\
+/prefer noun over finite verb if preceded by prep\
+1> noun, verb<inf:~> = |prep%[pron:~], adv*%,det*%,num*%,adj*[noun:~]|    ?[verb:~].  
+
+
+
+
+/*** REGLE DESAMB 139 ***\
+/qui danse; que fait le chient, comme dit le chien\
+1> verb<partpre:~,partpas:~,inf:~> = |pron%[rel];conj;conjque, neg*|        verb[p1:~,p2:~].
+
+
+/*** REGLE DESAMB 140 ***\
+/ imperative if beg. of sentence: mangez-le, ne le dites pas.\
+1> (verb)[imp,startbis] = verb[p3:~,ind:~,subj:~],noun,adj.
+
+
+/*** REGLE DESAMB 141 ***\
+/ imperative if beg. of sentence: ne le mangez pas.\
+1> verb<imp> = |neg[start], pron*| verb[p3:~,ind:~,subj:~].
+
+
+/*** REGLE DESAMB 142 ***\
+/ imperative if followed by clitic pronom \
+1> verb<imp> = verb |Pron[hyph]|.
+
+
+
+/*** REGLE DESAMB 143 ***\
+/ eliminates some imperative if also P3: e.g. if preceded by noun \
+/(verb)[p2,p3] = |noun,?*[verb:~]|        verb[p2:~,imp:~],noun,adj,prep,coord,pron. \
+1> (verb)[p2,p3] = |noun,?*[verb:~]|        ?[p2:~,imp:~].
+
+
+/*** REGLE DESAMB 144 ***\
+/ eliminates some imperative if also P3: e.g. if preceded by pronouns or adjectives \
+/verb = |pron;adj|        verb[imp:~],noun,adj. \
+1> verb = |pron;adj|        ?[imp:~]. 
+
+
+/*** REGLE DESAMB 145 ***\
+/il chante, l'oiseau chante: kill P1, P2 including imperative\
+/verb[p3] = verb[p1:~], noun, adj, prep .\
+1> verb<p3> = ?[p1:~] .
+
+
+/*** REGLE DESAMB 146 ***\
+1> verb<imp> = |neg[start:~],pron*%|        verb[p1:~,p3:~,ind:~,subj:~].
+
+/*** REGLE DESAMB 147 ***\
+/verb[p1],adj = adj,noun.\
+1> verb<p1,imp:~> =  ?[p1:~].
+
+
+/*** REGLE DESAMB 148 ***\
+/verb[p2],adj = adj,noun.\
+1> verb<p2,imp:~> =  ?[p2:~].
+
+
+/*** REGLE DESAMB 149 ***\
+/ il est fier\
+1> adj =  |?[sadj]| ?[verb:~].
+
+
+
+/*** REGLE DESAMB 150 ***\
+/ coord at beg of sentence\
+1> (coord)[startbis] = coord.
+
+
+
+/*** REGLE DESAMB 151 ***\
+/adverb vs. noun: le plus souvent, le plus ample\
+1> adv<compar> =  |@ det*%[prep:~];prep*% | 
+		 adv  
+		|punct*, adv%[adj:~]|.
+
+/*** REGLE DESAMB 152 ***\
+/adverb vs. noun: le plus souvent, le plus ample\
+1> adv<compar> =  |@ det*%[prep:~];prep*% | 
+		 adv  
+		 |punct*, adj%|.
+
+/*** REGLE DESAMB 153 ***\
+/adverb vs. noun: le plus souvent, le plus ample\
+1> adv<compar> =  |@ det*%[prep:~];prep*% | 
+		 adv  
+		 |punct*, verb%[partpre]; verb%[partpas]|.
+
+/*** REGLE DESAMB 154 ***\
+/adverb vs. noun\
+/adv,noun = |verb,negpas*,adv*|        adv,prep,adj. \
+1> adv,noun = |verb,adv*|        ?[noun:~]. 
+
+/*** REGLE DESAMB 155 ***\
+/adverb vs. noun\
+1> adv,noun = |adv|        ?[noun:~] .
+
+/*** REGLE DESAMB 156 ***\
+/adverb vs. noun\
+1> adv,noun = ?[noun:~]  | verb[partpas]; verb[partpre]|.
+
+
+/*** REGLE DESAMB 157 ***\
+/adverb vs. noun\
+1> adv,noun = ?[noun:~]  | verb[partpas]; verb[partpre]; adj%,noun|.
+
+
+/*** REGLE DESAMB 158 ***\
+/adverb vs. noun\
+1> adv,noun = |det, adj*|        ?[adv:~].
+
+
+/*** REGLE DESAMB 159 ***\
+/adverb vs. noun\
+/negpas,noun = |det%, adj*[adj2]|    noun.\
+1> adv<psneg>,noun = |det%, adj*[adj2]|    noun.
+
+/*** REGLE DESAMB 160 ***\
+/adverb vs. noun\
+/negpas = negpas.\
+1> adv<psneg> =  adv. 
+
+/*** REGLE DESAMB 161 ***\
+/ si: adv vs. conj\
+1> adv,conj = adv |?[closed:~,det:~,num:~,punct:~,prep:~,neg:~,p1:~,p2:~,p3:~]|.
+
+/*** REGLE DESAMB 162 ***\
+1> adv,conj = conj.
+
+
+/*** REGLE DESAMB 163 ***\
+1> adv,prep= prep |det;num;adv;noun|.
+
+
+
+/*** REGLE DESAMB 164 ***\
+1> adv,prep= adv |punct[form:~fquotes]|.
+
+
+/*** REGLE DESAMB 165 ***\
+/ de is a prep if N de N\
+1> det,prep =  |noun[verb:~],adv*, adj*,verb*[partpas]| prep |adv*%,det*%,num*%,noun|.
+
+
+/*** REGLE DESAMB 166 ***\
+/ de is a prep if N de N\
+1> det,prep =  |adj[verb:~]| prep |adv*%,det*%,num*%,noun|.
+
+/*** REGLE DESAMB 167 ***\
+/ de is a prep if pron de N: l'un des animaux\
+1> det,prep =  |pron[adv:~]| prep |adv*%,det*%,num*%,adj;noun|.
+
+
+/ some common phrase structures\
+
+
+/*** REGLE DESAMB 168 ***\
+/ le bon fonctionnement\
+1> adj<adj2> = |det;prep, adv*|  ?[adj] |noun|.
+
+
+/*** REGLE DESAMB 169 ***\
+/ personnelle et active\
+1> adj,verb = |adj,coord|  ?[verb:~].
+
+/*** REGLE DESAMB 170 ***\
+/ pendant la saison seche \
+1> adj,verb = |prep[form:~fde],det*,noun|  ?[verb:~].
+
+
+/*** REGLE DESAMB 171 ***\
+/ le gouvernement continue \
+1> adj<masc:~>,verb<p3> = |noun[fem:~]|  ?[adj:~].
+
+
+
+/*** REGLE DESAMB 172 ***\
+/verb followed by det \
+1> verb = |coord; punct[form:fcm]| verb |det[prep:~]|.
+
+
+/some disambiguation using parallelism\
+
+/*** REGLE DESAMB 173 ***\
+/parallel PPs introduced by de or any amalgamated prep\
+1> det,prep = |prep[def,det:~],det*,num*,adj*,noun,adj*,?[coord];conj[form:fcomme];punct[form:fcm]
+, adv*|    prep.
+
+/*** REGLE DESAMB 174 ***\
+/parallel NPs introduced by des\
+1> det,prep = |det[form:fdes],adj*,noun,adj*,?[coord];conj[form:fcomme];punct[form:fcm], adv*|    det.
+
+
+/*** REGLE DESAMB 175 ***\
+/ comme des champignons \
+1> det,prep = |conj;conjque, adv*|   det.
+
+
+/*** REGLE DESAMB 176 ***\
+/des accessoires electriques multiples\
+1> adj,noun = |noun, adj| ?[noun:~].
+
+
+/*** REGLE DESAMB 177 ***\
+/coordinated adjectives\
+1> adj = |adj[verb:~],coord,adv*|    adj,noun.  
+
+/*** REGLE DESAMB 178 ***\
+1> adj = |adj[verb:~],punct,adv*|    adj,noun.  
+
+
+/*** REGLE DESAMB 179 ***\
+1> adj = |adj[noun:~],coord,adv*|    adj.
+/*** REGLE DESAMB 180 ***\
+1> adj = |adj[noun:~],punct,adv*|    adj.
+
+/*** REGLE DESAMB 181 ***\
+/le grand et exquis festin\
+1> adj,noun = |det;prep| adj |coord, adj%, noun|.
+
+/A.R. : ajout du % et du noun final\
+
+
+/*** REGLE DESAMB 182 ***\
+/les feux avant et arriere\
+1> adj,noun = |noun,adj%,coord| ?[noun:~].
+
+/*** REGLE DESAMB 183 ***\
+/confirm adj if followed by nominal between quotes\
+1> adj = adj |adj*%,punct[form:fquotes], adj*,noun|.
+
+
+/*** REGLE DESAMB 184 ***\
+/prefer verb if auxiliary\
+1> noun,verb<aux> = verb.
+
+
+/*** REGLE DESAMB 185 ***\
+/coordinated nouns \
+1> noun = |det, noun%, coord%, det, adj*| noun.
+
+/*** REGLE DESAMB 186 ***\
+/coordinated nouns \
+1> noun = | noun[verb:~],adj*, coord%, det*, adj*| noun.
+
+
+/*** REGLE DESAMB 187 ***\
+/coordinated verbs: dort, mange et boit \
+1> verb = |verb[noun:~],   adv*, punct*[form:fcm], verb*%, coord%, neg*, pron*% | verb.
+
+
+
+
+
+
+/*** REGLE DESAMB 188 ***\
+/prefer verb is preceded by non ambiguous pron\
+1> noun,verb = |pron[det:~,prep:~]|  verb.
+
+
+/*** REGLE DESAMB 189 ***\
+/prefer verb is preceded sequence noun verb adv\
+1> noun,verb = |noun[verb:~], adj*|  verb |adv%|.
+
+/*** REGLE DESAMB 190 ***\
+/le DET-PC : prefer det if not followed by verb\
+1> (det,pron) = det |?[verb:~,pron:~, conjque:~]|.
+
+/*** REGLE DESAMB 191 ***\
+/le DET-PC produit NOUN-VERB  liquide ADJ-VERB: prefers noun if sequence det noun adj\
+/ case of singular noun\
+1> (noun, verb)[inf:~,sadj:~,sadj1:~] = |det%[sg],adj*|     noun[sg]        |adj%|.  
+
+/*** REGLE DESAMB 192 ***\
+/le DET-PC produit NOUN-VERB  liquide ADJ-VERB: prefers noun if sequence det noun adj\
+/ case of plural noun\
+1> (noun, verb)[inf:~,sadj:~,sadj1:~] = |det%[pl],adj*|     noun[pl]        |adj%|.  
+
+
+
+/*** REGLE DESAMB 193 ***\
+/le DET-PC NOUN-VERB: solliciter le centre: prefers noun if preceded by verb \
+/ case of singular noun\
+1> (noun, verb)[inf:~,sadj:~,sadj1:~] = |verb[noun:~], adv*, det%[sg]|     noun[sg].
+
+
+/*** REGLE DESAMB 194 ***\
+/le DET-PC NOUN-VERB: solliciter le centre: prefers noun if preceded by verb\
+/ case of plural noun\
+1> (noun, verb)[inf:~,sadj:~,sadj1:~] = |verb, adv*, det%[pl]|     noun[pl].
+
+
+/*** REGLE DESAMB 195 ***\
+/le DET-PC NOUN-VERB: , le centre: prefers noun if preceded by comma\
+1> (noun, verb)[inf:~,sadj:~,sadj1:~] = |punct, coord*, det%|     noun.
+
+
+
+
+/*** REGLE DESAMB 196 ***\
+/le DET-PC ADJ-VERB  la celebre firme\
+/ case of singular noun\
+1> (adj, verb)[inf:~,sadj:~,sadj1:~] = |det%[sg],adj*|     adj[sg]        |noun|.  
+
+/*** REGLE DESAMB 197 ***\
+/le DET-PC ADJ-VERB  la celebre firme\
+/ case of plural noun\
+1> (adj, verb)[inf:~,sadj:~,sadj1:~] = |det%[pl],adj*|     adj[pl]        |noun|.  
+
+
+/*** REGLE DESAMB 198 ***\
+/ambiguity det,pron if disagreement: le laisse: laisse is verb\
+1> (noun,verb<p3>)[fem:~,sg] = |pron%[masc:~,acc,clit]|  verb.
+/*** REGLE DESAMB 199 ***\
+/ambiguity det,pron if disagreement: la compte: compte is verb\
+1> (noun,verb<p3>)[masc:~,sg] = |pron%[fem:~,acc,clit]|   verb.
+
+/*** REGLE DESAMB 200 ***\
+/ambiguity det,pron if disagreement: les compte: compte is verb\
+1> noun<pl:~>,verb = |pron%[sg:~,acc,clit]|   verb.
+
+/*** REGLE DESAMB 201 ***\
+/ambiguity det,pron if disagreement: le comptes: comptes is verb\
+1> noun<sg:~>,verb = |pron%[pl:~,acc,clit]|   verb.
+
+/*** REGLE DESAMB 202 ***\
+/ambiguity det,pron if disagreement: le president: president is noun\
+1> noun<sg>,verb<pl> = |det[pl:~];adj[pl:~]|   noun.
+
+
+
+
+/*** REGLE DESAMB 203 ***\
+/le sortir: prefer verb\
+1> det<def>,pron = pron |verb%[inf,sn]|.
+
+
+/*** REGLE DESAMB 204 ***\
+/s'éteint:  prefer verb\
+1> verb = |pron[det:~,prep:~]| verb.
+
+
+
+
+/*** REGLE DESAMB 205 ***\
+/prefer verb if preceded by noun followed by anything but noun or verb\
+1> noun<proper:~,prefer:~>,verb = |noun[adj:~]|   ?[noun:~] |?[verb:~,noun:~]|.  
+
+
+/*** REGLE DESAMB 206 ***\
+/prefer verb if predicative followed by noun or adj\
+1> noun,verb<sadj> = |noun|    verb  |?[verb:~]|.  
+
+/*** REGLE DESAMB 207 ***\
+/prefer verb if "incise" estime M. machin\
+1> verb<quep,p3> = |punct[form:fcm]| verb |?[maj]| .
+
+
+/*** REGLE DESAMB 208 ***\
+/ambiguities between nouns and adj \
+/ il est bon, il est serein vs.  il est directeur\
+1> adj,noun<prefer:~> = |verb[sadj], adv*| adj |?[adj:~]|.
+
+/*** REGLE DESAMB 209 ***\
+/ambiguities between nouns and adj \
+/ il est vrai \
+1> adj,adv = |verb[sadj]| adj.
+
+
+/*** REGLE DESAMB 210 ***\
+/ambiguities between nouns and adj \
+1> noun = |prep| noun |prep|.
+
+/*** REGLE DESAMB 211 ***\
+1> noun = |det| noun |prep|.
+
+/*** REGLE DESAMB 212 ***\
+1> noun = |num| noun |prep|.
+
+/*** REGLE DESAMB 213 ***\
+/2> adj[adj2] = adj |noun|.\
+/2> adj[adj2] = adj |noun%|.\
+1> noun = |adj%[adj2]|   ?[verb:~].
+
+
+/*** REGLE DESAMB 214 ***\
+/ s'applique en particulier a classe d'ambi. noun,verb (cf. estime  que...)\
+1> verb = ?[quep] |conjque|.
+
+
+/*** REGLE DESAMB 215 ***\
+/ s'applique en particulier a classe d'ambi. adj,noun  ou adj,verb (cf. prevoyant que...)\
+1> adj = ?[quep] |conjque|.
+
+
+/*** REGLE DESAMB 216 ***\
+1> adj,noun = |noun[det:~,verb:~],adv*| ?[noun:~] |adv*%, adj*%|.
+
+/*** REGLE DESAMB 217 ***\
+1> adj,noun = |noun[adj:~,verb:~,det:~],adv*,adj*%|        ?[noun:~].
+
+
+/*** REGLE DESAMB 218 ***\
+1> adj,noun = |?[noun:~], adj[noun:~]| noun |?[noun:~]|.
+
+
+
+/*** REGLE DESAMB 219 ***\
+/ a noun between something else: e.g.  les particuliers qui font la sieste \
+1> adj,noun = |?[noun:~,verb:~,adj:~,adv:~,punct:~]| noun |?[adj:~,noun:~,coord:~]|.
+
+
+/*** REGLE DESAMB 220 ***\
+1> adj,noun<titren:~,prefer:~> = ?[noun:~]  |noun[adj:~,verb:~,maj:~]|.
+
+
+/*** REGLE DESAMB 221 ***\
+/le concessionnaire Transtour\
+1> adj<adj2:~>,noun = ?[adj:~]  |noun[maj]|.
+
+
+/*** REGLE DESAMB 222 ***\
+/sauf: en plein centre\
+1> adj,noun = |prep| noun |?[noun:~]|.
+
+
+
+/*** REGLE DESAMB 223 ***\
+1> adj<imperso:~>,noun = |adv%;verb[noun:~,sadj:~]| ?[noun:~].
+
+
+/*** REGLE DESAMB 224 ***\
+/ il fait part , il fait etat\
+1> verb<form:ffaire> = verb |noun%|.
+
+
+/*** REGLE DESAMB 225 ***\
+/prefer noun (or adj) if preceded by unambiguous verb\
+1> verb<inf:~> = |verb[noun:~;partpas:~]|   ?[verb:~].
+
+
+/*** REGLE DESAMB 226 ***\
+/prefer noun if followed by unambiguous verb\
+1> noun,verb<inf:~,partpre:~> =   ?[verb:~]   |verb[noun:~,adj:~]|  .
+
+
+/*** REGLE DESAMB 227 ***\
+/prefer verb if followed by unambiguous noun, except proper nouns\
+1> noun,verb =   ?[noun:~]   |det*[form:~fde],adj*,noun[verb:~,adj:~,maj:~]|  .
+
+/*** REGLE DESAMB 228 ***\
+/prefer verb if preceded by unambiguous noun\
+1> noun<proper:~,prefer:~>,verb  =    |noun[adj:~,verb:~]|  ?[noun:~]  .
+
+/*** REGLE DESAMB 229 ***\
+/prefer noun if followed by prep de  and no subcat\
+1> (noun,verb)[desn:~,partpas:~,partpre:~]  =    ?[verb:~] |prep[form:fde]|.
+
+
+
+/*** REGLE DESAMB 230 ***\
+/prefer participle if preceded by adv\
+1> noun,verb<partpre> =    |adv%;conj;coord|  ?[noun:~]  .
+
+/*** REGLE DESAMB 231 ***\
+/prefer participle if preceded by adv, conj or coord\
+1> noun,verb<partpas> =    |adv%;conj;coord|  ?[noun:~]  .
+
+/*** REGLE DESAMB 232 ***\
+/prefer participle if preceded by noun\
+1> noun,verb<partpre> =    |noun, adj*,punct*|  ?[noun:~]  .
+
+
+/*** REGLE DESAMB 233 ***\
+/prefer participle if preceded by noun\
+1> noun,verb<partpas> =    |noun, adj*,punct*|  ?[noun:~]  .
+
+/*** REGLE DESAMB 234 ***\
+/prefer participle at beg of sentence\
+1> (verb<partpas>,noun)[startbis] =    ?[noun:~].
+
+
+/*** REGLE DESAMB 235 ***\
+/ le voila, ce qui compte\
+1> det,pron = pron |pron; adv[voicila];conjque|.
+
+
+/*** REGLE DESAMB 236 ***\
+1> det<indef:~>,pron = pron |neg*,pron*%,verb%[partpre:~,partpas:~,noun:~]|.
+
+
+/*** REGLE DESAMB 237 ***\
+/ prefer det if unambiguous noun follows\
+1> det,pron = det        |adv*, adj*, noun[verb:~]|.
+
+/*** REGLE DESAMB 238 ***\
+/ prefer det if adj follows\
+1> det,pron = det        |adj|.
+
+/*** REGLE DESAMB 239 ***\
+/ prefer det if at beg of sentence and not followed by interrogative verb: cf. l'as de pique vs. L'as-tu vu\
+1> (det,pron)[start] = det        |noun, ?[nom:~]|.
+
+
+/*** REGLE DESAMB 240 ***\
+/ ambiguity around gender/number: e.g. la fois vs. la foi(s) \
+1> (noun)[sg,pl] = |?[sg,pl:~,noun:~,verb:~], adj*[sg]| noun[sg],?[noun:~].
+/*** REGLE DESAMB 241 ***\
+1> (noun)[sg,pl] = |?[sg:~,pl,noun:~,verb:~], adj*[pl]| noun[pl],?[noun:~].
+
+/*** REGLE DESAMB 242 ***\
+/ ambiguity around gender/number: e.g. le poste vs la poste\
+1> (noun)[masc,fem] = |?[masc,fem:~,noun:~,verb:~], adj*[masc]| noun[masc],?[noun:~].
+/*** REGLE DESAMB 243 ***\
+1> (noun)[masc,fem] = |?[masc:~,fem,noun:~,verb:~], adj*[fem]| noun[fem],?[noun:~].
+
+
+/*** REGLE DESAMB 244 ***\
+/prefer noun if preceded by unambiguous adj\
+1> noun,verb =   |det, adj[noun:~]| ?[verb:~].
+
+
+
+/*** REGLE DESAMB 245 ***\
+/ d'autres as pronoun\
+1> det,prep = det |pron[form:fautre]|.
+
+
+/*** REGLE DESAMB 246 ***\
+/  où is relative pronoun after noun, etc.\
+1> pron[rel] = |pron;noun, adj*,punct*[form:fcm],prep*| pron.
+
+
+/*** REGLE DESAMB 247 ***\
+/final rules about dets and preps \
+1> det<form:fdes>,prep = |?[strongbreak];prep;conj|  det.
+
+
+
+
+/*** REGLE DESAMB 248 ***\
+/final rules about dets and preps: des poissons de lignes et des champignons\
+1> det<form:fdes>,prep = |det[form:fdes,prep:~],?*[verb:~,def:~]|  det .
+
+
+/*** REGLE DESAMB 249 ***\
+/final rules about dets and preps \
+1> (det,prep<form:fde,pl:~>)[startbis] = prep.
+
+/*** REGLE DESAMB 250 ***\
+/final rules about dets at beg of sentence \
+1> det[startbis] = det.
+
+/*** REGLE DESAMB 251 ***\
+/final rules about preps at beg of sentence \
+1> prep[startbis] = prep.
+
+
+/*** REGLE DESAMB 252 ***\
+/final rules about adv at beg. of sentence \
+1> (adv)[startbis] = adv.
+
+
+
+
+/*** REGLE DESAMB 253 ***\
+/final rules about nouns at beg of sentence if followed by adj \
+1> (noun)[startbis] = noun |adj|.
+
+
+/*** REGLE DESAMB 254 ***\
+/final rules about adjectives at beg of sentence \
+1> (adj)[startbis] = adj |?[prep:~]|.
+
+
+
+
+/*** REGLE DESAMB 255 ***\
+/final rules about nouns at beg. of sentence \
+1> (noun)[startbis] = noun.
+
+/*** REGLE DESAMB 256 ***\
+/final rules about dets and preps \
+1> det<form:fdes>,prep = |?[desn]|  prep .
+
+/*** REGLE DESAMB 257 ***\
+/final rules about subcat\
+1> ?[desn] = ?[desn]  |prep[form:fde]| .
+
+/*** REGLE DESAMB 258 ***\
+/final rules about subcat\
+1> ?[asn] = ?[asn]  |prep[form:fa]| .
+
+
+
+
+/*** REGLE DESAMB 259 ***\
+/final rules about dets and preps \
+1> det<form:fdes>,prep = |?[start,noun:~,verb:~], ?*[noun:~,verb:~,adj:~]|  det .
+
+
+/*** REGLE DESAMB 260 ***\
+/final rules about dets and preps \
+1> det<form:fde>,prep = |?[start,noun:~,verb:~], ?*[noun:~,verb:~,adj:~]|  det |adv*,adj+,noun|.
+
+/*** REGLE DESAMB 261 ***\
+/final rules about dets and preps \
+/parallelism of preps\
+1> det,prep<form:fde> = |prep[form:fde], ?*[prep:~,verb:~], adv*, adj*, punct|  prep.
+
+/*** REGLE DESAMB 262 ***\
+/final rules about dets and preps \
+/parallelism of preps\
+1> det,prep<form:fde> = |prep[form:fde], ?*[prep:~,verb:~], adv*, adj*, punct*, coord|  prep.
+
+
+/*** REGLE DESAMB 263 ***\
+/final rules about dets and preps \
+1> det<pl>,prep<form:~fde> = |det, ?*[prep:~,verb:~,noun:~]| det.
+
+
+/*** REGLE DESAMB 264 ***\
+/final rules about dets and preps \
+1> det<pl>,prep<form:~fde> = |punct| det.
+
+/*** REGLE DESAMB 265 ***\
+/final rules about dets and preps \
+1> det<pl>,prep<form:~fde> = |?[desn:~];conj;adv[int]| det.
+
+/*** REGLE DESAMB 266 ***\
+/final rules about dets and preps \
+1> det,prep = |conj;adv[int]| det.
+
+/*** REGLE DESAMB 267 ***\
+/final rules about dets and preps \
+1> det,prep =  prep.
+
+/*** REGLE DESAMB 268 ***\
+/final rules about dets \
+1> det = det |adv*,num*,adj*,noun|.
+
+/*** REGLE DESAMB 269 ***\
+/final rules about dets \
+1> det = det.
+
+
+
+
+/*** REGLE DESAMB 270 ***\
+/final rules about imperatives at beg. of sentence \
+1> (verb<imp>,noun)[startbis] = verb    |adv*,det| .
+
+/*** REGLE DESAMB 271 ***\
+/final rules about noun-verbs \
+1> verb = verb    |adv*,det[prep:~]| .
+
+
+/*** REGLE DESAMB 272 ***\
+/final rules about coord (e.g. or jaune)\
+1> coord,noun = |punct| ?[coord:~] |adj|.
+
+
+/*** REGLE DESAMB 273 ***\
+/final rules about coord \
+1> coord = ?[adv:~,noun:~].
+
+
+/*** REGLE DESAMB 274 ***\
+/final rules \
+1> prep = prep.
+
+
+/*** REGLE DESAMB 275 ***\
+/final rules about adv  \
+1> adv = |?[det:~]| adv.
+
+
+
+
+
+/*** REGLE DESAMB 276 ***\
+/final rules about adj after punctuation \
+1> noun,adj = | adj, punct| adj |?[adj:~]|.
+
+
+/*** REGLE DESAMB 277 ***\
+/final rules about verbs after punctuation \
+1> verb,noun  = |?[start],?*[verb:~,form:~fcm],punct[form:fcm]| noun.
+1> verb,noun  = |punct[form:fcm]| verb |prep[form:~fde]|.
+
+
+/*** REGLE DESAMB 278 ***\
+/final rules about adj, nouns after punctuation: une sauterelle, grande comme une maison \
+1> adj[adj2] = |punct[form:fcm]| ?[noun:~].
+
+
+/*** REGLE DESAMB 279 ***\
+/final rules about nouns after punctuation \
+1> noun = | @ punct,prep*%, det*%, adv*%, adj*%| noun.
+
+
+/*** REGLE DESAMB 280 ***\
+/final rules about dets and nouns after punctuation \
+1> det = det |adj*, punct, adj*, noun|.
+
+/*** REGLE DESAMB 281 ***\
+/final rules about pronouns\
+1> pron = pron.
+
+/*** REGLE DESAMB 282 ***\
+/final rules about pronouns\
+1> pron<nom:~>[nom] = pron[nom:~].
+
+
+
+/*** REGLE DESAMB 283 ***\
+/final rules about verb after punctuation \
+1> verb = | @ punct;adv, pron*%| verb.
+
+
+/*** REGLE DESAMB 284 ***\
+/final rules \
+1> det = det.
+
+
+
+/*** REGLE DESAMB 285 ***\
+/final rules \
+1> conj = conj.
+
+/*** REGLE DESAMB 286 ***\
+/final rules \
+1> (adj,adv) = adj.
+
+
+/*** REGLE DESAMB 287 ***\
+/final rules \
+1> adv = adv.
+
+
+
+
+/*** REGLE DESAMB 288 ***\
+/final rules about adj \
+/la saison seche: seche is ADJ\
+/should not apply to fait in "l'occasion fait le larron\
+1> (adj)[partpre:~,partpas:~] = |noun| ?[noun:~].
+
+/*** REGLE DESAMB 289 ***\
+/final rules about adj \
+1> ?<prefer> = ?[prefer].
+
+
+/*** REGLE DESAMB 290 ***\
+/final rules about adj \
+1> adj,noun = adj |noun|.
+
+
+
+/*** REGLE DESAMB 291 ***\
+/final rules about verb followed by det or Uppercase (proper) noun\
+1> verb = verb |det;prep;noun[maj]|.
+
+// it is a verb if it is the only indicative verb candidate in the sequence
+1> verb = |?[start,verb:~],?*[ind:~]| verb[ind] |?*[ind:~],?[end]|.
+
+
+/*** REGLE DESAMB 292 ***\
+/final rules \
+1> noun = noun.
+
+/*** REGLE DESAMB 293 ***\
+/final rules \
+1> (verb<partpas>,adj) = adj[partpas=+].
+
+/final rules \
+1> adj = adj.
+
+/*** REGLE DESAMB 294 ***\
+/final rules \
+1> (verb)[partpre] = verb[partpre].
+
+
+
+/*** REGLE DESAMB 295 ***\
+/final rules: produit par ... \
+1> verb<partpas> = verb[partpas] |prep|.
+
+1> verb<partpas> = |pron[hyph,nom],(adv+)| verb[partpas].
+
+
+/*** REGLE DESAMB 296 ***\
+/final rules \
+1> verb<p3> = verb[p3].
+
+
+
+/*** REGLE DESAMB 297 ***\
+/final rules \
+1> verb = verb.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

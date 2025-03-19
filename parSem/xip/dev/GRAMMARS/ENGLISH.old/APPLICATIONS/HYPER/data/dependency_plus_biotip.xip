@@ -1,0 +1,228 @@
+DependencyRules:
+
+
+// "orf14 expressed from recombinant baculovirus powerfully induces proliferation." The parser gives SUBJ_PRE(expressed,orf14_ANNOT:+_PROTANNOT:+_GENANNOT:+) We add the feature passive if an -ed form of an iv verb is followed by a preposition
+
+| sc{?*,fv{#1}}, pp |
+if ( ^SUBJ(#1[iv,past],#2[annot]) )
+	MOD[post=+,pastpart=+](#2,#1) .
+
+| fv{#1}, pp |
+if ( ^SUBJ(#1[iv,past],#2[annot]) )
+	MOD[post=+,pastpart=+](#2,#1) .
+
+| sc{?*,fv{#1}}, pp |
+if ( ^SUBJ(#1[iv,past],#2[allmark]) )
+	MOD[post=+,pastpart=+](#2,#1) .
+
+| fv{#1}, pp |
+if ( ^SUBJ(#1[iv,past],#2[allmark]) )
+	MOD[post=+,pastpart=+](#2,#1) .
+
+| ?{?*, ?^#1[annot,last]}, ?{?*,?^#2[iv,past,last]}, pp |
+	MOD[post=+,pastpart=+](#1,#2) .
+
+| ?{?*, ?^#1[allmark,last]}, ?{?*,?^#2[iv,past,last]}, pp |
+if ( MOD[pre](#1,#3[annot]) )
+	MOD[post=+,pastpart=+](#3,#2) .
+
+//-ed+by -> AGENT
+
+//| sc{?*,fv{verb#1[iv]}}, pp{prep[form:fby], np{noun#2[annot]}} |
+//	AGENT(#1,#2) .
+
+| sc{?*,fv{verb#1[iv]}}, pp{prep#2[form:fby]} |
+if ( PREPD(#3[annot],#2) )
+	AGENT(#1,#3) .
+
+| sc{?*,fv{verb#1[iv]}}, pp{prep#2[form:fby]} |
+if ( PREPD(#3[allmark],#2) & MOD[pre](#3,#4[annot]) )
+	AGENT(#1,#4) .
+
+| verb#1[iv], pp{prep#2[form:fby]} |
+if ( PREPD(#3[annot],#2) )
+	AGENT(#1,#3) .
+
+| verb#1[iv], pp{prep#2[form:fby]} |
+if ( PREPD(#3[allmark],#2) & MOD[pre](#3,#4[annot]) )
+	AGENT(#1,#4) .
+
+
+if ( EDBY(#1[iv],#2) & PREPD(#3,#2) )
+	AGENT(#1,#3).
+
+// There are many erroneous SUBJ_POST dependencies. Since it is rare, no SUBJ_POST dependency is allowed
+
+if (^SUBJ[post](?,?) )
+	~ .
+
+// Dependencies that have not been tested for all kinds of corpus, but valid for Biotip
+
+// "A 3.3-kb RIM2 cDNA was isolated and is predicted to encode ..."
+
+| nfv{?#2}, sc{conj#5[coord],?{#3}} |
+if ( NUCL(#1,#2) & NUCL(#3,#4) )
+	COORD(#5,#1).
+
+| nfv{?#2}, sc{conj#5[coord],?{#3}} |
+if ( NUCL(#1,#2) & NUCL(#3,#4) )
+	COORD(#5,#3).
+
+if ( COORD(#1,#2) & COORD(#1,#3) & SUBJ(#2,#4) )
+	SUBJ[pre=+,nfinit=+](#3,#4).
+
+| nfv{?#3}, iv{prep,verb#4} |
+if ( SUBJ(#1,#2) & NUCL(#1,#3) )
+	SUBJ[pre=+,nfinit=+](#4,#2) .
+
+// "A 3.3-kb (RIM2 cDNA)#3 clone#2 was isolated and is predicted to encode#1 ..."
+
+if ( SUBJ[nfinit,pre](#1[iv],#2) & MOD[pre](#2,#3[annot]) )
+	SUBJ[pre=+,nfinit=+](#1,#3).
+
+
+// "rfbABSmO16 genes were subcloned and shown to encode ... "
+
+| nfv{?#2}, conj, nfv{?#3} |
+if ( NUCL(#1,#2) )
+	COORD(#2,#3) .
+
+| nfv{?#4}, iv{prep,verb#5} |
+if ( SUBJ(#1,#2) & NUCL(#1,#3) & COORD(#3,#4) )
+	SUBJ[pre=+,nfinit=+](#5,#2) .
+
+// if 1 member of a coordination is OBJ, the other member too
+
+if ( COORD(#1,#2) & COORD(#1,#3) & OBJ(#4,#2) )
+	OBJ[post=+](#4,#3) .
+
+// .. the sif genes are likely to encode ..."
+
+if ( SUBJ(#1,#2) & NUCL[subjcompl](#1,#3) & MOD[post,infinit](#3,#4) )
+	SUBJ[pre=+,nfinit=+](#4,#2) .
+
+
+//"CHO cells transfected to overexpress ..."
+
+| SC{?*, ?^#3[annot], ?*, FV^{#1}}, iv{prep,verb#4} |
+if ( SUBJ(#1,#2) & MOD[pre](#2,#3[annot]) )
+	SUBJ[pre=+,nfinit=+](#4,#3) .
+
+// "(Bm-SPN-2 protein)#1 was#2 found#3 to specifically inhibit#4 ..." SUBJ[pre,nfinit](inhibit,Bm-SPN-2 protein)
+
+| NFV{#3}, IV{?*,#4[iv]} |
+if ( SUBJ(#2,#1[annot]) & NUCL[vlink,passive](#2,#3) )
+	SUBJ[pre=+,nfinit=+](#4,#1).
+
+// the ability of X to encode
+
+| ?{?*,?^#1[noun,last]}, pp{prep[form:fof],np{?^#2[noun]}}, iv{prep,verb#3} |
+if ( mod[post](#1,#2) )
+	SUBJ[pre=+,nfinit=+](#3,#2).
+
+// "The ability#1 of#3 dl#2 to function#4 as both an activator and repressor ... " SUBJ[nfinit](function,dl)
+
+//if ( MOD[post](#1,#2[annot]) & PREPD(#2[annot],#3[form:fof]) & MOD[post,infinit](#1,#4) )
+if ( MOD[post](#1,#2) & PREPD(#2,#3[form:fof]) & MOD[post,infinit](#1,#4) )
+	SUBJ[pre=+,nfinit=+](#4,#2).
+
+// the X encoding Y SUBJ(encoding,X); OBJ(encoding,Y)
+
+| ?{?*, noun#1[allmark,last]}, (punct[comma]), gv{verb#2[encode,vprog]} |
+	SUBJ[pre=+,nfinit=+](#2,#1).
+
+| ?{?*,?^#1[annot,last]}, (punct[comma]), gv{verb#2[encode,vprog]} |
+	SUBJ[pre=+,nfinit=+](#2,#1).
+
+| gv{verb#1[encode,vprog]}, (quant), np{?*, noun#2[annot,last]} |
+	OBJ[post=+,nfinit=+](#1,#2). 
+
+| gv{verb#1[encode,vprog]}, np{?*, noun#2[allmark,last]} |
+	OBJ[post=+,nfinit=+](#1,#2). 
+
+// the X expressing Y SUBJ(expressing,X); OBJ(expressing,Y)
+
+| ?{?*, noun#1[allmark,last]}, (punct[comma]), gv{verb#2[form:fexpress,vprog]} |
+	SUBJ[pre=+,nfinit=+](#2,#1).
+
+| ?{?*,?#1[annot,last]}, (punct[comma]), gv{verb#2[form:fexpress,vprog]} |
+	SUBJ[pre=+,nfinit=+](#2,#1).
+
+| gv{verb#1[form:fexpress,vprog]}, (quant), np{?*,noun#2[annot,last]} |
+	OBJ[post=+,nfinit=+](#1,#2). 
+
+| gv{verb#1[form:fexpress,vprog]}, (quant), np{?*,noun#2[allmark,last]} |
+	OBJ[post=+,nfinit=+](#1,#2). 
+
+
+// establish MOD[post] dependency between "interaction", the antecedent of "between" and the last noun of the chunk beginning with "between" : "interaction between the pTi-encoded D10B" MOD_POST(interaction,D10B)
+
+| ?{?*,?^#1[last,interact,noun]}, PP{?#2[sc_pbetween], ?*} |
+if ( PREPD(#3,#2) )
+	MOD[post=+](#1,#3).
+
+//between X and Y COORD(and,X) COORD(and,Y)
+
+| PP{prep#1[sc_pbetween]}, ?#4[coord], np{?*,?#3[last,noun]} |
+if ( PREPD(#2[last],#1) )
+	COORD(#4,#2)
+
+| PP{prep#1[sc_pbetween]}, ?#4[coord], np{?*,?#3[last,noun]} |
+if ( PREPD(#2[last],#1) )
+	COORD(#4,#3).
+
+// If a word's premodifier is an entity name, the entity name inherits its dependencies
+
+if ( $1[!features:!](#2[in],#3) & MOD[pre](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[ier],#3) & MOD[pre](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[ia],#3) & MOD[pre](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[iv],#3) & MOD[pre](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[iving],#3) & MOD[pre](#3,#4[annot]) )
+	$1(#2,#4).
+
+
+	
+
+// the apposition should inherit the dependency of its antecedent
+
+if ( $1[!features:!](#2[in],#3) & MOD[post,appos](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[iv],#3) & MOD[post,appos](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[iving],#3) & MOD[post,appos](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[ia],#3) & MOD[post,appos](#3,#4[annot]) )
+	$1(#2,#4).
+
+if ( $1[!features:!](#2[ier],#3) & MOD[post,appos](#3,#4[annot]) )
+	$1(#2,#4).
+
+
+if ( PREPD(#3,#2) & MOD[post,appos](#3,#4[annot]) )
+	PREPD(#4,#2).
+
+// the expression#1 of#2 ENTITY#3 - the ENTITY inherits the dependencies of its head
+
+if ( $1[!features:!](#4[iv],#1) & MOD[post](#1,#3[annot]) & PREPD(#3[annot],?[form:fof]) )
+	$1(#4,#3).
+
+
+if ( $1[!features:!](#4[ia],#1) & MOD[post](#1,#3[annot]) & PREPD(#3[annot],?[form:fof]) )
+	$1(#4,#3).
+
+
+//X may encode
+
+if ( SUBJ(#1,#2[annot]) & NUCL(#1,#3[iv]) )
+	SUBJ(#3,#2).

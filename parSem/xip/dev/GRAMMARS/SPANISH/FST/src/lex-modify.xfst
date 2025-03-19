@@ -1,0 +1,243 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		(x)fst
+# CONTENT:	modifications of morphological analyzer
+# LANGUAGE:	Spanish
+# AUTHOR:	Anne Schiller, Elena Lopez Garcia
+# CREATED:	17-Feb-2006
+#
+# -------------------------------------------------------------------------
+# USAGE: 	fst -s morph-base.fst -l [ThisFile]
+# -------------------------------------------------------------------------
+
+define LEX 
+
+
+# derivation boundary 
+define DB	[ "^|" ] ; 		# derivation marker
+define SB	[ "^|" | "^=" ];	# segment boundary
+
+define SP	"^_";
+
+# ---------------------------------------------------------------------------------
+echo >>> correct some tags in the lexicon
+
+define MAP [
+
+# add missing category for interrogative
+# e.g.		cómo+Interrog+Man		==>	cómo+Adv+Interrog+Man
+#		cúyo+Interrog+Poss+Masc+Sg	==>	cúyo+Pron+Interrog+Poss+Masc+Sg
+	[..]	-> %+Pron || \[%+Pron] _ %+Interrog %+Poss
+.o.	[..]	-> %+Adv  || \[%+Pron] _ %+Interrog 
+
+
+# correct number of "lo" 
+# e.g.		el+Art+Def+Neut+SP	==> el+Art+Def+Neut+Sg
+
+.o.	%+SP -> %+Sg	|| %+Neut _ 
+
+# possessives
+.o.   %+Pron %+Gen -> %+Det %+Poss
+
+
+];
+
+read regex MAP.i .o. LEX ;
+
+
+define LEX
+
+# ---------------------------------------------------------------------------------
+echo >>> remove some readings
+define REMOVE [
+  {españolar} %+Verb ?*
+| {paso} %+Adj ?*
+| {regalo} %+Adj ?*
+| {ve} %+Let ?*
+| {principal} %+Noun ?*
+| {haber} %+Noun ?*
+| {impositiva} %+Noun ?*
+| {listín} %+Adj ?*
+| {Alabama} %+Prop %+Usastate %+Abrev ?*
+| {dictador} %+Adj ?*
+| {resoltar} %+Verb ?*
+| {recuerdo} %+Adj ?*
+| {envanecimiento} %+Adj ?*
+| {resulta} %+Noun ?*
+| {lisa} %+Noun ?*
+| {cuándo} %+Conj ?*
+| {cuando} %+Adv ?*
+| {facer} %+Verb ?*
+| {romanzar} %+Verb ?*
+| {frutar} %+Verb ?*
+| {pistar} %+Verb ?*
+| {erar} %+Verb ?*
+| {sin} SP {embargo} %+Adv ?*
+| {claro}  SP {que} %+Conj ?*
+| {imprimar} %+Verb ?*
+| {clarar} %+Verb ?*
+| {falsar} %+Verb ?*
+| {culturar} %+Verb ?*
+| {según} %+Adv ?*
+
+];
+
+read regex  ~[REMOVE] .o. LEX ;
+
+define LEX
+
+define COLA ${colar} .o. LEX .o. {cola} ;
+
+read regex LEX - COLA ;
+
+define LEX 
+
+# ---------------------------------------------------------------------------------
+echo >>> add some words
+
+define SGPLs 	[ %+Sg:0 | %+Pl:s ];
+define SGPLes 	[ %+Sg:0 | %+Pl:{es} ];
+
+define ADJAL	[	%+Adj:0 %+MF:0 SGPLes ] ;
+
+define ADJo 	[ o 	%+Adj:0 %+Masc:0 SGPLs 
+		| o:a	%+Adj:0 %+Fem:0 SGPLs 
+		];
+
+
+define NOUNo 	[ o 	%+Noun:0 %+Masc:0 SGPLs 
+		| o:a	%+Noun:0 %+Fem:0 SGPLs 
+		];
+
+define VERBar	[ {ar}	%+Verb:0 %+Inf:0
+		| {ar}:{o} %+Verb:0 %+PInd:0 %+1P:0 %+Sg:0  
+		| {ar}:{as} %+Verb:0 %+PInd:0 %+2P:0 %+Sg:0
+		| {ar}:{a} %+Verb:0 %+PInd:0 %+3P:0 %+Sg:0
+		| {ar}:{a} %+Verb:0 %+Imp:0 %+2P:0 %+Sg:0
+		| {ar}:{amos} %+Verb:0 [ %+PInd:0 | %+Perf:0] %+1P:0 %+Pl:0
+		| {ar}:{áis} %+Verb:0 %+PInd:0 %+2P:0 %+Pl:0
+		| {ar}:{an} %+Verb:0 %+PInd:0 %+3P:0 %+Pl:0
+		| {ar}:{aré} %+Verb:0 %+Fut:0 %+1P:0 %+Sg:0
+		| {ar}:{arás} %+Verb:0 %+Fut:0 %+2P:0 %+Sg:0
+		| {ar}:{ará} %+Verb:0 %+Fut:0 %+3P:0 %+Sg:0
+		| {ar}:{aremos} %+Verb:0 %+Fut:0 %+1P:0 %+Pl:0
+		| {ar}:{aréis} %+Verb:0 %+Fut:0 %+2P:0 %+Pl:0
+		| {ar}:{arán} %+Verb:0 %+Fut:0 %+3P:0 %+Pl:0
+		| {ar}:{é} %+Verb:0 %+Perf:0 %+1P:0 %+Sg:0
+		| {ar}:{aste} %+Verb:0 %+Perf:0 %+2P:0 %+Sg:0
+		| {ar}:{ó} %+Verb:0 %+Perf:0 %+3P:0 %+Sg:0
+		| {ar}:{asteis} %+Verb:0 %+Perf:0 %+2P:0 %+Pl:0
+		| {ar}:{aron} %+Verb:0 %+Perf:0 %+3P:0 %+Pl:0
+		| {ar}:{aba}  %+Verb:0 %+IInd:0 [ %+1P:0| %+3P:0] %+Sg:0
+		| {ar}:{abas} %+Verb:0 %+IInd:0 %+2P:0 %+Sg:0
+		| {ar}:{ábamos} %+Verb:0 %+IInd:0 %+1P:0 %+Pl:0
+		| {ar}:{abais} %+Verb:0 %+IInd:0 %+2P:0 %+Pl:0
+		| {ar}:{aban} %+Verb:0 %+IInd:0 %+3P:0 %+Pl:0
+		| {ar}:{aría} %+Verb:0 %+Cond:0 [ %+1P:0| %+3P:0] %+Sg:0
+		| {ar}:{arías} %+Verb:0 %+Cond:0 %+2P:0 %+Sg:0
+		| {ar}:{aríamos} %+Verb:0 %+Cond:0 %+1P:0 %+Pl:0
+		| {ar}:{aríais} %+Verb:0 %+Cond:0 %+2P:0 %+Pl:0
+		| {ar}:{arían} %+Verb:0 %+Cond:0 %+3P:0 %+Pl:0
+		| {ar}:{e} %+Verb:0 %+Imp:0 %+3P:0 %+Sg:0
+		| {ar}:{e} %+Verb:0 %+PSubj:0 [ %+1P:0 | %+3P:0] %+Sg:0
+		| {ar}:{es} %+Verb:0 %+PSubj:0 %+2P:0 %+Sg:0
+		| {ar}:{emos} %+Verb:0 %+PSubj:0 %+1P:0 %+Pl:0
+		| {ar}:{éis} %+Verb:0 %+PSubj:0 %+2P:0 %+Pl:0
+		| {ar}:{en} %+Verb:0 [%+PSubj:0 | %+Imp:0] %+3P:0 %+Pl:0
+		| {ar}:{ara} %+Verb:0 %+PluPerf:0 [ %+1P:0 | %+3P:0] %+Sg:0
+		| {ar}:{ase} %+Verb:0 %+PluPerf:0 [ %+1P:0 | %+3P:0] %+Sg:0
+		| {ar}:{aras} %+Verb:0 %+PluPerf:0 %+2P:0 %+Sg:0
+		| {ar}:{ases} %+Verb:0 %+PluPerf:0 %+3P:0 %+Sg:0
+		| {ar}:{áramos} %+Verb:0 %+PluPerf:0 %+1P:0 %+Pl:0
+		| {ar}:{ásemos} %+Verb:0 %+PluPerf:0 %+1P:0 %+Pl:0
+		| {ar}:{arais} %+Verb:0 %+PluPerf:0 %+2P:0 %+Pl:0
+		| {ar}:{áseis} %+Verb:0 %+PluPerf:0 %+2P:0 %+Pl:0
+		| {ar}:{aran} %+Verb:0 %+PluPerf:0 %+3P:0 %+Pl:0
+		| {ar}:{asen} %+Verb:0 %+PluPerf:0 %+3P:0 %+Pl:0
+		| {ar}:{are} %+Verb:0 %+FSubj:0 [ %+1P:0 | %+3P:0] %+Sg:0
+		| {ar}:{ares} %+Verb:0 %+FSubj:0 %+2P:0 %+Sg:0
+		| {ar}:{áremos} %+Verb:0 %+FSubj:0 %+1P:0 %+Pl:0
+		| {ar}:{areis} %+Verb:0 %+FSubj:0 %+2P:0 %+Pl:0
+		| {ar}:{aren} %+Verb:0 %+FSubj:0 %+3P:0 %+Pl:0
+		| {ar}:{ad} %+Verb:0 %+Imp:0 %+2P:0 %+Pl:0
+		| {ar}:{ado} %+Verb:0 %+PastPart:0
+		| {ar}:{ado} %+Verb:0 %+PastPart:0 %+Masc:0 %+Sg:0
+		| {ar}:{ada} %+Verb:0 %+PastPart:0 %+Fem:0 %+Sg:0
+		| {ar}:{ados} %+Verb:0 %+PastPart:0 %+Masc:0 %+Pl:0
+		| {ar}:{adas} %+Verb:0 %+PastPart:0 %+Fem:0 %+Pl:0
+		| {ar}:{ando} %+Verb:0 %+PresPart:0
+		];
+		
+
+
+define ADDLEX [ 
+  {calibre}		%+Noun:0 %+Masc:0 SGPLs
+| {colectivo}		%+Noun:0 %+Masc:0 SGPLs
+| {dislate} 		%+Noun:0 %+Masc:0 SGPLs
+| {subida}		%+Noun:0 %+Fem:0 SGPLs
+| {iris} 		%+Noun:0 %+Masc:0 %+SP:0
+| {jubilad} 		NOUNo
+| {implicad} 		NOUNo
+| {abonad}		NOUNo
+| {justo} 		%+Adv:0
+| {lustre}		%+Noun:0 %+Masc:0 SGPLs
+| {maletín}		%+Noun:0 %+Masc:0 %+Sg:0
+| {maletín}:{maletines}	%+Noun:0 %+Masc:0 %+Pl:0
+| {nubos}		ADJo
+| {otoñal}		ADJAL
+| {propina} 		%+Noun:0 %+Fem:0 SGPLs
+| {saharaui}		%+Adj:0 %+MF:0 SGPLs
+| {tens} 		ADJo
+| {listín}:{listines}	%+Noun:0 %+Masc:0 %+Pl:0
+| {encuesta}		%+Noun:0 %+Fem:0 SGPLs
+| {pista}		%+Noun:0 %+Fem:0 SGPLs
+| {desplazad}		NOUNo
+| {llegada}		%+Noun:0 %+Fem:0 SGPLs
+| {soporte}		%+Noun:0 %+Masc:0 SGPLs
+| {nacionalista}	%+Adj:0 %+MF:0 SGPLs
+| {envanecimiento}	%+Noun:0 %+Masc:0 SGPLs
+| {amante}		%+Adj:0 %+MF:0 SGPLs
+| {amante}		%+Noun:0 %+MF:0 SGPLs
+| {albanokosovar}	%+Adj:0 %+MF:0 SGPLes
+| {albanokosovar}	%+Noun:0 %+MF:0 SGPLes
+| {kosovar}		%+Adj:0 %+MF:0 SGPLes
+| {kosovar}		%+Noun:0 %+MF:0 SGPLe
+| {fragmentari}		ADJo
+| {inerme}		%+Adj:0 %+MF:0 SGPLs
+| {cese}		%+Noun:0 %+Masc:0 SGPLs
+| {reclus} 		NOUNo
+| {romance}		%+Noun:0 %+Masc:0 SGPLs
+| {prim}		VERBar
+| {favela}		%+Noun:0 %+Fem:0 SGPLs
+| {al menos}		%+Adv:0
+| {patronal}		%+Noun:0 %+Fem:0 SGPLs
+| {sin embargo}		%+Conj:0
+| {parche}		%+Noun:0 %+Masc:0 SGPLs
+| {tóner}		%+Noun:0 %+Masc:0 SGPLs
+| {tamaño}		%+Noun:0 %+Masc:0 SGPLs
+| {mayúscul} 		ADJo
+| {escane}		VERBar
+| {hisopo}		%+Noun:0 %+Masc:0 SGPLs
+| {pesad}		ADJo
+| {original}		%+Noun:0 %+Masc:0 %+Sg:0
+| {original}:{originales}		%+Noun:0 %+Masc:0 %+Pl:0
+| {trama}		%+Noun:0 %+Fem:0 SGPLs
+| {reinstal}		VERBar 
+| {Piscis}		%+Noun:0 %+MF:0 %+SP:0  %+Prop:0 %+Zodiac:0
+| {Escorpio}		%+Noun:0 %+MF:0 %+SP:0  %+Prop:0 %+Zodiac:0
+| {fax}:{faxes}		%+Noun:0 %+Masc:0 %+Pl:0
+| {enganche}		%+Noun:0 %+Masc:0 SGPLs
+| {enmienda}		%+Noun:0 %+Fem:0 SGPLs
+| {clausur}		VERBar
+| {rosa}		%+Adj:0 %+MF:0 SGPLs
+];
+
+
+read regex ADDLEX | LEX ;
+
+
+

@@ -1,0 +1,1 @@
+string s='DETERM(0,Noun#4[lemme="poids",case:nom,gender:neutral],Det#3[lemme="le",case:nom,def:+]).';vector v=s.extract(0,"[","]");println(v);v=s.extract(0,'"','"');println(v);s='"lemme":"poids","case":"nom","gender":"neutral"';map m;m="{"+s+"}";println(m);s=s[0:'(' in s];println(s);

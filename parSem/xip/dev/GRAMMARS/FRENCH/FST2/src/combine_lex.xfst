@@ -1,0 +1,57 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      define entries to be removed from original lexicon
+# 
+# LANGUAGE:     (FRENCH)
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      17-Jul-2007 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -s LEX.fst -s NEW.fst  -l [ThisFile]
+# ============================================================================
+
+define NEWLEX
+define OLDLEX
+
+read regex OLDLEX;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+];
+multi char sigma net
+define TAG;
+
+
+define GEO	[ %+Continent | %+Country | %+Region | %+City 
+		| %+River | %+Mountain | %+Geo ] ;
+
+define NUMBER	$[%+Num %+Card] .o. NEWLEX ;
+
+define DENOM	$[[%+Noun|%+Adj] GEO ] .o. NEWLEX ;
+
+define NEG	$[%+Adv %+PsNeg] .o. NEWLEX ;
+
+define TIME	$[%+Noun [%+Month|%+Weekday]] .o. NEWLEX ;
+
+
+define REMOVE [
+	$[%+WordPart]
+|	$[%+Ord]	# -> numbers.xfst
+|	DENOM.l  TAG* [%+Noun|%+Adj] ?*
+|	NUMBER.l TAG* [%+Noun|%+Adj] ?*
+|	NEG.l	 TAG* %+Adv ?*
+|	TIME.l	 TAG* %+Noun %+Common ?*
+|	[n [e|%']] TAG* %+Adv 
+|	{quel} TAG* %+Adj ?*
+|	{meilleur} TAG* %+Noun ?*
+|	{Etat} TAG* %+Noun ?*
+] .o. OLDLEX ;
+
+
+read regex	[ NEWLEX | [OLDLEX - REMOVE] ];
+
+# replace some feature names
+substitute symbol %+P1 for %+1
+substitute symbol %+P2 for %+2
+substitute symbol %+P3 for %+3

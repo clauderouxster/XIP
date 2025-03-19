@@ -1,0 +1,711 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+/############################## DEDUCTION   ################################################\
+
+
+reconstructeur:
+
+//90> #1{noun#2[date:~]{noun#3[first, last, heure:~,date:~]}}	=#1{#3}.
+1> #1{?*#5,noun#2{noun#3[first, last]},?-#4}=#1{#5,#3,#4}.
+
+// where(print("reshufling:"+#3[lemme]+"\n"))
+
+
+
+Déduction:
+
+/Modifs Maud\
+
+// --------------------------
+// Dependances pour les DATES
+// --------------------------
+
+// Dates absolues completes simples (NP):
+
+|NP#1[date,absolue,complete,nondate:~,datecoord:~,in-interval:~,interval:~]|
+	if(~DATE[complete,absolue](#1))
+	DATE[complete=+,absolue=+](#1).
+	
+
+// Dates absolues incompletes simples (NP):
+
+|NP#1[date,absolue,incomplete,nondate:~,datecoord:~,in-interval:~]|
+	if(~DATE[incomplete,absolue](#1))
+	DATE[incomplete=+,absolue=+](#1).
+
+
+|ADV#1[date,absolue,incomplete,nondate:~,datecoord:~,in-interval:~]|
+	if(~DATE[incomplete,absolue](#1))
+	DATE[incomplete=+,absolue=+](#1).
+
+// Dates absolues contenant une coord (NP):
+
+|NP#1[date,absolue,nondate:~,datecoord:+]|
+	if(~DATECOORD(#1))
+	DATECOORD[absolue=+](#1).
+
+
+// Dates relatives simples (NP):
+
+|NP#1[date,relative,duree:~,datecoord:~,in-interval:~]|
+	if(~DATE[relative](#1))
+	DATE[relative=+](#1).
+
+// Dates relatives contenant une coord (NP):
+
+|NP#1[date,relative,duree:~,datecoord:+]|
+	if(~DATECOORD(#1))
+	DATECOORD[relative=+](#1).
+
+
+// Dates absolues dans PP:
+// Possibilité de ne faire qu'une seule règle
+// si on ne veut pas les distinctions approx,orig, etc.
+
+|PP#1[date:+,absolue:+,nondate:~,t_mod:approx,in-interval:~]|
+	if(~DATE[t_mod:approx](#1))
+	DATE[t_mod=approx,absolue=+](#1).
+
+|PP#1[date:+,absolue:+,nondate:~,orig:+]|
+	if(~DATE[orig:+](#1))
+	DATE[orig=+,absolue=+](#1).
+
+|PP#1[date:+,absolue:+,nondate:~,tfin:+]|
+	if(~DATE[tfin:+](#1))
+	DATE[tfin=+,absolue=+](#1).
+
+|PP#1[date:+,absolue:+,nondate:~,t_mod:~approx,orig:~,tfin:~,in-interval:~]|
+	if(~DATE(#1))
+	DATE[absolue=+](#1).
+
+|PP#1[date,relative,duree:~,datecoord:~,in-interval:~]|
+	if(~DATE[relative](#1))
+	DATE[relative=+](#1).	
+
+
+// Dates relative dans PP:
+// Possibilité de ne faire qu'une seule règle
+// si on ne veut pas les distinctions approx,orig, etc.
+
+
+|PP#1[date:+,relative:+,nondate:~,t_mod:approx,in-interval:~]|
+	if(~DATE[t_mod:approx](#1))
+	DATE[t_mod=approx,relative=+](#1).
+
+|PP#1[date:+,relative:+,nondate:~,orig:+,in-interval:~]|
+	if(~DATE[orig:+](#1))
+	DATE[orig=+,relative=+](#1).
+
+|PP#1[date:+,relative:+,nondate:~,tfin:+,in-interval:~]|
+	if(~DATE[tfin:+](#1))
+	DATE[tfin=+,relative=+](#1).
+
+|PP#1[date:+,relative:+,nondate:~,t_mod:~approx,orig:~,tfin:~,in-interval:~]|
+	if(~DATE(#1))
+	DATE[relative=+](#1).
+
+|PP#1[date:+,relative:+,duree:~,in-interval:~]|
+	if(~DATE(#1))
+	DATE[relative=+](#1).
+
+// Annees seules potentielles:
+|?#2{NUM#1[datepot:+,absolue:+,incomplete:+,date:~]}| 
+  if(~DATEPOT(#1) & ~DATE(#2))
+  DATEPOT[incomplete=+,absolue=+](#1).
+
+
+|PP#1[datepot,absolue]|
+ if(~DATEPOT(#1))
+   DATEPOT[incomplete=+,absolue=+](#1).
+
+
+//Hier (matin), le mois prochain, etc.
+
+|ADV#2[tempexpr,relative]|
+	if(~DATE(#2) & ~HEURE(#2) )
+	DATE[relative=+](#2).
+
+
+|ADV#2[tempexpr,absolue]|
+	if(~DATE(#2) & ~HEURE(#2) )
+	DATE[absolue=+](#2).
+
+
+
+// le lendemain, veille
+
+|NOUN#1[tempexpr,relative,datecoord:~]|
+	if(~DATE(#1)) 
+	DATE[relative=+](#1).
+
+
+
+/end modifs maud\   
+
+
+
+|NOUN#1{?,NOUN{NOUN{NOUN#2,?*},?*}}|
+	if (LIEU(#1) & ^LIEU(#2))
+	~
+
+
+
+10> |noun#1[telfax]| LIEU[telfax=+](#1).
+10> |num#1[telfax]| LIEU[telfax=+](#1).
+
+10> |noun#1[person,animal,!animal:!,mwe,hum=~]| PERSONNE(#1)
+10> |noun#1[person,animal:~]| if (~PERSONNE[animal](#1)) PERSONNE[hum=+](#1)
+
+10> |noun#1[celeb,hum=+]| if (~PERSONNE(#1)) PERSONNE[hum=+](#1)
+20> |noun#1[batimentorg:+,!edu:!]| ORG[lieu=+, batiment=+](#1)
+
+20> |noun#1[org:+, lieu:+,batimentorg:~]| ORG[lieu=+](#1)
+20> |noun#1[org:+, firme:~,div:~,!pol:!,!non-profit:!,!mil:!]| ORG(#1)
+20> |noun#1[firme:+]| ORG[entreprise=+](#1)
+20> |noun#1[batiment:+,batimentorg:~]| if (~LIEU[batiment](#1)) LIEU[batiment=+,hum=~](#1)
+20> |noun#1[quartier:+,line:~,adresse:~,ville:~]| if (~LIEU[quartier](#1)) LIEU[quartier=+,hum=~](#1)
+20> |noun#1[quartier:+,line,adresse:~]| if (~LIEU[line](#1)) LIEU[line=+,quartier=+,hum=~](#1)
+20> |noun#1[quartier:+,adresse]| if (~LIEU[line](#1)) LIEU[adresse=+,quartier=+,hum=~](#1)
+20>  |noun#1[quartier:~,line,mwe,adresse:~]| if (~LIEU[line](#1)) LIEU[line=+,hum=~](#1)
+20>  |noun#1[quartier:~,line,entit,adresse:~]| if (~LIEU[line](#1)) LIEU[line=+,hum=~](#1)
+
+
+20> |noun#1[adresse:+]| if (~LIEU[adresse](#1)) LIEU[adresse=+,hum=~](#1)
+22> |noun#1[ville:+]| if (~LIEU[ville](#1)) LIEU[ville=+,admi=+,hum=~](#1)
+22> |noun#1[region:+]| if (~LIEU[region](#1)) LIEU[region=+,admi=+,hum=~](#1)
+22> |noun#1[pays:+]| if (~LIEU[pays](#1)) LIEU[pays=+,admi=+,hum=~](#1)
+22> |noun#1[continent:+]| if (~LIEU[continent](#1)) LIEU[continent=+,admi=+,hum=~](#1)
+22>  |noun#1[lieu:+,admi:+] | if (~LIEU(#1)) LIEU[admi=+](#1)
+
+23> |noun#1[lieu:+,noun:+, batimentorg:~, !batiment:!, !quartier:!, !ville:!, !region:!, !pays:!, !continent:!,!geog:!.!hydronyme:!,!oronyme:!]|if (~LIEU(#1)) LIEU[hum=~](#1)
+22> |noun#1[url]| if (~URL(#1)) URL(#1).
+22> |noun#1[email]| if (~EMAIL(#1)) EMAIL(#1).
+22>  |noun#1[!event:!,!culturel:!,!guerre:!,!sport:!,mwe,event]| if (~EVENEMENT(#1)) EVENEMENT(#1).
+22>  |noun#1[mwe,titreOeuvre]| if (~TITRE-OEUVRE(#1)) TITRE-OEUVRE(#1).
+22>  |noun#1[mwe,vehicule,!vehicule:!] | if (~PRODUIT(#1)) PRODUIT(#1).
+22>  |noun#1[entit,vehicule,!vehicule:!] | if (~PRODUIT(#1) & ^ORG(#1)) PRODUIT(#1).
+// ESTER  
+22>  |noun#1[entit,vehicule,!vehicule:!] | if (~PRODUIT(#1)) PRODUIT(#1).
+22>  |noun#1[entit,docu,!docu:!] | if (~PRODUIT(#1)) PRODUIT(#1).
+22>  |noun#1[entit,oeuvre,!oeuvre:!] | if (~PRODUIT(#1)) PRODUIT(#1).
+22>  |noun#1[prodmisc]|   if (~PRODUIT(#1)) PRODUIT(#1).
+#toto
+22>  |noun#1[org,div,!div:!,plusdet:~,!musique:!,!sport:!,entit] | if (~ORG(#1)) ORG(#1).
+
+22>  |noun#1[org,div,!div:!,!musique:!,!sport:!,entit] | if (~ORG(#1)) ORG(#1).
+22>  |num#1[org,div,!div:!,!musique:!,!sport:!,entit] | if (~ORG(#1)) ORG(#1).
+
+22>  |noun#1[org,div,!div:!,!musique:!,!sport:!,mwe] | if (~ORG(#1)) ORG(#1).
+
+22>  |noun#1[entit,award,!award:!] | if (~PRODUIT(#1)) PRODUIT(#1).
+
+22>  |noun#1[unit,!unit:!,mwe]| if (~AMOUNT(#1)) AMOUNT(#1). 
+22>  |pp#1[unit,!unit:!,mwe]| if (~AMOUNT(#1)) AMOUNT(#1). 
+22>  |np#1[unit,!unit:!,mwe]| if (~AMOUNT(#1)) AMOUNT(#1). 
+
+22>  |num#1[unit,!unit:!,mwe]| if (~AMOUNT(#1)) AMOUNT(#1). 
+//22>  |np{num#1,coord,noun#2}|
+//	if (AMOUNT[!unit:!](#2))
+//	AMOUNT(#1)
+	
+
+// ajout des fonctions 
+
+22> |noun#1[prof,grade]| if (~FONCTION(#1)) FONCTION[mil=+](#1).
+22> |noun#1[prof,reli]| if (~FONCTION(#1)) FONCTION[reli=+](#1).
+22> |noun#1[prof,ari]| if (~FONCTION(#1)) FONCTION[ari=+](#1).
+22> |noun#1[prof,pol,notfonc:~]| if (~FONCTION(#1)) FONCTION[pol=+](#1).
+// président est une fonction ambigue
+22> |noun#1[prof,admi]| if (~FONCTION(#1)) FONCTION[admi=+](#1).
+
+22> |noun#1[prof,admi:~,grade:~,reli:~,ari:~,pol:~,mwe]| if (~FONCTION(#1)) FONCTION[pol=+](#1).
+// président est une fonction ambigue
+
+22> |?[indef:~],noun#1[lemme:"président"]|  if (~FONCTION(#1))  FONCTION(#1).
+
+/1e suppression des dépendances superflues, pour éviter qu'elles soient propagées\
+24> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+24> |#1{#2, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1[villereg:+]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) ~
+//25> |#1{?*, #2}| if ((PRODUIT(#1)) & (^PERSONNE(#2))) ~
+
+/******* marquage des éléments à propager **********\
+
+
+Script:
+
+//AJOUT CB:notice  INA exemple: "Colin, Jean-Pierre"
+|NOUN#1[person]{NOUN#2[maj,lieu:~,tit:~,prof:~],punct[lemme:"%,"],noun#3[maj]}|
+	{PERS##2=1 ;}
+
+|NOUN#1[person, inconnu:+, lieupers:~, orgpers1:~]|
+          { PERS##1=1;}
+
+|NOUN#1[person, inconnu:+, lieu:~, orgpers1:~]|
+          { PERS##1=1;}
+
+|NOUN#1[person]{NOUN#2[tit],NOUN#3[pren], NOUN#4[last, initial:~, inconnu:+]}|
+     { PERS##4=1;}
+
+|NOUN#1[person]{NOUN#2[tit], NOUN#3[last, initial:~, inconnu:+]}|
+     { PERS##3=1;}
+
+// ajout CB Dominique de Prunerie
+
+|NOUN#1[person]{NOUN#2[pren],PREP[sfde],NOUN#3[last, initial:~,inconnu:+]}|
+        {PERS##3=1;}
+
+// ajout CB: le président Prouchmouto 
+
+ |NP#1{?*,NOUN[last,prof]},NP#3{NOUN#2[person,inconnu:+]}|
+        {PERS##3=1;}
+
+// ajout CB : deux prenoms
+ |NOUN#1[person]{NOUN#2[pren],NOUN#3[pren], NOUN#4[last, initial:~, inconnu:+]}|
+     { PERS##4=1;}
+
+|NOUN#1[person]{NOUN#2[tit], NOUN#3[pren:~, partic:~], NOUN#4[last, initial:~, inconnu:+]}|
+     { PERSINT1##3=1; PERSINT2##4=1;}
+
+|NOUN#1[person]{NOUN#2[pren:~, partic:~, start, initial:~], NOUN#3[last, initial:~, inconnu:+]}|
+     { PERSINT1##2=1; PERSINT2##3=1;}
+
+
+|NOUN#1[person]{NOUN#2[pren], NOUN#3[inconnu:+, last, initial:~]}|
+     { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[pren], NOUN#3[inconnu:+, initial:~], Noun#4[last]}|
+     { PERSINT1##3=1; PERSINT2##4=1;}
+
+|NOUN#1[lieu:+, inconnu:+, perslieu:~]| if (LIEU(#1))
+          { LIEUX##1=1;}
+
+|NOUN#1[lieu:+, inconnu:+, person:~]| if (LIEU(#1))
+          { LIEUX##1=1;}
+
+|NOUN#1[lieu:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU(#1))
+     { LIEUINT1##2=1; LIEUINT2##3=1;}
+
+|NOUN#1[lieu:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU(#1))
+     { LIEUINT1##2=1; LIEUINT2##3=1;}
+
+|NOUN#1[ville:+, inconnu:+, perslieu:~]| if (LIEU[ville](#1))
+          { VI##1=1;}
+
+|NOUN#1[ville:+, inconnu:+, person:~]| if (LIEU[ville](#1))
+          { VI##1=1;}
+
+|NOUN#1[vville:+, inconnu:+]|
+          { VI##1=1;}
+
+|NOUN#1[ville:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[ville](#1))
+     { VIINT1##2=1; VIINT2##3=1;}
+
+|NOUN#1[ville:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[ville](#1))
+     { VIINT1##2=1; VIINT2##3=1;}
+
+|NOUN#1[region:+, perslieu:~]| if (LIEU[region](#1))
+          { REG##1=1;}
+
+|NOUN#1[region:+, person:~]| if (LIEU[region](#1))
+          { REG##1=1;}
+
+|NOUN#1[region:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[region](#1))
+     { REGINT1##2=1; REGINT2##3=1;}
+
+|NOUN#1[region:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[region](#1))
+     { REGINT1##2=1; REGINT2##3=1;}
+
+|NOUN#1[org:+, person:~, lieu:~]|
+          { ORGA##1=1;}
+
+|NOUN#1[firme:+, person:~, lieu:~]|
+          {FIRME##1=1;}
+
+|NOUN#1[batimentorg:+, inconnu:+, person:~, lieu:~]|
+          {ORGBAT##1=1;}
+
+|NOUN#1[batimentorg:+, person:~]{NOUN#2[batimentorg1], NOUN#3[inconnu:+, person:~, lieu:~, last]}|
+          {ORGBAT##3=1;}
+
+|NOUN#1[batiment:+]{NOUN#2[maj, batimentorg1:~], NOUN#3[maj, last]}|  if (ORG[batiment](#1))
+     { ORGBAT1##2=1; ORGBAT2##3=1;}
+
+
+|NOUN#1[org:+, firme:~, persorg1:~]{NOUN#2[maj], NOUN#3[maj, last,lieu:~]}|  if (ORG(#1))
+     { ORGINT1##2=1; ORGINT2##3=1;}
+
+|NOUN#1[firme:+, persorg1:~]{NOUN#2[maj], NOUN#3[maj, last]}|  if (ORG[entreprise](#1))
+     { FIRMEINT1##2=1; FIRMEINT2##3=1;}
+
+
+Déduction:
+/propagation d'un seul élément\
+
+|NOUN#1[maj, lieu:~, org:~, firme:~]| if(PERS##1:1 & ~PERSONNE(#1))
+        PERSONNE[hum=+](#1)
+
+|NOUN#1[maj, lieupers:~, orgpers:~]| if(PERS##1:1 & ~PERSONNE(#1))
+        PERSONNE[hum=+](#1)
+
+|NOUN#1[maj, person:~, org:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, person:~, org:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+
+|NOUN#1[maj, person:~, org:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, persorg:~]| if(ORGA##1:1 & ~ORG(#1))
+        ORG(#1)
+
+|NOUN#1[maj, persorg:~]| if(FIRME##1:1 & ~ORG[entreprise](#1))
+        ORG[entreprise=+](#1)
+
+|NOUN#1[maj, persorg:~]| if(ORGBAT##1:1 & ~ORG[batiment](#1))
+        ORG[batiment=+](#1)
+
+
+/propagation de plusieurs éléments d'un chunk\
+|NP#1{NOUN#2, NOUN#3[last]}| if ((PERSINT1##2:1) & (PERSINT2##3:1))
+	PERSONNE(#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((REGINT1##2:1) & (REGINT2##3:1))
+	LIEU[region=+](#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((VIINT1##2:1) & (VIINT2##3:1))
+	LIEU[ville=+](#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((LIEUINT1##2:1) & (LIEUINT2##3:1))
+	LIEU(#1)
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((ORGINT1##2:1) & (ORGINT2##3:1))
+	ORG(#1) 
+
+|NP{?,NOUN#2[maj,last]}|  if (ORGINT1##2:1) ORG(#2) 
+
+|NP{?,NOUN#2[maj,last]}|  if (ORGINT2##2:1) ORG(#2) 
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((FIRMEINT1##2:1) & (FIRMEINT2##3:1))
+	ORG[entreprise=+](#1)
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((ORGBAT1##2:1) & (ORGBAT2##3:1))
+	ORG[batiment=+](#1)
+
+
+
+/************* élimination des dépendances superflues ********\
+/ lorsqu'un noeud parent et un noeud fils portent tous deux une dépendance d'entité nommée\
+/on garde la dépendance du noeud fils lorsque c'est un nom seul fils d'un autre nom (en vue d'une élimination du noeud parent)\
+/
+
+30> |NOUN#1{NOUN#2[org, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[firme, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[batimentorg, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[person, first, last]}| if ((^PERSONNE(#1)) & (PERSONNE(#2))) ~
+30> |NOUN#1{NOUN#2[lieu, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[pays, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[continent, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[ville, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[quartier, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[batiment, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[date, first, last]}| if ((^DATE(#1)) & (DATE(#2))) ~
+30> |NOUN#1{NOUN#2[periode, first, last]}| if ((^PERIODE(#1)) & (PERIODE(#2))) ~
+\
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[entreprise:~, batiment:~](#1)) ORG(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[entreprise](#1)) ORG[entreprise=+](#2)
+
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[batiment](#1)) ORG[batiment=+](#2)
+//30> |NOUN#1{NOUN#2[first, last]}| if (^PERSONNE(#1)) PERSONNE(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[pays:~, continent:~, ville:~, region:~, quartier:~, batiment:~](#1)) LIEU(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[pays](#1)) LIEU[pays=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[continent](#1)) LIEU[continent=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[ville](#1)) LIEU[ville=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[region](#1)) LIEU[region=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[quartier](#1)) LIEU[quartier=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[batiment](#1)) LIEU[batiment=+](#2)
+//30> |NOUN#1{NOUN#2[first, last]}| if (^DATE(#1)) DATE(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^PERIODE(#1)) PERIODE(#2)
+
+
+
+/dans tous les autres cas, on garde la dépendance du noeud père\
+
+40>  |#1{?*,#2}| if (PRODUIT(#1) & ^PRODUIT(#2)) ~
+
+40> |#1{#2,?*}| if (AMOUNT(#1) & ^AMOUNT(#2)) ~
+
+40> |#1{#2,?*}| if (AMOUNT(#1) & ^DATE(#2)) ~
+
+40> |#1{?{?*,#2,?*},?*}| if (AMOUNT(#1) & ^AMOUNT(#2)) ~
+
+//40> |#1{?*, #2}| if ((DATE(#1)) & (^DATE(#2))) ~
+//40> |#1{?*, ?{?*, #2}}| if ((DATE(#1)) & (^DATE(#2))) ~
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+40> |#1{?*, #2}| if ((LIEU[ville](#1)) & (^LIEU[ville](#2))) ~
+40> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[region](#2))) ~
+40> |#1{?*, #2}| if ((LIEU[pays](#1)) & (^LIEU[pays](#2))) ~
+40> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+40> |#1{#2, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+
+40> |#1{?*, #2}| if ((FONCTION(#1)) & (^FONCTION(#2))) ~
+40> |#1{#2{?*,#3},?*}| if ((FONCTION(#1)) & (^FONCTION(#3))) ~
+40> |#1{#2{#3,?*},?*}| if ((FONCTION(#1)) & (^FONCTION(#3))) ~
+
+
+//40> if ((PAYS(#1)) & (^REGION(#1))) ~
+40> if ((LIEU[pays](#1)) & (^LIEU[region](#1))) ~
+40> |#1[Perslieu:+]|if ((PERSONNE(#1)) & (^LIEU(#1))) ~
+40> |#1[LieuPers:+]|if ((^PERSONNE(#1)) & (LIEU(#1))) ~
+
+50> |#1{?*, #2}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+
+50> |#1{?*, #2}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^LIEU(#2)) & ) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^LIEU(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((PERSONNE(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^LIEU(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((ORG(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((ORG(#1)) & (^LIEU(#2))) ~
+50> |#1{?*, #2, ?*}| if ((ORG(#1)) & (^ORG(#2))) ~
+50> |#1{?*, #2, ?*}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[batiment](#1)) & (^LIEU(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^ORG(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((ORG(#1)) & (^ORG(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((ORG(#1)) & (^ORG(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^ORG(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^ORG(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^ORG(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^ORG(#2)) & ) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^ORG(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((PERSONNE(#1)) & (^ORG(#2))) ~
+
+/dépendances concurrencetes sur un même noeud\
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[region:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[batiment:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[ville:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[quartier:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[pays:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[continent:+](#1))) ~
+
+70> |#1[villereg:~]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) LIEU[region=+, ville=+](#1)
+70> |#1[villereg:+]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) ~
+
+71> if ((LIEU[region, ville](#1)) & (^LIEU[ville](#1))) ~
+70> if ((ORG[entreprise](#1)) & (^ORG(#1))) ~
+71> if ((ORG[lieu](#1)) & (^ORG(#1))) ~
+
+70> |#1[orgpers1, persorg:~]| if ((ORG(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg1, orgpers:~]| if ((^ORG(#1)) & (PERSONNE(#1)))	~
+70> |#1[orgpers, persorg:~]| if ((ORG(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg, orgpers:~]| if ((^ORG(#1)) & (PERSONNE(#1)))	~
+70> |#1[lieupers1, perslieu:~]| if ((LIEU(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg1, lieupers:~]| if ((^LIEU(#1)) & (PERSONNE(#1)))	~
+70> |#1[lieupers, perslieu:~]| if ((LIEU(#1)) & (^PERSONNE(#1)))	~
+70> |#1[perslieu, lieupers:~]| if ((^LIEU(#1)) & (PERSONNE(#1)))	~
+
+55> |NOUN#1{?*,NOUN#2,?*}| if (EVENEMENT(#1) & ^LIEU(#2)) ~ 
+55> |NOUN#1{?*,NOUN#2,?*}| if ( EVENEMENT(#1) & ^PERSONNE(#2)) ~ 
+55> |NOUN#1{?*,NOUN#2,?*}| if (^EVENEMENT(#2) & EVENEMENT(#1)) ~ 
+
+55> |NOUN#1{?*,NOUN#2,?*}| if (^PERSONNE(#2) & TITRE-OEUVRE(#1)) ~ 
+55> |NOUN#1| if (^PERSONNE(#1) & TITRE-OEUVRE(#1)) ~ 
+55> |NOUN#1{?*,NOUN#2,?*}| if (^LIEU(#2) & TITRE-OEUVRE(#1)) ~ 
+55> |NOUN#1| if (^LIEU(#1) & TITRE-OEUVRE(#1)) ~ 
+
+/à enlever qd on ne se sert pas des dépendances sous-types de LIEU\
+/
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^PAYS(#2)) & ) ~
+40> |#1{?*,?{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^PAYS(#2))) ~
+45> |#1{?*, ?*,?{?*, #2}}| if ((PERSONNE(#1)) & (^PAYS(#2))) ~
+
+50> |#1{?*, #2}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+
+50> |#1{?*, #2}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+
+50> |#1{?*, #2}| if ((REGION(#1)) & (^VILLE(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((REGION(#1)) & (^VILLE(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((REGION(#1)) & (^VILLE(#2))) ~
+
+50> |#1{?*, #2}| if ((REGION(#1)) & (^PAYS(#2))) ~
+50> |#1{?*,?{?*, #2}, ?*}| if ((REGION(#1)) & (^PAYS(#2))) ~
+55> |#1{?*, ?*,?{?*, #2}}| if ((REGION(#1)) & (^PAYS(#2))) ~
+
+
+\
+/***************** changement d'affichage *******************\
+
+//pour faire des périodes une sous-catégorie de DATE
+//58> if (^PERIODE(#1)) DATE[periode=+](#1).
+
+/
+// pour qu'un noeud ne porte pas deux dépendances
+60> if (PERSONNE$1(#1) & ORG$2(#1)) ~$1, ~$2.
+60> if (PERSONNE$1(#1) & LIEU$2(#1)) ~$1, ~$2.
+\
+/
+//pour afficher des dépendances différentes pour toutes les sous-catégories d'entités nommées
+60> if (^LIEU[pays](#1)) PAYS[pays=~](#1).
+60> if (^LIEU[quartier](#1)) QUARTIER[quartier=~](#1).
+60> if (^LIEU[continent](#1)) PAYS[continent=~](#1).
+60> if (^LIEU[ville](#1)) VILLE[ville=~](#1).
+60> if (^LIEU[region](#1)) REGION[region=~](#1).
+60> if (^LIEU[batiment](#1)) BATIMENT[batiment=~](#1).
+60> if (^ORG[batiment](#1)) BATIMENT[batiment=~, lieu=~](#1).
+60> if (^ORG[entreprise](#1)) ENTREPRISE[entreprise=~](#1).
+60> if (^DATE[periode](#1)) PERIODE[periode=~](#1).
+
+
+// supprimer un noeud noun qui ne contient qu'un noeud noun\
+
+// finalement on ne fait pas ca pour le script d'eval.
+//56> |noun#3{noun#1,noun#2}|
+//	if (PERSONNE(#3) & ~PERSONNE(#2) & FONCTION(#1))
+//	PERSONNE(#2)
+
+
+
+
+//56> |noun#3{?#1[lemme:"général"],noun#2}|
+//	if (PERSONNE(#3))
+//	FONCTION[mil=+](#1),personne[hum=+](#2).
+
+//suppression  des fonctions imbriquees
+
+56> |noun#3{noun#1,?*}|
+	if (PERSONNE(#3) & ^FONCTION(#1))
+	~
+
+56> |noun#3{?*,noun#2}|
+	if (PERSONNE(#3) & ^FONCTION(#2))
+       ~
+
+//56> |noun#3{?*,noun#1}|
+//	if (FONCTION(#3) & ^ORG(#1))
+//	~
+
+
+
+
+//56> |noun#3{?#1[lemme:"général"],?*}|
+//	if (PERSONNE(#3))
+//	FONCTION[mil=+](#1),personne[hum=+](#2).
+
+
+
+/// !!!!!! SPECIAL ESTER !!!!!!!!!
+
+// 30 euros la nuit : "la nuit" = duree
+58>|NP[unit_monnaie]{NOUN#2},NP#1[date,relative]|
+	if (^DATE(#1) & AMOUNT(#2))
+	   DUREE[relative=~](#1),~.
+
+// idem avec un PP
+58>|PP#2[unit_monnaie],NP#1[date,relative]|
+	if (^DATE(#1))
+	   DUREE[relative=~](#1),~.
+
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Final :
+
+CleanAllLemmas;

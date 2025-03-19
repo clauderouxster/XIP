@@ -1,0 +1,135 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-actor-target_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// in this file the dependencies COORDINATE_ACTOR et COORIDNATE_TARGET are created.
+
+DependencyRules:
+
+//Iran awards a subsidiary of the British firm MW Kellogg
+//ARGUMENT_EXT_OBJ(#1awards,#2subsidiary)
+//MOD_POST(#2subsidiary,#3MW Kellogg)
+//PREPD(#4Kellogg,#5of)
+//ORGANISATION(#3MW Kellogg)
+//HEAD(#4Kellogg,#3MW Kellogg)
+
+if ( ARGUMENT[obj](#1,#2) & MOD[post](#2,#3) & PREPD(#4,#5[lemme:of]) & ORGANISATION(#3) & HEAD(#4,#3) )
+   ARGUMENT[obj=+](#1,#3).
+
+if ( ARGUMENT[subj](#1,#2) & MOD[post](#2,#3) & PREPD(#4,#5[lemme:of]) & ORGANISATION(#3) & HEAD(#4,#3) )
+   ARGUMENT[subj=+](#1,#3).
+
+//work on developing Iran's nuclear programs
+//OBJ_PRDEP_NUC_PROD_POST(developing,programs)
+//MOD_PRDEP_NUC_PROD_PRE(programs,nuclear)
+//MOD_PRE(programs,Iran)
+//PARTICLE(Iran,'s)
+//ARGUMENT_NSUBJ(programs,Iran)
+//ARGUMENT_PRDEP_PROD_COMPL_EXT(work,developing)
+//ARGUMENT_PRDEP_NUC_PROD_SV_EXT_OBJ(developing,programs)
+
+
+//#############  création des COORDINATE_ACTOR et COORIDNATE_TARGET   #########
+
+
+
+	
+// a) substitute obj, compl and subj ARGUMENT with actor and target COORDINATE
+
+if ( ( ARGUMENT[subj, sv:~](#1[subjtarg:~],#2)|ARGUMENT[Nsubj](#1[subjtarg:~],#2)) & ~CORE(#2) & ~LOCATION(#2))
+	COORDINATE[actor=+](#1,#2)
+
+if ((ARGUMENT[subj](#1[subjtarg],#2)|ARGUMENT[Nsubj](#1[subjtarg],#2)) & ~CORE(#2))
+	COORDINATE[target=+](#1,#2)
+
+
+
+if (ARGUMENT[obj, sv:~](#1,#2)| ARGUMENT[compl](#1,#2) | ARGUMENT[Nobj](#1,#2))
+	COORDINATE[target=+](#1,#2)
+
+
+
+if (ARGUMENT[obj, sv:~](#1,#2[commonplace])| ARGUMENT[compl](#1,#2[commonplace]) | ARGUMENT[Nobj](#1,#2[human]))
+	COORDINATE[target=+](#1,#2)
+
+
+if ((ARGUMENT[obj, sv:~](#1,#2)| ARGUMENT[compl](#1,#2) | ARGUMENT[Nobj](#1,#2)) & LOCATION(#2))
+	COORDINATE[target=+, Nentity=+](#1,#2)
+
+
+// Federal searches reveal
+if (ARGUMENT[subj](#1[say],#2) & CORE-NOUN(#2) & COORDINATE[actor](#2,#3))
+	COORDINATE[actor=+](#1,#3)
+
+if ((ARGUMENT[obj, sv:~](#1,#2)| ARGUMENT[compl](#1,#2)) & MOD[pre](#2,#4[Nentity]))
+	COORDINATE[target=+](#1,#4)
+
+
+// b) other actor and target COORDINATEs
+// compléments coordonnés
+if (COORDINATE[actor](#1,#2) & (NCOORD(#3,#2)|NCOORD(#2,#3)))
+	COORDINATE[actor=+](#1,#3)
+
+if (COORDINATE[target](#1,#2) & (NCOORD(#3,#2)|NCOORD(#2,#3)))
+	COORDINATE[target=+](#1,#3)
+
+// les événements de parole ont nécessairement un acteur (qui sera la source des événements emboîtés)
+if ((CORE(#1[say]) | CORE(#1[deny])) & ~COORDINATE[actor](#1,?))
+	COORDINATE[actor=+](#1,##noun[lemme=SOMEONE])
+
+//The Iranian-Russian agreement
+
+|#10[adj, country]{#2[adj, country], ?*, #3[adj, country]}|
+if (^COORDINATE[actor](#1,#10))
+	COORDINATE[actor=+](#1,#2), COORDINATE[actor=+](#1,#3)
+
+// c) corrections
+
+//remplacer un relatif par son antécédent
+if (^COORDINATE(#1,#2) & ANTECEDENT(#3,#2))
+	COORDINATE(#1,#3)
+
+
+// éviter deux cibles emboîtées : 'Pakistani scientists' et 'Pakistani' => on supprime 'Pakistani'
+// à voir si on ne veut pas les garder toutes les deux
+|#4{#2,?*}|
+if (COORDINATE[target](#1,#2) & ^COORDINATE[target](#1,#3) & HEAD2(#3,#4) )
+	~
+
+//#############  type de l'acteur et de la source #########
+// ajout du type dans le lemme : sert à l'affichage dans le tableau
+
+if ( COORDINATE(?,#1) & (LOCORG(#1[country]) | (LOCORG[country](#2) & HEAD2(#1,#2)) | (LOCORG[country](#2) & HEAD2(#2,#1)) ) & ~NETYPE(#1,?))
+	NETYPE(#1,##noun[lemme=country])
+
+if ( COORDINATE(?,#1) & (LOCORG(#1) | (LOCORG(#2) & HEAD2(#1,#2)) | (LOCORG(#2) & HEAD2(#2,#1)) ) & ~NETYPE(#1,?))
+	NETYPE(#1,##noun[lemme=locorg])
+
+if ( COORDINATE(?,#1) & (PERSON(#1) | (PERSON(#2) & HEAD2(#1,#2)) | (PERSON(#2) & HEAD2(#2,#1)) ) & ~NETYPE(#1,?))
+	NETYPE(#1,##noun[lemme=person])
+
+if ( COORDINATE(?,#1) & (ORGANISATION(#1) | (ORGANISATION(#2) & HEAD2(#1,#2)) | (ORGANISATION(#2) & HEAD2(#2,#1)) ) & ~NETYPE(#1,?))
+	NETYPE(#1,##noun[lemme=organisation])
+
+if ( COORDINATE(?,#1) & (LOCATION(#1) | (LOCATION(#2) & HEAD2(#1,#2)) | (LOCATION(#2) & HEAD2(#2,#1)) ) & ~NETYPE(#1,?))
+	NETYPE(#1,##noun[lemme=location])
+
+// marquage : sert à sélectionner les coordonnées
+
+//marquage des acteurs et cibles qui sont des EN
+if (^COORDINATE(#1,#2[Nentity]))	
+	COORDINATE[Nentity=+](#1,#2)
+
+// si on ne veut garder comme cibles que les entités nommées
+//if (^COORDINATE[target, Nentity:~](#1,#2))
+//	~

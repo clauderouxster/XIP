@@ -1,0 +1,525 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2011 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : dependency_split.xip
+//!   Date       : 11/02/2011
+//!   Author     : André Bittar 
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+// CH 15/02
+// A tester. Verifier les effets de bord.
+// attention forme simple de dernier verbe seulement
+// e.g. John said the man who lives next door annoys Paul.
+| NP#1, ?[verb], NP#6, ?[verb]{?*,#4[last]} | 
+if ( HEAD(#2,#1) & ( ~SUBJ-N(?,#2) | (SUBJ-N(#3,#2) & MOD[post,relativ](#2,#3)) )
+     		 & ( ~OBJ-N(?,#2) | (OBJ-N(#3,#2) & MOD[post,relativ](#2,#3))
+		   )
+		 & ~IOBJ(?,#2) 
+		 & ^SUBJ-N(#4,#5) & HEAD(#5,#6) & ~OBJ-N(?,#5)
+)
+SUBJ-N(#4,#2)
+// manque reconstruire l'objet du verbe du milieu
+//LIXO(#1,#1,#1)
+
+////////////////////////
+// MISSING EMBEDDINGS //
+////////////////////////
+// AB 2011.09.05 moved from bottom in order to apply these before propagation of embedlevel
+
+// The verbal MOD of a noun that is subject or direct object of a verb is embedded beneath this verb
+// e.g. John's repeated efforts helped. EMBED(repeated,helped)
+if ( MOD(#1[noun],#2[verb]) & ( SUBJ-N(#3,#1) | OBJ(#3,#1) ) & ~EMBED(#2,?) )
+   EMBED(#2,#3)
+
+// AB 2012.01.03 a verbal postnominal MOD is embedded under its nominal governor's governing verb
+// e.g. John will come if Jane, prepared for the worst, comes. EMBED(prepared,comes)
+if ( MOD[pastpart,post](#1,#2) & (SUBJ(#3,#1[noun]) | OBJ(#3,#1[noun])) & ~EMBED(#2,#3) )
+   EMBED(#2,#3)
+
+// AB 2012.01.02
+// A verb in a CP attached to an adjective is embedded beneath the verbal governor of the adjective.
+// e.g. Although he is aware that people are lazy,... EMBED(are,is)
+| adj#5;AP{?*,#5[last]}, SC{BG{?*,#4[lemme:that]}} |
+if ( SUBJ(#1,#2) & SUBJATTR(#2,#5) & CONNECTOR(#3,#4) )
+   EMBED[complthat=+](#3,#1)
+
+// the verb in a that-complementizer phrase is not embedded under the main verb in a subordinating clause. Rather, the verb
+// governing the CP is embedded in the subordinating clause.
+// e.g. Although he is aware that people lie, he believes everyone. *EMBED(lie,believes), EMBED(is,believes)
+if ( EMBED[complthat](#2,#1) & ^EMBED[complthat:~](#2,#3) )
+   EMBED(#1,#3)
+
+// if an infinitive is attached to a noun of a different embedlevel (or no embedlevel at all for the infinitive) 
+// and if this infinitive is not embedded to anything, then we add the embedding between this infinitive and the verbal governor of the noun.
+// e.g. John campaigned for Mary to march .
+// TESTING Instruct them in handling complaints so that they resolve problems immediately.
+if ( MOD[post,infinit](#1_order,#2_resolve) & ~EMBED(#2_resolve,?) & 
+//    ( #1[embedlevel]_order~:#2[embedlevel]_resolve | #2[embedlevel:~]_resolve ) & // embedlevel is not applied yet
+      $1(#3[verb]_instruct,#1_order)
+      & #2~:#3
+   )
+     EMBED(#2_resolve,#3_handling)
+
+// AB Corrects wrong embedding. If a verb is embedded under a verb other than the main verb, 
+// it cannot also be embedded under the main verb
+// Delete the embedding which crosses an OBJ(verb,verb) dependency.
+// The man who lives next door tried to greet John. *EMBED(lives,greet)
+if ( EMBED(#1_lives,#2_tried) & EMBED(#3_greet,#2_tried) & MAIN(#2_tried) & OBJ(#2,#3) & ^EMBED(#1_lives,#3_greet) )
+~
+
+// AB 2011.09.14 a verb in a subordinate clause without a subordinating conjunction and whose subject 
+// is direct object of the verb in the matrix clause is embedded beneath this verb
+// e.g. The Kuwaitis have about 100 tanks, mostly concentrated near the airport. EMBED(concentrated,have)
+if ( OBJ-N(#1_have,#2_tanks) & SUBJ-N(#3[partpas]_concentrated,#2_tanks) & ~EMBED(#3_concentrated,?) )
+EMBED(#3,#1)
+
+// AB 2011.09.15 NEEDS TO BE TESTED THOROUGHLY!!!
+// a present participle that is OBJ-N of a verb with the feature SC_ING:+ and that is 
+// to the right of this verb, and is not already embedded, is embedded beneath this verb.
+// e.g. He likes eating tomatoes. EMBED(eating,likes)
+if ( OBJ-N(#1[verb]_likes,#2[vprog]_eating) & #1<#2 & ~EMBED(#2,?) )
+EMBED(#2,#1)
+
+// AB 2011.09.15 NEEDS TO BE TESTED THOROUGHLY!!!
+// a present participle whose subject is CONTENT of a verb with the feature SC_NP_ING:+ and is not already embedded,
+// is embedded beneath this verb.
+// e.g. He sees people eating tomatoes. EMBED(eating,sees)
+if ( CONTENT(#1[sc_np_ing]_sees,#2_people) & SUBJ-N(#3_working,#2_people) & ~EMBED(#3,?) )
+EMBED(#3,#1)
+
+// AB 2011.12.09
+// a verb in a subordinate clause that is preceded by a present participle is embedded beneath the verb
+// that governs the present participle
+// e.g. He likes eating when he reads.
+//      He likes eating because he likes food.
+//      He likes eating in order to grow.
+if ( EMBED(#1[vprog],#2) & ~EMBED(#3,?) & #1<#3 )
+EMBED(#2,#1)
+
+// This will deal with cases not dealt with by the preceding rule
+// e.g. John doesn't like eating. EMBED(eating,like)
+//      John loves eating because he reads.
+if ( OBJ[post,gerund](#1_loves,#2_eating) & ~EMBED(#2,?) )
+   EMBED[gerund=+](#2_eating,#1_loves)
+
+// Sentential object is embedded under governing verb
+if ( OBJ[post,sentence](#1,#2) & ~EMBED(#2,?) )
+   EMBED(#2,#1)
+
+// AB 2011.12.12 - rule for "because-subordinates"
+// e.g. John likes to eat because he loves food.
+// EMBED(loves,likes)
+//if ( EMBED(#1_eat,#2_likes) & ^EMBED(#3_loves,#1_eat) & RSN[sentence](#2_likes,#3_loves) )
+//   EMBED(#3,#2)
+
+// e.g. John likes eating because he loves food.
+if ( RSN[sentence](#2_likes,#3_loves) & ~EMBED(#3,#4) & VDOMAIN(#4,#2) )
+   EMBED(#4,#3)
+
+// e.g. John likes eating while he reads.
+if ( TEMP[sentence](#2_eating ,#1_reads) & ~EMBED(?,#1) & ~EMBED(#1,#2) )
+   EMBED(#1_reads,#2_eating)
+
+// Missing embedding under indspeech main verb which is in a parenthetical (incise:+)
+// careful, this will embed every non-embedded verb under MAIN
+| #2[verb,last,indspeech:~] |
+if ( MAIN(#1[indspeech,incise]) & ~EMBED(#2,?) )
+   EMBED(#2,#1)
+
+// If there is an indspeech main verb that has no verb embedded beneath it, but there are still non-embedded
+// verbs that embed another verb, then the first (leftmost) of these is embedded beneath the main verb
+| ?[startbis], ?*[verb:~], ?[verb]{?*,#3[last]};SC{?*,?[verb]{?*,#3[last]}} |
+if ( MAIN(#1[indspeech]) & ~EMBED(?,#1) & EMBED(#2,#3) )
+   EMBED(#3,#1)
+
+// If a subject-verb dependency is crossed by another, the "innermost" verb is embedded beneath the "outermost"
+// e.g. The versions we are releasing today have new features. SUBJ(releasing,we) and SUBJ(have,versions) and *EMBED(have,releasing)
+//if ( SUBJ(#1,#2)
+
+//////////////////
+// EMBED LEVELS //
+//////////////////
+
+// Add embedlevel=0 to main verb
+| #1[embedlevel=0] |
+if ( MAIN(#1) )
+~
+
+// Add level=1 to main verb of first level embedded clauses
+| #2[embedlevel=1] |
+if ( EMBED(#2,#1[embedlevel:0]) )
+~
+
+// Add embedlevel=2 to main verb of second level embedded clauses
+| #3[embedlevel=2] |
+if ( EMBED(#3,#2[embedlevel:1]) )
+~
+
+// Add embedlevel=3 to main verb of third level embedded clauses
+| #4[embedlevel=3] |
+if ( EMBED(#4,#3[embedlevel:2]) )
+~
+
+// Add embedlevel=4 to main verb of fourth level embedded clauses
+| #5[embedlevel=4] |
+if ( EMBED(#5, #4[embedlevel:3]) )
+~
+
+// Add embedlevel=5 to main verb of fifth level embedded clauses
+| #6[embedlevel=5] |
+if ( EMBED(#6,#5[embedlevel:4]) )
+~
+
+////////////////////////////////////
+// PROPAGATE LEVELS TO DEPENDENTS //
+////////////////////////////////////
+
+// embedlevel 0
+
+// Assign the feature embedlevel 0 to any dependent (other than auxiliaries or other verbs) of the main verb.
+// e.g. The boy said that... give embedlevel:0 to "boy" and "the".
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:0],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=0] | 
+if ( VDOMAIN(#2[embedlevel:0],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=0] |
+if ( NUCL[vlink](#1[embedlevel:0],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=0] |
+if ( COORD(#1,#2[embedlevel:0]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=0], #2[embedlevel:0] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:0], #1[coord,embedlevel=0] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=0] |
+if ( ATTRIB(#1[embedlevel=0],#2[verb,embedlevel:~]) )
+~
+
+// embedlevel 1
+
+// Assign the feature embedlevel 1 to any dependent of the first embedded verb.
+// e.g. The boy said that John came... give embedlevel:1 to "John".
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:1]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=1] |
+if ( $1(#2[embedlevel:1],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=1] | 
+if ( VDOMAIN(#2[embedlevel:1],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=1] |
+if ( NUCL[vlink](#1[embedlevel:1],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=1] |
+if ( COORD(#1,#2[embedlevel:1]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=1], #2[embedlevel:1] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:1], #1[coord,embedlevel=1] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=1] |
+if ( ATTRIB(#1[embedlevel=1],#2[verb,embedlevel:~]) )
+~
+
+// embedlevel 2
+
+// Assign the feature embedlevel 2 to any dependent of the second embedded verb.
+// e.g. The boy said that the man who said that John came... give embedlevel:2 to "John".
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:2]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=2] |
+if ( $1(#2[embedlevel:2],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=2] | 
+if ( VDOMAIN(#2[embedlevel:2],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=2] |
+if ( NUCL[vlink](#1[embedlevel:2],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=2] |
+if ( COORD(#1,#2[embedlevel:2]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=2], #2[embedlevel:2] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:2], #1[coord,embedlevel=2] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=2] |
+if ( ATTRIB(#1[embedlevel=2],#2[verb,embedlevel:~]) )
+~
+
+// embedlevel 3
+
+// Assign the feature embedlevel 3 to any dependent of the third embedded verb.
+// e.g. The boy said that Mary said that Paul said that John came... give embedlevel:3 to "John".
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:3]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=3] |
+if ( $1(#2[embedlevel:3],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=3] | 
+if ( VDOMAIN(#2[embedlevel:3],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=3] |
+if ( NUCL[vlink](#1[embedlevel:3],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=3] |
+if ( COORD(#1,#2[embedlevel:3]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=3], #2[embedlevel:3] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:3], #1[coord,embedlevel=3] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=3] |
+if ( ATTRIB(#1[embedlevel=3],#2[verb,embedlevel:~]) )
+~
+
+// embedlevel 4
+
+// Assign the feature embedlevel 4 to any dependent of the fourth embedded verb.
+// e.g. The boy said that Mary said that Paul said that Jim said that John came... give embedlevel:4 to "John".
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:4]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=0] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=4] |
+if ( $1(#2[embedlevel:4],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=5] | 
+if ( VDOMAIN(#2[embedlevel:4],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=4] |
+if ( NUCL[vlink](#1[embedlevel:4],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=4] |
+if ( COORD(#1,#2[embedlevel:4]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=4], #2[embedlevel:4] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:4], #1[coord,embedlevel=4] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=4] |
+if ( ATTRIB(#1[embedlevel=4],#2[verb,embedlevel:~]) )
+~
+
+// embedlevel 5
+
+// Assign the feature embedlevel 5 to any dependent of the fifth embedded verb.
+// e.g. The boy said that Mary said that Jim said that Paul said that Jane said that John came... give embedlevel:5 to "John".
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) | $1(#1[embedlevel:~],#2[embedlevel:5]) )
+~
+
+// The preceding rule must be reapplied to add the levels across all dependencies,
+// e.g. for determiners DETERM(noun,det), which are not marked by the first application.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// A third application, just to be sure.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// A final application, just to be really sure.
+| #1[verb:~,aux:~,embedlevel=5] |
+if ( $1(#2[embedlevel:5],#1[embedlevel:~]) )
+~
+
+// For complex verbal chains. We have to affect a embedlevel to auxiliaries.
+// First rule gives embedlevel to the left most auxiliary.
+| #1[embedlevel=5] | 
+if ( VDOMAIN(#2[embedlevel:5],#1) & #1 < #2 & NUCL[vlink](#1[embedlevel:~],?) )
+~
+// Second rule propagates embedlevel feature from one verb to the verb on its right.
+| #2[embedlevel=5] |
+if ( NUCL[vlink](#1[embedlevel:5],#2[embedlevel:~]) )
+~
+
+// Propagate embedlevel to conjunction (head argument)
+| #1[embedlevel=5] |
+if ( COORD(#1,#2[embedlevel:5]) )
+~
+
+// Add embedlevel (of element to the right) if no coordination dependency is present
+| #1[coord,embedlevel=5], #2[embedlevel:5] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel (of element to the left) if no coordination dependency is present
+| #2[embedlevel:5], #1[coord,embedlevel=5] |
+if ( ~COORD(#1,?) )
+~
+
+// Add embedlevel of attribute subject if the attribute predicate is a verb
+// and, thus, not covered in the preceding rules
+| #2[embedlevel=5] |
+if ( ATTRIB(#1[embedlevel=5],#2[verb,embedlevel:~]) )
+~
+
+////////////////////
+// CLEANING RULES //
+////////////////////
+
+// if EMBED(B,A) and EMBED(C,B) then *EMBED(C,A)
+if ( EMBED(#2,#1) & EMBED(#3,#2) & ^EMBED(#3,#1) )
+~
+
+// remove any reflexive embeddings, i.e. a verb embedded beneath itself
+if ( ^EMBED(#1,#1) )
+~

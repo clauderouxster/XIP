@@ -1,0 +1,312 @@
+Déduction:
+
+//A6175 CATERPILLAR CB24
+
+| #2, #3[numlet]  |
+if ( ^ORG(#2) )
+   ~.
+
+| #1[numlet] , #2  |
+if ( ^ORG(#2) )
+   ~.
+
+| #1[noorg] |
+if ( ^ORG(#1) )
+   ~.
+
+| #1[potzipcode=~,end] |
+   ~.
+
+| TOP#1{?+} |
+SENT(#1).
+
+/////////////////////////////////////////////////
+////////////////// ADDRESS /////////////////////
+///////////////////////////////////////////////
+
+
+//1 ALLEE DES SORBIERA
+| #1[address] |
+if ( SENT(#2) & ~ADDRESS(#2) )
+   ADDRESS(#2).
+
+
+//53200 LAIGNE SACER ATLANTIQUE
+//NP{53200 LAIGNE}
+
+| np#1{#2[potzipcode],?[proper]} |
+if ( ~ADDRESS(#3) & ~ADDRESS(#1))
+   ADDRESS(#1).
+
+| #1[addressw=+] |
+if ( ADDRESS(#2) )
+   ~.
+
+
+//////////////////// STREET /////////////////////
+
+
+//{NP{1 ALLEE_STREET:+} PP{DES NP{SORBIERA}}
+
+| np{#1[num], #2[street]}, #3 |
+   NUMBER(#1), STREET(#2,#3).
+
+//NP{2 RUE_STREET:+} RENÉ NP{CAUDRON}
+//STREET(RUE_STREET:+,RENÉ)
+
+| NP{#3, #1}, #2, #4[end] |
+if ( ^STREET(#1,#2) )
+    STREET(#1,#2,#4).
+
+//48, AVENUE DU GENERAL DE GAULLE
+//LIEU_QUARTIER(AVENUE DU GENERAL DE GAULLE)
+//NP{48 , NOUN{AVENUE DU GENERAL DE GAULLE}}
+
+| #1[num], punct, #2 |
+if ( LIEU[quartier](#2) )
+   NUMBER(#1).
+
+//9 Avenue DU BEAUMoNTOIR
+//LIEU_QUARTIER(Avenue DU BEAUMoNTOIR)
+//{9 NOUN{Avenue DU BEAUMoNTOIR}
+
+| #1[num], #2 |
+if ( LIEU[quartier](#2) )
+   NUMBER(#1).
+
+//38 B, rue d'Helsinki
+//LIEU_QUARTIER(rue d' Helsinki)
+//NP{38 B} , NP{NOUN{rue d' Helsinki}}
+
+| #1{#2[num], #3[lettre]}, punct, np{noun#4} |
+if ( LIEU[quartier](#4) )
+   NUMBER(#1).
+
+if ( ^LIEU[quartier](#1) )
+   STREET(#1).
+
+
+//104, Allée COLBERT
+//ADDRESS(104 , Allée COLBERT)
+//NP{104} , NP{Allée COLBERT}
+
+| #1{#2[addressw,num]}, punct, #3{#4[street], ?+} |
+   NUMBER(#1), STREET(#3).
+
+//ADDRESS(BOULEVARD EIFFEL)
+//NP{BOULEVARD EIFFEL}
+
+| #1np{#2[street,addressw],?+} |
+if ( ~STREET(#1) )
+   STREET(#1).
+
+
+/
+
+//test number + quartier
+
+| TOP#1 { ?+ } |
+if ( LIEU[quartier](#2) & ~NUMBER(#3) )
+	LIXO(#1).
+\
+   
+
+//////////////////// ZIPCODE /////////////////////
+
+
+| #1[potzipcode,addressw] |
+    ZIPCODE(#1).
+
+
+
+//////////////////// TOWN ///////////////////////
+
+//NP{53200 LAIGNE}
+//ZIPCODE(53200)
+
+| #1{#2,#3[proper]} |
+if ( ZIPCODE(#2) & ~LIEU[ville](#3) )
+   LIEU[ville=+](#3).
+
+| #1{#2,#3[maj]} |
+if ( ZIPCODE(#2) & ~LIEU[ville](#3) )
+   LIEU[ville=+](#3).
+
+//78771 MAGNY LES HAMEAUX
+//LIEU_VILLE(MAGNY)
+//NP{78771 MAGNY} NP{LES HAMEAUX}
+//ADDRESS(78771 MAGNY)
+
+| np#1[addressw]{#2,#3}, np#4{#5[def],?+} |
+if ( ^LIEU[ville](#3) )
+   LIEU[ville=+](#3,#4).
+
+| np#1[addressw]{#2,#3}, pp#4 |
+if ( ^LIEU[ville](#3) )
+   LIEU[ville=+](#3,#4).
+
+//BP 3041 - 59703 MARCO-EN-BAROEUL CEDEX
+//ZIPCODE(59703)
+//NP{59703} NP{NOUN{MARCO - EN - BAROEUL} CEDEX}
+
+| ?{#1[last]}, #2[maj] |
+if ( ZIPCODE(#1) )
+   LIEU[ville=+](#2).
+
+//69573 D ARDILLY CEDEX
+//LIEU_VILLE(D)
+//NP{D} NP{ARDILLY CEDEX}
+
+| #1{#2[lettre]}, #3np |
+if ( ^LIEU[ville](#1) )
+   LIEU[ville](#1,#3)
+
+
+//test zipcode + town
+/
+| TOP#1 { ?+ } |
+if ( ZIPCODE(#2) & ~LIEU[ville](#3) )
+	LIXO(#1).
+
+if ( ^LIXO(#1) & LIEU[ville](#2,#3) )
+   ~.
+\
+////////////////// ORG /////////////////////
+
+//Orange France
+//NP{Orange France}
+//LIEU_PAYS(France)
+
+| #3np{#1[maj], #2} |
+if ( LIEU[pays](#2) )
+   ORG(#3).
+
+
+//SAS L'AVENIR
+//TOP{NP{SAS} NP{L' AVENIR}}
+
+| TOP#1{#2[lemme:SAS], #3[maj,last]} |
+    ORG(#1).
+
+//NP{SCREG IDF NORMANDIE}
+
+| np#1{#2[maj,numlet:~], #3[guessed,numlet:~], #4[lieu,last]} |
+    ORG(#1).
+
+//WIRTGEN FRANCE SAS
+| np#2{?+, #1[last,lemme:SAS]} |
+if ( ^ORG(#1) )
+   ORG(#2).
+
+//PERSONNE(HEINRICH CANALISATION SAS)
+//{NOUN{HEINRICH CANALISATION SAS}
+
+| noun#1{?+[maj], #4[lemme:SAS] } |
+   ORG(#1).
+
+//EURL S2MR
+
+| #1[orgmark] |
+if ( SENT(#3) )
+   ORG(#3).	
+
+
+//NMOD(SACER,ATLANTIQUE)
+
+| np#3{#1[guessed,numlet:~], (#4[lieu]), #2[last,lieu]} |
+//if ( NMOD(#1[guessed],#2) & LIEU(#2) )
+   ORG(#3).
+
+//SACER PARIS NORD EST EVILLERS.
+//NMOD(SACER,PARIS NORD EST)
+//LIEU_REGION(PARIS NORD EST)
+
+| #3, #2 |
+if ( LIEU(#2) & NMOD(#3[guessed,numlet:~],#2) & ~ORG(#1) )
+   ORG(#3,#2).
+  
+
+//SAS au capital de 
+//ORG_ENTREPRISE(SAS)
+//PREPOBJ(capital,à)
+
+
+if ( ^ORG(#1) & PREPOBJ(#2[lemme:capital],#3[lemme:à]) )
+    ~.
+
+//Notre RIB : 30002 02950 0000060120R 11 CREDIT LYONNAIS
+//ORG_ENTREPRISE(Cr~dit Lyonnais)
+
+| #1[bank] |
+if ( ^ORG(#2) )
+    ~.
+
+| #1[bank] |
+if ( ^ORG(#2,#3) )
+    ~.
+
+//AVENUE MARCEL DASSAULT
+//ORG_ENTREPRISE(Dassault)
+
+| #1np{?+, #2[last]} |
+if ( ^ORG(#2) )
+   ~.
+
+//ORG(GA20LE NON)
+//NOUN{GA20LE NON}
+
+| #1{#2[numlet], ?+} |
+if ( ^ORG(#1) )
+   ~.
+
+| #1{ ?+, #2[numlet] } |
+if ( ^ORG(#1) )
+   ~.
+
+// mark orgwords
+
+| #1[orgw=+] |
+if ( ORG(#1) )
+   ~.
+
+| #1[orgw=+] |
+if ( ORG(#1,#2) )
+   ~.
+
+| #2[orgw=+] |
+if ( ORG(#1,#2) )
+   ~.
+
+/
+///////////////////// final //////////////////////
+
+
+| #1[addressw]{?[addressw=+], ?[addressw=+] } |
+   ~.
+
+| #1[addressw]{?[addressw=+], ?[addressw=+], ?[addressw=+] } |
+   ~.
+
+| #1[addressw]{?[addressw=+], ?[addressw=+], ?[addressw=+], ?[addressw=+] } |
+   ~.
+
+| #1[orgw]{?[orgw=+], ?[orgw=+] } |
+   ~.
+
+| #1[orgw]{?[orgw=+], ?[orgw=+], ?[orgw=+] } |
+   ~.
+
+| #1[orgw]{?[orgw=+], ?[orgw=+], ?[orgw=+], ?[orgw=+] } |
+   ~.
+
+
+if ( ^ORG(#1[addressw,orgw]) )
+   ~.
+
+if ( ^ORG(#1[addressw,orgw],#2) )
+   ~.
+
+if ( ^ORG(#1,#2[addressw,orgw]) )
+   ~.
+
+\

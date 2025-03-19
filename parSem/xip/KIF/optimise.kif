@@ -1,0 +1,356 @@
+bool english=true;
+file f(_paths[1]+_sep+'kifn.cxx','r');
+
+file sauve(_paths[1]+_sep+'kifn_o.cxx','w');
+
+string lg;
+smap ekeywords={"foldl":"folding",
+    "foldr":"folding",
+    "scanl":"folding",
+    "scanr":"folding",
+    "foldl1":"folding1",
+    "foldr1":"folding1",
+    "scanl1":"folding1",
+    "scanr1":"folding1",
+    "takeWhile":"filtering",
+    "flip":"flipping",
+    "filter":"filtering",
+    "dropWhile":"filtering",
+    "take":"taking",
+    "drop":"taking",
+    "map":"mapping",
+    "zipWith":"zipping",
+    "zip":"pairing",
+    "repeat":"cycling",
+    "cycle":"cycling",
+    "replicate":"repeating",
+    "and":"haskellbooling",
+    "or":"haskellbooling"
+};
+
+smap fkeywords={"plieg":"folding",
+    "plied":"folding",
+    "scang":"folding",
+    "scand":"folding",
+    "plieg1":"folding1",
+    "plied1":"folding1",
+    "flip":"flipping",
+    "scang1":"folding1",
+    "scand1":"folding1",
+    "prendJusquà":"filtering",
+    "filtre":"filtering",
+    "abandonneJusquà":"filtering",
+    "prend":"taking",
+    "abandonne":"taking",
+    "projette":"mapping",
+    "fusionneAvec":"zipping",
+    "fusionne":"pairing",
+    "répète":"cycling",
+    "cycle":"cycling",
+    "réplique":"repeating",
+    "et":"haskellbooling",
+    "ou":"haskellbooling"
+};
+
+smap keywords;
+
+if (english) {
+    lg="tf!";
+    keywords=ekeywords;
+}
+else {
+    lg="vf!";
+    keywords=fkeywords;
+}
+
+map indexes={"astringdouble":34,"afullstring":34,"astringsimple":39,"xnumber":'0',"anumber":'0123456789-',"valtail":"|","maptail":"|","valmaptail":"{","valvectortail":"[",
+    "jvector":"[","jmap":"{","telque":"<","intentionvect":"[","pintentionvect":"[","valmap":"{","optional":"(","haskellvector":"[","haskellmap":"{","haskellmaptail":"|",
+    "valvector":"[","valmap":"{","term":"?","tuple":"(","predicatevariable":"?","valpredicatevector":"[","valmappredicate":"{","valtuple":"(",
+"haskellcase":"c!","abool":lg,"localif":"i!"};
+
+
+svector methodes=["m_expression","m_jexpression","m_pexpression","m_jdico",
+    "m_haskellexpression","m_haskellkeymap","m_forin","m_finaltoken","m_haskell","m_testswitch","m_hexpression",
+    "m_operator","m_hoper","m_operatoraffectation","m_comparator"];
+
+
+map ikey;
+map keyidx;
+int i=0;
+map kidx;
+
+for (string sx in keywords) {
+    string val=keywords[sx];
+    if (ikey.test(val))
+        ikey[val].push(sx);
+    else {
+        ikey[val]=[sx];
+        kidx[val]=i;
+        i++;
+    }
+    keyidx[sx]=kidx[val];
+}
+
+
+
+
+map lestabs;
+
+string nouvelle=@"
+if (currentpos>=fx->stack.size())
+     return 0;
+unsigned char x = fx->stack[currentpos][intoken];
+bool err = true;
+switch (x) {
+"@;
+
+string avecchaine = @"
+if (currentpos>=fx->stack.size())
+     return 0;
+string x=fx->stack[currentpos];
+if (keys.find(x)==keys.end())
+return 0;
+int i=keys[x];
+bool err = true;
+switch (i) {
+"@;
+
+string s,sx,sxx,regle;
+svector v,vx,ve;
+bool premier=true;
+map regles,leschars;
+
+for (s in f) {
+    if ("bnf_kif::" in s) {
+        if (premier)
+            sauve.write(regle);
+        else{
+            sx=regle["::":"("][2:-1];
+            if ("_" in sx[3:])
+                sx=sx["m_":"_"][:-1];
+
+            if (sx=="m_intentionvect" || sx=="m_pintentionvect")  {
+                v=< <trim x> | x <- regle.trim().split("\r\n") >;
+                int ipos="//BODYOR" in v;
+                string reg;
+                reg="bool fnd=false;\n";
+                reg+="bool nbcomma=false;\n";
+                reg+="unsigned char c;\n";
+                reg+="for (int ix=currentpos+1;ix<fx->stack.size();ix++) {\n";
+                reg+="c=fx->stack[ix][0];\n";
+                reg+="if (c=='[' || c==']')\nreturn 0;\n";
+                reg+="if (c==',')\n{\n";
+                reg+="if (nbcomma)\nreturn 0;\nnbcomma=true;}\n";
+                reg+="if ((ix+1)<fx->stack.size() && c=='.' && fx->stack[ix+1][0]=='.')\n{fnd=true;\nbreak;}\n}\n";
+                reg+="if (!fnd)\nreturn 0;\n";
+                v.insert(ipos,reg);
+                reg=v.join("\n");
+                reg+="\n";
+                sauve.writeln(reg);
+                regle=s;
+                continue;
+            }
+
+            if ("::m_operator_" in regle or "::m_operatoraffectation_" in regle or "::m_comparator_" in regle) {
+                sx=regle["::":"("][4:-1];
+                string k=regle["if (!":")"]["'":"'"][1:-1];
+                if (k!="") {
+                    if (k=='!')
+                        indexes[sx]=33;
+                    else
+                        indexes[sx]=k;
+                }
+            }
+            
+            
+            if ("::m_hmetafunctions" in regle or "::m_hcompose" in regle) {
+                v=< <trim x> | x <- regle.trim().split("\r\n") >;
+                vx=<x | x <- v," || " in x>;
+                if (vx.size()) {
+                    string reg="static map<string,int> keys;\nstatic bool init=false;\nif (!init) {\n";
+                    svector u=<'keys["'+x+'"]='+keyidx[x]+";" | x <- keyidx.keys()>;
+                    reg+=u.join("\n");
+                    reg+="\ninit=true;\n}";
+                    v.insert(2,reg);
+                    vx=vx[0][4:-1].split(" || ");
+                    reg=avecchaine;
+                    for (sx in vx) {
+                        string idx=sx["_":"("][1:-1];
+                        idx="case "+kidx[idx]+":\nif ("+sx+") \nerr=false;\nbreak;\n";
+                        reg+=idx;
+                    }
+                    reg+="}\nif (err==false)";
+                    vx=<if (" || " in x) reg else x | x <- v>;
+                    reg=vx.join("\n");
+                    reg+="\n\n";
+                    sauve.write(reg);
+                    regle=s;
+                    continue;
+                }
+            }
+
+            if (sx in methodes) {
+                v=< <trim x> | x <- regle.trim().split("\r\n") >;
+                vx=<x | x <- v," || " in x>;
+                if (vx.size()) {
+                    vx=vx[0][4:-1].split(" || ");
+                    primemap ors;
+                    string idx;
+                    for (sx in vx) {
+                        sxx=sx[2:"("][:-1];
+                        if (indexes.test(sxx)) {
+                            idx=indexes[sxx];
+                            if (idx[-1]=='!')
+                                ors[indexes[sxx]]=[sx];
+                            else {
+                                idx=indexes[sxx][0];
+                                if (ors.test(idx))
+                                    ors[idx].push(sx);
+                                else
+                                    ors[idx]=[sx];
+                                if (indexes[sxx]!=idx) {
+                                    ors[indexes[sxx]]=[sx];
+                                }
+                            }
+                        }
+                        else {
+                            if ("x_test_in" in sx) {
+                                string k=sx["tab":1];
+                                for (idx in lestabs[k]) {
+                                    if (ors.test(idx))
+                                        ors[idx].push(sx);
+                                    else
+                                        ors[idx]=[sx];
+                                }
+                            }
+                            elif ("x_test_char" in sx) {
+                                idx=sx["'":"'"][1:-1];
+                                if (ors.test(idx))
+                                    ors[idx].push(sx);
+                                else
+                                    ors[idx]=[sx];
+                            }
+                            else {
+                                if (ors.test("default"))
+                                    ors["default"].push(sx);
+                                else
+                                    ors["default"]=[sx];
+                            }
+                        }
+                    }
+                    if (ors.size()==1)
+                        sauve.write(regle);
+                    else {
+                        string reg=nouvelle[:-2];
+                        bool def=false;
+                        int lettre=0;
+                        for (sx in ors) {
+                            if (sx[0]!="0") {
+                                if (sx=="default") {
+                                    def=true;
+                                    continue;
+                                }
+                                if (sx[-1]=='!')
+                                    lettre++;
+                                else {
+                                    if (sx.isdigit() and sx!="0")
+                                        reg+="case "+sx+":\nif (";
+                                    else
+                                        reg+="case '"+sx+"':\nif (";
+                                    bool p=true;
+                                    for (string e in ors[sx]) {
+                                        if (not p)
+                                            reg+=" || ";
+                                        p=false;
+                                        reg+=e;
+                                    }
+                                    reg+=") \nerr=false;\nbreak;\n";
+                                }
+                            }
+                        }
+
+
+                        for (sx in ors) {
+                            if (sx[0]=='0') {
+                                if (sx.size()==1) {
+                                    reg+="case '"+sx+"':\nif (";
+                                    bool p=true;
+                                    for (string e in ors[sx]) {
+                                        if (not p)
+                                            reg+=" || ";
+                                        p=false;
+                                        reg+=e;
+                                    }
+                                }
+                                else {
+                                    ve=sx[1:].split("");
+                                    ve=<("case '"+x+"':") | x <- ve>;
+                                    reg+=ve.join("\n");
+                                    reg+="\n";
+                                    reg+="if ("+ors[sx][0];
+                                }
+                                reg+=") \nerr=false;\nbreak;\n";
+                            }
+                        }
+
+                        string defaut;
+                        if (def)  {
+                            for (string e in ors["default"])
+                                defaut+=" || "+e;
+                        }
+
+                        if (lettre) {
+                            for (sx in ors) {
+                                if (sx[-1]=='!') {
+                                    sxx=sx[:-1];
+                                    ve=<("case '"+x+"':") | x <- sxx>;
+                                    reg+=ve.join("\n");
+                                    if (lettre>1)
+                                        reg+="\nif ("+ors[sx][0]+defaut+") \nerr=false;\nbreak;\n";
+                                    else
+                                        reg+="\nif ("+ors[sx][0]+") \n{err=false;\nbreak;\n}\n";
+                                }
+                            }
+                        }
+
+                        if (def)  {
+                            reg+="default:\nif (";
+                            bool p=true;
+                            for (string e in ors["default"]) {
+                                if (not p)
+                                    reg+=" || ";
+                                p=false;
+                                reg+=e;
+                            }
+                            reg+=") \nerr=false;\n";
+                        }
+
+                        reg+="}\nif (err==false)";
+                        vx=<if (" || " in x) reg else x | x <- v>;
+                        reg=vx.join("\n");
+                        reg+="\n\n";
+                        sauve.write(reg);
+                    }
+                }
+                else
+                    sauve.write(regle);
+            }
+            else
+                sauve.write(regle);
+        }
+        premier=false;
+        regle=s;
+    }
+    else {
+        if ("static char tab" in s) {
+            sx=s["tab":"["][:-1];
+            svector sub=s["{":"}"][1:-1].split(",")[:-1];
+            lestabs[sx]=< x[1:-1] | x <- sub>;
+        }
+        regle+=s;
+    }
+}
+
+sauve.write(regle);
+sauve.close();
+f.close();

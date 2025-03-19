@@ -1,0 +1,212 @@
+Variables:
+string _outputfilename;
+string _sent_id;
+string _group_id;
+string _form_id;
+string _form_id1;
+string _form_id2;
+string _form_id3;
+string _ids[];
+string _rels[];
+string _arg1[];
+string _arg2[];
+string _arg3[];
+int _mysentnumber = 0;
+
+int groupid;
+int formid;
+int relid;
+int irel;
+string _rel_id;
+string _rel_name;
+string _arg1tag;
+string _arg2tag;
+string _arg3tag;
+
+
+int _varref = 1;
+
+Script:
+
+_outputfilename = @pathname + ".ph2.xml"; 
+groupid = 1;
+formid = 1;
+
+@_current(//E)->GetAttribute(_sent_id,"id");
+// print("MYSENTNUYMBER="+_sent_id+"\n");
+
+// mysentnumber = mysentnumber + 1;
+
+//_sent_id = "E"+ _mysentnumber;
+
+
+|#1[cat:~0]| {
+
+   // Noeuds de GROUPES
+   iftest (#1[terminal:~]) {
+        _group_id =  _sent_id + "G" + groupid ;
+        _ids[Nodenumber(#1)] = _group_id ;
+
+         @np(/DOCUMENT/E[@id=_sent_id]/constituants/Groupe[@type=#1 & @id=_group_id])->Create();
+
+         groupid = groupid+1;
+
+   } else {
+   // Noeuds de TERMINAUX
+
+        mother(#1,#2);
+        _form_id =  _sent_id + "F" + formid ;
+        _ids[Nodenumber(#1)] = _form_id ;
+        _group_id = _ids[Nodenumber(#2)];
+
+        iftest (#2[cat:~0]) {
+
+               @np(/DOCUMENT/E[@id=_sent_id]/constituants/Groupe[@type=#2 & @id=_group_id]/F[@id=_form_id])->Create(#1[surface]);
+
+         } else {
+
+               @np(/DOCUMENT/E[@id=_sent_id]/constituants/F[@id=_form_id])->Create(#1[surface]);
+        }
+   
+
+        formid = formid + 1;
+   }
+}
+
+
+iftest (_varref:1) {
+    @np(/DOCUMENT)->setnamespace("xlink","http://www.w3.org/1999/xlink");	 
+     _varref = 0;
+
+ _rels[0] = "SUJ-V"; _arg1[0] = "sujet"; _arg2[0] = "verbe";
+ _rels[1] = "AUX-V"; _arg1[1] = "auxiliaire"; _arg2[1] = "verbe";
+ _rels[2] = "COD-V"; _arg1[2] = "cod"; _arg2[2] = "verbe";
+ _rels[3] = "CPL-V"; _arg1[3] = "complement"; _arg2[3] = "verbe";
+ _rels[4] = "MOD-V"; _arg1[4] = "modifieur"; _arg2[4] = "verbe" ;
+ _rels[5] = "COMP";  _arg1[5] = "complementeur"; _arg2[5] = "verbe" ;
+ _rels[6] = "ATB-SO"; _arg1[6] = "attribut"; _arg2[6] = "verbe";  // !!! 3eme arg s-o
+ _rels[7] = "MOD-N"; _arg1[7] = "modifieur"; _arg2[7] = "nom" ; // !!! 3eme arg a-propager 
+ _rels[8] = "MOD-A";  _arg1[8] = "modifieur"; _arg2[8] = "adjectif" ; 
+ _rels[9] = "MOD-R"; _arg1[9] = "modifieur"; _arg2[9] = "adverbe" ; 
+ _rels[10] = "MOD-P"; _arg1[10] = "modifieur"; _arg2[10] = "preposition" ; 
+ _rels[11] = "COORD"; _arg1[11] = "coordonnant"; _arg2[11] = "coord-g" ; _arg3[11] = "coord-d" ; // !!!! au moins 3 args !
+ _rels[12] = "APPOS"; _arg1[12] = "premier"; _arg2[12] = "appose" ; 
+ _rels[13] = "JUXT"; _arg1[13] = "premier"; _arg2[13] = "suivant" ;
+
+
+
+}
+
+
+
+
+relid = 1;
+
+iftest ( $1(#1,#2) ) {
+
+        _rel_id =  _sent_id + "R" + relid ;
+        _form_id1 = _ids[Nodenumber(#2)];
+        _form_id2 = _ids[Nodenumber(#1)];
+
+        irel = search(_rels,$1);
+
+       iftest (irel>=0) {
+         _arg1tag = _arg1[irel];
+         _arg2tag = _arg2[irel];
+         //_print("SALAH##: arg1 " + _arg1tag);
+         _rel_name = $1;
+
+	 @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id])->Create();
+         @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/_arg1tag[xlink:type="locator" & xlink:href=_form_id1])->Create();       
+         @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/_arg2tag[xlink:type="locator" & xlink:href=_form_id2])->Create();
+        
+         iftest (_rel_name:"ATB-SO" ) {
+            iftest ($$1[spred](?,?) ) {
+                 @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/"s-o"[valeur="sujet"])->Create();
+            } else {
+                 @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/"s-o"[valeur="objet"])->Create();
+            }          
+
+         } 
+         iftest (_rel_name:"MOD-N") {
+          // _print("################ " + $1 + $1[traits] + "\n");
+           //pause(1);
+           iftest ( $$1[apropager](?,?) ) {
+                  //_print("############### " + $1 + "\n");
+                  @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/"a-propager"[booleen="vrai"])->Create(); 
+           } else {
+                  
+                  @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/"a-propager"[booleen="faux"])->Create(); 
+           }            
+         }
+
+
+
+        } else {
+          _print("SALAH ERROR##: Unknown Relation: ");
+          _print($1);
+          _print("\n");
+        }
+
+       relid = relid + 1;
+
+}
+
+
+// et pour les relations a 3 args: COORD
+iftest ( $1(#1,#2,#3) ) {
+        _rel_id =  _sent_id + "R" + relid ;
+        _form_id1 = _ids[Nodenumber(#1)];
+        _form_id2 = _ids[Nodenumber(#2)];
+        _form_id3 = _ids[Nodenumber(#3)];
+
+       irel = search(_rels,$1);
+       iftest (irel>=0) {
+         _arg1tag = _arg1[irel];
+         _arg2tag = _arg2[irel];
+         _arg3tag = _arg3[irel];
+         _rel_name = $1;
+
+	 @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id])->Create();
+         @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/_arg1tag[xlink:type="locator" & xlink:href=_form_id1])->Create();       
+         @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/_arg2tag[xlink:type="locator" & xlink:href=_form_id2])->Create();
+         @np(/DOCUMENT/E[@id=_sent_id]/relations/relation[xlink:type="extended" & @type=$1 & @id=_rel_id]/_arg3tag[xlink:type="locator" & xlink:href=_form_id3])->Create();
+                
+       } else {
+         _print("SALAH ERROR##: Unknown Relation: ");
+          _print($1);
+          _print("\n");
+       }
+      
+      relid = relid + 1;
+
+}
+
+
+
+final:
+
+@np(/DOCUMENT)->setattribute(fichier,_outputfilename) ;
+
+@np()->save(_outputfilename,"UTF-8");
+
+@np()->clean();
+
+// mysentnumber = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

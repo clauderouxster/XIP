@@ -1,0 +1,342 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyLast.xip                                          !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency make some reorganization of dependencies                      !
+//!                                                                            !
+//!   Dependencies handled in this file:  AGENT                                !
+//!                                       PATIENT                              !
+//!                                       ATTRIB (enlarged)                    !
+//!                                       MAIN                                 !
+//!                                       PP attachment heuristics             !
+//!                                       Missing SUBJ handled                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependencyLast.xip,v 1.4 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// AGENT and PATIENT DEPENDENCIES  (VERY LIGHT PASSIVE TREATMENT)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// CH, 22nd May 2007
+// Creation of an AGENT and PATIENT dep between agent complements and Verb
+//
+// Example: (O rato) foi comido pelo gato -> AGENT(comer,gato), PATIENT(comer,rato)
+//
+if ( VLINK(?[lemma:ser],#2[pastpart]) &  SUBJ(#2,#5) & ^MOD[post](#2,#3) & PREPD(#3,?[lemma:por]) )
+   AGENT[features=~,post=+](#2,#3),
+   PATIENT[features=~,pre=+](#2,#5).
+
+
+// When the AGENT is not present and only PATIENT
+// Requirement of an existing modifier of the verb, in order to avoid to attribute PATIENT relations in // badly disambiguated PPART-ADJ
+//
+// Example: A recompensa foi dada em 2006 -> PATIENT_PRE(dada,recompensa)
+//
+if ( VLINK(?[lemma:ser],#2[pastpart]) & SUBJ[!features:!](#2,#3) & ~AGENT(#2,?) & ( MOD[post](#2,?) | MOD[pre](#2,?[qu]) )  )
+	PATIENT(#2,#3)
+
+
+// CH, June 2007
+// Allowing not to have a modifier in the case of interrogative clauses
+//
+// Example: O que foi comido?         -> PATIENT(comido,o que)
+// Example: Que foi comido?           -> PATIENT(comido,que)
+// Example: O que é que foi comido?   -> PATIENT(comido,o que)
+//
+if ( VLINK(?[lemma:ser],#2[pastpart]) & SUBJ[interrog:+,!features:!](#2,#3) & ~PATIENT(#2,#3) )
+        PATIENT(#2,#3)
+
+
+//if (AGENT(#1,#2) & ~CDIR(#1,#2))
+//   CDIR(#1,#2).
+//
+//
+//if (PATIENT(#1,#2) & ~SUBJ(#1,#2))
+//   SUBJ(#1,#2).
+//
+//
+// When both SUBJ and PATIENT are present, removes the SUBJ dependency
+//
+// Example: (O rato) foi comido pelo gato -> SUBJ(comer,gato) is removed
+//
+//if(^SUBJ(#1,#2) & PATIENT(#1,#2))
+//  ~
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//	Enlargement of ATTRIB relation
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// X chama-se Y ATTRIB between X and Y
+// A cidade chama-se Itaporanga ATTRIB(cidade,Itaporange)
+| ?{?*,verb#1[lemma:chamar]}, ?{#6[first,last,lemma:se]}, NP#2 |
+	if ( VDOMAIN(#3,#1) & SUBJ(#3,#4) & HEAD(#5,#2) & ^CDIR(#1,#6) )
+	ATTRIB(#4,#5)
+
+// A cidade sempre se chamou Itaporanga
+| ?{#6[first,last,lemma:se]}, ?*, ?{?*,verb#1[lemma:chamar]}, NP#2 |
+if ( VDOMAIN(#3,#1) & SUBJ(#3,#4) & HEAD(#5,#2) & ^CDIR(#1,#5) )
+	ATTRIB(#4,#5)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MAIN DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// É o verbo que tem de satisfazer as seguintes restrições:
+//    1. não pode estar debaixo de um SC
+//    2. não pode ser VINF (se estiver fora de uma cadeia verbal)
+//    3. tem de ser o mais à esquerda
+//    4. se o verbo for um cop, é o nome predicativo
+//    5. se estiver à esquerda de um verbo dicendi, é o verbo dicendi
+// Se não houver verbo é o primeiro NP:
+//    1. antes do SC
+//    2. fora do SC
+//    3. não é CDIR
+// Se não existir:
+//    1. é o verbo principal do primeiro SC
+// Se não existir:
+//    1. é a cabeça do primeiro PP
+//
+//
+// Algumas regras assumem que o XIP faz a tentativa de emparelhamento da
+// esquerda para a direita, pelo que encontra sempre o verbo mais à esquerda que
+// satisfaz todos os requisitos.
+
+
+// Example: O João come a banana -> MAIN(come)
+// Example: o João treme de medo, como a Paula tinha dito -> MAIN(treme)
+//
+| TOP{?*[first,verb:~,scfeat:~],
+      ?*[verb:~,scfeat:~], #1[verb:+,inf:~,lemma:~haver] } |
+ if ( ~MAIN(?) & HEAD(#2,#1) & VDOMAIN(#2,#2) )
+   MAIN(#2)
+
+// Example: O João tinha acabado de comer a banana -> MAIN(comer)
+// Example: O João tinha acabado de comer a banana como a Paula disse -> MAIN(comer)
+//
+| TOP{?*[scfeat:~], #1[verb:+,lemma:~haver]{?[first:+,prep:~]} } |
+ if ( ~MAIN(?) & HEAD(#2,#1) & VDOMAIN(?,#2) )
+   MAIN(#2)
+
+// Example: Comida a banana, o João que é meu amigo desde que o encontrei morreu -> MAIN(morreu)
+//
+| TOP{?*, sc#1, ?*, #3[verb:+]{#2[inf:~,lemma:~haver]} } |
+ if ( ~MAIN(?) & HEAD(#2,#3) & HEAD(#4,#1) & ~VDOMAIN(#4,#2) & VDOMAIN(?,#2) )
+   MAIN(#2)
+
+
+// Se não há mais nenhum, é o primeiro nome (antes do SC)
+//
+// Example: a belissima banana que eu comi -> MAIN(banana)
+// Example: O João que treme de medo       -> MAIN(João)
+// Example: Ordem para hipotecar           -> MAIN(ordem)
+//
+| TOP{?*[NP:~], NP#1} |
+ if ( ~MAIN(?) & HEAD(#2,#1) )
+   MAIN(#2)
+
+// Se não há mais nenhum, é a cabeça do primeiro PP (antes do SC)
+//
+// Example: da belissima banana que eu comi -> MAIN(banana)
+// Example: do João que treme de medo       -> MAIN(João)
+// Example: da ordem para hipotecar         -> MAIN(ordem)
+//
+| TOP{?*[PP:~], PP#1} |
+ if ( ~MAIN(?) & HEAD(#2,#1) )
+   MAIN(#2)
+
+
+//========================================================
+// If the MAIN is a cop, then use the predsubj
+//========================================================
+
+// Example: O Zé é um aluno, disse o Paulo -> MAIN(disse)
+//
+if (^MAIN(#1[cop]) & PREDSUBJ(#1,#2) )
+  MAIN(#2)
+
+
+//========================================================
+// If there is a dicendi verb on the right, which is not under an SC,
+// the dicendi is the MAIN
+//========================================================
+
+// Example: Vamos aprovar os grandes projectos que eu acho que o Brasil precisa, afirmou (o Lula, o ano passado.)
+//
+| TOP{?+, punct[comma], (NP), ?[verb]{?*,#3[dicendi]}, ?*[verb:~,inf:~]} |
+if (^MAIN(#1) & #1 < #3 )
+  MAIN(#3)
+
+| TOP{?+, punct[comma], (NP), ?[verb]{?*,#3[dicendi]}, ?*[verb:~,inf:~], ?#5[verb]} |
+if (^MAIN(#1) & #1 < #3 & coord(#4,#3) & coord(#4,#5))
+  MAIN(#3)
+
+
+//========================================================
+// If the MAIN is quantifying a noun, that noun is the MAIN
+//========================================================
+
+// Example: 5 litros de leite -> MAIN(leite)
+//
+if (^MAIN(#1[meas]) & QUANTD(#2,#1) )
+  MAIN(#2)
+
+// Example: 5 litros e dois terços de leite -> MAIN(leite)
+//
+if (^MAIN(#1[meas]) & (CLINK(#3,#1)|CLINK(#1,#3)) & QUANTD(#2,#3) )
+  MAIN(#2)
+
+
+//========================================================
+// If the MAIN already computed is taking part of a coordination, the new MAIN is
+// the coordination
+//========================================================
+
+// Example: Ele comeu e bebeu
+//
+if (^MAIN(#2) & coord(#1,#2) & coord(#1,#3))
+  MAIN(#1)
+
+
+//========================================================
+// Heuristics to limit multiple PP attachments
+//========================================================
+// This rule can be commented if it introduces errors
+// It tries to limit less probable blind PP attachment.
+//
+// Criamos uma barreira dizendo que se houver um sítio onde se pode agarrar um PP
+// que estiver precedido à esquerda por uma vírgula, não se deve ultrapassar esta vírgula
+// neste caso na medida em que há uma potencial âncora para o PP a direita da
+// vírgula, não se tente agarrar mais a esquerda.
+//
+// Example: Não foi além dos 39,2 por centos dos votos, um resultado aquém do conseguido ....
+//
+| punct#1[comma], ?+, PP{?[prep], ?*, #2[last]} |
+if ( ^MOD[post](#3,#2) & MOD[post](#4,#2) & #3 < #1 & #3 < #4 & #1 < #4)
+	~
+
+// CH - May, 16th
+// If we have a noun with feature [inf:+] i.e. an infinitive used as a noun
+// If this noun is followed by a PP[de], then we just attach this PP[de] to the noun,
+// deleting any other attachment to this noun.
+//
+// Example: O continuar da esperança de os cabo-verdianos poderem resolver problemas
+//           [We attach only esperanca to continuar]
+//
+if ( MOD[post](#1[noun,inf],#2) & PREPD(#2,?[lemma:de]) & ^MOD[post](#1,#3) & #2 < #3 )
+	~
+
+// CH May, 16th
+// Deleting erroneous MOD[post] attachment when a PP is both attached as subject of
+// infinitive verb and MOD[post] of a governor which is on the left.
+//
+// Example: O continuar da esperança de os cabo-verdianos poderem resolver problemas
+//           SUBJ(resolver,cabo-verdianos) and *MOD(esperanca, cabo-verdianos)
+//
+if ( PREPD(#1[inf,verb],#2) & SUBJ(#1,#3) & #2 < #3 & ^MOD[post](#4,#3) & #4 < #2 )
+~
+
+//========================================================
+// Heuristics for missing SUBJ
+//========================================================
+
+// This rules tries to capture a SUBJ dependency which is in a long distance
+// from the verb
+// We limitate this rule to NP subjects which are at the beginning of a sentence and
+// which are proper nouns.
+//
+// Example: Geraldo Alckmin, candidato do Partido e antigo governador do estado,
+//           comeu o bolo
+//
+| NP[start]{?*,#1[proper]}, ?*[verb:~], #2[verb] |
+if ( ~SUBJ(?,#1) & HEAD(#3,#2) & ~SUBJ(#3,?) )
+SUBJ[pre=+](#3,#1)
+
+
+
+//========================================================
+// Correction of bad SUB-CDIR-MOD dependencies
+//========================================================
+
+// CH, May 16th
+// Cleaning rule
+// If we have for the same verb two subjects that are calculated, then we chose
+// the one which is nearer
+//
+// NJM, Jun 25th
+// the rule is not applied if the two subjects are coordinated.
+//
+if ( ^SUBJ(#1,#2) & SUBJ(#1,#3) & #2 < #3 & ~(COORD(#4,#2) & COORD(#4,#3)))
+~
+
+// CH, May 17th
+// Cleaning rule
+// if we have a MOD dependency between a verb and a reflexive "se", then we destroy it
+//
+if ( ^MOD(#1,#2[surface:"se"]) )
+~
+
+// Using the projectivity principal (arrows crossing)
+// For a sequence A B C D, we cannot have SUB[pre](D,B) and CDIR(A,C)
+
+
+// Nuno, June 27th
+// Cleaning rule
+// if we have a APPOSIT dependency, then the subject is the first element of the
+// APPOSIT relation
+//
+if ( ^SUBJ[pre](#1,#2) & APPOSIT(#3,#2))
+  SUBJ(#1,#3)
+
+
+
+//========================================================
+// Removal of extra MOD(NP, PP(de,...)) dependencies
+//========================================================
+
+// Nuno, 2007/09/10
+// Default cleaning rule (informative rules must be applied before this one)
+//
+// Example: comeu a banana de Portugal -X-> MOD_POST(comer,Portugal)
+//
+|NP#1,PP#2|
+if ( HEAD(#3,#1) & HEAD(#4,#2) & MOD[post](#3,#4) & PREPD(#4,#5[surface:"de"]) & ^MOD[post](#6,#4) & #6<#3)
+  ~
+
+
+//========================================================
+// TESTE TESTE TESTE TESTE
+//========================================================
+
+// Exemplo: Ele bateu bem da bola
+//
+//if ( VDOMAIN(#1,#2[lemma:bater]) & MOD[POST:+](#2,#3[lemma:bola]) &
+//     PREPD(#3,#4[lemma:de]) & MOD[POST:+](#2,#5[lemma:bem]) & DETD(#3,?[def]) & MOD[neg](#2,?))
+//  DUMMY[neg=+](#2,#5,#3)
+
+//if ( VDOMAIN(#1,#2[lemma:bater]) & MOD[POST:+](#2,#3[lemma:bola]) &
+//     PREPD(#3,#4[lemma:de]) & MOD[POST:+](#2,#5[lemma:bem]) & DETD(#3,?[def]) &  ~DUMMY(#2,#5,#3))
+//  DUMMY(#2,#5,#3)
+

@@ -1,0 +1,166 @@
+//*******************************************************************
+// xmlguide_meto.xip : affichage des données et résultats de l'analyse xip pour la métonymie des entités nommées en FRANCAIS
+//*******************************************************************
+
+// 1/ pour chaque Article (balise) de texte analysé, on crée une balise contenant le résultat de l'analyse
+ //   xip. Ici, on ne s'intéresse qu'au mot marqué comme métonymique (par SemEval).
+
+// - Print des resultats au format SemEval dans 3 fichiers (evalCoarse,evalMedium,evalFine)
+// 
+// -----> Tout ça à commenter ou non en fonction de ce qu'on veut.
+
+
+Variables:
+	xml vxml;
+	xml pxml;
+	string s;
+	string rel;
+	string res;
+	dictionary dico;
+	string chemin1;
+	string chemin2;
+	string chemin3;
+
+
+Initial:
+	chemin1="evalFine_"+@pathname+".txt";
+	chemin2="evalMedium_"+@pathname+".txt";
+	chemin3="evalCoarse_"+@pathname+".txt";
+	fopen("fine",chemin1);
+	fopen("medium",chemin2);
+	fopen("coarse",chemin3);
+	//fwrite("fine",chemin1);
+
+
+
+Script:
+@_current()->set(vxml);
+xmlparent(vxml,pxml);
+xmldata(pxml,dico);
+s=dico["id"];
+
+
+
+//***********************
+// Print OUT pour evalFr.pl
+
+	//  COUNTRIES
+
+//*** Niveau de granularité : FINE
+
+
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("fine",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+
+    res=s+"|"+"literal"+"\n";
+    fwrite("fine",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"place-for-people"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"place-for-event"+"\n";
+     fwrite("fine",res);
+}
+
+
+
+//*** Niveau de granularité : MEDIUM
+
+
+//if ($1[metosem,loclit,bydefault](#1)) {
+ //   res=s+"|"+"unknown"+"\n";
+ //   fwrite("medium",res);
+//}
+
+
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("medium",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("medium",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+
+
+//*** Niveau de granularité : COARSE
+
+
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("coarse",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("coarse",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+
+
+//***********************
+//***********************
+// OUTPUT : génération automatique du fichier sortie XML
+
+Final:
+
+//génération  du fichier sortie XML:
+s=@pathname+"_resmetoLoc"; //extension pour differencier les org des loc
+//s=@pathname+"_resmetoOrg";
+@_current()->save(s);
+
+fclose("fine");
+fclose("medium");
+fclose("coarse");
+
+
+//***********************
+// Analyse Xip XML :
+
+// annoter uniquement les EN contenues dans le Body2
+
+XMLGuide:
+#default->skip(text).
+
+
+Body2->merge(dependency). 
+
+
+annotloc->feature(annotationLoc,annotationLoc).				
+
+
+
+
+
+

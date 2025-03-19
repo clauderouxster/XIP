@@ -1,0 +1,177 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      deinitions of special symbols (punctuations, white space, ...)
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+# UPDATED:	09-Feb-2006 (AS)
+#		- restricted use of spaces in numbers	
+# ============================================================================
+# USAGE:        xfst -l [ThisFile]sa
+# ============================================================================
+
+# ---------------------------------------------------------------------------- 
+# white space
+
+define BLANK	[
+     " "		# a space (ASCII decimal code 32 )
+   | "\n"  | "\r"	#  newline, cr
+   | "\t"		# a tab
+];
+
+# sequence of white space
+define SP 	[ BLANK ]+ ;
+
+
+# ---------------------------------------------------------------------------- 
+# define NUMERALS
+define Num [ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ] ;
+
+# ---------------------------------------------------------------------------- 
+# define numerical operators
+define Ops [  %> | %< |  %* | %- | %+ | %/ | %= ] ;
+
+
+# ---------------------------------------------------------------------------- 
+# time expressions
+
+define hours [
+ (%0 | 1 | 2) Num [h | %:]  
+ (%0 | 1 | 2 | 3 | 4 |5) Num ([m n | %:])  
+ ((%0 | 1 | 2 | 3 | 4 |5) Num (s | s e c))
+] ;
+
+
+define years [
+([(%0) [Num - %0] | [1 | 2] Num | 3 [%0 | 1]] [%/ | %-])
+ [(%0) [Num - %0] | 1 [%0 | 1 | 2]] [%/ | %-]
+ ([1 | 2] Num) Num Num
+		];
+
+
+# ---------------------------------------------------------------------------- 
+# basic numerals
+
+define NumSpaced	(Num (Num)) Num [ [%_:% ] Num Num Num ]* ;
+define NumPart1		Num+ | NumSpaced ;
+
+define NumBase 	(%+|%-|%.|%±) NumPart1 [[ %, | %. | %/] [Num]+]*;
+
+define NumBase 	NumBase - [years| hours] ;
+
+
+# ---------------------------------------------------------------------------- 
+# define UPPER-CASE letters
+define Up [ 
+  B|C|D|F|G|H|J|K|L|M|N|P|Q|R|S|T|V|W|X|Y|Z|Ç|Ð|Ñ|
+  A|E|I|O|U|Ä|Ö|Ü|À|Á|Å|Â|Ã|Æ|È|É|Ê|Ë|Î|Ï|Ì|Í|Ó|Ò|Ô|Õ|Ù|Ú|Û|Ý
+];
+
+# ---------------------------------------------------------------------------- 
+# define LOWER-CASE letters
+define Low [
+ b|c|d|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z|ß|ç|ñ|
+ a|e|i|o|u|ä|ö|ü|à|á|â|ã|å|æ|è|é|ê|ë|í|î|ï|ì|ó|ô|ð|ò|õ|ù|ú|û|ý|ÿ
+];
+
+# ---------------------------------------------------------------------------- 
+# define a LETTER
+
+define Let 	[Up|Low] ;
+define Char 	Let | Num ;
+
+
+
+# ---------------------------------------------------------------------------- 
+# punctuations
+
+# end of sentence: includes . ! ? plus some carriage return in specific contexts
+define Sent     [ %. | %! | %? | [%; | %:] 0:"\n" ] ;
+define Comma    [ %, ] ;
+ 
+define OPAR 	%( | %[ ;
+define CPAR 	%) | %] ;
+define SEMICOL 	%; ;
+define COLON 	%: ;
+define HYPH 	%- ;
+ 
+define NonSent [
+ %< | %> | %« | %» |
+ %" | %' | %` | %~ | %= | %_ |
+ %+ | %= | %^ | %/ | %¿ | %¡ | %\ | %| | %* | %# | %@ 
+| %&
+];
+
+
+define PUNCTLEX [
+ 	Sent	%+SENT:0
+|	Comma	%+CM:0
+|	OPAR	%+PUNCT:0
+|	CPAR	%+PUNCT:0
+|	SEMICOL	%+PUNCT:0
+|	COLON	%+PUNCT:0
+|	HYPH	%+PUNCT:0
+|	NonSent	%+PUNCT:0
+];
+
+# lowersice only:
+define PUNC	PUNCTLEX.l ;
+
+define MULTIPUNCT [
+	[NonSent [NonSent]+ | [%.] [%.]+ | %! [%!]+ | %? [%?]+]    %+PUNCT:0 
+];
+
+
+
+# ---------------------------------------------------------------------------- 
+#  single symbols used as separators
+define SEP	PUNC |  %% | %$ ;
+
+
+# ---------------------------------------------------------------------------- 
+# upper/lower case mapping
+define low2up [
+	À:à | 
+	Â:â | 
+	Ç:ç |
+	È:è |
+	É:é |
+	Ê:ê |
+	Î:î |
+	Ï:ï |
+	Ô:ô |
+	Ö:ö |
+	Û:û |
+	Ü:ü |
+	ÿ:ÿ |
+        A:A | A:a | A:à | A:â |
+        B:B | B:b |
+        C:C | C:c | C:ç |
+        D:D | D:d |
+        E:E | E:e | E:é | E:è | E:ê | E:É | E:È | E:Ê
+        F:F | F:f |
+        G:G | G:g |
+        H:H | H:h |
+        I:i | I:î | I:ï | I:Î
+        J:J | J:j |
+        K:K | K:k |
+        L:L | L:l |
+        M:M | M:m |
+        N:N | N:n | N:ñ |
+        O:O | O:o | O:ô | O:ö |
+        P:P | P:p |
+        Q:Q | Q:q |
+        R:R | R:r |
+        S:S | S:s |
+        T:T | T:t |
+        U:U | U:u | U:ù | U:û |
+        V:V | V:v |
+        W:W | W:w |
+        X:X | X:x |
+        Y:Y | Y:y |
+        Z:Z | Z:z  	
+].i ;

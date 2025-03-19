@@ -1,0 +1,375 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// EN COURS
+
+
+Déduction:
+
+//Preposition: form de PREP sur PP
+| PP[form=fde]{prep[lemme:de]} | 
+~
+
+| PP[form=fa]{prep[lemme:à]} | 
+~
+
+| PP[form=fa]{prep[lemme:au]} | 
+~
+
+| PP[form=fentre]{prep[lemme:entre]} | 
+~
+
+| PP[form=fet]{prep[lemme:et]} | 
+~
+
+| PP[form=fdepuis]{prep[lemme:depuis]} | 
+~
+
+| PP[form=fjusque]{prep[form:fjusque]} | 
+~
+
+| PP[form=fde]{prep[form:fde]} | 
+~
+
+| PP[form=fdesaccent]{prep[form:fdesaccent]} | 
+~
+
+Marqueur:
+
+// AB 2012.05.03 adverbes qui sont un token "jour après jour", "mois après mois", etc
+// tokens
+1> ADV[tempexpr=+,set=+,val_duree=S,lemme:"seconde après seconde"].
+1> ADV[tempexpr=+,set=+,val_duree=S,lemme:"minute après minute"].
+1> ADV[tempexpr=+,set=+,val_duree=D,lemme:"jour après jour"].
+1> ADV[tempexpr=+,set=+,val_duree=M,lemme:"mois après mois"].
+// multi-mots
+1> ADV[tempexpr=+,set=+,val_duree=H]{noun[lemme:heure,sg],prep[lemme:après],noun[lemme:heure,sg]}.
+1> ADV[tempexpr=+,set=+,val_duree=Y]{noun[lemme:année,sg],prep[lemme:après],noun[lemme:année,sg]}.
+
+// intervalles en AP (avec adjectif) ex. du 3 au 5 juin inclus
+1> AP[tempexpr=+,date=+,interval=+]{adv[partial_date,absolue,interval], adj}.
+
+//**********NOMINAL CHUNKS********************
+
+// Pour marquer certains NP avec des traits temp.
+// Ces NP sont déjà construits par le chunker.
+// Pour le chunking d'autres expressions temporelles
+// non gérées par chunker.xip, voir plus loin chunker_temp.xip
+// ou plus haut localgram_temp.xip
+
+// AB 2011.11.15 durées approximatives (ex. une trentaine d'années)
+1> NP[duree=+,tempexpr=+,t_mod=approx]{det,noun[duree,tempexpr,t_mod:approx]}.
+
+// DATES ABSOLUES
+// Bcp de distinctions, pour faire plus simple:
+// absolue vs. relative seulement.
+
+// absolue complete
+1> NP[date=+,absolue=+,complete=+,!tempexpr=+]{?*,noun[mwe:+,date:+,absolue:+,complete:+,last:+,datecoord:~]}.
+
+// absolue incomplete
+1> NP[date=+,absolue=+,partial_date=+,!tempexpr=+]{?*,noun[mwe:+,date:+,absolue:+,partial_date:+,last:+,datecoord:~]}.
+
+1> NP[date=+,absolue=+,partial_date=+,!tempexpr=+]{num[date:+,absolue:+,partial_date:+,last:+,datecoord:~]}.
+
+1> NP[datepot=+,absolue=+,partial_date=+,!tempexpr=+]{num[datepot:+,absolue:+,partial_date:+,last:+,datecoord:~]}.
+
+// ni l'un ni l'autre
+1> NP[date=+,absolue=+,!tempexpr=+]{?*,noun[mwe:+,date:+,absolue:+,partial_date:~,complete:~,last:+,datecoord:~]}.
+
+// absolue coord
+1> NP[date=+,absolue=+,datecoord=+,!tempexpr=+]{?*,noun[mwe:+,date:+,absolue:+,partial_date:~,complete:~,last:+,datecoord:+]}.
+
+// AB 2011.11.08 DATES INCOMPLETES
+// ce sont des relatives (donc sans année) en format date strict mais qui manquent un élémént
+// elles ont obligatoirement au moins un numéro de jour
+// ex. le (jeudi) 15 mai
+1> NP[date=+,partial_date=+,!tempexpr=+,complete=~,incomplete=+]{?*,noun{(noun[jour]),num[numjourpot],noun[mois,last]}}.
+1> PP[date=+,partial_date=+,tempexpr=+,incomplete=+]{prep,?*,NP[complete:~]{?*,noun{(noun[jour]),num[numjourpot],noun[mois,last]}}}.
+// ex. le (jeudi) 15 mai prochain/dernier
+1> NP[date=+,partial_date=+,!tempexpr=+,complete=~,incomplete=+]{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[timemod:+]}}.
+1> PP[date=+,partial_date=+,tempexpr=+,incomplete=+]{prep,?*,NP[complete:~]{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[timemod:+]}}}.
+// 1er janvier
+// AB 2012.01.23 1er isn't adj, this rule doesn't apply to any "real" expressions, does it? (le 1er janvier du siècle???)
+1> NP[date=+,partial_date=+,!tempexpr=+,complete=~,incomplete=+]{?*,noun{(noun[jour]),ap{adj[numjourpot]},noun[mois,last]}}.
+1> PP[date=+,partial_date=+,tempexpr=+,incomplete=+]{prep,?*,np[complete:~]{?*,noun{(noun[jour]),ap{adj[numjourpot]}},noun[mois,last]}}.
+// ex. le jeudi 15
+1> NP[date=+,partial_date=+,!tempexpr=+,complete=~,incomplete=+]{(det[dem:~]),noun{noun[jour],num[numjourpot,last]}}.
+1> PP[date=+,partial_date=+,tempexpr=+,incomplete=+]{prep,?*,np[complete:~]{(det[dem:~]),noun{noun[jour],num[numjourpot,last]}}}.
+
+// AB 2012.03.16
+// le 6 mai dernier
+1> NP[date=+,partial_date=+,!tempexpr=+,incomplete=+]{?*,noun{num,noun[mois],adj[timemod]}}.
+1> PP[date=+,partial_date=+,tempexpr=+,incomplete=+]{prep,?*,NP{?*,noun{num,noun[mois],adj[timemod]}}}.
+
+// DATES RELATIVES
+
+1> NP[date=+,relative=+,!tempexpr=+,partial_date:~]{?*,noun[mwe:+,date:+,relative:+,last:+,datecoord:~,date_event:~]}.
+
+1> NP[date=+,relative=+,!tempexpr=+,partial_date:~]{?+,noun[mwe:~,date:+,relative:+,last:+,datecoord:~,date_event:~]}.
+
+1> NP[date=+,relative=+,!tempexpr=+,partial_date:~]{noun[date:+,relative:+,first:+,last:+,datecoord:~,date_event:~]}.
+
+1> PP[date=+,relative=+,tempexpr=+,partial_date:~]{prep,?*,np{?*,noun[date:+,relative:+,last:+,datecoord:~,date_event:~]}}.
+//1> PP[date=+,relative=+]{prep,np{noun[date:+,relative:+,first:+,last:+,datecoord:~,date_event:~]}}.
+
+// AB 2011.11.18 dates avec jour seulement
+// ex. il vient (le) jeudi
+1> NP[date=+,relative=+,!tempexpr=+,complete:~,day=+]{(det[lemme:le]),noun[jour,last]}.
+
+// AB 2011.11.08 PP{prep adv}
+// ex. d'ici demain
+1> PP[date=+,relative=+,tempexpr=+,partial_date:~]{prep,?*,adv[relative:+,last:+,tempexpr:+]}.
+
+// relative coord
+1> NP[date=+,relative=+,datecoord=+,!tempexpr=+,partial_date:~]{?*,noun[mwe:+,date:+,relative:+,last:+,datecoord:+]}.
+
+// avec des adverbes seulement : le lendemain, pour aujourd'hui etc.
+1> NP[date=+,relative=+,!tempexpr=+,partial_date:~]{?*,noun[tempexpr:+,relative:+,last:+,datecoord:~,date_event:~]}.
+
+
+// HEURES
+// daytime
+
+//modif special ESTER qui considère "matin,soir,etc." comme des dates et non comme des heures
+//1> NP[heure=+,daytime=+,!tempexpr=+] {?*,noun[daytime,heure:+]}.
+//1> NP[date=+,relative=+,!tempexpr=+] {?*,noun[daytime,heure:+]}.
+
+// AB 2011.11.21 modifs des règles ESTER pour matin,soir, etc.
+
+// le matin is a time or an anaphoric date
+1> NP[date=+,heure=+,daytime=+,!tempexpr=+]{?[det,lemme:le],?*,noun[daytime,heure:+]}.
+
+// ce matin is a date
+1> NP[heure=~,date=+,daytime=+,relative=+,!tempexpr=+]{?[det,dem],?*,noun[daytime,heure:+]}.
+
+// un matin is a date
+1> NP[heure=~,date=+,daytime=+,relative=+,!tempexpr=+]{?[det,lemme:~le,dem:~],?*,noun[daytime,heure:+]}.
+
+// Pour day + daytime
+// ex. jeudi matin
+// AB 2012.03.22 ajout (det) ex. ce lundi après-midi
+1> NP[date=+,time=+,heure=+,daytime=+,!tempexpr=+]{(det),noun[date,time,daytime]}.
+// adj doit être précédé d'un det
+// ex. ce même lundi après-midi
+1> NP[date=+,time=+,heure=+,daytime=+,!tempexpr=+]{det,adj;AP,noun[date,time,daytime]}.
+
+//enlever daytime:~ : spécial ester
+1> NP[interval:~,heure=+,!tempexpr=+] {?*,noun[mwe:+,heure:+,duree:~,last:+,daytime:~]}.
+
+1> NP[heure=+,!tempexpr=+] {?*,noun[heure:+,duree:~,periode:~,last:+,daytime:~]}.
+
+// AB 2012.04.02 pour expression d'heure avec tout collé ex. 2H
+1> NP[interval:~,heure=+,!tempexpr=+]{num[numheure],noun[heure,periode,abr,duree:~,daytime:~]}.
+
+// AB 2012.04.11 moved from below
+// HEUREMOD
+//§!!!special ESTER qui veut des date pour les moments du jour
+1> NP[heuremod=+,!tempexpr=+]{?*,noun[heuremod:+,daytime:~]}.
+
+1> NP[date=+,relative=+,tempexpr=+]{?*,noun[heuremod:+,daytime]}.
+
+
+1> PP[heuremod=+] {prep,?*,NP[heuremod:+]}.
+
+//intervalles
+
+1> NP[interval=+,!tempexpr=+,date=+] {num[interval:+,date]}.
+
+
+// DUREE-HEURE
+
+1> NP[heure=+,duree=+,!tempexpr=+] {?*,noun[mwe:+,heure:+,duree:+,last:+]}.
+
+
+// DUREE-DATE
+
+1> NP[date=+,duree=+,!tempexpr=+] {?*,noun[mwe:+,date:+,duree:+,last:+]}.
+ 
+1> NP[date=+,duree=+,!tempexpr=+] {?*,noun[date:+,duree:+,last:+]}.
+
+//1> PP[date=+,duree=+] {PP{PREP,NP{?*,noun[mwe:+,date:+,duree:+,last:+]}}}.
+
+
+// DATES ABSOLUES ET  RELATIVES
+1> PP[date=+, absolue=+, t_mod=approx]{prep[first,predate:+,t_mod:approx],NP[date:+,absolue:+,last]}.
+
+1> PP[date=+, relative=+, t_mod=approx]{prep[first,predate:+,t_mod:approx],NP[date:+,relative:+,last]}.
+
+
+1> PP[date=+]{prep[t_mod:~approx,orig:~,tfin:~],?*,NP[date:+,duree:~]}.
+
+1> PP[date=+,absolue=+]{prep[t_mod:~approx,orig:~,tfin:~],?*,NP[date:+,absolue:+,duree:~]}.
+
+1> PP[date=+,absolue=+,partial_date=+]{prep,?*,num[date:+,absolue:+,partial_date:+]}.
+
+// AB 2012.05.11 added last constraint on num to avoid getting quantified NPs as dates e.g. la pièce consiste en 2011 actes.
+1> PP[date=+,absolue=+,partial_date=+,tempexpr=+]{PREP,?*,NP{num[date:+,absolue:+,partial_date:+,last]}}.
+
+1> PP[datepot=+,absolue=+,partial_date=+,tempexpr=+]{PREP,?*,NP{num[datepot:+,absolue:+,partial_date:+]}}.
+
+1> PP[date=+,absolue=+,partial_date=+]{PREP,PREP,?*,NP{num[date:+,absolue:+,partial_date:+]}}.
+
+// AB 2012.03.22 en début/fin d'après-midi
+1> PP[date=+,relative=+,heure=+]{prep[t_mod],?*,NP[time]{noun[first,last]}}.
+
+// AB 2011.03.15 PP{d'ici (à) 2012} for the time being gets the same treatment as "jusqu'à 2012"
+// the NP must contain a potential day number. this exlcudes NPs such as "la semaine prochaine"
+// these may not have a year (so we propagate the incomplete feature value if present)
+1> PP[date=+,absolue=+,partial_date=+]{prep[sfde],adv[lemme:ici],(prep[sfa]),NP[date:+,complete:~]{?*,noun{num[numjourpot]},?*[!incomplete:!]}}.
+
+// AB 2011.11.08 PP{d'ici (à) le 30 juin 2012} for the time being gets the same treatment as "jusqu'au 30 juin 2012"
+1> PP[date=+,absolue=+]{prep[sfde],adv[lemme:ici],(prep[sfa]),NP[date:+,complete:+]}.
+
+// a enlever
+/////// DATES qui deviennent des DUREE en fonction de la nature de la prep :
+
+//1> PP[duree=+,date=+, orig=+]{prep[first,predate:+,orig:+],NP[date:+,absolue:+,last]}.
+//1> PP[duree=+,date=+, orig=+]{prep[first,predate:+,orig:+],NP[date:+,relative:+,last]}.
+
+//1> PP[duree=+,date=+, tfin=+]{prep[first,predate:+,tfin:+],NP[date:+,absolue:+,last]}.
+//1> PP[duree=+,date=+, tfin=+]{prep[first,predate:+,tfin:+],NP[date:+,relative:+,last]}.
+
+1> PP[date=+,absolue=+, orig=+]{prep[first,predate:+,orig:+],?*,NP[date:+,absolue:+,last]}.
+1> PP[date=+,relative=+,orig=+]{prep[first,predate:+,orig:+],?*,NP[date:+,relative:+,last]}.
+
+1> PP[date=+,absolue=+, tfin=+]{prep[first,predate:+,tfin:+],?*,NP[date:+,absolue:+,last]}.
+1> PP[date=+,relative=+, tfin=+]{prep[first,predate:+,tfin:+],?*,NP[date:+,relative:+,last]}.
+
+
+// Intervalles
+
+1> PP[tempexpr=+,interval=+]{PREP,?*,NP[interval:+]}.
+
+
+// HEURES
+
+1> PP[heure=+,t_mod=approx] {prep[first,predate:+,t_mod:approx],NP[heure:+,duree:~]}.
+
+1> PP[heure=+,orig=+] {prep[first,predate:+,orig:+],NP[heure:+,duree:~]}.
+
+1> PP[heure=+,tfin=+] {prep[first,predate:+,tfin:+],NP[heure:+,duree:~]}.
+
+1> PP[heure=+] {prep,?*,NP[heure:+,duree:~,daytime:~,dureemod:~]}.
+
+1> PP[heure=+,daytime=+] {prep,?*,NP[heure:+,duree:~,daytime:+]}.
+
+
+// AB 2012.04.11 moved above to treat "en début d'après-midi" the same as "dans l'après-midi"
+//// HEUREMOD
+//
+////§!!!special ESTER qui veut des date pour les moments du jour
+//1> NP[heuremod=+,!tempexpr=+]{?*,noun[heuremod:+,daytime:~]}.
+//
+//1> NP[date=+,relative=+,tempexpr=+]{?*,noun[heuremod:+,daytime]}.
+//
+//
+//1> PP[heuremod=+] {prep,?*,NP[heuremod:+]}.
+
+// AB 2011.11.21 DATES RELATIVES PAS DUREE
+// ex. dans deux jours
+1> PP[relative=+,date=+,duree=~,age=~]{prep[lemme:dans], NP[duree]}.
+
+// AB 2011.11.15 PP DUREE
+// ex. en quelques jours
+1> PP[duree=+,tempexpr=+,date=~,relative=~]{prep[lemme:~dans],NP[duree,tempexpr]}.
+
+// DUREE-HEURE
+
+1> PP[heure=+,duree=+] {?*,NP[heure:+,duree:+]}.
+
+// DUREE-DATE
+
+// AB 2012.03.21 ajout prep[lemme:en]
+// ex. "en deux minutes" = DUREE pas DATE
+// "dans/depuis deux ans" = DATE
+1> PP[duree=+,date=~] {prep[lemme:en],?*,NP[date:+,duree:+]}.
+1> PP[date=+,duree=+] {prep[lemme:~en],?*,NP[date:+,duree:+]}.
+
+
+// DUREEMOD-HEURE
+
+1> PP[heure=+,dureemod=+] {?*,NP[heure:+,dureemod:+]}.
+
+// DUREEMOD-DATE
+
+// AB 2012.03.21 ajout prep[lemme:en]
+// ex. "en deux minutes" = DUREE pas DATE
+// "dans/depuis deux ans" = DATE
+1> PP[dureemod=+] {prep[lemme:en],?*,NP[date:+,dureemod:+]}.
+1> PP[date=+,dureemod=+] {prep[lemme:~en],?*,NP[date:+,dureemod:+]}.
+
+//DATEMOD
+
+1> NP[datemod=+,relative=+]{?*,NOUN[datemod:+, relative:+]}.
+
+1> NP[datemod=+,absolue=+]{?*,NOUN[datemod:+, absolue:+]}.
+
+1> PP[datemod=+,relative=+]{prep,NP[datemod:+, relative:+]}.
+
+1> PP[datemod=+,absolue=+]{prep,NP[datemod:+, absolue:+]}.
+
+
+/***idem sur PP\
+//Marquage expressions temporelles avec modifieurs
+//ex: depuis/dès/
+
+2> PP[tempexpr=+,t_mod=approx]{prep[first,predate:+,t_mod:approx],NP[tempexpr:+,last]}.
+
+2> PP[tempexpr=+,orig=+]{prep[first,predate:+,orig:+],NP[tempexpr:+,last]}.
+
+//2> PP[tempexpr=+,duree=+,date=+]{prep[first,predate:+,duree:+],NP[tempexpr:+,last,date:+]}.
+
+//2> PP[tempexpr=+,duree=+,heure=+]{prep[first,predate:+,duree:+],NP[tempexpr:+,last,heure:+]}.
+
+2> PP[tempexpr=+,tfin=+]{prep[first,predate:+,tfin:+],NP[tempexpr:+,last]}.
+
+3> PP[tempexpr=+]{prep[first:+], NP[tempexpr:+,last]}.
+
+3> PP[postjour=+]{prep[form:fa],NP{noun[last,postjour]}}.
+
+
+
+
+// DATES COORDONNEES.
+
+// il est parti les 30 et 31 mai
+4> NP[datecoord=+,relative=+]{DET,NUM,COORD,NOUN[date,relative]}.
+
+// il est parti les 29, 30 et 31 mai
+4> NP[datecoord=+,relative=+]{DET,NUM,PUNCT,NUM,COORD,NOUN[date,relative]}.
+
+// il est parti les 30 et 31 mai 2008
+4> NP[datecoord=+,absolue=+]{DET,NUM,COORD,NOUN[date,absolue]}.
+
+// il est parti les 29, 30 et 31 mai 2008
+4> NP[datecoord=+,absolue=+]{DET,NUM,PUNCT,NUM,COORD,NOUN[date,absolue]}.
+
+4> NP[datecoord=+,relative=+,date=+]{det,noun[datecoord,relative]}.
+
+4> NP[datecoord=+,absolue=+,date=+]{det,noun[datecoord,absolue]}.
+
+
+Déduction: 
+
+// Enlever les expressions de durées qui sont en fait des ages
+// utilisation de contexte
+// partiellement traites dans la grammaire plus en amont. 
+// Le probleme est que l'expression garde des traits tempexpr associes 
+// ce qui a des consequences sur TEMPLINK
+// agés de (moins de| plus de) N ans
+
+| ap[lemme:"âgé"], pp[tempexpr=~, date=~, time=~, duree=~]{prep[lemme:de], np[duree=~,date=~,tempexpr=~,time=~]{ (det), (adv), noun[tempexpr=~,duree=~,date=~]{num, noun[lemme:an]}}} |
+~
+
+
+Marqueur:
+
+//Marquage des éléments dans les intervalles
+8> NP[interval:+]{PP[date:+,in-interval=+]{?*,NP[date:+,in-interval=+]},PP[date:+,in-interval=+]{?*,NP[date:+,in-interval=+]}}.
+
+8> NP[interval:+]{NOUN[date:+,duree:~,in-interval=+],PUNCT,NOUN[date:+,duree:~,in-interval=+]}.

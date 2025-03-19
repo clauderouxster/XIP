@@ -1,0 +1,1669 @@
+Index: kif.cxx
+===================================================================
+RCS file: /opt/ParSem/cvs_repo/parSem/xip/dev/src/kif.cxx,v
+retrieving revision 1.249
+retrieving revision 1.264
+diff -w -b -r1.249 -r1.264
+20a21,22
+> #else
+> #include <pthread.h>
+71c73,80
+< #define GETCH  _getch
+---
+> int GETCH(bool echoing) {
+> 	ThreadLock _lock(kifInputchr);
+> 	if (echoing==false)
+> 		return _getch();
+> 	int i=_getch();
+> 	cout<<i;
+> 	return i;
+> }
+74d82
+< #include <pthread.h>
+76c84,99
+< #define GETCH  getchar_unlocked 
+---
+> #include <termios.h>
+> int GETCH(bool echoing) {
+> 	ThreadLock _lock(kifInputchr);
+> 	struct termios t;
+> 	tcgetattr(STDIN_FILENO, &t);
+> 	t.c_lflag &= ~ICANON;
+> 	if (echoing==false)
+> 		t.c_lflag &= ~ECHO;
+> 	tcsetattr(STDIN_FILENO, TCSANOW, &t);
+> 	int c=getchar_unlocked();
+> 	t.c_lflag |= ICANON;
+> 	if (echoing==false)
+> 		t.c_lflag |= ECHO;
+> 	tcsetattr(STDIN_FILENO, TCSANOW, &t);
+> 	return c;
+> }
+96c119
+< 
+---
+> static map<KifType,string> kifStringType;
+113a137
+> 
+115c139
+< 	for (int i=0;i<50;i++)
+---
+> 	for (int i=0;i<100;i++)
+120c144
+< 	for (int i=0;i<50;i++)
+---
+> 	for (int i=0;i<100;i++)
+128a153,161
+> Exported KifThreadLock::KifThreadLock(HANDLE l) {
+> 	lock=l;
+> 	WaitForSingleObject(lock,INFINITE);
+> }
+> 
+> Exported KifThreadLock::~KifThreadLock() {
+> 	ReleaseMutex(lock);
+> }
+> 
+130c163,177
+< #else
+---
+> #else //For other OS
+> 
+> //This method is used to create a mutex that counts up and does not block
+> void KifInitialisationMutex(pthread_mutex_t* mut) {
+> 	static bool initial=true;
+> 	static pthread_mutexattr_t mattr; 
+> 	//We create it once for all
+> 	if (initial==true) {
+> 		pthread_mutexattr_init(&mattr);
+> 		pthread_mutexattr_settype(&mattr,PTHREAD_MUTEX_RECURSIVE);
+> 		initial=false;
+> 	}
+> 	pthread_mutex_init(mut,&mattr);
+> }
+> 
+147a195
+> 			Initialise();
+153a202,207
+> void ThreadLock::Initialise() {
+> 	for (int i=0;i<100;i++)
+> 		KifInitialisationMutex(&table[i]);
+> }
+> 
+> 
+157a212,221
+> 
+> Exported KifThreadLock::KifThreadLock(pthread_mutex_t* l) {
+> 	lock=l;
+> 	pthread_mutex_lock(lock);
+> }
+> 
+> Exported KifThreadLock::~KifThreadLock() {
+> 	pthread_mutex_unlock(lock);
+> }
+> 
+166,167c230,231
+< Exported int KifLoad(vector<string>& paths,vector<string>& arguments,bool debugkif);
+< int KifLoadPath(string& path,vector<string>& arguments,bool debugkif);
+---
+> Exported int KifLoad(KifCode*,vector<string>& paths,vector<string>& arguments,bool debugkif);
+> int KifLoadPath(KifCode* kifcode,string& path,vector<string>& arguments,bool debugkif);
+170a235,267
+> //----------------------------------------------------------------------------------------
+> #ifdef WIN32
+> #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
+>   #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
+> #else
+>   #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
+> #endif
+> int gettimeofday(struct timeval *tv, struct timezone *tz)
+> {
+>   FILETIME ft;
+>   unsigned __int64 tmpres = 0;
+>   static int tzflag;
+>  
+>   if (NULL != tv)
+>   {
+>     GetSystemTimeAsFileTime(&ft);
+>  
+>     tmpres |= ft.dwHighDateTime;
+>     tmpres <<= 32;
+>     tmpres |= ft.dwLowDateTime;
+>  
+>     /*converting file time to unix epoch*/
+>     tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+>     tmpres /= 10;  /*convert into microseconds*/
+>     tv->tv_sec = (long)(tmpres / 1000000UL);
+>     tv->tv_usec = (long)(tmpres % 1000000UL);
+>   }
+>  
+>   return 0;
+> }
+> #endif
+> 
+> 
+238,240d334
+< typedef bool (*KifExternalModule)(KifCode*,string);
+< 
+< 
+456a551,555
+> 	"KIF(215): Wrong parameters in ADDOPTION",
+> 	"KIF(216): Wrong parameters in REMOVEOPTION",
+> 	"KIF(217): WAIT are forbiden in a CATCH section",
+> 	"KIF(218): Wrong number of parameters in RESET",
+> 	"KIF(219): Wrong parameter in RESET",
+464a564,588
+> map<string,KifExternalModule> kifLibraries;
+> map<string,KifExternalModule> kifTerminateLibraries;
+> 
+> Exported bool KifRecordLibraries(string name,KifExternalModule module) {
+> 	if (kifLibraries.find(name)!=kifLibraries.end())
+> 		return false;
+> 	
+> 	if (module==NULL)
+> 		return true;
+> 
+> 	kifLibraries[name]=module;
+> 	return true;
+> }
+> 
+> Exported bool KifRecordTerminateModule(string name,KifExternalModule module) {
+> 	if (kifTerminateLibraries.find(name)!=kifTerminateLibraries.end())
+> 		return false;
+> 	
+> 	if (module==NULL)
+> 		return true;
+> 
+> 	kifTerminateLibraries[name]=module;
+> 	return true;
+> }
+> 
+466a591,596
+> #ifndef WIN32
+> #define sprintf_s(a,b,c,d) sprintf(a,c,d)
+> #define strcpy_s(a,b,c) strcpy(a,c)
+> #endif
+> 
+> //===================================================================
+469a600,611
+> void KifCode::Gets() {
+> 	string s;
+> 	getline(cin,s);
+> 	if (s.size()<1023) {
+> 		strcpy_s(buffer,s.size(),STR(s));
+> 		buffer[s.size()]=0;
+> 	}
+> 	else {
+> 		memcpy(buffer,STR(s),1022);
+> 		buffer[1023]=0;
+> 	}
+> }
+576,578d717
+< #ifndef WIN32
+< #define sprintf_s(a,b,c,d) sprintf(a,c,d)
+< #endif
+589a729
+> static map<int,bool> kifOperationInstructions;
+628d767
+< static map<KifType,string> kifStringType;
+649a789,1039
+> static map<string,string> kifInformationsString;
+> static map<string,string> kifInformationsInt;
+> static map<string,string> kifInformationsFloat;
+> static map<string,string> kifInformationsVector;
+> static map<string,string> kifInformationsMap;
+> static map<string,string> kifInformationsTree;
+> static map<string,string> kifInformationsMatrix;
+> static map<string,string> kifInformationsIterator;
+> static map<string,string> kifInformationsDate;
+> static map<string,string> kifInformationsTime;
+> static map<string,string> kifInformationsFile;
+> static map<string,string> kifInformationsKif;
+> 
+> Exported map<string,string> kifInformationsNode;
+> Exported map<string,string> kifInformationsDependency;
+> Exported map<string,string> kifInformationsGeneration;
+> Exported map<string,string> kifInformationsGraph;
+> Exported map<string,string> kifInformationsFst;
+> Exported map<string,string> kifInformationsXml;
+> Exported map<string,string> kifInformationsRule;
+> Exported map<string,string> kifInformationsParser;
+> 
+> void KifInitInformations() {
+> 	kifInformationsString["split"]="split(string splitter,vector vect): split a string along splitter and store the results  in a vector. If splitter==“”, then the string is split into a vector of characters";
+> 	kifInformationsString["removefirst"]="removefirst(int nb): remove the first nb characters of a string";
+> 	kifInformationsString["removelast"]="removelast(int nb): remove the last nb characters of a string";
+> 	kifInformationsString["left"]="left(int nb): return the first nb characters of a string";
+> 	kifInformationsString["right"]="right(int nb): return the last nb characters of a string";
+> 	kifInformationsString["mid"]="mid(int pos,int nb): return the nb characters starting at position pos of a string";
+> 	kifInformationsString["reverse"]="reverse(): reverse the string";
+> 	kifInformationsString["pop"]="pop(i): remove character at position i";
+> 	kifInformationsString["pop"]="pop(): remove last character";
+> 	kifInformationsString["last"]="last(): return last character";
+> 	kifInformationsString["insert"]="insert(i,s): insert the string s at I";
+> 	kifInformationsString["trim"]="trim(): remove the trailing characters";
+> 	kifInformationsString["trimright"]="trimright(): remove the trailing characters on the right";
+> 	kifInformationsString["trimleft"]="trimleft(): remove the trailing characters on the left";
+> 	kifInformationsString["upper"]="upper(): Return the string in upper characters";
+> 	kifInformationsString["lower"]="lower(): Return the string in lower characters";
+> 	kifInformationsString["islower"]="islower(): Test if a string only contains lowercase characters";
+> 	kifInformationsString["isupper"]="isupper(): Test if a string only contains uppercase characters";
+> 	kifInformationsString["isalpha"]="isalpha(): Test if a string only contains only alphabetical characters";
+> 	kifInformationsString["isdigit"]="isdigit(): Test if a string only contains digits";
+> 	kifInformationsString["latin"]="latin(): convert an UTF8 string in LATIN";
+> 	kifInformationsString["utf8"]="utf8(): convert a LATIN string into UTF8";
+> 	kifInformationsString["find"]="find(string sub,int pos): Return the position of substring sub starting at position pos";
+> 	kifInformationsString["rfind"]="rfind(string sub,int pos): Return the position of substring sub backward starting at position pos";
+> 	kifInformationsString["replace"]="replace(sub,str): Replace the substrings matching sub with str";
+> 	kifInformationsString["replacergx"]="replacergx(rgx,str): Replace the substrings matching rgx with str";
+> 	kifInformationsString["splitrgx"]="splitrgx(rgx): Split string with regular expression rgx. Return a vector of substrings. Need regular expression operator (…) to keep substrings.";
+> 	kifInformationsString["boolean=regex"]="boolean=regex(rgx): Test if the regular expression rgx applies to string";
+> 	kifInformationsString["vector=regex"]="vector=regex(rgx): Return all substrings matching rgx";
+> 	kifInformationsString["string=regex"]="string=regex(rgx): Return the substring matching rgx in the string";
+> 	kifInformationsString["int=regex"]="int=regex(rgx): Return the position of the substring matching rgx in the string";
+> 	kifInformationsInt["log"]="log(): return the log base 10 of the value";
+> 	kifInformationsFloat["log"]="log(): return the log base 10 of the value";
+> 	kifInformationsInt["ln"]="ln(): return the neperian log";
+> 	kifInformationsFloat["ln"]="ln(): return the neperian log";
+> 	kifInformationsInt["exp"]="exp(): return the exponential";
+> 	kifInformationsFloat["exp"]="exp(): return the exponential";
+> 	kifInformationsInt["sqrt"]="sqrt(): return the square root";
+> 	kifInformationsFloat["sqrt"]="sqrt(): return the square root";
+> 	kifInformationsInt["tan"]="tan(): tangent";
+> 	kifInformationsFloat["tan"]="tan(): tangent";
+> 	kifInformationsInt["sin"]="sin(): sinus";
+> 	kifInformationsFloat["sin"]="sin(): sinus";
+> 	kifInformationsInt["cos"]="cos(): cosinus";
+> 	kifInformationsFloat["cos"]="cos(): cosinus";
+> 	kifInformationsInt["atan"]="atan(): arc tangent";
+> 	kifInformationsFloat["atan"]="atan(): arc tangent";
+> 	kifInformationsInt["#"]="#(): return the bit complement";
+> 	kifInformationsFloat["#"]="#(): return the bit complement";
+> 	kifInformationsInt["format"]="format(string form): return a string formatted according to the pattern in form. (this format is the same as the sprintf format in C++)";
+> 	kifInformationsFloat["format"]="format(string form): return a string formatted according to the pattern in form. (this format is the same as the sprintf format in C++)";
+> 	kifInformationsInt["get"]="get(): Read a number from keyboard";
+> 	kifInformationsFloat["get"]="get(): Read a number from keyboard";
+> 	kifInformationsVector["push"]="push(a): add a to the vector";
+> 	kifInformationsVector["pop"]="pop(int i): remove the ith element from the vector and return it.";
+> 	kifInformationsVector["pop"]="pop(): remove the last element from the vector and return it.";
+> 	kifInformationsVector["last"]="last(): return the last element of the vector";
+> 	kifInformationsVector["reverse"]="reverse(): reverse the order of the elements in the vector";
+> 	kifInformationsVector["join"]="join(string sep): concatenate each element in the vector in a string where each element is separated from the others with sep";
+> 	kifInformationsVector["insert"]="insert(i,x): insert the element x at position i";
+> 	kifInformationsVector["sum"]="sum(): Sum each element with the others";
+> 	kifInformationsVector["product"]="product(): Multiply each element with the others";
+> 	kifInformationsVector["clear"]="clear(): clean the vector";
+> 	kifInformationsVector["sort"]="sort(compare): sort the content of the vector according to compare function.";
+> 	kifInformationsVector["apply"]="apply(a,b,c…): apply all XIP rules store in the vector, passing a,b,c etc. as parameters.";
+> 	kifInformationsMap["sum"]="sum(): Sum each element with the others";
+> 	kifInformationsMap["product"]="product(): Multiply each element with the others";
+> 	kifInformationsMap["pop"]="pop(string key): remove the elements matching key";
+> 	kifInformationsMap["keys"]="keys(): returns the map keys as a vector";
+> 	kifInformationsMap["values"]="values(): return the values as a vector";
+> 	kifInformationsMap["clear"]="clear(): clean the vector";
+> 	kifInformationsTree["tree"]="tree(value): create a tree node, with value as a value. Value can have any types";
+> 	kifInformationsTree["tree n=100"]="tree n=100: modify the value of a tree node with anything, here with an integer, but it could any object.";
+> 	kifInformationsTree["next"]="next(): return the next tree node as a tree object";
+> 	kifInformationsTree["previous"]="previous(): return the first tree node as a tree object";
+> 	kifInformationsTree["child"]="child(): return the first tree node as a tree object";
+> 	kifInformationsTree["parent"]="parent(): return the parent tree node as a tree object";
+> 	kifInformationsTree["last"]="last(): return the last child tree node as a tree object";
+> 	kifInformationsTree["next"]="next(tree n): compare the next tree node with n";
+> 	kifInformationsTree["previous"]="previous(tree n): compare the previous tree node with n";
+> 	kifInformationsTree["child"]="child(tree n): Test if the current node is a child of n";
+> 	kifInformationsTree["parent"]="parent(tree n): Test if the current node is a parent of n";
+> 	kifInformationsTree["last"]="last(tree n): Test if the current node is the last child of n";
+> 	kifInformationsTree["addchild"]="addchild(tree n): Add n at the end of the children of the current tree node";
+> 	kifInformationsTree["addnext"]="addnext(tree n): Add n after the current tree node";
+> 	kifInformationsTree["addprevious"]="addprevious(tree n): Add n before the current tree node";
+> 	kifInformationsTree["extract"]="extract(): Extract the current node from its tree";
+> 	kifInformationsTree["remove"]="remove(): Delete the current sub-tree from the global tree";
+> 	kifInformationsTree["depth"]="depth(): Return the depth of the node in the tree";
+> 	kifInformationsMatrix["instances"]="instances(): return the number of  instances in the matrix";
+> 	kifInformationsMatrix["set"]="set(int instance,string class,string attribute, value): Add an element with a class instance value, according to an attribute and an instance Id.";
+> 	kifInformationsMatrix["get"]="get(int instance,string class,string attribute): Return the element with a specific class instance value, according to an attribute and an instance Id.";
+> 	kifInformationsMatrix["clear"]="clear(): clean the vector";
+> 	kifInformationsMatrix["save"]="save(filename,type): save the matrix on the disk. type can take two values";
+> 	kifInformationsIterator["value"]="value(): return the value of the current element";
+> 	kifInformationsIterator["key"]="key(): return the key of the current element";
+> 	kifInformationsIterator["valuetype"]="valuetype(): return the value type of the current element";
+> 	kifInformationsIterator["isvaluetype"]="isvaluetype(string type): test the type of the current element";
+> 	kifInformationsIterator["begin"]="begin(): initialiaze the iterator with the beginning of the collection";
+> 	kifInformationsIterator["next"]="next(): next element in the collection";
+> 	kifInformationsIterator["end"]="end(): return true when the end of the collection is reached";
+> 	kifInformationsIterator["nend"]="nend(): return true while the end of the collection has not been reached (~end())";
+> 	kifInformationsIterator["apply"]="apply(a,b,c): apply a XIP rule or a function";
+> 	kifInformationsDate["setdate"]="setdate(year,month,day,hour,min,sec): set a time variable";
+> 	kifInformationsDate["date"]="date(): return the date as a string";
+> 	kifInformationsDate["year"]="year(): return the year as an integer";
+> 	kifInformationsDate["month"]="month(): return the month as an integer";
+> 	kifInformationsDate["day"]="day(): return the day as an integer";
+> 	kifInformationsDate["hour"]="hour(): return the hour as an integer";
+> 	kifInformationsDate["min"]="min(): return the min as an integer";
+> 	kifInformationsDate["sec"]="sec(): return the sec as an integer";
+> 	kifInformationsTime["reset"]="reset (): reinitialize a time variable";
+> 	kifInformationsFile["openwrite"]="openwrite(string filename): open a file in write mode";
+> 	kifInformationsFile["openread"]="openread(string filename): open a file in read mode";
+> 	kifInformationsFile["write"]="write(string s1,string s2,…): write strings in the file";
+> 	kifInformationsFile["get"]="get(): read one character from the file";
+> 	kifInformationsFile["unget"]="unget(): return one character to the stream";
+> 	kifInformationsFile["unget"]="unget(nb): return nb character to the stream";
+> 	kifInformationsFile["read"]="read(): read a line from a file";
+> 	kifInformationsFile["readln"]="readln(): read a line from a file";
+> 	kifInformationsFile["seek"]="seek(int p): position the file cursor at p";
+> 	kifInformationsFile["tell"]="tell(): return the position of the file cursor";
+> 	kifInformationsFile["eof"]="eof(): return true when the end of file is reached";
+> 	kifInformationsNode["name"]="name(): return the part of speech";
+> 	kifInformationsNode["pos"]="pos(): return the part of speech. It should be noted, that if the recipient variable is a vector and the element is ambiguous, then a vector of pos can be returned (the same applied to name above).";
+> 	kifInformationsNode["data"]="data(map feats): Features are stored in map as attribute/value";
+> 	kifInformationsNode["setfeature"]="setfeature(string att, string val): feature assignment to the node";
+> 	kifInformationsNode["feature"]="feature(string att): return the value of an attribute";
+> 	kifInformationsNode["feature"]="feature(string att,string val): test the value of an attribute";
+> 	kifInformationsNode["next"]="next(): return the next node after current node";
+> 	kifInformationsNode["previous"]="previous(): return the previous node after current node";
+> 	kifInformationsNode["child"]="child(): return the first child node under current node";
+> 	kifInformationsNode["last"]="last(): return the last child node under current node";
+> 	kifInformationsNode["parent"]="parent(): return the parent node above current node";
+> 	kifInformationsNode["surface"]="surface(): return the surface string";
+> 	kifInformationsNode["lemma"]="lemma(): return the lemma string. It should be noted, that if the recipient variable is a vector and the element is ambiguous, then a vector of lemmas can be returned  as for pos above.";
+> 	kifInformationsNode["number"]="number(): return the ID of current node";
+> 	kifInformationsNode["offset"]="offset(int left,int right): left and right receive the offset";
+> 	kifInformationsNode["offsetchar"]="offsetchar(int left,int right): left and right receive the character offset";
+> 	kifInformationsNode["tokenoffset"]="tokenoffset(int left,int right): left and right receive the  token offset";
+> 	kifInformationsNode["leftoffset"]="leftoffset(): return the left offset";
+> 	kifInformationsNode["rightoffset"]="rightoffset(): return the right offset";
+> 	kifInformationsNode["leftoffsetchar"]="leftoffsetchar(): return the left character offset";
+> 	kifInformationsNode["rightoffsetchar"]="rightoffsetchar(): return the right character offset";
+> 	kifInformationsNode["righttokenoffset"]="righttokenoffset(): return the right token offset";
+> 	kifInformationsNode["xmlnode"]="xmlnode(): return the XML node associated with this node (TOKENIZE mode)";
+> 	kifInformationsDependency["name"]="name(): return the dependency name";
+> 	kifInformationsDependency["data"]="data(map feats): Features are stored in map as attribute/value";
+> 	kifInformationsDependency["setfeature"]="setfeature(string att, string val): feature assignment to the dependency";
+> 	kifInformationsDependency["feature"]="feature(string att): return the value of an attribute";
+> 	kifInformationsDependency["feature"]="feature(string att,string val): test the value of an attribute";
+> 	kifInformationsDependency["parameters"]="parameters(): return a vector of node variable";
+> 	kifInformationsDependency["stack"]="stack(vector v): return the dependency stack in a vector of strings";
+> 	kifInformationsDependency["push"]="push(string s): push s on the dependency’s stack";
+> 	kifInformationsDependency["pop"]="pop(int i): remove the ith element from the dependency’s stack";
+> 	kifInformationsDependency["pop"]="pop(): remove the last element on top of the dependency’s stack";
+> 	kifInformationsGeneration["next"]="next(): return the next Generation Node";
+> 	kifInformationsGeneration["previous"]="previous(): return the previous Generation Node";
+> 	kifInformationsGeneration["child"]="child(): return the first Generation Node  child";
+> 	kifInformationsGeneration["parent"]="parent(): return the parent Generation Node";
+> 	kifInformationsGeneration["last"]="last(): return the last child";
+> 	kifInformationsGraph["set"]="set(string name): give the graph a name";
+> 	kifInformationsGraph["name"]="name(): return the name of the graph";
+> 	kifInformationsGraph["project"]="project(g): g should be a graph. We project g on the current graph.";
+> 	kifInformationsGraph["pop"]="pop(remove): remove should be a graph. We remove from the current graph, the sub-graphs that match remove.";
+> 	kifInformationsGraph["replace"]="replace(pattern,replacement): pattern and replacement should be two graphs. We replace the sub-graph that matches pattern with a new replacement graph.";
+> 	kifInformationsGraph["extract"]="extract(extractor): extractor should be a graph. We return a vector of all sub-graphs from the current graph that match extractor.";
+> 	kifInformationsFst["load"]="load(string script, string flags, int strategy,boolean utf8): load an FST script. Strategy=0 for a DEPTH strategy, 1 for a BREADTH strategy.";
+> 	kifInformationsFst["init"]="init(boolean utf8): Initialization of a net creation, step by step. If the net should contain UTF8 characters, set utf8 to true.";
+> 	kifInformationsFst["add"]="add(string surface,string lemma): Store a new surface/lemma couple in the FST, which has been prepared with init().";
+> 	kifInformationsFst["save"]="save(string filename,boolean utf8): final operation after an init() and a series of add(). Store the final FST in filename.";
+> 	kifInformationsFst["compile"]="compile(map m, string filename,boolean utf8): compile the map m into a FST. Keys should be a lemma+”\t”+features and values should be a surface form";
+> 	kifInformationsXml["name"]="name(): return the XML node name";
+> 	kifInformationsXml["data"]="data(map props): Properties are stored in map as attribute/value";
+> 	kifInformationsXml["next"]="next(): return the next XML node";
+> 	kifInformationsXml["previous"]="previous(): return the previous XML node";
+> 	kifInformationsXml["child"]="child(): return the first child node under current node";
+> 	kifInformationsXml["parent"]="parent(): return the parent node above current node";
+> 	kifInformationsRule["apply"]="apply(a,b,c…): apply a rule or a group of rules, passing parameters to any KiF functions that might be call back from the rule itself.";
+> 	kifInformationsRule["set"]="set(float weight,float threshold,float value): set the probabilities value of a rule";
+> 	kifInformationsRule["get"]="get(float weight,float threshold,float value): get the probabilities value of a rule";
+> 	kifInformationsParser["load"]="load(string grmpathname): Load a XIP grammar.";
+> 	kifInformationsParser["parse"]="parse(string sentence): parse a sentence using the grammar. If no variable is provided to get the analysis, then the result is displayed on the current output.";
+> 	kifInformationsParser["parsefile"]="parsefile(string input,string output): parse the file input and store the results in file output.";
+> 	kifInformationsParser["parsefile"]="parsefile(string input): parse the file input within a XIP library call. A callback function must be provided in that case to catch the XipResult objects.";
+> 	kifInformationsParser["parsexml"]="parsexml(string input,string output,int depth): parse the XML file input and store the results in file output. Depth is the depth at which the analysis should take place.";
+> 	kifInformationsParser["parsexml"]="parsexml(string input, int depth): parse the XML file input A callback function must be provided in that case to catch the XipResult objects.";
+> 	kifInformationsParser["name"]="name(): Return the pathname of the grm file";
+> 	kifInformationsParser["addoption"]="addoption(int nb1,int nb2,...): Add the options of id nb1,nb2 ... See below for a list of these options.";
+> 	kifInformationsParser["removeoption"]="removeoption(int nb1,int nb2,...): Remove the options of id nb1,nb2, nb3 ...";
+> 	kifInformationsKif["load"]="load(string kifpathname): Load a KiF program";
+> 	kifInformationsKif["name"]="name(): Return the pathname of the grm file";
+> 	kifInformationsKif["_loader"]="_loader: A kif variable (of the type described here), which stores a pointer to the loading program.";
+> 	kifInformationsKif["command"]="command(string s): execute the system command s";
+> 	kifInformationsKif["createdirectory"]="createdirectory(string path): create a directory for the given path";
+> 	kifInformationsKif["vector v=listdirectory"]="vector v=listdirectory(string path): return the files in the directory at path";
+> 	kifInformationsKif["map info=fileinfo"]="map info=fileinfo(string path): return a map with the following information for a given file";
+> 	kifInformationsKif["realpath"]="realpath(string path): return the actual path for a given relative path.";
+> 	kifInformationsKif["getenv"]="getenv(string var): return the value of the environment variable";
+> 	kifInformationsKif["setenv"]="setenv(string var,string val): set the environment variable var with the value val.";
+> 	kifInformationsKif["gethostname"]="gethostname(): return the current host name. The socket does not need to be activated to get this information.";
+> 	kifInformationsKif["createserver"]="createserver(string hostname,int port,int nbclients): create a server on a host with a specific port.";
+> 	kifInformationsKif["createserver"]="createserver(int port,int nbclients): create a server on the local host with a specific port.";
+> 	kifInformationsKif["connect"]="connect(string hostname,int port): connect a client to a specific host on a specific port.";
+> 	kifInformationsKif["int clientid=wait"]="int clientid=wait(): the server wait for a client to connect. It returns the client identifier, which will be used to communicate with the client.";
+> 	kifInformationsKif["settimeout"]="settimeout(int i): set the timeout in seconds for both writing and reading on the socket. Use this instruction to avoid blocking on a read or on a write. A value of -1 cancels the timeout.";
+> 	kifInformationsKif["open"]="open(string pathname): open a database";
+> 	kifInformationsKif["close"]="close(): close a database";
+> 	kifInformationsKif["create"]="create(x1,x2,x3): create a table in a database, with the arguments x1,x2...";
+> 	kifInformationsKif["insert"]="insert(table,column,value,...): insert a line in a table.";
+> 	kifInformationsKif["execute"]="execute(string sqlcommand): execute a sql command. If the input variable is a vector, then all possible values will be stored in it. It the input variable is an iterator, then it is possible to iterate on the results of the sql command. Each result is a map, where each key is a column name.";
+> 	kifInformationsKif["begin"]="begin(): to enter the commit mode";
+> 	kifInformationsKif["commit"]="commit(): the SQL command are then processed. It should finish a series of commands initiated with a begin.";
+> }
+> 
+> KifRaiseError::KifRaiseError(string mes,string file,long l,long r) {
+> 	message=mes;
+> 	char c[100];
+> 	sprintf_s(c,100,"%d",l);
+> 	message+=" (line:";
+> 	message+=c;
+> 	message+=")";
+> 
+> 	filename=file;
+> 	left=l;
+> 	right=r;
+> }
+> 
+767a1158
+> 		kifFunctions["plusplus"]=&KifCode::KifParsePlusPlus;
+814a1206
+> 		kifOperators["++"]=kifPLUSEQU;
+815a1208
+> 		kifOperators["--"]=kifMINUSEQU;
+831,832d1223
+< 		kifInstructions[kifINITIALISATION]=&KifInstruction::INITIALISATION;
+< 		kifInstructions[kifAFFECTATION]=&KifInstruction::AFFECTATION;
+867a1259
+> 		
+870d1261
+< 
+875a1267,1316
+> 		kifInstructions[kifINITIALISATION]=&KifInstruction::INITIALISATION;
+> 		kifInstructions[kifAFFECTATION]=&KifInstruction::AFFECTATION;
+> 
+> 		kifOperationInstructions[kifIF]=false;
+> 		kifOperationInstructions[kifSWITCH]=false;
+> 		kifOperationInstructions[kifWHILE]=false;
+> 		kifOperationInstructions[kifFOR]=false;
+> 		kifOperationInstructions[kifCATCHBLOC]=false;
+> 		kifOperationInstructions[kifSEQUENCE]=false;
+> 		kifOperationInstructions[kifTRY]=false;
+> 
+> 		kifOperationInstructions[kifINITIALISATION]=true;
+> 		kifOperationInstructions[kifAFFECTATION]=true;
+> 
+> 		kifOperationInstructions[kifPLUSEQU]=true;
+> 		kifOperationInstructions[kifMINUSEQU]=true;
+> 		kifOperationInstructions[kifMULTIPLYEQU]=true;
+> 		kifOperationInstructions[kifDIVIDEEQU]=true;
+> 		kifOperationInstructions[kifMODEQU]=true;
+> 		kifOperationInstructions[kifPOWEREQU]=true;
+> 		kifOperationInstructions[kifUNIONEQU]=true;
+> 		kifOperationInstructions[kifXOREQU]=true;
+> 		kifOperationInstructions[kifINTERSECTIONEQU]=true;
+> 		kifOperationInstructions[kifSHIFTLEFTEQU]=true;
+> 		kifOperationInstructions[kifSHIFTRIGHTEQU]=true;
+> 		kifOperationInstructions[kifBLOC]=true;
+> 		kifOperationInstructions[kifBLOCBOOLEAN]=true;
+> 		kifOperationInstructions[kifBLOCLOOPIN]=true;
+> 		kifOperationInstructions[kifINTERSECTION]=true;
+> 		kifOperationInstructions[kifUNION]=true;
+> 		kifOperationInstructions[kifXOR]=true;
+> 		kifOperationInstructions[kifPLUS]=true;
+> 		kifOperationInstructions[kifMINUS]=true;
+> 		kifOperationInstructions[kifMULTIPLY]=true;
+> 		kifOperationInstructions[kifDIVIDE]=true;
+> 		kifOperationInstructions[kifMOD]=true;
+> 		kifOperationInstructions[kifPOWER]=true;
+> 		kifOperationInstructions[kifSHIFTRIGHT]=true;
+> 		kifOperationInstructions[kifSHIFTLEFT]=true;
+> 		kifOperationInstructions[kifNOTIN]=true;
+> 		kifOperationInstructions[kifIN]=true;
+> 		kifOperationInstructions[kifEQUAL]=true;
+> 		kifOperationInstructions[kifSUPERIOR]=true;
+> 		kifOperationInstructions[kifINFERIOR]=true;
+> 		kifOperationInstructions[kifSUPEQU]=true;
+> 		kifOperationInstructions[kifINFEQU]=true;
+> 		kifOperationInstructions[kifDIFFERENT]=true;
+> 		kifOperationInstructions[kifOR]=true;
+> 		kifOperationInstructions[kifAND]=true;
+> 		
+898a1340
+> 		InitMapBooleanString(kifPredefinedFunctions,"infos");
+967a1410
+> 		InitMapBooleanString(kifStringFunctions,"infos");
+984a1428
+> 		InitMapBooleanString(kifVectorFunctions,"infos");
+1001a1446
+> 		InitMapBooleanString(kifFSTFunctions,"infos");
+1007a1453,1454
+> 		InitMapBooleanString(kifParserFunctions,"addoption");
+> 		InitMapBooleanString(kifParserFunctions,"removeoption");
+1021a1469
+> 		InitMapBooleanString(kifMapFunctions,"infos");
+1035a1484
+> 		InitMapBooleanString(kifMatrixFunctions,"infos");
+1051a1501
+> 		InitMapBooleanString(kifFileFunctions,"infos");
+1063a1514
+> 		InitMapBooleanString(kifXipRuleFunctions,"infos");
+1076a1528
+> 		InitMapBooleanString(kifDateFunctions,"infos");
+1084a1537
+> 		InitMapBooleanString(kifTimeFunctions,"infos");
+1086a1540
+> 		InitMapBooleanString(kifTimeFunctions,"reset");
+1105a1560
+> 		InitMapBooleanString(kifNumericalFunctions,"infos");
+1119a1575
+> 		InitMapBooleanString(kifGraphFunctions,"infos");
+1135a1592
+> 		InitMapBooleanString(kifIteratorFunctions,"infos");
+1153a1611
+> 		InitMapBooleanString(kifXipFunctions,"infos");
+1181a1640
+> 		InitMapBooleanString(kifDependencyFunctions,"infos");
+1200a1660
+> 		InitMapBooleanString(kifGenerationFunctions,"infos");
+1222a1683
+> 		InitMapBooleanString(kifXMLFunctions,"infos");
+1259a1721
+> 			KifInitInformations();
+1339c1801
+< 	int c=GETCH();
+---
+> 	int c=GETCH(false);
+1727a2190,2198
+> static KifElement* PreInfos(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+> 	if (callfunc->Size()!=2)
+> 		return callfunc->kifcode->Returnerror(kifErrorStrings[2]);
+> 	
+> 	KifElement* ke=callfunc->Evaluate(0,dom);
+> 	KifElement* kstr=callfunc->Evaluate(1,dom);
+> 	return ke->Information(kstr);
+> }
+> 
+1740,1741c2211
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1756,1757c2226
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1777,1778c2246
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1797,1798c2265
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1821,1822c2288
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1895c2361
+< 	return Selectstring(callfunc,contextualpattern,thestr);
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1909c2375
+< 	return Selectstring(callfunc,contextualpattern,thestr);
+---
+> 	return new KifString(callfunc->kifcode,NULL,thestr);
+1937,1938c2403
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,res);	
+1959,1960c2424
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,res);	
+1983,1984c2447
+< 	mystr=Selectstring(callfunc,contextualpattern,res);
+< 	return mystr;		
+---
+> 	return new KifString(callfunc->kifcode,NULL,res);	
+2003c2466
+< 		return Selectstring(callfunc,contextualpattern,resstr);
+---
+> 		return new KifString(callfunc->kifcode,NULL,resstr);
+2021c2484
+< 	return Selectstring(callfunc,contextualpattern,resstr);
+---
+> 	return new KifString(callfunc->kifcode,NULL,resstr);
+2023a2487,2497
+> static KifElement* PreResetTime(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+> 	if (callfunc->Size()==0 || callfunc->Size()>=8)
+> 		return callfunc->kifcode->Returnerror(kifErrorStrings[218]);
+> 	//First parameter is a time
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifTime)
+> 		return callfunc->kifcode->Returnerror(kifErrorStrings[219]);
+> 	KifTime* ktime=(KifTime*)timeinfo;
+> 	gettimeofday(&ktime->value, NULL);
+> 	return ktime;
+> }
+2116,2117c2590,2591
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2119,2120c2593,2594
+< 	string d=time->String();
+< 	return Selectstring(callfunc,contextualpattern,d);
+---
+> 	string d=timeinfo->String();
+> 	return new KifString(callfunc->kifcode,NULL,d);
+2132,2133c2606,2607
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2135c2609
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2148,2149c2622,2623
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2151c2625
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2164,2165c2638,2639
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2167c2641
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2179,2180c2653,2654
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2182c2656
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2194,2195c2668,2669
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2197c2671
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2209,2210c2683,2684
+< 	KifElement* time=callfunc->Evaluate(0,dom);
+< 	if (time->type!=kifDate)
+---
+> 	KifElement* timeinfo=callfunc->Evaluate(0,dom);
+> 	if (timeinfo->type!=kifDate)
+2212c2686
+< 	struct tm* temps = localtime(&((KifDate*)time)->value); 
+---
+> 	struct tm* temps = localtime(&((KifDate*)timeinfo)->value); 
+2230d2703
+< 	KifElement* res=callfunc->Evaluate(0,dom);
+2231a2705,2706
+> 	callfunc->kifcode->errorptr=NULL;
+> 	KifElement* res=callfunc->Evaluate(0,dom);
+2236c2711,2720
+< 		string resex=resstr.substr(0,3);
+---
+> 		//we look for the first digit
+> 		string resex;
+> 		for (int i=0;i<resstr.size();i++) {
+> 			while (i<resstr.size() && resstr[i]>='0' && resstr[i]<='9') {
+> 				resex+=resstr[i];
+> 				i++;
+> 			}
+> 			if (resex!="")
+> 				break;
+> 		}
+2240d2723
+< 	callfunc->kifcode->errorptr=NULL;
+2530c3013,3017
+< 			while (kws.instruction==-1);
+---
+> 			while (true) {
+> 				ThreadLock _lock(kifSignal);
+> 				if (kws.instruction!=-1)
+> 					break;
+> 			}
+2621c3108
+< 	return Selectstring(callfunc,contextualpattern,version);
+---
+> 	return new KifString(callfunc->kifcode,NULL,version);
+2664a3152,3161
+> static KifElement* PrePrintFlush(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+> #ifdef PROFILING
+> 	profilingcall("PrePrintLN");
+> #endif
+> 	KifElement* res=kifNULL;
+> 	ostream* os=callfunc->kifcode->os;
+> 	os->flush();
+> 	return kifTRUE;
+> }
+> 
+2947c3444
+< 		return Selectstring(callfunc,contextualpattern,res);
+---
+> 		return new KifString(callfunc->kifcode,NULL,res);
+3271c3768
+< 	return Selectstring(callfunc,contextualpattern,s);
+---
+> 	return new KifString(callfunc->kifcode,NULL,s);
+3291c3788
+< 		return Selectstring(callfunc,contextualpattern,s);
+---
+> 		return new KifString(callfunc->kifcode,NULL,s);
+3312c3809
+< 		return Selectstring(callfunc,contextualpattern,s);
+---
+> 		return new KifString(callfunc->kifcode,NULL,s);
+3377c3874
+< 		return Selectstring(callfunc,contextualpattern,callfunc->kifcode->buffer);
+---
+> 		return new KifString(callfunc->kifcode,NULL,callfunc->kifcode->buffer);
+3385c3882
+< 	return Selectstring(callfunc,contextualpattern,callfunc->kifcode->buffer);
+---
+> 	return new KifString(callfunc->kifcode,NULL,callfunc->kifcode->buffer);
+3408a3906,3933
+> static KifElement* PostEval(KifCode* kifcode,string& code,KifElement* contextualpattern,KifDomain* dom) {
+> 	
+> 	bool pushed=kifcode->Push(kifcode->kstart);
+> 	KifInstruction ki(NULL,NULL,kifSEQUENCE);
+> 	ki.kifcode=kifcode;
+> 	//We deactivate the garbage temporary (to avoid problems)
+> 	
+> 	kifcode->nogarbage=true;
+> 	kifcode->Evaluate(&ki,code,false);
+> 	if (pushed)
+> 		kifcode->Pop();
+> 	KifElement* ret=ki.Execute(contextualpattern,dom,kifNULL,false);
+> 	//we reactivate it...
+> 	kifcode->nogarbage=false;
+> 	return ret;
+> }
+> 
+> static KifElement* PreEval(KifElement* contextualpattern,KifDomain* dom,KifCallFunction* callfunc) {
+> #ifdef PROFILING
+> 	profilingcall("PrePause");
+> #endif
+> 	if (callfunc->Size()!=1)
+> 		return kifFALSE;
+> 	KifElement* kfirst=callfunc->Evaluate(0,dom);
+> 	string code=kfirst->String();
+> 	return PostEval(callfunc->kifcode,code,contextualpattern,dom);
+> }
+> 
+3506c4031
+< 		return Selectstring(callfunc,contextualpattern,resstr);
+---
+> 		return new KifString(callfunc->kifcode,NULL,resstr);
+3510c4035
+< 		return Selectstring(callfunc,contextualpattern,resstr);
+---
+> 		return new KifString(callfunc->kifcode,NULL,resstr);
+3587a4113,4114
+> 	kifcodeptr->KifCreatePredefined("addoption",&PreParseAddOption);
+> 	kifcodeptr->KifCreatePredefined("removeoption",&PreParseRemoveOption);
+3676a4204
+> 	kifcodeptr->KifCreatePredefined("eval",&PreEval);
+3679a4208
+> 	kifcodeptr->KifCreatePredefined("infos",&PreInfos);
+3702a4232
+> 	kifcodeptr->KifCreatePredefined("pflush",&PrePrintFlush);
+3776a4307
+> 	kifcodeptr->KifCreatePredefined("reset",&PreResetTime);
+3894a4426
+> 	ThreadLock _lock(kifFile);
+3898c4430,4435
+< 	FILE* cible=fopen(STR(filename),"rb");
+---
+> 	FILE* cible;
+> #ifdef WIN32
+> 	fopen_s(&cible,STR(filename),"rb");
+> #else
+> 	cible=fopen(STR(filename),"rb");
+> #endif
+4081,4110d4617
+< #ifdef WIN32
+< #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
+<   #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
+< #else
+<   #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
+< #endif
+< int gettimeofday(struct timeval *tv, struct timezone *tz)
+< {
+<   FILETIME ft;
+<   unsigned __int64 tmpres = 0;
+<   static int tzflag;
+<  
+<   if (NULL != tv)
+<   {
+<     GetSystemTimeAsFileTime(&ft);
+<  
+<     tmpres |= ft.dwHighDateTime;
+<     tmpres <<= 32;
+<     tmpres |= ft.dwLowDateTime;
+<  
+<     /*converting file time to unix epoch*/
+<     tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+<     tmpres /= 10;  /*convert into microseconds*/
+<     tv->tv_sec = (long)(tmpres / 1000000UL);
+<     tv->tv_usec = (long)(tmpres % 1000000UL);
+<   }
+<  
+<   return 0;
+< }
+< #endif
+4133a4641,4656
+> bool KifFile::Write(string n) {
+> 	ThreadLock _lock(kifFile);
+> 	if (writefile==NULL)
+> 		return false;
+> 	*writefile<<(char*)n.c_str();
+> 	return true;
+> }
+> 
+> KifElement* KifFile::EndOfFile() {
+> 	if (readfile==NULL)
+> 		return kifTRUE;
+> 	if (readfile->eof())
+> 		return kifTRUE;
+> 	return kifFALSE;
+> }
+> 
+4135a4659
+> 	ThreadLock _lock(kifFile);
+4145a4670
+> 	ThreadLock _lock(kifFile);
+4181c4706
+< Exported void KifCode::Push(KifDomain* ke) {
+---
+> Exported bool KifCode::Push(KifDomain* ke) {
+4185c4710,4712
+< 	if (id==-1)
+---
+> 	if (id==-1) {
+> 		if (ke==kstart && stacking.size()!=0)
+> 			return false;
+4187c4714,4717
+< 	else
+---
+> 	}
+> 	else {
+> 		if (ke==kstart && threadstacks[id].size()!=0)
+> 			return false;
+4189a4720,4721
+> 	return true;
+> }
+4372c4904
+< 	sprintf(kifcode->buffer,"%d",t->hight);
+---
+> 	sprintf_s(kifcode->buffer,100,"%d",t->hight);
+5833a6366
+> 	ThreadLock _lock(type);
+5851a6385
+> 	ThreadLock _lock(type);
+5859,5871c6393
+< 	KifElement* loc=NULL;
+< 	if (declarations.find(s)!=declarations.end())
+< 		loc=declarations[s];
+< 	
+< 	//Only functions can be overloaded...
+< 	if (kifcode->kstart!=this && loc!=NULL && loc->type!=kifFunction) {
+< 		string message="'";
+< 		message+=s;
+< 		message+="' has already been declared in frame: '";
+< 		message+=name;
+< 		message+="'";
+< 		throw new KifRaiseError(message,kifcode->current->name,kifcode->current_start,kifcode->current_end);
+< 	}
+---
+> 	ThreadLock _lock(type);	
+5879a6402
+> 	ThreadLock _lock(type);
+5885a6409,6430
+> void KifCallFunction::SetWaitonthread() {
+> 	ThreadLock _lock(type);
+> 	waitonthread++;
+> }
+> 
+> void KifCallFunction::FreeWaitonthread() {
+> 	ThreadLock _lock(type);
+> 	waitonthread--;
+> }
+> 
+> void KifCallFunction::WaitOnThread() {	
+> 	if (waitonthread<=0)
+> 		return;
+> 
+> 	while (true) {
+> 		ThreadLock _lock(type);
+> 		if (waitonthread<=0)
+> 			break;
+> 	}
+> }
+> 
+> 
+5889a6435
+> 	ThreadLock _lock(type);
+5906a6453
+> 	ThreadLock _lock(type);
+5938a6486
+> 	ThreadLock _lock(type);
+5941d6488
+< 	ThreadLock _lock(type);
+6033a6581
+> 	ThreadLock _lock(type);
+6036d6583
+< 	ThreadLock _lock(type);
+6055a6603
+> 	ThreadLock _lock(type);
+6071d6618
+< 	callfunction(value,k);
+6072a6620
+> 	callfunction(value,k);
+6150a6699
+> 	ThreadLock _lock(type);
+6181a6731
+> 	ThreadLock _lock(type);
+6194c6744
+< 	
+---
+> 	ThreadLock _lock(type);
+6199c6749
+< 	ThreadLock _lock(type);
+---
+> 	
+6225,6226c6775,6778
+< 					if (ke==kifNULL)
+< 						return kifcode->Returnerror(kifErrorStrings[206]);
+---
+> 					if (ke==kifNULL) {
+> 						kifcode->Returnerror(kifErrorStrings[206]);
+> 						return true;
+> 					}
+6270c6822
+< 	
+---
+> 	ThreadLock _lock(type);
+6273d6824
+< 	ThreadLock _lock(type);
+6288c6839
+< 
+---
+> 	ThreadLock _lock(type);
+6293d6843
+< 	ThreadLock _lock(type);
+6322,6323c6872,6875
+< 					if (ke==kifNULL)
+< 						return kifcode->Returnerror(kifErrorStrings[207]);
+---
+> 					if (ke==kifNULL) {
+> 						kifcode->Returnerror(kifErrorStrings[207]);
+> 						return false;
+> 					}
+6604a7157,7242
+> //===================================================================
+> Exported KifElement* KifString::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsString.find(s)==kifInformationsString.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsString[s]);
+> }
+> 
+> Exported KifElement* KifInteger::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsInt.find(s)==kifInformationsInt.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsInt[s]);
+> }
+> 
+> Exported KifElement* KifFloat::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsFloat.find(s)==kifInformationsFloat.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsFloat[s]);
+> }
+> 
+> Exported KifElement* KifVector::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsVector.find(s)==kifInformationsVector.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsVector[s]);
+> }
+> 
+> Exported KifElement* KifMap::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsMap.find(s)==kifInformationsMap.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsMap[s]);
+> }
+> 
+> Exported KifElement* KifTree::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsTree.find(s)==kifInformationsTree.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsTree[s]);
+> }
+> 
+> Exported KifElement* KifMatrix::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsMatrix.find(s)==kifInformationsMatrix.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsMatrix[s]);
+> }
+> 
+> Exported KifElement* KifIterator::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsIterator.find(s)==kifInformationsIterator.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsIterator[s]);
+> }
+> 
+> 
+> Exported KifElement* KifDate::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsDate.find(s)==kifInformationsDate.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsDate[s]);
+> }
+> 
+> Exported KifElement* KifTime::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsTime.find(s)==kifInformationsTime.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsTime[s]);
+> }
+> 
+> Exported KifElement* KifFile::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsFile.find(s)==kifInformationsFile.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsFile[s]);
+> }
+> 
+> 
+> Exported KifElement* KifKiF::Information(KifElement* kstr) {
+> 	string s=kstr->String();
+> 	if (kifInformationsKif.find(s)==kifInformationsKif.end())
+> 		return kifNULL;
+> 	return new KifString(kifcode,NULL,kifInformationsKif[s]);
+> }
+6686a7325,7333
+> Exported void KifKiF::List(KifVector* fcts) {
+> #ifdef PROFILING
+> 	profilingcall("Time::List");
+> #endif
+> 	hmap<string,bool>::iterator it;
+> 	for (it=kifKiFFunctions.begin();it!=kifKiFFunctions.end();it++)
+> 		fcts->Push(new KifString(kifcode,NULL,it->first));
+> }
+> 
+7159c7806
+< 					sprintf(kifcode->buffer,"%d",i);
+---
+> 					sprintf_s(kifcode->buffer,100,"%d",i);
+7164c7811
+< 						sprintf(kifcode->buffer,"%d",i);
+---
+> 						sprintf_s(kifcode->buffer,100,"%d",i);
+7192d7838
+< 	KifElement* kval;
+7218c7864
+< 					sprintf(kifcode->buffer,"%d",itree.idx);
+---
+> 					sprintf_s(kifcode->buffer,100,"%d",itree.idx);
+7713,7714c8359,8360
+< 	double time=Float()/1000000UL;
+< 	sprintf(kifcode->buffer,"%fs",time);
+---
+> 	double timeval=Float()/1000000UL;
+> 	sprintf_s(kifcode->buffer,100,"%fs",timeval);
+7791a8438,8440
+> 	kifcode->temporaryselection.erase(threadid);
+> 	kifcode->temporarygarbage.erase(threadid);
+> 
+7793a8443
+> 	delete this;
+7799c8449
+< 
+---
+> //This method is called from within a KifCallExecuteThread Launch or Execute...
+7812a8463,8467
+> 	
+> 	kifcode->temporaryselection[threadid]=0;
+> 	vector<KifElement*> vcx;
+> 	kifcode->temporarygarbage[threadid]=vcx;
+> 
+7837c8492,8493
+< 	KifCallExecuteThread* kifcall=new KifCallExecuteThread(kifcode,this,body);
+---
+> 	KifCallExecuteThread* kifcall=new KifCallExecuteThread(NULL,this,body);
+> 	kifcall->kifcode=kifcode;
+7893c8549
+< 
+---
+> 	ThreadLock _lock(type);
+7912a8569
+> 	ThreadLock _lock(type);
+7923a8581
+> 	ThreadLock _lock(type);
+7934a8593
+> 	ThreadLock _lock(type);
+7945a8605
+> 	ThreadLock _lock(type);
+7956a8617
+> 	ThreadLock _lock(type);
+8021a8683
+> 	ThreadLock _lock(type);
+8073c8735
+< 	return Selectstring(this,contextualpattern,res);
+---
+> 	return new KifString(kifcode,NULL,res);
+8088a8751
+> 			ThreadLock _lock(type);
+8100a8764
+> 			ThreadLock _lock(type);
+8133c8797
+< 
+---
+> 	ThreadLock _lock(type);
+8152a8817
+> 			ThreadLock _lock(type);
+8166a8832
+> 			ThreadLock _lock(type);
+8200c8866
+< 
+---
+> 	ThreadLock _lock(type);
+8243a8910
+> 	ThreadLock _lock(type);
+8812d9478
+< 				v=new KifCouple(kifcode,declaration->value->Returnvalue(),index,dom);
+8814,8816c9480,9485
+< 					return v;
+< 				else
+< 					return v->Execute(contextualpattern,dom,index,false);
+---
+> 					return new KifCouple(kifcode,declaration->value->Returnvalue(),index,dom);
+> 				else {
+> 					KifCouple vx(NULL,declaration->value->Returnvalue(),index,dom);
+> 					vx.kifcode=kifcode;
+> 					return vx.Execute(contextualpattern,dom,index,false);
+> 				}
+8844d9512
+< 		v=new KifCouple(kifcode,v->Returnvalue(),index,dom);
+8846,8848c9514,9519
+< 			return v;
+< 		else
+< 			return v->Execute(contextualpattern,dom,index,false);
+---
+> 			return new KifCouple(kifcode,v->Returnvalue(),index,dom);
+> 		else {
+> 			KifCouple vx(NULL,v->Returnvalue(),index,dom);
+> 			vx.kifcode=kifcode;
+> 			return vx.Execute(contextualpattern,dom,index,false);
+> 		}
+8943a9615
+> 
+8972a9645
+> 
+8981a9655
+> 
+8996a9671
+> 
+9004a9680
+> 
+9011a9688
+> 
+9034a9712
+> 
+9041a9720
+> 
+9049a9729
+> 
+9056a9737
+> 
+9064a9746
+> 
+9071a9754
+> 
+9079a9763
+> 
+9095a9780
+> 
+9111a9797
+> 
+9127a9814
+> 
+9180a9868
+> 
+9181a9870
+> 
+9510a10200,10206
+> 	
+> 	if (result==kifNULL) {
+> 		if (ke==result)
+> 			return kifTRUE;
+> 		return kifFALSE;
+> 	}
+> 
+9555a10252,10256
+> 	if (result==kifNULL) {
+> 		if (ke==result)
+> 			return kifFALSE;
+> 		return kifTRUE;
+> 	}
+9705c10406
+< 	KifElement* ret=kifTRUE;
+---
+> 	KifElement* res=kifTRUE;
+9715c10416
+< 		KifElement* res=instructions[i]->Execute(contextualpattern,dom,kifNULL,false);
+---
+> 		res=instructions[i]->Execute(contextualpattern,dom,kifNULL,false);
+9738c10439
+< 	return kifTRUE;
+---
+> 	return res;
+9763a10465
+> 			res=kifFALSE;
+9765,9766c10467,10470
+< 				instructions[last+1]->Execute(contextualpattern,dom,kifNULL,false);
+< 			return kifFALSE;
+---
+> 				res=instructions[last+1]->Execute(contextualpattern,dom,kifNULL,false);
+> 			if (res==kifWAIT)
+> 				return kifcode->Returnerror(kifErrorStrings[217]);
+> 			return res;
+9848a10553
+> 	if (kifOperationInstructions[action]==false)
+9849a10555,10558
+> 	kifcode->SetToTemporary();
+> 	KifElement* res=(this->*kifInstructions[action])(contextualpattern,dom,ke);
+> 	kifcode->ResetFromTemporary(res);
+> 	return res;
+10359a11069,11075
+> KifElement* KifCode::KifParsePlusPlus(x_node* xn,KifElement* kf) {
+> 	KifOperator op=kifOperators[xn->value];
+> 	kf->Setaction(op);
+> 	KifInteger* kone=new KifInteger(this,kf,1);
+> 	return kf;
+> }
+> 
+10587c11303
+< 			if (xn->value[i]=='\\') {
+---
+> 			if (xn->value[i]=='\\' && i<xn->value.size()-2) {
+10589c11305,11331
+< 				s+=xn->value[i+1];
+---
+> 				char c=xn->value[i+1];								
+> 				if (c>='0' && c<='9') {
+> 					s=c;
+> 					i++;
+> 					if (i<xn->value.size()-2) {
+> 						c=xn->value[i+1];
+> 						if (c>='0' && c<='9') {
+> 							s+=c;					
+> 							i++;
+> 							if (i<xn->value.size()-2) {
+> 								c=xn->value[i+1];
+> 								if (c>='0' && c<='9') {								
+> 									s+=c;
+> 									i++;
+> 									char nbchar=atoi(STR(s));
+> 									name+=nbchar;
+> 									s="";
+> 								}
+> 							}
+> 						}
+> 					}
+> 					i--;
+> 					if (s!="")
+> 						name+=s;
+> 				}
+> 				else {
+> 					s+=c;
+10590a11333
+> 				}
+10591a11335
+> 
+10612a11357
+> 	long line=GetCurrentLine(0,xn);
+10613a11359,11365
+> 	if (kf->Declaration(name)!=NULL) {
+> 		string message="Variable: '";
+> 		message+=name;
+> 		message+="' has already been declared";
+> 		throw new KifRaiseError(message,current->name,line,xn->end);
+> 	}
+> 
+10633d11384
+< 				long line=GetCurrentLine(0,xn);
+11087c11838
+< void KifCode::Loadfile(string filename) {
+---
+> void KifCode::Loadfile(string filename,KifCode* loader) {
+11092a11844
+> 	Setloader(loader);
+11095c11847
+< void KifCode::Loadfile(ifstream& fichier,string filename,long pos) {
+---
+> void KifCode::Loadfile(ifstream& fichier,string filename,long pos,KifCode* loader) {
+11100a11853
+> 	Setloader(loader);
+11137c11890
+< 		return Returnerror("Unknown expression");
+---
+> 		return Returnerror("KIF(230): Unknown expression");
+11170c11923
+< 		return Returnerror("Unknown expression");
+---
+> 		return Returnerror("KIF(230): Unknown expression");
+11203c11956
+< 		return Returnerror("Unknown expression");
+---
+> 		return Returnerror("KIF(230): Unknown expression");
+11370c12123
+< 			c=GETCH();
+---
+> 			c=GETCH(false);
+11373c12126
+< 				c=GETCH();
+---
+> 				c=GETCH(false);
+11403a12157
+> 				if (s=="" || s[0]!='$') {
+11427a12182
+> 			}
+11646,11654c12401,12402
+< 							KifElement* kret;
+< 							if (callfunc==NULL) {
+< 								Push(kstart);
+< 								kret=Evaluate(kstart,s,false);
+< 								Pop();
+< 							}
+< 							else	
+< 								kret=Evaluate(callfunc,s,false);
+< 							KifElement* kres=kret->Execute(kifTypeSTRING,dom,kifNULL,false);
+---
+> 							KifElement* kres;
+> 							kres=PostEval(this,s,kifTypeSTRING,dom);
+11729d12476
+< 	FinalGarbage();
+11730a12478
+> 	FinalGarbage();
+11736a12485,12490
+> 	if (id==0) {
+> 		//If it is the first module, then we clean also our libraries...
+> 		map<string,KifExternalModule>::iterator term;
+> 		for (term=kifTerminateLibraries.begin();term!=kifTerminateLibraries.end();term++)
+> 			(*term->second)(this,KIFVERSION);
+> 	}
+11812a12567,12590
+> void KifCode::SetToTemporary() {	
+> 	int id=GetThreadid();
+> 	temporaryselection[id]++;
+> 	
+> }
+> 
+> void KifCode::ResetFromTemporary(KifElement* var) {	
+> 	int id=GetThreadid();
+> 	temporaryselection[id]--;
+> 	if (temporaryselection[id]==0) {
+> 		var->Setreference();
+> 		for (int i=temporarygarbage[id].size()-1;i>=0;i--) {
+> 			if (temporarygarbage[id][i]!=NULL) {
+> 				if (temporarygarbage[id][i]->reference==0)
+> 					delete temporarygarbage[id][i]; 
+> 				else
+> 					Add(temporarygarbage[id][i]);
+> 			}
+> 		}
+> 		temporarygarbage[id].clear();
+> 		var->Resetreference();
+> 	}
+> }
+> 
+11818a12597,12604
+> 	int id=GetThreadid();
+> 	if (temporaryselection[id]!=0) {
+> 		if (ke->type>=kifString && ke->type<=kifCouple) {
+> 			temporarygarbage[id].push_back(ke);
+> 			return temporarygarbage[id].size();
+> 		}
+> 	}
+> 
+11878a12665,12667
+> 	ThreadLock _lock(kifGarbage);
+> 	if (nogarbage)
+> 		return false;
+11926c12715
+< int KifLoadPath(string& path,vector<string>& arguments,bool debugkif) {
+---
+> int KifLoadPath(KifCode* kifcode,string& path,vector<string>& arguments,bool debugkif) {
+11942c12731
+< 		ikif=KifLoad(paths,arguments,debugkif);		
+---
+> 		ikif=KifLoad(kifcode,paths,arguments,debugkif);		
+11947c12736
+< Exported int KifLoad(vector<string>& paths,vector<string>& arguments,bool debugkif) {
+---
+> Exported int KifLoad(KifCode* loader,vector<string>& paths,vector<string>& arguments,bool debugkif) {
+11958d12746
+< 
+11968c12756
+< 			kifcode->Loadfile(fkif,paths[i],0);
+---
+> 			kifcode->Loadfile(fkif,paths[i],0,loader);
+12002c12790
+< 		sprintf(buf,"%d",i);
+---
+> 		sprintf_s(buf,100,"%d",i);
+12116a12905,12977
+> Exported void KifCode::Setloader(KifCode* k) {
+> 	if (k==NULL)
+> 		return;
+> 	string name="_loader";
+> 	KifElement* kifvar=kstart->Declaration(name);
+> 	KifKiF* kifkif=(KifKiF*)kifvar->Returnvalue();
+> 	kifkif->ipar=k->id;
+> }
+> 
+> 
+> Exported void KifCode::ObjectInitialisation(int trig) {
+> 	nogarbage=false;
+> 	utf8=false;
+> 	threadalloc=0;
+> 	current_wait=NULL;
+> 	temporaryselection[-1]=0;
+> 	vector<KifElement*> vcx;
+> 	temporarygarbage[-1]=vcx;
+> #ifdef _DEBUG
+> 	currentkifcode=this;
+> #endif
+> #ifdef WIN32
+> 	_fullpath(buffer,".",1024);
+> #else
+> 	realpath(".",buffer);
+> #endif
+> 	kifsvector=&kifCodeVector;
+> 	trigger=trig;
+> 	garbage.ajuste(trigger);
+> 	inittableutf8();
+> 	id=kifCodeVector.size();
+> 	kifCodeVector.ajoute(this);
+> 	bnfkif=new bnf_kif;
+> 	linereference=0;
+> 	gotoline=-10;
+> 	garbagefunction=NULL;
+> 	debug=false;	
+> 	debugging=false;
+> 	infunction=false;
+> 	breakpoint=-1;
+> 	currentline=0;
+> 	current=NULL;
+> 	basegarbage=0;
+> 	errorptr=NULL;
+> 	error=false;
+> 	cursor=0;
+> 	cursormax=trigger;
+> 	os=&cout;
+> 	insidecall=0;
+> 	kstart=new KifFrame(this,NULL,"%%START");
+> 	string n="_args";
+> 	KifConst* args=new KifConst(this,NULL,n);
+> 	KifVector* vargs=new KifVector(this,args);
+> 	kstart->Set(n,args,NULL);
+> 	n="_paths";
+> 	args=new KifConst(this,NULL,n);
+> 	vargs=new KifVector(this,args);
+> 	kstart->Set(n,args,NULL);
+> 	vargs->Push(new KifString(this,NULL,buffer));
+> 	buffer[0]=0;
+> 	n="_sep";
+> 	args=new KifConst(this,NULL,n);
+> 	n=SEP;
+> 	KifString* sep=new KifString(this,args,n);
+> 	n="_sep";
+> 	kstart->Set(n,args,NULL);
+> 	n="_loader";
+> 	KifVariableDeclaration* var=new KifVariableDeclaration(this,NULL,n);
+> 	KifKiF* kifkif=new KifKiF(this,var);
+> 	kstart->Set(n,var,NULL);
+> 	KifInitFunctions(this,kstart);
+> }
+> 
+12174a13036
+> 
+12191a13054,13075
+> 	int pos=lname.find_last_of(SEP);
+> 	string subname=lname;
+> 	if (pos!=string::npos) {
+> 		subname=lname.substr(pos+1,lname.size()-pos-1);
+> 		pos=subname.find(".");
+> 		if (pos!=string::npos)
+> 			subname=subname.substr(0,pos);
+> 	}
+> 	
+> 	string initname="Init_";
+> 	initname+=subname;
+> 	string terminatename=subname;
+> 	terminatename+="_Terminate";
+> 	subname+="_KifInitialisationModule";
+> 	KifExternalModule LibInitEntryPoint;
+> 	//If it has already been loaded, we return...
+> 	if (KifRecordLibraries(initname,NULL)==false) {
+> 		LibInitEntryPoint=kifLibraries[initname];
+> 		(*LibInitEntryPoint)(this,KIF_VERSION);
+> 		return true;
+> 	}
+> 
+12200c13084
+< 		throw KifRaiseError(lname,current->name,line,xn->end);
+---
+> 		throw new KifRaiseError(lname,current->name,line,xn->end);
+12203,12211d13086
+< 	int pos=lname.find_last_of(SEP);
+< 	string subname=lname;
+< 	if (pos!=string::npos) {
+< 		subname=lname.substr(pos+1,lname.size()-pos-1);
+< 		pos=subname.find(".");
+< 		if (pos!=string::npos)
+< 			subname=subname.substr(0,pos);
+< 	}
+< 	subname+="_KifInitialisationModule";
+12212a13088,13089
+> 	KifExternalModule LibTerminateEntryPoint;
+> 
+12213a13091,13092
+> 	LibInitEntryPoint = (KifExternalModule)GetProcAddress(LoadMe,STR(initname));
+> 	LibTerminateEntryPoint = (KifExternalModule)GetProcAddress(LoadMe,STR(terminatename));
+12215c13094
+< 	if (LibMainEntryPoint==NULL) {
+---
+> 	if (LibMainEntryPoint==NULL || LibInitEntryPoint==NULL) {
+12218c13097
+< 		throw KifRaiseError(lname,current->name,line,xn->end);
+---
+> 		throw new KifRaiseError(lname,current->name,line,xn->end);	
+12220a13100,13102
+> 	KifRecordLibraries(initname,LibInitEntryPoint);
+> 	kifTerminateLibraries[terminatename]=LibTerminateEntryPoint;
+> 
+12260a13143
+> 	int pos=name.find_last_of('/');
+12261a13145,13156
+> 	string subname=name;
+> 	if (pos!=string::npos) {
+> 		subname=name.substr(pos+1,name.size()-pos-1);
+> 		pos=subname.find(".");
+> 		if (pos!=string::npos)
+> 			subname=subname.substr(0,pos);
+> 	}
+> 	string initname="Init_";
+> 	initname+=subname;
+> 	string terminatename=subname;
+> 	terminatename+="_Terminate";
+> 	subname+="_KifInitialisationModule";
+12262a13158,13165
+> 	KifExternalModule LibInitEntryPoint;
+> 	//If it has already been loaded, we return...
+> 	if (KifRecordLibraries(initname,NULL)==false) {
+> 		LibInitEntryPoint=kifLibraries[initname];
+> 		(*LibInitEntryPoint)(this,KIF_VERSION);
+> 		return true;
+> 	}
+> 
+12271c13174
+< 		message+=name;
+---
+> 		message+=lname;
+12273c13176
+< 		throw KifRaiseError(message,current->name,line,xn->end);
+---
+> 		throw new KifRaiseError(message,current->name,line,xn->end);
+12276,12285d13178
+< 	int pos=name.find_last_of('/');
+< 
+< 	string subname=name;
+< 	if (pos!=string::npos) {
+< 		subname=name.substr(pos+1,name.size()-pos-1);
+< 		pos=subname.find(".");
+< 		if (pos!=string::npos)
+< 			subname=subname.substr(0,pos);
+< 	}
+< 	subname+="_KifInitialisationModule";
+12287a13181,13182
+> 	KifExternalModule LibTerminateEntryPoint;
+> 
+12288a13184,13185
+> 	LibInitEntryPoint = (KifExternalModule)dlsym(LoadMe,STR(initname));
+> 	LibTerminateEntryPoint = (KifExternalModule)dlsym(LoadMe,STR(terminatename));
+12295c13192
+< 		throw KifRaiseError(message,current->name,line,xn->end);
+---
+> 		throw new KifRaiseError(message,current->name,line,xn->end);
+12297a13195,13196
+> 	KifRecordLibraries(initname,LibInitEntryPoint);
+> 	kifTerminateLibraries[terminatename]=LibTerminateEntryPoint;

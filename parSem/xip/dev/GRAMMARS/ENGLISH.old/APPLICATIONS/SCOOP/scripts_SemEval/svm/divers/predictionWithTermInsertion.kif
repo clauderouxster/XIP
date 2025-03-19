@@ -1,0 +1,280 @@
+use("kifliblinear");
+use("kifsys");
+
+loadin(kifsys.realpath(_paths[1])+"/dictionariesPolarity.kif");
+
+//This is the actual path of the script file, from which we can derived our accesss to the grammars
+string localpath=kifsys.realpath(_paths[1]);
+string pathcorpus=localpath+'/../Corpus/';
+string path= localpath+'/../../GRMFILES/scoop-restaurant.grm';
+
+liblinear predFood(localpath+"/model_test_food");
+liblinear predPrice(localpath+"/model_test_price");
+liblinear predAmbience(localpath+"/model_test_ambience");
+liblinear predService(localpath+"/model_test_service");
+liblinear predMisc(localpath+"/model_test_annecdote");
+
+
+parser p(path);
+
+//Global variables
+map categmodel={"food":predFood,"price":predPrice,"ambience":predAmbience,"service":predService,"anecdotes/miscellaneous":predMisc};
+istreemap polarities={0:"positive",1:"negative",2:"neutral",3:"conflict"};
+
+
+string polarity;
+sitreemap allwordsinstring;
+smap FoodTerms,PriceTerms,ServiceTerms,AmbienceTerms;
+map OpinionAspectTerm;
+
+//kif_exchange_data is a local XIP variable, which has been sent as the second parameter of parse
+string rule=@"
+functions:
+SENTIMENT-AND-CATEGORY.
+
+dependencyRules:
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) && FOOD(#1))
+     SENTIMENT-AND-CATEGORY[food=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) && SERVICE(#1))
+     SENTIMENT-AND-CATEGORY[service=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) && PRICE(#1))
+     SENTIMENT-AND-CATEGORY[price=+](#1)
+
+if (OPINION-ON-ASPECT-TERM[!sentiments:!](#1) && AMBIENCE(#1))
+     SENTIMENT-AND-CATEGORY[ambience=+](#1)
+
+script:
+
+resetall(kif_exchange_data);
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+
+if (FOOD$1(#1)) {
+     getdeps($1,kif_exchange_data);
+}
+
+if(SERVICE$1(#1)){
+     getdeps($1,kif_exchange_data);
+}
+
+if(AMBIENCE$1(#1)){
+     getdeps($1,kif_exchange_data);
+}
+
+if(PRICE$1(#1)){
+     getdeps($1,kif_exchange_data);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$1(#1,#2)) {
+     getdeps($1,kif_exchange_data);
+}
+
+if(OPINION-ON-ASPECT-TERM$1(#1)){
+     getdeps($1,kif_exchange_data);
+}
+
+if (SENTIMENT-AND-CATEGORY$1(#1)) {
+     getdeps($1,kif_exchange_data);
+}
+
+predictforstring(kif_exchange_data);
+
+"@;
+
+p.addendum(rule,true);
+
+//Just to display dependencies if necessary
+function affichedep(dependency d) {
+     if (d.parameters().size()==2)
+          printlnerr(d.name(),d.features(),d.parameters()[0].lemma(),d.parameters()[1].surface(),d.parameters()[0].number(),d.parameters()[1].number());
+     else
+          printlnerr(d.name(),d.features(),d.parameters()[0].lemma(),d.parameters()[0].number());
+}
+
+function storewords(node n){
+     string s=n.lemma().lower();
+     if(allwordsinstring.test(s)==true) {
+          allwordsinstring[s]++;
+     }
+     elif (allwordsinstring.test(s)==false){
+          allwordsinstring[s]=1;
+     }
+}
+
+function storedepwords(string s){
+     s = s.lower();
+     if (allwordsinstring.test(s)==true){
+          allwordsinstring[s]++;
+     }
+     elif (allwordsinstring.test(s)==false){
+          allwordsinstring[s]=1;
+     }
+}
+
+function getdeps(dependency d,string currentCategory) {
+     //affichedep(d);
+     vector v1,v2;
+     node n1;
+     string s1;
+     ssmap dfeats;
+
+     switch(d.name()) {
+          "FOOD": {
+               v1 = d.parameters();
+               n1 = v1[0];
+               s1 = n1.lemma();
+               FoodTerms[s1]=1;
+          }
+          "PRICE" : {
+               v1 = d.parameters();
+               n1 = v1[0];
+               s1 = n1.lemma();
+               PriceTerms[s1]=1;
+          }
+          "AMBIENCE" : {
+               v1 = d.parameters();
+               n1 = v1[0];
+               s1 = n1.lemma();
+               AmbienceTerms[s1]=1;
+          }
+          "SERVICE": {
+               v1 = d.parameters();
+               n1 = v1[0];
+               s1 = n1.lemma();
+               ServiceTerms[s1]=1;
+          }
+          "OPINION-ON-ASPECT-TERM": {
+               dfeats=d.features();
+               if (dfeats.test("NEUTRAL")) {
+                    if (OpinionAspectTerm.test(currentCategory)==false)
+                         OpinionAspectTerm[currentCategory]=[];
+                    OpinionAspectTerm[currentCategory].push(d);
+               }
+          }
+          "OPINION-ON-ASPECT-CATEGORY": {
+               v1 = d.features();
+               v2 = d.parameters();
+               n1 = v2[0];
+               s1 = n1.surface();
+               string pol = v1[0];
+               if(s1==currentCategory && pol!=null && pol!="") {
+                    storedepwords(pol + "_" + s1);
+                    storedepwords(pol);
+               }
+          }
+          "SENTIMENT-AND-CATEGORY": {
+               dfeats=d.features();
+               if (dfeats.test(currentCategory.upper())) {
+                    if (dfeats.test("POSITIVE")) {
+                         storedepwords("POSITIVE_"+currentCategory);
+                    }
+                    elif (dfeats.test("NEGATIVE")) {
+                         storedepwords("NEGATIVE_"+currentCategory);
+                    }
+                    elif (dfeats.test("NEUTRAL")) {
+                         storedepwords("NEUTRAL_"+currentCategory);
+                    }
+                    elif (dfeats.test("CONFLICT")) {
+                         storedepwords("CONFLICT_"+currentCategory);
+                    }
+               }
+          }
+     }
+}
+
+function resetall(string cat) {
+     OpinionAspectTerm.clear();
+     allwordsinstring.clear();
+     FoodTerms.clear();
+     PriceTerms.clear();
+     AmbienceTerms.clear();
+     ServiceTerms.clear();
+}
+
+function predictforstring(string cat) {
+     vector donnees;
+     fvector labels=[0];
+     iftreemap imd;
+     string str;
+
+     for (str in allwordsinstring) {
+          if (allthewords.test(str)) {
+               imd[allthewords[str]]=allwordsinstring[str];
+          }
+     }
+
+     donnees.push(imd);
+     vector reponse=categmodel[cat].predict(donnees,true,true);
+     vector predictedclassresults = reponse[1];
+     int predictedclass = predictedclassresults[0];
+     polarity = polarities[predictedclass];
+     if (polarity!="neutral") {
+          //We store this predicted polarity as a feature to this dependency
+          dependency d;
+          for (d in OpinionAspectTerm[cat])
+               d.setfeature("p_"+polarity,"+");
+     }
+}
+
+
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+//xml handling
+vector sentences,terms;
+
+function readXml(xml n, self s) {
+     switch (n.name()) {
+          "aspectTerms": terms.push(n);
+          "text":  sentences.push(n);
+          "aspectCategory": sentences.push(n);
+     }
+}
+
+xmldoc inputXml with readXml;
+inputXml.load(pathcorpus+'restaurants-trial.xml');
+
+xml n;
+string c,sent,category;
+ssmap props;
+string newrules;
+string leterme;
+svector lestermes;
+
+//We traverse the XML nodes, for which we want a specific analysis
+for (n in sentences) {
+     if (n.name()=="aspectCategory") {
+          props = n.properties();
+          ssmap newProps;
+          category = props["category"];
+          // make prediction for each category, the "category" value appears as a kif_exchange_data object in XIP
+          p.parse(sent,category);
+          // store predicted polarity in the xml
+          newProps["category"] = category;
+          newProps["polarity"] = polarity;
+          n.properties(newProps);
+          continue;
+     }
+
+     c = n.content().trim();
+     if(c!="")
+          sent = c;
+}
+
+
+//we remove from the file the XML aspectTerm nodes
+xml t;
+for(t in terms){
+     t.delete();
+}
+
+//We save our new file
+inputXml.save(pathcorpus+'restaurants-trialXRCEresultV1_diana_Polarities.xml');
+inputXml.close();
+

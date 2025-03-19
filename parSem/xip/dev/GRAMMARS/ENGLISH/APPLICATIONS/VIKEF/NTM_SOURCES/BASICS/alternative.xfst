@@ -1,0 +1,201 @@
+# ============================================================================
+# CONTENT:	morphological guesser
+#
+# LANGUAGE:	ENGLISH
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	19-Apr-2001
+# UPDATE:	22-Nov-2001 [A.S]
+#
+# ============================================================================
+# USAGE:	xfst -l [ThisFile]
+# ============================================================================
+
+
+clear
+
+
+# ----------------------------------------------------------------------------
+echo >>> categories and inflectional endings ...
+
+define ADJ	    [ %+Guess:0 %+Adj:0				    %+ADJ:0 ] ;
+define ADV	    [ %+Guess:0 %+Adv:0				    %+ADV:0 ] ;
+define NADJ	    [ %+Guess:0 %+NAdj:0 %+Sg:0			%+NADJ:0 ] ;
+define NOUNSG	[ %+Guess:0 %+Noun:0 %+Sg:0			%+NOUN:0 ] ;
+define NOUNPL	[ %+Guess:0 %+Noun:0 %+Pl:0			%+NOUN:0 ] ;
+define YEAR  	[ %+Guess:0 %+Noun:0 %+Date:0 	%+NOUN:0 ] ;
+
+define PROP	    [ %+Guess:0 %+Noun:0 %+Prop:0	    %+NOUN:0 ] ;
+
+define NOUN	[ NOUNSG | 0:s NOUNPL ];
+
+define VING	    [ %+Guess:0 %+Verb:0 %+Prog:0			    %+VPROG:0 ];
+define VING2	[       %+Guess:0 %+Noun:0 %+VProg:0 %+Sg:0       %+NOUNING:0
+		          | 0:s %+Guess:0 %+Noun:0 %+VProg:0 %+Pl:0		%+NOUNING:0
+		          |     %+Guess:0 %+Adj:0 %+VProg:0		        %+ADJING:0
+		         ];
+
+define VED	[ %+Guess:0 %+Verb:0 %+PastBoth:0 %+123SP:0	[%+VPAP:0 | %+VPAST:0 ] ];
+define VED2	[ %+Guess:0 %+Adj:0  %+VPap:0			         %+ADJPAP:0 ]; 
+
+define CARD	    [ %+Guess:0 %+Dig:0 %+Card:0			    %+CARD:0 ];
+define MONEY	[ %+Guess:0 %+Dig:0 %+DlrAmt:0			%+MONEY:0 ];
+
+# --------------------------------------------------------------
+# english characters
+define LOW1	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z];
+define UPP1	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z];
+define LET1	[LOW1|UPP1] ;
+
+# foreign characters
+define LOW2	[à|á|â|ã|ä|å|æ|ç|è|é|ê|ë|ì|í|î|ï|ð|ñ|ò|ó|ô|õ|ö|ø|ù|ú|û|ü|ý|þ|ß];
+define UPP2	[À|Á|Â|Ã|Ä|Å|Æ|Ç|È|É|Ê|Ë|Ì|Í|Î|Ï|Ð|Ñ|Ò|Ó|Ô|Õ|Ö|Ø|Ù|Ú|Û|Ü|Ý|Þ];
+define LET2	[LOW2| UPP2];
+
+# combined
+define LOW	[LOW1|LOW2];
+define UPP	[UPP1|UPP2];
+define LET	[LET1|LET2];
+
+define DIG	[%0|1|2|3|4|5|6|7|8|9];
+define NUMOP    [ %+|%-|%*|%/|%=|%&|%±|%× ];
+define NUMSEP	[ %. | %, | % ];
+define CURR	[ (M | U S | C a n ) "$" | "£" | "¥" | "¢" | D M | F F | W o n | Y e n ];
+
+
+## FT:     NO WORDS WITH "-"
+
+## define Prefix	[[ LET |DIG ]+ %- ]* ;
+
+echo >>> english derivations
+
+## words starting with UPP may belong to common categories
+## added "an" ending (e.g. Chomskyan)
+
+regex	(UPP) LOW1+ [
+	{ous}	ADJ
+|	{ive}	ADJ
+|	{ional}	ADJ
+|	{an}	ADJ
+|	{ly}	ADV
+|	{ion}	NOUN
+|	{ic}	ADJ
+|	{ics}	NOUNPL
+
+|	0:{ing}	VING 
+|	{ing}	VING2 
+|	0:{ed}	VED  
+|	{ed}	VED2
+];
+
+
+define Deriv	[ {ed} | {ic} (s) | {ing} | {an} | {ion} ({al}) | {ive}
+		| {ly} | {ous} ];
+		
+define SimpleStem	[LOW]+  - [ ?* Deriv ];
+
+regex SimpleStem [
+		NADJ
+|	0:s	NOUNPL
+];
+
+
+define PUNCT	[ %< | %> | %[ | %] | %| ];
+define IGNORE	[ %| %| ] ;
+
+
+
+regex [
+# proper names
+	UPP [ [LOW|%'|UPP]+ & ~$[%' ?* %'] & [?+ LOW] & ~[?+ %' s] ]			    PROP
+|   [ [UPP|%.]+ & [UPP ?+] & [ [?+ UPP] | [$%. %.] ] & [~$[%. %.]] ]  PROP     # ACRONYMS
+|	[ [UPP|DIG]+ & $UPP ]   PROP
+];
+
+# ACRONYMS (gloss for the reg. expression above): 
+# composed of UPP and "." , 
+# start with UPP , 
+# end with "." only if it contains another "."
+# do not contain ".."
+
+regex [
+# numerals
+	(NUMOP) DIG+ [[ NUMOP|NUMSEP] DIG+]* 	CARD		# 4*4
+|	CURR DIG+ [NUMSEP DIG+]*		        MONEY		# $1,000
+|	DIG+ (%-) [LET1 - s ]			        CARD		# 10a	
+|	DIG DIG DIG DIG (%') s				                YEAR		# [the] 1960s 
+|       DIG DIG (%') s	 YEAR
+];
+
+
+regex [
+# measure units
+
+	[n|µ|m|c|d|k|K|M] [m|s|g|M] (%²)		%+Meas:0 %+Abbr:0 %+MEAS:0
+|       m i %²                                          %+Meas:0 %+Abbr:0 %+MEAS:0
+|	%º						                %+Meas:0 %+Abbr:0 %+MEAS:0
+|	NUMOP						            %+Symbol:0 %+PUNCT:0
+|	%©						                %+Symbol:0 %+PUNCT:0
+|	PUNCT						            %+Punct:0 %+PUNCT:0
+|	%&						                %+Symbol:0 %+Conj:0 %+Coord:0 %+COORD:0
+|	IGNORE	%+Ignore:0 
+];
+
+
+## FT
+## words containing "." or ":" (these require a WS to the right in the new lexicon)
+
+define SY [ %: | %.]  ;
+
+regex   [ [LET|DIG] [LET|DIG|SY]+ [LET|DIG] & $[SY] & ~$[SY SY] ]         PROP ;
+
+
+#-------------------------------------------------
+
+echo >>> punctuation symbols, in case the context is not satisfied in first strategy
+
+define punc [%!|%"|%#|%'|%(|%)|%*|%+|%|%,|%-|%.|%/|%:|%;|
+                    %<|%=|%>|%?|%@|%[|%\|%]|%^|%_|%`|%||%~|%¡|%«|%»|%¿] ;
+
+# if there is only two symbols, they are analysed separately
+
+regex [ [punc | [ punc punc punc+]] %+Punct:0 %+PUNCT:0 ] ;
+
+
+
+
+## FT
+## Hyphen needs to be defined here as well if first word is unknown (e.g. trans-Atlantic)
+
+define WS " " | "\n" | "\t" | "\r" ;
+
+regex [
+[ %- %+Punct:0 %+Hyphen:0 %+Right:0 %+PUNCT:0              LC WS      RC \WS ] |
+[ %- %+Punct:0 %+Hyphen:0 %+Left:0  %+PUNCT:0              LC \WS     RC WS  ] |
+[ %- %+Punct:0 %+Hyphen:0 %+Right:0 %+Left:0 %+PUNCT:0     LC \WS     RC \WS ] |
+[ %- %+Punct:0 %+Hyphen:0 %+PUNCT:0                        LC WS      RC WS  ]   ];
+
+
+echo >>> unit like 5G, 3Com ...etc
+
+define businessPart [ DIG+ [ UPP1 | UPP2] ( [ LOW1* | LOW2*]) ]  PROP ;
+
+echo >>> web addresses
+
+define suffix [~$[WS] - [?* [%, | %. | %; | %: | %? | %!]] ];
+
+define url1 [{http}|{ftp}|{gopher}|{telnet}|{mailto}|{news}] %: (%/ %/) [LET|DIG] suffix  ;
+
+define url2 [ w w Let %. | Let w w %. ] suffix  ;
+
+regex [ url1 | url2 ] %+Url:0 %+Prop:0 %+NOUN:0 ;
+
+regex businessPart ;
+
+echo >>> combine
+
+union net
+
+
+save alternative.fst

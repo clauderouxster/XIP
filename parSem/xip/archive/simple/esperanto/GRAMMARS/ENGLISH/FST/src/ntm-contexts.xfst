@@ -1,0 +1,219 @@
+
+# USAGE:  fst -s LEX.fst -l [ThisFile]
+define LEX
+
+
+# ------------------------------------------------------------------------------
+
+define PUNC [ 
+  %! | %" | %' | %( | %) | %* | %+ 
+| %, | %- | %. | %/ | %: | %; | %< | %= 
+| %> | %? | %@ | %[ | %\ | %] | %^ | %_ 
+| %` | %| | %~ | %¡ | %« | %» | %¿ | %# 
+| "\u2013" | "\u2014" | "\u2018" | "\u2019" | "\u201A" | "\u201C" 
+| "\u201D" | "\u201E" | "\u2022" | "\u2026" | "\u2039" | "\u203A"
+| EOT ] ;
+
+define NUM [ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ] ;
+
+define UPP [ B|C|D|F|G|H|J|K|L|M|N|P|Q|R|S|T|V|W|X|Y|Z|Ç|Ð|Ñ|A|E|I|O|U|
+            Ä|Ö|Ü|À|Á|Å|Â|Ã|Æ|È|É|Ê|Ë|Î|Ï|Ì|Í|Ó|Ò|Ô|Õ|Ù|Ú|Û|Ý  ];
+
+define LOW [ b|c|d|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z|ß|ç|ñ|a|e|i|o|u|
+             ä|ö|ü|à|á|â|ã|å|æ|è|é|ê|ë|í|î|ï|ì|ó|ô|ð|ò|õ|ù|ú|û|ý|ÿ ];
+
+define WS [ " " | "\t" | "\n" | "\r" ] ;
+
+define PRINT	[ NUM | UPP | LOW | PUNC ] ;
+
+# ------------------------------------------------------------------------------
+# add context for quotes
+
+define QUOTE1	$%+Quote  .o. LEX ;
+define QUOTE	QUOTE1.l ;
+define RESTLEX	LEX - QUOTE1 ;
+
+define QR	[ %+Right 	<- [..] || %+Quote _ ] .o. QUOTE1 ;
+define QL	[ %+Left  	<- [..] || %+Quote _ ] .o. QUOTE1 ;
+define QRL	[ %+Right %+Left <- [..] || %+Quote _ ] .o. QUOTE1 ;
+
+define NEWQUOTE [
+  QR 	LC [WS|BOT]  RC PRINT 
+| QL 	LC PRINT     RC [WS|EOT] 
+| QRL	LC PRINT     RC PRINT 
+| QUOTE1 LC [WS|BOT]  RC [WS|EOT]
+];
+
+define LEX	NEWQUOTE | RESTLEX ;
+
+# ------------------------------------------------------------------------------
+# add context for hyphens
+
+define HYPHEN	[ %+Hyphen <- %+Spec] .o. $[%- %+Punct] .o. LEX ;
+define RESTLEX	LEX - HYPHEN ;
+
+define HR	[ %+Right <- [..] || %+Hyphen _ ] .o. HYPHEN ;
+define HL	[ %+Left <- [..] || %+Hyphen _ ] .o. HYPHEN ;
+define HRL	[ %+Left %+Right <- [..] || %+Hyphen _ ] .o. HYPHEN ;
+
+define NEWHYPHEN [
+  HR 		LC [WS|BOT]  RC PRINT 
+| HL 		LC PRINT     RC [WS|EOT] 
+| HRL		LC PRINT     RC PRINT 
+| HYPHEN 	LC [WS|BOT]  RC [WS|EOT]
+];
+
+define LEX	NEWHYPHEN | RESTLEX ;
+
+# ------------------------------------------------------------------------------
+# add context for slashs
+
+define SLASH	$[%/ %+Punct] .o. LEX ;
+define RESTLEX	LEX - SLASH ;
+
+define SR	[ %+Right <- [..] || %+Slash _ ] .o. SLASH ;
+define SL	[ %+Left <- [..] || %+Slash _ ] .o. SLASH ;
+define SRL	[ %+Left %+Right <- [..] || %+Slash _ ] .o. SLASH ;
+
+define NEWSLASH [
+  SR 		LC [WS|BOT]  RC PRINT 
+| SL 		LC PRINT     RC [WS|EOT] 
+| SRL		LC PRINT     RC PRINT 
+| SLASH 	LC [WS|BOT]  RC [WS|EOT]
+];
+
+define LEX	NEWSLASH | RESTLEX ;
+
+# ------------------------------------------------------------------------------
+# add context for sentence final punctuations
+
+define PS1	[ %. | %: ] ;
+define PS2	[%. %. %.  | "\u2026" ] ;
+
+define SENT1	$[ [%.|%:] %+Punct %+Sent] .o. LEX ;
+define SENT2	$[ [{...}|"\u2026"] %+Punct %+Sent] .o. LEX ;
+define SENT3	$[ [%.|%?|%!|%:] %+Punct %+Sent] .o. LEX .o. [ [..] -> "\n" || _ .#. ];
+define RESTLEX	LEX - [SENT1|SENT2] ;
+
+define NEWSENT [
+  SENT1 	RC [ [WS|EOT] | QUOTE [WS|EOT|UPP] ]
+| SENT2 	RC [ (QUOTE) WS+ (QUOTE) UPP ]
+];
+
+define LEX	NEWSENT | SENT3 | RESTLEX ;
+
+# ------------------------------------------------------------------------------
+# add context for genitive '	(eg. the students' room)
+
+define GEN	$[%' s %+Part %+Gen] .o. LEX .o. ~$[s] ;
+define RESTLEX	LEX - GEN ;
+
+define NEWGEN [ GEN	LC [ s | s e | c e | x | S | S E | C E | X ].r ] ;
+
+define LEX	LEX | NEWGEN ;
+
+# ------------------------------------------------------------------------------
+# add context to single letters
+
+define LETTER	[ $%+Let .o. LEX ] ;	
+define RESTLEX	LEX - LETTER ;
+
+define NEWLETTER	[ LETTER	RC [ [WS|EOT] | [PUNC - %.] ] ];
+
+define LEX	LEX | NEWLETTER ;
+
+# ------------------------------------------------------------------------------
+# add context to initials
+
+define INIT	[ $%+Init .o. LEX ] ;	
+define RESTLEX	LEX - INIT ;
+
+define NEWINIT	[ INIT	RC [ WS | [PUNC - %.] ] ];
+
+define LEX	LEX | NEWINIT ;
+
+# ------------------------------------------------------------------------------
+# add context to words with a dot
+
+define WDOT	$[%+Abbr|%+Acron] .o. LEX  .o. [ ? ?+ %.] ;
+
+define AlwaysWithDot [
+ {Adm.}|{Cdr.}|{Cmdr.}|{Col.}|{Comdr.}|{Capt.}|{Dr.}|{Drs.}|{Dir.}|{Esq.}|{Fr.}
+|{Gen.}|{Gov.}|{Hon.}|{Ins.}|{Lt.}|{Ms.}|{Mgr.} |{Mlle.}|{Mdm.}|{MME.}|{MM.}
+|{Maj.}|{Mr.}|{Mrs.}|{Messrs.}|{Mme.}|{Mmes.}|{Pvt.}|{P.M.}|{Proc.}|{Prof.}
+|{Pres.}|{Ret.}|{Rev.}|{Revd.}|{Rep.}|{Reps.}|{Sgt.}
+|{Sr.}		#CB: I think it may loose dot, so do "Jr." 
+|{Jr.}|{Sra.}|{Srta.}|{St.}|{et. al.} |{et al.}
+|{Bd.} 		#CB: for thingfinder purposes 
+|{Corp.}|{Ste.}|{Supt.}|{Secy.}
+|{O.J.} 	#AnS : ????
+|{Sen.}|{Sens.}|{lt.}|{e.g.}|{i.e.}|{cf.}
+|{U.S.} 	#CB: it was commented but i add it...
+|{Mt.}|{Pt.}|{Bros.}|{Dept.}|{Ave.}
+
+# months (pb with Jan, which is also a first name)
+|{Jan.}|{Feb.}|{Mar.}|{Apr.}|{Jun.}|{Jul.}|{Aug.}|{Sep.}|{Sept.}|{Oct.}|{Nov.}|{Dec.}
+# week days
+|{Sun.}|{Mon.}|{Tue.}|{Wed.}|{Thur.}|{Fri.}|{Sat.}
+]; 
+
+# select abbreviations that may lose final dot if at end of sentence 
+# they need a special look ahead:  etc.
+
+# the begining of a sentence is basically characterized by a word starting 
+# with an upper-case letter. In some cases, it would be useful to have a more fine grain definition
+# e.g. "U.S." is often followed by an upper-case word; in this version the dot is always attached 
+# to the token "U.S." (statistically sound choice). However, one could define a set of words which 
+# frequently start a sentence (e.g. The, As, They) and use that as a right context.
+
+define MayLoseDot  [ WDOT .o. ~[AlwaysWithDot]  ] ;
+
+# The set of forms in the lexicon with the final dot removed
+# (e.g. contains "U.S.A")
+
+define DotReadingWithoutDot [ MayLoseDot .o. [ %. -> 0 || _ .#. ] ];
+
+# The set of forms without dot which belong to Basic Lexicon in the first place
+# (e.g. "in", the shorter former of "in.+Meas" is also a preposition)
+# Existing readings are prefered (i.e. if "in+Meas" do not exist in the lexicon,
+# this reading won't be available) 
+
+define InBasicReadingWithoutDot [ LEX .o. DotReadingWithoutDot.l ] ;
+
+
+# The set of forms without dot which does not yet exist in the lexicon
+
+define NotBasicReadingWithoutDot [ 
+   DotReadingWithoutDot .o. ~[InBasicReadingWithoutDot.l]  
+];
+
+define ReadingWithoutDot [ NotBasicReadingWithoutDot | InBasicReadingWithoutDot ] ;
+
+define NewReadingWithoutDot [ ReadingWithoutDot RC [ [%. QUOTE* WS+ QUOTE* UPP]       |
+                                                     [ WS | [PUNC - %.] ]            ]   ] ;
+
+# special case for abbreviations that must be followed by numerical expressions: art. 112
+
+
+define DotIfNum  [  MayLoseDot .o. [[p p | a r t | f i g | p a r | v o l] %.]   ];
+
+define MayLoseDot [ MayLoseDot .o. ~[DotIfNum.l] ] ;
+
+
+define NEWDOT [	
+	  ReadingWithoutDot 	RC	[ [%. QUOTE* WS+ QUOTE* UPP]
+          				| [ WS | [PUNC - %.] ] ]
+	| DotIfNum		RC 	[ WS+ NUM
+                                      	| WS* [PUNC - [%.|QUOTE]]  ]
+	| MayLoseDot		RC 	[ QUOTE* WS+ QUOTE* [LOW | NUM] 
+					| WS* [PUNC - [%.|QUOTE]]
+                                        | QUOTE [LOW | NUM] ]
+];
+
+
+
+define RESTLEX	LEX - [MayLoseDot | InBasicReadingWithoutDot ];
+
+read regex	RESTLEX | NEWDOT ;
+
+

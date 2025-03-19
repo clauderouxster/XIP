@@ -1,0 +1,103 @@
+<project name="" default="test" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+<echo message="basedir1= ${basedir}" />
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}testInclude.xml" />
+
+<property name="name"                   value="languageGuesser" />
+<!--
+<property name="root.dir"               location="${basedir}${fs}..${fs}..${fs}..${fs}delivery${fs}${name}-${languageGuesser.version}" />
+-->
+<property name="root.dir"               location="${basedir}${fs}..${fs}.." />
+<property name="include.dir"            location="${root.dir}${fs}include" />
+<property name="lib.names"              value="${name}" />
+<property name="app.name"		value="sample" />
+<property name="cc.debug"               value="${cc.debug.common}" />
+<property name="input"                  value="input.txt" />
+<property name="output"                 value="output.txt" />
+<property name="outputRef"              value="outputRef.txt" />
+
+<target name="test" depends="testShared, testStatic"> </target>
+
+<target name="testShared" depends="compileShared, testSharedLinux, testSharedSolaris, testSharedWindows" />
+
+<target name="testSharedSolaris" depends="" if="solaris"> 
+        <exec executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}${fs}sharedLib:/usr/lib:/opt/gnu/lib"/>
+        </exec>
+</target>
+
+<target name="testSharedLinux" depends="" if="linux"> 
+        <exec executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}${fs}sharedLib"/>
+        </exec>
+</target>
+
+<target name="testSharedWindows" depends="" if="windows"> 
+	<copy file="${basedir}${fs}..${fs}..${fs}lib${fs}windows${fs}sharedLib${fs}languageGuesser.dll" todir="${basedir}" />
+        <exec executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" />
+</target>
+
+<target name="testStatic" depends="compileStatic" description=" ">
+        <exec executable="${test.bin.dir}${fs}${app.name}S" failonerror="true" />
+</target>
+
+<!-- shared lib can't be compile: source files must be modified 
+<target name="comp" depends="compileShared, compileStatic" description="compile And Link (shared and static)" > </target>
+-->
+<target name="compile" depends="compileShared, compileStatic" description="compile And Link (shared and static)" /> 
+
+<!-- compile and link(shared lib)  code -->
+<!-- shared lib can't be compile: source files must be modified to export functions for windows -->
+<target name="compileShared" depends="setCommonProperties" >
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}${fs}${app.name}D" >
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<fileset dir="." includes="${app.name}.c" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libC.names}"  />
+			<libset dir="${lib.dir}${fs}sharedLib" libs="${lib.names}" type="shared"/> 
+		</linker>
+	</cc>
+</target>
+
+<!-- compile and link(static lib)  code -->
+<target name="compileStatic" depends="setCommonProperties" >
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}${fs}${app.name}S" >
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<fileset dir="." includes="${app.name}.c" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libC.names}" />
+			<libset dir="${lib.dir}${fs}staticLib" libs="${lib.names}" type="static"/> 
+		</linker>
+	</cc>
+</target>
+
+<target name="localClean" depends="localCleanWindows" >
+        <delete file="${output}"/>
+</target>
+
+<target name="localCleanWindows" depends="" if="windows">
+        <delete file="${name}.dll"/>
+</target>
+
+<target name="localCleanAll" depends="" >
+        <delete file="${output}"/>
+        <delete file="${name}.dll"/>
+</target>
+
+</project>
+

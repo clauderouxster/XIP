@@ -1,0 +1,106 @@
+<?xml version="1.0" ?>
+<project name="uimaxip.annotator.common">
+
+    <dirname property="uimaxip.annotator.common.dir"
+        file="${ant.file.uimaxip.annotator.common}"/>
+
+    <property name="uimaxip.core.dir" location="${uimaxip.annotator.common.dir}"/>
+
+    <import file="build-annotator-common.xml"/>
+
+    <path id="uimaxip.core.jars">
+        <fileset dir="${uimaxip.core.dir}/dist/java6"
+        includes="*.jar"/>
+    </path>
+
+    <target name="set.uimaxip.compile.classpath"
+	    depends="set.annotator.compile.classpath">
+	<path id="uimaxip.compile.classpath">
+            <path refid="annotator.compile.classpath"/>
+            <path refid="uimaxip.core.jars"/>
+	</path>
+    </target>
+
+    <target name="set.compile.classpath"
+	    depends="set.uimaxip.compile.classpath">
+	<path id="compile.classpath">
+	    <path refid="uimaxip.compile.classpath"/>
+	</path>
+    </target>
+     
+    <target name="set.uimaxip.test.classpath"
+	    depends="set.annotator.test.classpath">
+	<path id="uimaxip.test.classpath">
+	    <path refid="annotator.test.classpath"/>
+	</path>
+    </target>
+
+    <target name="set.test.classpath"
+	    depends="set.uimaxip.test.classpath">
+        <path id="test.classpath">
+	    <path refid="uimaxip.test.classpath"/>
+	</path>
+    </target>
+
+    <property name="parSem"
+        location="${uimaxip.core.dir}/../../../.."/>
+
+    <propertyregex property="implementation.class.path"
+		   input="${annotatorDescriptor.annotatorImplementationName}"
+		   regexp="\."
+		   replace="/"
+		   global="true"/>
+    <property name="grammar.dest.dir" value="bin/${implementation.class.path}-grammar"/>
+
+    <!-- Encrypt target -->
+    <!-- Where to put the encrypted grammar.  Overrides the
+	 setting in Gilbert's build.xml -->
+    <!-- Could use a DependencySet to avoid reencrypting a grammar
+	 that's already been encrypted, but in general it could be
+	 complicated to find all the source grammar files, since in
+	 principle they could be spread over multiple directories.
+	 Since we only encrypt at pear time, and it's reasonably fast,
+	 I'm being conservative. -->
+    <property name="del.gram.dir" location="${grammar.dest.dir}"/>
+    <basename property="grammar.grmfile.basename"
+	      file="${grammar.grmfile.relative}"/>
+    <target name="encrypt">
+        <ant dir="${parSem}/xip/dev/GRAMMARS"
+             target="${grammar.encrypt.target}">
+	  <property name="bin.dir" value="${parsem.bin}"/>
+	</ant>
+	<move file="${grammar.dest.dir}/${grammar.grmfile.basename}"
+	      tofile="${grammar.dest.dir}/grammar.grm"/>
+    </target>
+
+    <target name="compile"
+        depends="uimaxip.core.dist6,xrce.annotator.common.compile"/>
+
+
+    <target name="clean" depends="xrce.annotator.common.clean">
+        <delete dir="resources/grammar"/>
+    </target>
+
+    <target name="pear" depends="compile,encrypt,uimaxip.core.dist6,mkdist,set.shared.descriptors,set.dependency.pear.files">
+        <jar destfile="${pear.file}" duplicate="preserve">
+  	    <fileset dir=".">
+		<patternset refid="pear.files.pattern"/>
+	    </fileset>
+ 	    <zipfileset refid="shared.descriptors"/>
+	    <zipfileset dir="${uimaxip.core.dir}/dist/java6"
+			includes="*.jar"
+			prefix="lib/"/>
+	    <zipfileset dir="${shared.types.dir}"
+			includes="uimaxip_coreTypeSystem.xml,TextBlockTypeSystem.xml"
+			prefix="desc/"/>
+ 	    <zipfileset refid="shared.descriptors"/>
+	    <fileset refid="dependency.pear.files"/>
+	</jar>
+    </target>
+
+    <target name="uimaxip.core.dist6">
+        <ant antfile="build.xml" dir="${uimaxip.annotator.common.dir}" target="dist6" inheritall="false"/>
+    </target>
+	
+
+</project>

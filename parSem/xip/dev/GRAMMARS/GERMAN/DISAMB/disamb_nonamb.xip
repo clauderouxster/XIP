@@ -1,0 +1,190 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb_nomamb.xip
+//! Content:	Disambiguation rules fornon-ambiguous contexts
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	08-Nov-2006
+//! Updated:	08-Nov-2006
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Initial:
+
+pythonfulllexical(1);
+
+ 
+
+Tagging: 
+
+// ####################################################################
+// check if words have only one reading
+0> ? = ?[unique=+],where(testunique(#0)).
+
+// check if words have only one category
+0> ? = ?[uniquecat=+],where(testuniquecat(#0)).
+
+
+// -----------------------------------------------------------------------------
+// add marker to first and last words of (sub-)sentences
+// NOTE: 	features start + end denote first and last tokens in a sentence
+
+1> ?<punct:~,start> = ?[firstword=+].
+1> ?<punct:~> = | ?[punct,start], ?*[punct] | ?[firstword=+].
+1> ?<punct:~> = | ?[sent_sep], ?*[punct] | ?[firstword=+].
+
+2> ?<punct:~,end> = ?[lastword=+].
+2> ?<punct:~> = ?[lastword=+] | ?*[punct], ?[punct,end] |.
+
+// subclauses starting with a conjunction
+2> ?<punct:~> = ?[lastword=+] | ?*[skip], ?[comma];?[conj,coord], ?[conj,coord:~,unique] |.
+
+// ------------------------------------------------------------------------------------------------------
+// upper case words (other than at the beginning of a sentence) must be
+// * noun or proper name
+// * other defined upper case words (e.g. polite "Sie"), which are marked [upp:+]
+// * special case: adjectives which are part of proper names ("Vereinigte Staaaten")
+
+// :: Die Technische/adja[proper] Hochschule/noun im Gebäude/noun A/symbol[upp]
+// :: Folgen Sie/pron[polite] den Anweisungen.
+
+1> ?[cap:+,firstword:~] = ~| punct[quote,start]; punct[sent_sep], ?*[skip] |
+	adja<proper=+,pronom:~>, noun, ?<polite:+>, ?<upp:+> .
+
+// restriction: allow proper adjectives only if followed by a noun or proper adjective
+// die Vereinigten/adja Staaten
+// die Vereinigten/adja Amerikanischen/adja Staaten.
+// :! die Abgeordneten/noun
+2> adja<proper>, noun = noun | ?*[skip], ?[skip:~,proper:~, noun:~] |.
+
+
+// =========================================================================
+// no preposition at end of sentence
+3> ?[prep,lastword] = ?[prep:~].
+
+// =========================================================================
+// no postposition at beginning of sentence
+4> ?[postp,firstword] = ?[postp:~].
+
+// =========================================================================
+// no determiner at end of sentence
+5> ?[det,lastword] = ?[det:~].
+
+// =========================================================================
+// no verb prefix at beginning of sentence (except truncated forms)
+// Ein- und Ausladen
+6> ?[pref,firstword] = ?[pref:~] .
+
+
+// ###############################################################################
+// re-recheck if a word has only one reading
+18> ? = ?[unique=+],where(testunique(#0)).
+
+// re-check if a word has only one category
+19> ? = ?[uniquecat=+],where(testuniquecat(#0)).
+
+// =========================================================================
+// adjective particles
+
+20> ?[mod_adj] = ptcl[mod_adj:~],?[ptcl:~]    ~| ?*[skip], ?[adj];adv |.
+
+// with positive: {zu, allzu}
+//* "zu" is ambiguous (infinitive particle, preposition
+//* "allzu" is unambiguous
+//:: er ist zu/ptcl[pos] klein
+
+20> ?[mod_adj,pos] = 
+	ptcl[mod_adj,pos] 
+	|  ?[adj,uniquecat,super:~,comp:~];adv[uniquecat,super:~,comp:~],
+	 ?[adj:~,adv:~] |.
+
+
+// with comparative: {je, desto, umso}
+//* "je"  is ambiguous (preposition, adverb)
+//* "desto", "umso" are unambiguous
+//:: er ist umso/ptcl[comp] besser
+20> ?[mod_adj,comp] = 
+	ptcl[mod_adj,comp] 
+	| ?[adj,uniquecat,comp]; adv[uniquecat,comp], ?[adj:~,adv:~] |.
+
+// with superlative: {am}
+//* "am" is ambiguous (preposition+article)
+// :: er spielt am/ptcl[super] besten
+20> ?[mod_adj,super] = 
+	ptcl[mod_adj,super] 
+	| ?[adj,uniquecat,sup_am]; adv[uniquecat,super] |.
+
+
+
+// =========================================================================
+// infinititive particle {zu}
+// * "zu" is ambiguous (preposition, adjective particle, ...)
+
+//:: er braucht nicht zu/ptcl[infzu] kommen
+//:! die zu/ptcl[pos] kleinen Kinder
+22> ptcl[infzu] = ptcl[infzu] | verb[inf,uniquecat] |.
+22> ptcl[infzu] = ptcl[infzu:~],?[ptcl:~] ~| verb[inf] |.
+
+
+// ####################################################################
+// re-check if words have only one category
+48> ? = ?[uniquecat=+],where(testuniquecat(#0)).
+49> ? = ?[unique=+],where(testunique(#0)).
+
+
+// ===========================================================
+// disambiguate adjectives in the context of unambiguous particles
+// :: eine allzu/ptcl[pos] laute/adja Maschine
+// :! er sagt, die Frage laute/verb[finite] so.
+// :: eine umso/ptcl[comp] bessere/adja Antwort
+// :! er sagt, dass er sich bessere/verb[finite]
+
+50> adja = | ptcl#1[mod_adj, unique] | adja,
+	where (	(#0[invar] & #1[pos]) 		
+		| #0[degree] :: #1[degree] 
+	).
+
+//:: er ist umso/ptcl[comp] heller/adjp
+//:! ein heller/adja Kopf
+51> adjp = | ptcl#1[mod_adj, unique] | adjp,
+	where (	(#0[invar] & #1[pos]) 		
+		| #0[degree] :: #1[degree] 
+	).
+
+// ===========================================================
+// verb in context of disambiguated infinitive particle
+
+52> verb[inf] = | ptcl[infzu, unique] | verb[inf] .
+
+// ============================================================
+// check positive conditions
+
+// check that right part of circumpositions has the approriate left part.
+// von ... ab/an/aus/auf
+61> postp[crc] = | prep#1, (det), ?*[pre_noun], noun |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+61> postp[crc] = | prep#1, (adv;adjp)+ |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+
+// eliminate candidate otherwise
+62> postp[crc2:~] = ?[crc:~].
+
+// check that a verb prefix is preceeded (somewhere) by a verb
+65> ptcl[pref] = ~| verb[req_pref], ?* | ?[pref:~].
+
+// if a verb is followed by a unique prefix, dont allow unprefixed reading
+66> verb[v1,uniquecat] = verb[v1] | ?*[finite:~], ptcl[pref,unique] |.
+
+// check that an infinitive conjunction is followed (somewhere) by an infinitive with "zu"
+// conj[infzu] = {um,ohne,anstatt}
+70> conj[infzu] = ?[infzu:~] ~| ?*, ptcl[infzu];verb[infzu] |.
+
+
+// ####################################################################
+// re-check if words have only one category
+98> ?[uniquecat:~] = ?[uniquecat=+],where(testuniquecat(#0)).
+//99> ?[unique:~]  = ?[unique=+],where(testunique(#0)).
+

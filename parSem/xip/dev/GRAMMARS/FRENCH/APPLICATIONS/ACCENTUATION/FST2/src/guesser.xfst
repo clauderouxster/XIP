@@ -1,0 +1,319 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      morphological guesser
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      13-Jul-2007 (AS) 
+#
+# ============================================================================
+# USAGE:        xfst -l [ThisFile]
+# ============================================================================
+
+
+define LOW	[a|à|â|ä|á|å|b|c|ç|d|e|é|è|ê|ë|f|g|h|i|î|ï|j|k|l|m|n|ñ|o|ô|ö|ó
+		|p|q|r|s|t|u|ù|û|ü|v|w|x|y|z];
+
+define UPP	[A|À|Â|Ä|Á|Å|B|C|Ç|D|E|É|È|Ê|Ë|F|G|H|I|Î|Ï|J|K|L|M|N|Ñ|O|Ô|Ö|Ó
+		|P|Q|R|S|T|U|Ù|Û|Ü|V|W|X|Y|Z];
+
+define CONS	[b|c|ç|d|f|g|h|j|k|l|m|n|p|q|r|s|t|v|w|x|y|z];
+define VOWEL	[a|à|â|ä|á|å|e|é|è|ê|ë|i|î|ï|o|ô|ö|ó|u|ù|û|ü|y];
+
+define LET	LOW | UPP ;
+
+define SPEC	[ %_ | %' ]; # | %- ];
+
+define CHAR	LET | SPEC ;
+
+define DIG	[ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ];
+define OPS 	[  %, | %. |  %> | %< |  %* | %( | %) | %- | %+ | %/ | %= | %% ] ;
+
+
+define Stem	[LOW|%-]  [ LOW | SPEC ]* LOW ;
+
+
+# ------------------------------------------------------------------------------
+# NOUNS
+# ------------------------------------------------------------------------------
+define NounFem	 Stem [ {tion} | {sion} | {rice} | {euse} ];
+
+define NounMasc [ Stem [ {eur} | {age} | {ment} | {al} ] ]
+		- [ ?* [ {able} | {ible} | {ique} | {ive} ] {ment} ];
+
+define NounSg	[ Stem - [ NounFem|NounMasc] ]
+		- [ ?* [ s| x | z |  {era} (i (t)) | {ira} (i (t)) | Cons i r ] ] ;
+
+define Nouns [
+  NounMasc		[%+Noun %+Common %+Sg %+Masc]:0
+| NounMasc 0:{+s}	[%+Noun %+Common %+Pl %+Masc]:0
+| NounFem		[%+Noun %+Common %+Sg %+Fem]:0
+| NounFem 0:{+s}	[%+Noun %+Common %+Pl %+Fem]:0
+| NounSg		[%+Noun %+Common %+Sg %+MF]:0
+| NounSg 0:{+s}		[%+Noun %+Common %+Pl %+MF]:0
+];
+
+define RulesNoun [ 
+	{+s} -> 0  || [x|s] _
+.o.	{al+s} -> {aux}
+.o.	%+ -> 0
+];
+
+read regex Nouns .o. RulesNoun ;
+
+# ------------------------------------------------------------------------------
+# PROPER NOUNS
+# ------------------------------------------------------------------------------
+define PropStem	UPP [LOW|UPP|SPEC]* - [UPP [NounFem|NounMasc] ];
+
+read regex	[
+  PropStem [%+Noun %+Prop]:0 
+];
+
+# ------------------------------------------------------------------------------
+#  ADVERBS
+# ------------------------------------------------------------------------------
+
+read regex [
+  Stem	[ e | a m | e m | i ] {ment} 	%+Adv:0
+];
+
+# ------------------------------------------------------------------------------
+# VERBS
+# ------------------------------------------------------------------------------
+
+#define CL	( %- ) ;
+#define CLT	( %- (t %-) );
+
+define CL	[] ;
+define CLT	[] ;
+
+define VERB	[ %+avoir %+SN %+Verb ];
+
+
+# [1] regular forms, verb  class -er
+
+define VStem 	Stem [CONS - [ç] | q u | o u ]  - [?* [ a n t | i o n | i e n n ]];
+
+
+define VerbsEr	VStem [
+# infinitive
+  {er}		[VERB %+Inf]:0				# donner
+
+# present participle
+| {er}:{+ant}  	[VERB %+Pres %+Part]:0			# donnant
+
+# present tense, indicative
+| {er}:{+e}	[VERB %+Sg %+1 %+Pres %+Indic]:0 CL	# je donne
+| {er}:{+es}	[VERB %+Sg %+2 %+Pres %+Indic]:0 CL	# tu donnes
+| {er}:{+e}	[VERB %+Sg %+3 %+Pres %+Indic]:0 CLT	# il donne; donne-t-il
+| {er}:{+ons} 	[VERB %+Pl %+1 %+Pres %+Indic]:0 CL	# nous donnons
+| {er}:{+ez} 	[VERB %+Pl %+2 %+Pres %+Indic]:0 CL	# nous donnez
+| {er}:{+ent} 	[VERB %+Pl %+3 %+Pres %+Indic]:0 CLT	# ils donnent 
+
+# present tense, subjunctive
+| {er}:{+e}	[VERB %+Sg %+1 %+Pres %+Subj]:0 CL	# je donne
+| {er}:{+es}	[VERB %+Sg %+2 %+Pres %+Subj]:0 CL	# tu donnes
+| {er}:{+e}	[VERB %+Sg %+3 %+Pres %+Subj]:0 CLT	# il donne; donne-t-il
+| {er}:{+ions} 	[VERB %+Pl %+1 %+Pres %+Subj]:0 CL	# nous donnions
+| {er}:{+iez} 	[VERB %+Pl %+2 %+Pres %+Subj]:0 CL	# nous donniez
+| {er}:{+ent} 	[VERB %+Pl %+3 %+Pres %+Subj]:0 CLT	# ils donnent 
+
+# future tense
+| {er} 0:{ai} 	[VERB %+Sg %+1 %+Fut %+Indic]:0 CL	# je donnerai
+| {er} 0:{as} 	[VERB %+Sg %+2 %+Fut %+Indic]:0 CL	# tu donneras
+| {er} 0:{a} 	[VERB %+Sg %+2 %+Fut %+Indic]:0 CLT	# il donnera
+| {er} 0:{ons} 	[VERB %+Pl %+1 %+Fut %+Indic]:0 CL	# nous donnerons
+| {er} 0:{ez}	[VERB %+Pl %+2 %+Fut %+Indic]:0 CL	# vous donnerez
+| {er} 0:{ont}	[VERB %+Pl %+2 %+Fut %+Indic]:0 CLT	# ils donneront
+
+# conditional
+| {er} 0:{ais} 	[VERB %+Sg %+1 %+Pres %+Cond]:0 CL	# je donnerais
+| {er} 0:{ais} 	[VERB %+Sg %+2 %+Pres %+Cond]:0 CL	# tu donnerais
+| {er} 0:{ait} 	[VERB %+Sg %+2 %+Pres %+Cond]:0 CLT	# il donnerait
+| {er} 0:{ions} [VERB %+Pl %+1 %+Pres %+Cond]:0 CL	# nous donnerions
+| {er} 0:{iez}	[VERB %+Pl %+2 %+Pres %+Cond]:0 CL	# vous donneriez
+| {er} 0:{aient} [VERB %+Pl %+2 %+Pres %+Cond]:0 CLT	# ils donneriont
+
+# past tense, indicative  (imparfait)
+| {er}:{+ais} 	[VERB %+Sg %+1 %+Impar %+Indic]:0 CL	# je donnais
+| {er}:{+ais} 	[VERB %+Sg %+2 %+Impar %+Indic]:0 CL	# tu donnais
+| {er}:{+ait} 	[VERB %+Sg %+3 %+Impar %+Indic]:0 CL	# il donnait
+| {er}:{+ions} 	[VERB %+Sg %+1 %+Impar %+Indic]:0 CL	# nous donnions
+| {er}:{+iez} 	[VERB %+Sg %+2 %+Impar %+Indic]:0 CL	# vous donniez
+| {er}:{+aient} [VERB %+Sg %+3 %+Impar %+Indic]:0 CL	# ils donnaient
+
+# NOTE: not included are passé simple, subjonctif II
+
+# past participle
+| {er}:{+é}	[VERB %+Sg %+Masc %+Past %+Part]:0	# donné
+| {er}:{+ée}	[VERB %+Sg %+Fem %+Past %+Part]:0	# donnée
+| {er}:{+és}	[VERB %+Pl %+Masc %+Past %+Part]:0	# donnés
+| {er}:{+ées}	[VERB %+Pl %+Fem %+Past %+Part]:0	# données
+];
+
+define RulesEr [
+	{el+}	-> {ell} || _ e 	# appeler -> appelle
+.o.	{ér+}	-> {èr}  || _ e 	# liberer -> libère
+.o.	{g+} 	-> {ge} || _ [a|o]	# nager -> nageait
+.o.	{c+} 	-> {ç}  || _ [a|o]	# rincer -> rinçait
+.o.	{qu+} 	-> {c} 	|| _ [a|o]	# 
+.o.	%+ -> 0
+];		
+
+read regex 	[ VerbsEr .o. RulesEr ] ;
+
+
+# ------------------------------------------------------------------------------
+# [2] regular forms, verb  class -ir
+
+define VerbsIr	VStem [
+# infinitive
+  {ir}		[VERB %+Inf]:0				# maigrir
+
+# present participle
+| {ir}:{issant}  	[VERB %+Pres %+Part]:0			# magrissant
+
+# present tense, indicative
+| {ir}:{+is}		[VERB %+Sg %+1 %+Pres %+Indic]:0 CL	# je maigris
+| {ir}:{+is}		[VERB %+Sg %+2 %+Pres %+Indic]:0 CL	# tu maigris
+| {ir}:{+it}		[VERB %+Sg %+3 %+Pres %+Indic]:0 CLT	# il maigrit
+| {ir}:{+issons} 	[VERB %+Pl %+1 %+Pres %+Indic]:0 CL	# nous maigrissons
+| {ir}:{+issez} 	[VERB %+Pl %+2 %+Pres %+Indic]:0 CL	# vous maigrissez
+| {ir}:{+issent} 	[VERB %+Pl %+3 %+Pres %+Indic]:0 CLT	# ils maigrissent 
+
+# present tense, subjunctive
+| {ir}:{+isse}		[VERB %+Sg %+1 %+Pres %+Subj]:0 CL	# je maigrisse
+| {ir}:{+isses}		[VERB %+Sg %+2 %+Pres %+Subj]:0 CL
+| {ir}:{+isse}		[VERB %+Sg %+3 %+Pres %+Subj]:0 CLT
+| {ir}:{+issions} 	[VERB %+Pl %+1 %+Pres %+Subj]:0 CL
+| {ir}:{+issiez} 	[VERB %+Pl %+2 %+Pres %+Subj]:0 CL
+| {ir}:{+issent} 	[VERB %+Pl %+3 %+Pres %+Subj]:0 CLT
+
+# future tense
+| {ir} 0:{ai} 		[VERB %+Sg %+1 %+Fut %+Indic]:0 CL	# je maigrirai
+| {ir} 0:{as} 		[VERB %+Sg %+2 %+Fut %+Indic]:0 CL
+| {ir} 0:{a} 		[VERB %+Sg %+2 %+Fut %+Indic]:0 CLT
+| {ir} 0:{ons} 		[VERB %+Pl %+1 %+Fut %+Indic]:0 CL
+| {ir} 0:{ez}		[VERB %+Pl %+2 %+Fut %+Indic]:0 CL
+| {ir} 0:{ont}		[VERB %+Pl %+2 %+Fut %+Indic]:0 CLT
+
+# conditional
+| {ir} 0:{ais} 		[VERB %+Sg %+1 %+Pres %+Cond]:0 CL	# je maigrirais
+| {ir} 0:{ais} 		[VERB %+Sg %+2 %+Pres %+Cond]:0 CL
+| {ir} 0:{ait} 		[VERB %+Sg %+2 %+Pres %+Cond]:0 CLT
+| {ir} 0:{ions} 	[VERB %+Pl %+1 %+Pres %+Cond]:0 CL
+| {ir} 0:{iez}		[VERB %+Pl %+2 %+Pres %+Cond]:0 CL
+| {ir} 0:{aient}	[VERB %+Pl %+2 %+Pres %+Cond]:0 CLT
+
+# past tense, indicative  (imparfait)
+| {ir}:{+issais} 	[VERB %+Sg %+1 %+Impar %+Indic]:0 CL	# je maigrissais
+| {ir}:{+issais} 	[VERB %+Sg %+2 %+Impar %+Indic]:0 CL
+| {ir}:{+issait} 	[VERB %+Sg %+3 %+Impar %+Indic]:0 CL
+| {ir}:{+issions} 	[VERB %+Sg %+1 %+Impar %+Indic]:0 CL
+| {ir}:{+issiez} 	[VERB %+Sg %+2 %+Impar %+Indic]:0 CL
+| {ir}:{+issaient} 	[VERB %+Sg %+3 %+Impar %+Indic]:0 CL
+
+# NOTE: not included are passé simple, subjonctif II
+
+# past participle
+| {ir}:{+is}	[VERB %+Sg %+Masc %+Past %+Part]:0	# maigris
+| {ir}:{+ise}	[VERB %+Sg %+Fem %+Past %+Part]:0	# maigrise
+| {ir}:{+is}	[VERB %+Pl %+Masc %+Past %+Part]:0	# maigris
+| {ir}:{+ises}	[VERB %+Pl %+Fem %+Past %+Part]:0	# maigrises
+];
+
+define RulesIr [
+	%+ -> 0
+];		
+
+read regex 	[ VerbsIr .o. RulesIr ] ;
+
+
+
+# ------------------------------------------------------------------------------
+# ADJECTIVES
+# ------------------------------------------------------------------------------
+
+# [1] regular forms (fem.sg +e, masc.pl +s, fem.pl +es)
+define AStem1	[ Stem [ {ant} | {aud} | {il} | {ol} | {u} | {ent} ] ]
+		- [ ?* [ {qu} | {gu} | {ment} | {aient} ] ] ;
+
+# [2] invariant masc (masc.pl=masc.sg +0 , fem.sg +e, fem.pl +es)
+define AStem2	[ Stem [ {ais} | {ois} ]]
+		- [ ?* [ {erais} | {irais} ] ] ;
+
+# [3] invariant gender (fem.sg=masc.sg +0, fem.pl=masc.pl +s)
+define AStem3	Stem 	[ {able} | {aire} | {âtre} 
+			| {ible} | {ique} | {ïque} | {iste} | {ïste}
+			| {oire} ];
+
+# [4] phonological mapping masc->fem
+define AIrreg	Stem 	[ {el}:{elle} | {et}:{ette} | {éen}:{éenne} 
+			| {eux}:{euse} | {eur}:{euse} | {teur}:{trice} 
+			| {er}:{ère} | {et}:{ète} | {ien}:{ienne} 
+			| {if}:{ive} | {ot}:{otte} ];
+
+define AMascSg	AStem1 | AStem2 | AStem3 | AIrreg.u | {al} ;
+define AMascPl	AStem1 0:s | AStem2 | AStem3 0:s | [AIrreg].u 0:s | {aux} ;
+define AFemSg	AStem1 0:e | AStem2 0:e | AStem3 | AIrreg | {al}:{ale} ;
+define AFemPl	AFemSg 0:s;
+
+read regex	[
+  AMascSg	[%+Adj %+Qual %+Sg %+Masc]:0
+| AFemSg	[%+Adj %+Qual %+Sg %+Fem]:0
+| AMascPl	[%+Adj %+Qual %+Pl %+Masc]:0
+| AFemPl	[%+Adj %+Qual %+Pl %+Fem]:0
+];
+
+# ------------------------------------------------------------------------------
+# NUMERICAL EXPRESSIONS
+# ------------------------------------------------------------------------------
+
+define NUM	[ [DIG|OPS]+ & $[DIG] ] - [ ?* [%,|%.] ];
+
+define BR1	[ %< | %( | %[ ];
+define BR2	[ %> | %) | %] ];
+
+read regex 	(BR1) NUM (BR2)	%+Num:0 %+Dig:0 ;
+
+# ------------------------------------------------------------------
+# combine all
+
+union net
+
+# add +Guessed feature
+
+define GUESSER
+
+read regex GUESSER %+Guessed:0 ;
+
+
+
+
+
+exit
+
+######################
+# TODO
+
+
+
+
+
+define NounInv [WordAndCap [x | z | [a|o] i s]  - [WordAndCap a u x]] | %% |
+                             (%*) Capital [AllLetter | Capital |DIG]* ;
+
+define NounInv NounInv - [?* %'] ;
+
+
+
+read regex
+[T h e | t h e]     %+InvGen:0 %+InvPL:0  %+Det:0         %+DET%_SG:0          | 
+[ o f | O f | O F | w i t h ]       %+Prep:0        %+PREP:0  |
+q u		                %+ConjQue:0     %+CONJQUE:0 |
+[q u o i | p u i s | l o r s] q u       %+SConj:0        %+CONN:0 
+;
+

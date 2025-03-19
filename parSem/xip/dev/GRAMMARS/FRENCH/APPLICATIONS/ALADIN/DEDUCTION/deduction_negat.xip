@@ -1,0 +1,250 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Caroline Hagege - Nov 2009 - rajout de negation pour ALADIN
+//! Fichier pourra eventuellement etre integre dans gram generale
+//! On utilise la dependance unaire NEGAT existante 
+//! Creation de la dependance NON
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Déduction:
+
+
+// NEGATIONS GENERALES
+// On attribue la dep unaire NEGAT sur le predicat le +proche de la negation
+// extract.xip traite partiellement de NEGAT sur prédicats verbaux.
+
+
+// correction de négation syntaxiques erronées
+// e.g il n'a presque pas de XXX
+| adv[lemme:presque];adv[lemme:quasiment];adv[lemme:pratiquement], adv#1[lemme:pas];adv#1[lemme:plus] |
+if ( VMOD[posit1](#2,#1) & ^NEGAT(#2) )
+~
+
+// pas de negat dans le cas "il n'a d'infection que le matin"
+// "il n'a qu'une infection"
+| FV{neg, ?*, #1[verb]} |
+if ( ^NEGAT(#1) & VMOD(#1,?[conjque]) & ~VMOD[posit1](#1,?[lemme:pas]) & ~VMOD[posit1](#1,?[lemme:plus] ) )
+~
+
+// forme accomplie. Il n'a eu qu'une infection -> pas de negat
+| FV{neg, ?*, #1[verb]} |
+if ( VLINK(#1,#3) & ^NEGAT(#1) & VMOD(#3,?[conjque]) & ~VMOD[posit1](#3,?[lemme:pas]) & ~VMOD[posit1](#3,?[lemme:plus]) )
+~
+
+
+// foyer infectieux sans pneumopathie
+if ( PREPOBJ(#1,?[lemme:sans]) & ~NEGAT(#1) )
+   NEGAT(#1)
+
+// a voir, a part, hormis, sauf
+
+// non inflammatoire
+| AP{?*,adv[lemme:non];adv[lemme:pas], #2} |
+if ( ~NEGAT(#2) )
+  NEGAT(#2)
+
+// négation avec "ni"
+// il n'y a pas d'épanchement pleural ni de pneumopathie
+| coord[lemme:ni], PP{prep[lemme:de],NP{?*,#1[last]}} |
+if ( ~NEGAT(#1) )
+   NEGAT(#1)
+
+// sans|ni épanchement pleural ni pneumopathie. tjs sur le deuxieme
+| coord[lemme:ni], NP{?*,#1[last]} |
+if ( ~NEGAT(#1) )
+   NEGAT(#1)
+
+
+// adjectif négatif postposé à un nom
+// ECBU négatif
+| NP{#1};PP{?*,NP{#1}}, AP{?[lemme:"négatif"]} |
+  NEGAT(#1)
+
+// attributs
+if ( ATTRIB(#1,?[lemme:négatif]) )
+   NEGAT(#1)
+
+
+// dans le cas d'un accompli, passer la négation de l'auxilaire sur le participe passé
+// il n'a pas mangé
+if ( VLINK(#1,#2) & ^NEGAT(#1) )
+   NEGAT(#2)
+
+
+// accompli au passif
+// il n'a pas été mangé
+if ( VLINK(?[lemme:avoir],#1[lemme:être]) & VLINK(#1,#2[avoir]) & ^NEGAT(#1) )
+   NEGAT(#2)
+
+
+
+
+// Dans le cas ou liste et "Pas" commence par une majuscule alors que le mot avant n'a pas de majuscule et le mot apres non plus, il s'agit d'un retour charriot manquant. Du coup des faux OBJ, VMOD sont calcules
+| ADV[psneg,maj:+,toutmaj:~], PP{prep[lemme:de,maj:~], NP{?*,#1[last]}} |
+NEGAT(#1)
+
+// Cas ou "pas" est precede de 2 points
+| punct[form:f2pts], ADV[psneg], PP{prep[lemme:de], NP{?*,#1[last]}} |
+ NEGAT(#1)
+
+// Pas de comme det dans phrases mal construites du style
+// eg: A noter pas de complication infectieuse ni thromboembolique . 
+// Dans ce cas la regle generale (regle suivante) ne s'applique pas a cause de contrainte sur absence d'objet direct
+// Ici regle ad-hoc qui va considerer que si obj infinitif verbe evidence on accepte pas de comme det (voir erreur sur de pris comme det)
+| ADV[psneg], NP{det[form:fde],?*,#1[last]}} |
+if ( OBJ(?[v_evid,inf],#1) & ~VMOD(?[verb],#1) & ~NEGAT(#1) )
+   NEGAT(#1)
+
+// Dans le cas de "pas de" fonctionnant comme déterminant et debute une phrase
+| ADV[psneg], PP{prep[lemme:de], NP{?*,#1[last]}} |
+if ( ~OBJ(?[verb],#1) & ~VMOD(?[verb],#1) & ~NEGAT(#1) )
+   NEGAT(#1)
+
+// aucun(e) fonctionnant comme det dans le cas d'une construction passive (position objet de surface, non couvert par regle generale)
+// e.g. il n'a été découvert aucune infection
+| NP{det[lemme:aucun],?*,#1[last]} |
+if ( OBJ(#2,#1) & DEEPOBJ(#2,#3[lemme:il]) & NEGAT(#2) )
+   NEGAT(#1)
+
+
+// aucun(e) infection fonctionnant comme det
+| NP{det[lemme:aucun],?*,#1[last]} |
+if ( ~OBJ(?[verb],#1) & ~VMOD(?[verb],#1) & ~NEGAT(#1) )
+   NEGAT(#1)
+
+
+// impossibilité de + INFINITIF
+// échec pour + INFINITIF
+//| noun#1[lemme:échec];noun#1[lemme:impossibilité] |
+//if ( NMOD(#1,#2[verb,inf]) )
+//   NEGAT(#2)
+
+//// 2eme stade
+// si un pred avec negation syntaxique, on change sa polarité
+// 1 - si negation syntaxique avec marqueurs changer la polarité de son focus si celui-ci a deja une polarité
+// polar_done indique que la polarite a ete changee.
+| #1[polar:+] |
+if ( NEGAT(#1) & #1[polar=~] & #1[polar=-,polar_done=+] )
+~
+
+| #1[polar:-,polar_done:~] |
+if ( NEGAT(#1) & #1[polar=~] & #1[polar=+,polar_done=+] )
+~
+
+
+
+/// 3eme stade 
+/// combinaison des polarités si polarités existent
+// ou deterministe pour eviter la re-application de la regle
+if ( (OBJ(#1[polar:-],#2[polar:+]) & #2[polar=~] & #2[polar=-]) ||
+     (OBJ(#1[polar:-],#2[polar:-]) & #2[polar=~] & #2[polar=+])  
+   )
+~
+
+// il n'existe pas de signe de...
+| PP{prep[lemme:de],NP{#2[last]}} |
+if ( ~OBJ(#1,?) & 
+     ( VMOD[posit1](#1[polar:-],#2[polar:+]) & #2[polar=~] & #2[polar=-] ) ||
+     ( VMOD[posit1](#1[polar:-],#2[polar:-]) & #2[polar=~] & #2[polar=+] )
+   )
+~
+
+if ( 
+     (NMOD[posit1](#1[polar:-],#2[polar:+]) & #2[polar=~] & #2[polar=-]) ||
+     (NMOD[posit1](#1[polar:-],#2[polar:-]) & #2[polar=~] & #2[polar=+])
+   )
+~
+
+// Cas d'un sujet [polar] d'un verbe [polar] et existe objet [polar]
+// e.g Aucun signe n'attestant une infection 
+
+
+/// 4eme stade
+/// condition d'arret
+
+/// 4-1 le predicat a polarite a un complement. NON sur le complement
+// contrainte si le verbe est a l'infinitif précédé de "afin de", "dans le but de" etc.
+// afin d'éliminer l'infection....
+if ( OBJ(#1[polar:-,inf:+],#2[polar:~]) & PREPOBJ(#1,?[lemme:de]) )
+   NON(#2)
+
+if ( OBJ(#1[polar:-,inf:~],#2[polar:~]) )
+   NON(#2)
+
+if ( ~OBJ(#1[polar:-],?) & ~DEEPOBJ(#1[polar:-],?) & VMOD[posit1](#1[polar:-],#2[polar:~]) )
+   NON(#2)
+
+// formes impersonnelles au passif
+// eg il n'est pas entrepris d'antibiothérapie
+if ( ~OBJ(#1[polar:-],?) & DEEPOBJ(#1[polar:-],#2[lemme:il]) & SUBJ[passive](#1,#2) & VMOD[posit1](#1,#3[polar:~]) )
+   NON(#3)
+
+if ( DEEPOBJ(#1[polar:-],#2[polar:~,pron:~]) )
+   NON(#2)
+
+if ( NMOD(#1[polar:-],#2[polar:~,adj:~]) )
+   NON(#2)
+
+// cas restreints ou unique sujet d'un verbe polar:- verbe intransitifs
+if ( ~OBJ(#1[polar:-],?) & ~DEEPOBJ(#1[polar:-],?) & ~VMOD(#1[polar:-],?) & SUBJ(#1[polar:-],#2[polar:~]) )
+   NON(#2)
+
+
+//// 4-2 le predicat a polarite n'a pas de complements. NON sur le predicat
+| #1[verb,polar:-] |
+if ( ~OBJ(#1,?) & ~VMOD(#1,?) )
+   NON(#1)
+
+| #1[polar:-,noun] |
+if (  ~NMOD(#1,?) )
+   NON(#1)
+
+
+
+//// 4-3 le prédicat n'a pas de polarité et est nie syntaxiquement
+// il ne marche pas
+| #1[polar:~] |
+if ( NEGAT(#1) & ~NON(#1) )
+   NON(#1)
+
+
+////// 5eme stade préposition avec changement de polarité
+
+// rectification de tir quand on a l'utilisation de préposition qui changent la polarité
+// contrairement à, malgré, en dépit de (changement de polarité)  après et avant suite à  (aucun lien car temporel)
+
+if ( ^NON(#1) & NEGAT(#2) & ~NON(#2)
+     ( PREPOBJ(#1,?[prep,lemme:malgré]) || PREPOBJ(#1,?[prep,lemme:"en dépit de"]) || PREPOBJ(#1,?[prep,lemme:"contrairement à"]) || PREPOBJ(#1,?[prep,lemme:avant]) || PREPOBJ(#1,?[prep,lemme:après]) || PREPOBJ(#1,?[prep,lemme:"suite à"]) || PREPOBJ(#1,?[prep,duree]))
+   )
+NON(#2)
+
+
+
+
+// NEGAT sur ETRE (passif)
+// il n'est pas noté d'instabilité hémodynamique
+// couvert par nouvelle méthode
+
+// absence de X
+// couvert pas nouvelle méthode
+
+// résultats négatifs pour bactéries
+// couvert par nouvelle méthode
+
+
+
+
+
+
+// NEGATION DOMAINE DEPENDANT
+
+// NON sur modifieur de "résultat négatif"
+// e.g. "résultat négatif pour les bactéries
+//if ( NMOD[posit1](#1[lemme:"résultat"],?[lemme:négatif]) & NMOD[posit1](#1,#2) )
+//   NON(#2) 
+

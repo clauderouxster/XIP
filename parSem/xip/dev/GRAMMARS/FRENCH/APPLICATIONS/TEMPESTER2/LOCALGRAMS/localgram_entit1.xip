@@ -1,0 +1,434 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/sont rassemblées dans ce fichier les règles relatives aux entités nommées qui doivent intervenir avant la désambiguïsation \
+
+
+
+/************** phrases entièrement en majuscules ************\
+Marqueur:
+1> ?[lemme:"Mc%C*", toutmaj1=+].
+1> ?[surface:"%C+\'", toutmaj=+].
+1> ?[toutmaj:+, toutmaj1=+].
+1> Num[toutmaj1=+].
+1> ?[punct, toutmaj1=+].
+1> ?[sent, toutmaj1=+].
+
+
+
+//##### telephones
+
+1> noun[lemme:"tél"], (punct[form:f2pts]), num[telfax=+] ,?[num:~] .
+1> noun[lemme:"tél."], (punct[form:f2pts]), num[telfax=+] ,?[num:~] .
+1> noun[lemme:"fax"], (punct[form:f2pts]), num[telfax=+] , ?[num:~] .
+1> noun[lemme:"fax."], (punct[form:f2pts]), num[telfax=+] , ?[num:~] .
+1> adj[lemme:"mobile"], (punct[form:f2pts]), num[telfax=+] , ?[num:~].
+1> adj[lemme:"portable"], (punct[form:f2pts]), num[telfax=+] , ?[num:~].
+1> adj[lemme:"tel"], (punct[form:f2pts]), num[telfax=+] , ?[num:~].
+1> noun[lemme:"téléphone"], (punct[form:f2pts]), num[telfax=+] ,?[num:~] .
+1> noun[lemme:"télécopie"], (punct[form:f2pts]), num[telfax=+] ,?[num:~] .
+1> noun[lemme:"Tél."], (punct[form:f2pts]), num[telfax=+] ,?[num:~] .
+1> noun[lemme:"Tél"], (punct[form:f2pts]), num[telfax=+],?[num:~] .
+1> noun[lemme:"standard"],  (punct[form:f2pts]), num[telfax=+],?[num:~] .
+1> prep[form:fa],  num[lemme:"%d%d.%d%d.%d%d.%d%d.%d%d.",telfax=+].
+1>  prep[form:fa], num[lemme:"%d%d.%d%d.%d%d.%d%d.%d%d",telfax=+].
+1>  num[lemme:"0% 800% %d%d%d% %d%d%d",telfax=+].
+
+Désambiguïsation:
+2> ?[toutmaj:+] = |?[toutmaj1:+, start];?[toutmaj1:+, CR], ?*[toutmaj1:+]| ?[phrasemaj=+] |?*[toutmaj1:+], ?[toutmaj1:+, end:+];?[CR:+]|.
+
+Marqueur:
+4> ?[toutmaj1:+, phrasemaj:+], ?[toutmaj1:+, phrasemaj=+].
+4> ?[toutmaj1:+, phrasemaj=+], ?[toutmaj1:+, phrasemaj:+].
+4> ?[toutmaj1:+, start], ?[toutmaj1:+, end:+, phrasemaj=+].
+4> ?[toutmaj1:+, end:+, start:+, phrasemaj=+].
+
+/*****************noms composés**************\
+
+Désambiguïsation:
+/Saint-Jean Le Baptiste\
+10> (pron, det)[maj] = |noun[maj]| det |noun[maj];adj[maj]|.
+/Saint-Jean-Le-Baptiste\
+10> (pron, det)[maj] = |noun[maj], punct[hyph]| det |punct[hyph], noun[maj];adj[maj]|.
+
+/néolibéral\
+10> adj,noun = |noun[det:~,verb:~],adv*, prefix| ?[noun:~] |adv*%, adj*%|.
+
+/ un pronom commençant par une maj lié à un nom par un trait d'union est un nom (propre)\
+10> pron[maj:+] %= |?[hyph:~]| noun[proper=+,masc=+,fem=+, sg=+,pl=+,p3=+,maj=+] |punct[form:fhyph], noun[maj:+]|.
+
+10> adj, noun = |noun| ?[noun:~] |punct[hyph], ?[adj]|.
+11> adj, noun = |noun, adj, punct[hyph]| ?[noun:~].
+
+Séquence:
+
+
+/dollar américain\
+
+15> noun[unit_monnaie=+,measure=+] = noun[lemme:dollar], adj[nat].
+
+15> adj= ?[lemme:ouest], (punct[hyph]) , ?[nat].
+
+/ ? les Nations-Unies\
+15> noun [mwe=+, maj=+] = noun[maj, !sg:!, !pl:!, !masc:!, !fem:!, saint:~], punct[hyph], adj[maj, ptCard:~] |~punct[hyph]|.
+
+/Champ-Martin\
+15> noun[mwe=+, Lieu=+, region=+] @= noun[lemme:champ, maj], punct[hyph], noun[maj], (punct[hyph], noun[maj]).
+/Pré-Martin\
+15> noun[mwe=+, Lieu=+] @= prefix[lemme:pré-, maj], noun[maj], (punct[hyph], noun[maj]).
+/Val-Thorens\
+15> noun[mwe=+, Lieu=+, region=+, maj=+] @= noun[lemme:val, maj], punct[hyph], (prep), (punct[hyph]), noun[maj], ((prep), punct[hyph], noun[maj]).
+
+/social-démocrate, social-chrétien\
+15> adj[mwe=+, adj=+] = adj[lemme:social], punct[hyph, CR:~], adj[CR:~, !sg:!, !pl:!, !masc:!, !fem:!, !postprof:!].
+
+/MSF-Belgique\
+15> noun[org=+, mwe=+] @= noun[org, !maj:!, !sg:!, !pl:!, !masc:!, !fem:!, !div:!, !edu:!, !firme:!, !non-profit:!], (punct[hyph, CR:~]), noun[pays, maj, CR:~];noun[region, maj, CR:~].
+
+/****************dates et périodes*********************\
+
+Désambiguïsation:
+/troisième est un adjectif s'il est suivi du mot millénaire\
+10> adj,noun = adj |?[lemme:millénaire]|.
+
+
+Séquence:
+
+
+/Moyen Age = Moyen-Age\
+15> noun[mwe=+,time=+, periode=+] = noun[lemme:moyen, maj:+], ?[lemme:âge, maj:+].
+
+/les mois musulmans composés (2e partie du mot)\
+15> noun[time=+, mois2:+, sg=+] = ?[lemme:al];?[lemme:Al];?[lemme:at];?[lemme:At];?[lemme:t];?[lemme:out];?[lemme:el];?[lemme:El];?[lemme:l], (punct[form:fhyph]), (punct[lemme:']), ?[mois2:+].
+15> noun[time=+, mois:+, sg=+] = ?[mois1:+], ?[lemme:I];?[lemme:II].
+
+/************* nombres ***********************\
+
+//********AJOUT maud ******\\
+
+Désambiguïsation:
+
+/un dans "trente-et-un" et "vingt-et-un"  sont des num\
+16> pron[lemme="un"] =  |num,(punct[hyph]), coord, (punct[hyph])| num[mwe=+,noun=+].
+
+//déplacement depuis le fichier desamb_entit.xip
+/neuf est un chiffre devant un nom de periode\
+// AB 2012.04.13 ajout contraint ord:~ pour que les ordinaux restent des adjectifs
+// ex. Il est né au XXe siècle.
+16> (adj<ord:~>,num<ord:~>) %= num |noun[periode:+]|.
+
+Marqueur:
+
+
+
+
+
+//********FIN AJOUT maud ******//
+
+
+/marque les chiffres romains\
+20> num[lemme:"X(I*)(V*)(I*)(X*)(I*)", rom=+, toutmaj=+, maj=+, card=+], ?[card:~].
+20> num[lemme:"(I*)V(I*)(X*)(I*)", rom=+, toutmaj=+, maj=+, card=+], ?[card:~] .
+20> num[lemme:"I+", rom=+, toutmaj=+, maj=+, card=+], ?[card:~] .
+
+/marque les nombres en lettres\
+20> num[lemme:"%c+", rom:~, lettres=+].
+
+/marque les nombres en chiffres\
+20> num[lemme:"%d+", chiffres=+].
+
+/un nombre d'au moins 2 chiffres est un grand nombre\
+20> num[lemme:"%d%d+", gdnbre=+].
+
+//ajout Maud : nbre de 2 chiffres strictement = shortyear
+20> num[lemme:"%d%d", shortyear=+], ?[measure:~].
+
+/un nombre > 30 est un grand nombre1\
+20> num[lemme:"3%d%", gdnbre1=+].
+20> num[lemme:"4%d%", gdnbre1=+].
+20> num[lemme:"5%d%", gdnbre1=+].
+20> num[lemme:"6%d%", gdnbre1=+].
+20> num[lemme:"7%d%", gdnbre1=+].
+20> num[lemme:"8%d%", gdnbre1=+].
+20> num[lemme:"9%d%", gdnbre1=+].
+20> num[lemme:"%d%d%d+", gdnbre1=+].
+
+//AJOUT maud. un nombre compris entre 1 et 31 est potentiellement un num de jour.
+
+20> num[lemme:"0%d", numjourpot=+].
+20> num[lemme:"%d", numjourpot=+].
+20> num[lemme:"1%d", numjourpot=+].
+20> num[lemme:"2%d", numjourpot=+].
+20> num[lemme:"30", numjourpot=+].
+20> num[lemme:"31", numjourpot=+].
+
+// ajour CH
+20> num[lemme:"1er", numjourpot=+].
+
+
+//ajout maud : un nombre entre 0 et 24 est potentiellement une heure
+// objectif: se servir de l'absence de ce trait pour les heures-durées.
+//chiffres en lettres gérés dans le lexique
+20> num[lemme:"%d", heurepot=+].
+20> num[lemme:"1%d", heurepot=+].
+20> num[lemme:"21", heurepot=+].
+20> num[lemme:"22", heurepot=+].
+20> num[lemme:"23", heurepot=+].
+20> num[lemme:"24", heurepot=+].
+
+
+/chiffres ronds\
+21> num[lemme:"%d+0", rond=+].
+
+/nombres décimaux\
+20> num[lemme:"%d+%,%d+", dec=+].
+20> num[lemme:"%d+%.%d+", dec=+].
+
+/contextes où un nombre ne peut faire partie d'un nom de roi\ 
+22> num[numRoi=-], noun[verb:~].
+22> num[numRoi=-], punct[hyph], num.
+22> num[gdnbre1:+, numRoi=-].
+22> num[dec:+, numRoi=-].
+
+/80 millions est un grand nombre\
+22> num[chiffres:~, lettres:~, gdnbre1=+].
+
+Désambiguïsation:
+/sept est une abréviation après un nombre en chiffres\
+25> noun<abr>, num = |num[chiffres]| noun.
+
+
+Fragmenter:
+// CH - rajout pour modifier la segmentation de 3,2g qui est segmente par ntm 
+// en 3 + , + 2g
+
+27> (%d)%d%1g%2 : noun = | num, punct[form:fcm] | num%1, noun%2[unit_weight=+,measure=+] .
+
+Séquence:
+// regrouper les éléments séparés par la règle ci-dessus
+28> num = num, punct[form:fcm], num | ?[measure] | .
+
+
+
+
+
+/************** personnes ****************\
+
+Désambiguïsation:
+/Saint-Georges n'est pas un prénom\
+30> noun<lemme:"Saint(e)\-%C+%c*"> += noun[pren=~, saintTiret=+].
+30> noun<lemme:"Saint(e)\-É+%c*"> += noun[pren=~, saintTiret=+].
+30> noun<lemme:"St(e)\-%C+%c*"> += noun[pren=~, saintTiret=+].
+
+30> NOUN,adj<lemme:"saint"> = adj |PUNCT[form:fhyph]|.
+
+Séquence:
+
+// ###############TEL#############
+35> noun[telfax=+] = | noun[lemme:"Tél"];noun[lemme:"tél."];noun[lemme:"tél"];noun[lemme:"fax"];noun[lemme:"fax."];adj[lemme:"mobile"];adj[lemme:"portable"];adj[lemme:"tel"]; noun[lemme:"téléphone"];noun[lemme:"télécopie"];prep[surface:"au"];noun[lemme:renseignement];noun[lemme:"standard"], (punct[form:f2pts]) | 
+		num[lemme:"+%d%d"],
+		punct[form:fopar],
+		num,
+		punct[form:fcpar],
+		num[lemme:"%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"].
+
+35> noun[telfax=+] = | noun[lemme:"Tél"];noun[lemme:"tél."];noun[lemme:"tél"];noun[lemme:"fax"];noun[lemme:"fax."];adj[lemme:"mobile"];adj[lemme:"portable"];adj[lemme:"tel"]; noun[lemme:"téléphone"];noun[lemme:"télécopie"];prep[surface:"au"];noun[lemme:renseignement];noun[lemme:"standard"], (punct[form:f2pts]) | 
+		num[lemme:"%d"],
+		num[lemme:"%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d%d%d"].
+
+
+35> noun[telfax=+] = num[lemme:"04"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"].
+
+35> noun[telfax=+] =  num[lemme:"0"],
+		num[lemme:"%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d%d%d"].
+
+
+35> noun[telfax=+] = | noun[lemme:"Tél"];noun[lemme:"tél."];noun[lemme:"tél"];noun[lemme:"fax"];noun[lemme:"fax."];adj[lemme:"mobile"];adj[lemme:"portable"];adj[lemme:"tel"]; noun[lemme:"téléphone"];noun[lemme:"télécopie"];prep[surface:"au"], (punct[form:f2pts]) | 
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"].
+
+35> noun[telfax=+] = | noun[lemme:"Tél"];noun[lemme:"Tél."]; noun[lemme:"tél"];noun[lemme:"fax"];adj[lemme:"mobile"];adj[lemme:"portable"];adj[lemme:"tel"], (punct[form:f2pts]) | 
+		num[lemme:"%d%d%d/%d%d%d"],
+		num[lemme:"%d%d"],
+		num[lemme:"%d%d"].
+
+
+
+/ex-président, contre-maître\
+35> Noun [prof=+] = prefix[preProf];prep[preProf], (punct[hyph]), noun[prof,!prof:!,!pol:!,!admi:!,!grade:!, !sg:!, !pl:!, !masc:!, !fem:!].
+
+/compositeur-interprète\
+35> Noun [prof=+] @= noun[prof], punct[hyph], noun[prof], (punct[hyph], noun[prof]).
+
+
+/Prénom composé dont le second est connu comme prénom\
+40> NOUN[proper=+, pren=+] = NOUN[maj:+, toutmaj:~, saint:~,celeb:~], PUNCT[hyph], NOUN[preN,!maj:!, toutmaj:~ ,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!, prenamb2:~].
+
+40> NOUN[proper=+, saintTiret=+, pren=~] = ?[saint:+,!maj:!], PUNCT[form:fhyph], NOUN[preN, toutmaj:~,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+40> NOUN[proper=+, saintTiret=+, pren=~] = ?[saint:+,!maj:!], PUNCT[form:fhyph], NOUN[maj, toutmaj:~,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+40> NOUN[proper=+, saintTiret=+, pren=~] = ?[saint:+,!maj:!], PUNCT[form:fhyph], adj[maj, toutmaj:~,!masc:!,!fem:!,!sg:!,!pl:!,!p3:!].
+
+
+
+/M. et Mme\
+45> Noun[mwe=+,tit=+,sg=+] = noun[tit], coord, noun[tit].
+
+/ M. le Prof. \
+45> Noun[mwe=+,tit=+,sg=+] = noun[tit], det[def], noun[tit].
+
+/ Louis 12, François 1er, Jean(-)Paul II \
+45> Noun[mwe=+,maj=+,sg=+,proper=+, person=+] = noun[maj,pren, pren_rois:~-, lieu:~, ville:~, pays:~, region:~, !fem:!, !masc:!], (noun[maj,pren, pren_rois:~-, CR:~]), num[lemme:~un, numRoi:~-, CR:~];adj[premier:+, CR:~].
+
+46> Noun[partic=+] = ?[lemme:o, maj:+], punct[lemme:"'"].
+
+
+Marqueur:
+50> noun[saintTiret, ville, lieupers=+].
+
+/les adjectifs qui doivent rester adjectifs dans la désamb malgré leur majuscule\
+50> adj[lemme:premier, aadj=+], noun[prof].
+50> noun[maj, toutmaj:~, batiment1], adj[maj, postbat, aadj=+].
+50> noun[maj, toutmaj:~, batimentorg1], adj[maj, postbat, aadj=+].
+50> noun[parti], adj[maj, postprof, aadj=+].
+50> noun[prof], adj[maj, postprof, aadj=+].
+50> det, adj[maj, aadj=+], noun[CR:~].
+50> det, noun[prof];noun[org1], adj[maj, aadj=+], noun[CR:~].
+50> noun[org1], adj[maj, aadj=+], prep.
+50> noun[batimentorg1], adj[maj, aadj=+], prep.
+
+
+/************** organisations ****************\
+
+Séquence:
+/UDF-CDS\
+60> Noun[org=+] = noun[org:+, maj:+], punct[hyph:+], noun[org:+].
+
+/radio-France\
+60> Noun[org=+] @= noun[org1:+, !maj:!], punct[hyph:+], noun[maj:+], (punct[hyph:+], noun[maj:+]).
+
+/le "Monde (de l'Education)"\
+60> noun[org=+, mwe=+] @= (det[def, prep:~]), punct[form:fquotes], noun[orgdef, maj], (punct[hyph]), (?[lemonde]), (prep[form:fde], (det[def]), noun[lemonde]), punct[form:fquotes].
+/le Figaro-Magazine\
+60> noun[org=+, mwe=+] @= (det[def, prep:~]), noun[orgdef, maj], punct[hyph], (?[lemonde]).
+
+60> num = num[etportion=+], coord[lemme:"et"], noun[lemme:demi]. 
+
+
+marqueur:
+65> Noun[firme:+, org=+].
+
+/************** lieux ****************\
+Désambiguïsation:
+
+/ ces règles se trouvent également dans desamb.xip
+ correcting input from lexicon:  -le is a determiner if followed by hyphen and not a pronoun in Monsieur-le-Prince \
+//>>>>>>> 1.10
+
+70> PRON[acc,hyph, masc, sg] %= DET[det=+,def=+,hyph=+, masc=+, sg=+]  |punct[Hyph]|.
+70> PRON[acc,hyph, fem, sg] %= DET[det=+,def=+,hyph=+, fem=+, sg=+]  |punct[Hyph]|.
+70> PRON[acc,hyph, pl] %= DET[det=+,def=+,hyph=+, pl=+]  |punct[Hyph]|.
+
+
+/Montrevel-en-Bresse \
+70> PRON[gen,hyph] %= PREP[form:fen, sfen=+, hyph=+]  |punct[Hyph]|.
+
+/Montlouis-sur-Loire\
+70> PREFIX[lemme:sur] %= |Punct[hyph]| PREP[form:fsur, sfsur=+, hyph=+].
+
+
+Séquence:
+/La Ciotat\
+75> Noun[mwe=+, ville=+] = det[def:+, !maj:!];prep[def:+, !maj:!], Noun[villedef:+, maj:+, CR:~].
+
+/Brétigny-sur-Orge, Rosny-sous-Bois\
+75> Noun[mwe=+, ville=+, maj=+] = Noun[maj:+], punct[hyph, CR:~], prefix[lemme:"sur-", CR:~];prefix[lemme:"sous-", CR:~], (det[def, CR:~], punct[hyph, CR:~]), Noun[maj, CR:~].
+
+/Bourg-lès-Valence\
+75> Noun[mwe=+, ville=+, maj=+] = Noun[maj:+], punct[hyph, CR:~], Noun[lemme:"lès", CR:~], punct[hyph, CR:~], Noun[maj, CR:~].
+
+/Neuilly-en-Vexin\
+75> Noun[mwe=+, ville=+, maj=+] = Noun[maj:+], ?[lemme:"en", CR:~], punct[hyph, CR:~], Noun[maj, CR:~].
+
+
+/Corenc-le-haut, l'Etang-la-ville\
+75> Noun[mwe=+, ville=+, maj=+] = Noun[maj:+], det[def, CR:~, hyph], punct[hyph, CR:~], ?[ville2:+, CR:~].
+
+/ Savigny-le-Temple, Saint-Denis-de-la-Réunion, Saint-Cyr-l'Ecole \
+75> Noun[mwe=+, ville=+, maj=+] = Noun[maj:+, ville:+];noun[maj, saintTiret], (punct[hyph, CR:~], prep), det[def, CR:~, hyph];pron[hyph], (punct[hyph, CR:~]), ?[maj:+, CR:~].
+
+/Saint-Jean-Cap-Ferrat, Saint-Jean-Saint-Maurice\
+75> Noun[mwe=+, ville=+, maj=+] @= noun[maj, saintTiret, ville:~], punct[hyph, CR:~], ?[maj:+, CR:~], (punct[hyph, CR:~], ?[maj:+, det:~, CR:~]).
+
+
+/Villeneuve-Saint-Georges\
+75> noun[mwe=+, ville=+] = noun[ville:+, !maj:!], punct[hyph], noun[saintTiret].
+
+/Bourg-de-Peage, Saint-Martin-d'Hères\
+75> Noun[mwe=+,maj=+, ville=+] = noun[maj,ville,!p3:!];noun[maj,ville1,!p3:!];noun[saintTiret:+], punct[hyph], prep, (punct[hyph]), noun[maj].
+
+
+/les DOM TOM\
+75> Noun[mwe=+,maj=+, region=+] = Noun[toutmaj, lemme:DOM], Noun[toutmaj, lemme:TOM].
+
+/Beyrouth-Ouest\
+75> noun[mwe=+, Lieu=+, quartier=+] = noun[maj, ville];noun[maj, quartier];noun[maj, lieu], punct[hyph, CR:~], ?[ptCard, CR:~].
+
+/Liban-Sud\
+75> noun[mwe=+, Lieu=+, region=+] = noun[maj, phrasemaj:~];noun[maj, pays], punct[hyph, CR:~], ?[ptCard, CR:~].
+
+/Sud-Liban\
+75> noun[mwe=+, Lieu=+, region=+] = ?[ptCard, CR:~], punct[hyph, CR:~], noun[maj, pays];noun[maj, region].
+
+/Paris-Sorbonne\
+75> noun[batimentorg=+, sg=+] @= noun[ville, maj, CR:~], punct[form:fhyph], noun[batimentorg:+, sg:+].
+
+
+/Moulins-Engilbert\
+75> noun[mwe=+, perslieu=+, compville=+] = noun[ville:+, !maj:!, !sg:!; !pl:!, !masc:!, !fem:!, !p3:!], punct[hyph], noun[guessed].
+75> noun[mwe=+, perslieu=+, compville=+] = noun[guessed], punct[hyph], noun[ville:+].
+
+/ le 7 9 --> org.div ESTER\
+
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"7 9"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"18 20"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"18"],  num[lemme:"20"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"7"],  num[lemme:"7"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"13"],  num[lemme:"h"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"13"],  noun[lemme:"heure"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"20"],  noun[lemme:"heure"].
+75> noun[org=+,div=+,mwe=+] = | ?[def]| num[lemme:"20"],  num[lemme:"h"].
+
+Marqueur:
+
+80> noun[villeamb:+, ville=~, maj:~].
+80> noun[villeamb:+, ville=~, phrasemaj:+].
+80> noun[villeamb:+, ville=~, start:+].
+
+90> noun[ville:+, lieu=+].
+90> noun[pays:+, lieu=+, lieudef:~].
+90> noun[region:+, lieu=+].
+90> noun[continent:+, lieu=+].
+90> noun[batiment:+, maj, lieu=+].
+
+

@@ -1,0 +1,229 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : entit_propagation.xip                                       !
+//!   author     : C. Hagege                                                   !
+//!   Date       : 2007/November                                               !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!                                                                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/18
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+// Marking parts of discovered Named Entities in order to take advantage of
+// propagation
+
+Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MARKING
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Pedro Ferreira           -> marks: Pedro and Ferreira
+// Example: Presidente Cavaco Silva  -> marks: Cavaco and Silva
+//
+| noun#1[SEM-Hpeople,SEM-Hindividual]{?*,noun#2[title:~,location:~,SEM-Hcollective:~,initial:~,maj],?*,noun#3[last,title:~,location:~,initial:~,maj]} |
+if (NE[people](#1) )
+   { PERSON##2=1; PERSON##3=1; }
+
+
+// Example: Senhor Silva -> marks Silva
+
+
+// W. (O.) Silva -> marks Silva
+
+
+// a NER found because of a context is propagated
+//
+// Example: o primo do Zé. O Zé foi fixe
+//
+| noun#1[SEM-Hpeople,SEM-Hcargo:~,SEM-Hindividual] |
+if (NE[people](#1) )
+{ PERSON##1=1; }
+
+
+//a NER type person which starts with relative
+// we propagate what follows the relative
+// a irma/tia Kiazer marks Kiazer
+| noun[mwe,SEM-Hindividual]{?[relative], noun#2[proper]} |
+if ( NE[people](#1) )
+{ PERSON##2=1; }
+
+
+
+// marking for propagation an acronym that has be found by a rule
+//
+| noun#1[SEM-Hcollective,acron] |
+if ( NE[collective](#1) )
+   { ORGA##1=1; }
+
+
+// marking the proper name just following "ONG" as organization
+// Example: A ONG Atini -> marks Atini
+| noun#1[SEM-Hcollective,SEM-Hinstitution]{?[lemma:ONG], noun#2[proper]} |
+if ( NE[SEM-Hcollective,institution](#1) )
+   { INSTIT##2=1; }
+
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PROPAGATION
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if two nouns have been marked by the previous rule but do not bear any people
+// feature (only proper feature), then the PESSOA Ne is the concatenation of
+// these two nouns.
+//
+// Example: o Tito Tutu Tata da Tete falou. Tito Tete foi fixe.
+//
+| noun#3[proper,SEM-Hpeople=+]{?*,noun#1[maj], ?*, noun#2[maj]} |
+   if ( ~NE[people](#3) & PERSON##1:1 & PERSON##2:1 )
+   NE[people=+,individual=+,propag=+](#3)
+
+
+// noun alone that has been marked for propagation
+//
+| noun#1[toutmaj:~,maj] |
+if ( PERSON##1:1 & ~NE[people](#1) )
+   NE[people=+,individual=+,propag=+](#1)
+
+
+// institution that has been marked
+//
+| noun#1[maj] |
+  if ( INSTIT##1 & ~NE[collective](#1) )
+  NE[collective=+,institution=+,propag=+](#1)
+
+
+// if the noun is an acronym, can be all capitalized
+//
+| noun#1[maj] |
+   if ( ORGA##1 & ~NE[collective](#1)  & ~NE[people](#1) )
+   NE[collective=+](#1)
+
+| noun#1[maj] |
+   if ( ORGA##1 & ~NE[collective](#1)  & (^NE[people,individual](#1) | ~NE[people,indgroup](#1) )  )
+   NE[features=~,people=+,indgroup=+,propag=+](#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// cleaning rules...
+//
+////////////////////////////////////////////////////////////////////////////////
+
+if (NE[propag:~](#1) & ^NE[propag](#1) )
+~
+
+//DCO, 2011/03/09
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// IMBRICAÇÃO DE ENTIDADES DA CATEGORIA LOCAL
+//
+// Para permitir casos como "<EM EVENTO>campeonato de <EM CIDADE>Lisboa</EM> de ping-pong</EM>"
+// é preciso manter estas 3 regras com a restrição location:~ e comentar as 3 seguintes.
+// Caso se pretenda "<EM EVENTO>campeonato de Lisboa de ping-pong</EM>", fazer o oposto
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// if a NE within a NE take the most embedded out
+| #1{?*,#2} |
+if ( $1(#1) & ^$1[location:~](#2) )
+ ~
+
+// if a NE within a NE take the most embedded out
+| #1{?*,?{?*,#2}} |
+if ( $1(#1) & ^$1[location:~](#2) )
+ ~
+
+// if a NE within a NE take the most embedded out
+| #1{?*, ?{?*, ?{?*, #2}}} |
+if ( $1(#1) & ^$1[location:~](#2) )
+ ~
+
+//DCO, 2011/07/20
+// Entidades (instituições) dentro de outras entidades (locais) são para serem marcadas como entidades
+| #1{?*, #2[SEM-Hcollective,SEM-Hinstitution]} |
+   if ( NE[location](#1) )
+      NE[collective=+,institution=+](#2)
+
+//DCO, 2011/07/14
+//NJM, 2012/01/26, pode começar com uma palavra adivinhada
+// Entidades (pessoas) dentro de outras entidades (locais, mas não geográficos; instituições [escolas]) são para serem marcadas como entidades
+// mas só marcamos caso seja um nome próprio constituído por um firstname e um lastname ou caso o primeiro elemento seja um título designativo ou profissão
+// e.g. (Infante D. Henrique)
+| #1{?*, #2[SEM-Hpeople,SEM-Hindividual]{#3[first], ?*, #4[last]} } |
+   if (  ~NE[people](#2) & ~NE[people](#1) &
+         ( NE[location,geographic:~](#1) | NE[collective,institution,school](#1) ) &
+         ( (#3[firstname]|#3[title]|#3[SEM-Hprofession])  || (#4[firstname]||#4[lastname]) )
+      )
+      NE[people=+,individual=+](#2)
+
+
+//DCO, 2011/07/14
+// Igual à regra de cima, mas para quando o nome da pessoa inclui um título designativo ou profissão.
+// Não era necessário fazer outra regra, apesar de a estrutura dos nós ser muito diferente, mas assim fica mais claro
+| #1{?*, noun#2[SEM-Hpeople,SEM-Hindividual]{#3, noun#4[SEM-Hpeople,SEM-Hindividual]{#5[first], ?*, #6[last]}}} |
+   if (  ~NE[people](#2) & ~NE[people](#1) &
+         ( NE[location,geographic:~](#1) | NE[collective,institution,school](#1) ) &
+         (#3[title]     || #3[SEM-Hprofession]) &
+         (#5[firstname] || #6[lastname])
+      )
+      NE[people=+,individual=+](#2)
+
+//DCO, 2011/07/13
+//If a NE of HUMAN INDIVIDUAL type has a LOCATION NE inside it, then we remove the LOCATION
+| #1{?*, ?{?*, #2}} ; #1{?*, #2} |
+if ( NE[people,individual](#1) & ^NE[location](#2) )
+ ~
+
+//| ?{noun#1{noun, ?*}}, ?{noun#2{noun, ?*}} |
+//if ( NE[people,individual](#1) & ^NE[location](#2) )
+//~
+
+//--------------------
+
+//| #1{?*,#2} |
+//if ( $1(#1) & ^$1(#2) )
+// ~
+//
+//// if a NE within a NE take the most embedded out
+//| #1{?*,?{?*,#2}} |
+//if ( $1(#1) & ^$1(#2) )
+// ~
+//
+//// if a NE within a NE take the most embedded out
+//| #1{?*,?{?{?*,#2}}} |
+//if ( $1(#1) & ^$1(#2) )
+// ~
+
+
+Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// STOP PROPAGATION
+// (cleans lemmas when a closing DOC tag is found)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If token </DOC> is found, then clean all variables that have been modified
+// (propagation)
+//
+| #1[surface:"</DOC>"]; #1[surface:"</doc>"] |
+{  CleanAllLemmas; }
+

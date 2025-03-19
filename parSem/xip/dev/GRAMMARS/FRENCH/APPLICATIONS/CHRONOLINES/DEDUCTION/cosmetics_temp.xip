@@ -1,0 +1,180 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! André Bittar 2011.11.02
+//! Normalisation and pre-processing for temporal processing
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+///////////////////////////////////////////////////
+// Grammatical tense and aspect values for verbs //
+///////////////////////////////////////////////////
+
+// simple tenses, active voice
+
+// VTENSE_T_PRES VASPECT_A_SIMPLE
+// e.g. Jean mange.
+if ( VDOMAIN(#1,#1[pre:+]) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1),
+   VASPECT[a_simple=+](#1).
+// e.g. Jean doit manger.
+if ( VDOMAIN(#2,#1[pre:+,modal]) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// VTENSE_T_PAST VASPECT_A_SIMPLE
+// e.g. Jean mangea.
+if ( VDOMAIN(#1,#1[pas,imparfait:~]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_simple=+](#1).
+// e.g. Jean dut manger.
+if ( VDOMAIN(#2,#1[pas,modal,imparfait:~]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// VTENSE_T_PAST VASPECT_A_PROGRESS
+// e.g. Jean mangeait.
+if ( VDOMAIN(#1,#1[pas,imparfait]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_progress=+](#1).
+// e.g. Jean devait manger
+if ( VDOMAIN(#2,#1[pas,imparfait,modal]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_progress=+](#1).
+
+// VTENSE_FUT VASPECT_A_SIMPLE
+// e.g. Jean mangera.
+if ( VDOMAIN(#1,#1[fut]) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_simple=+](#1).
+// e.g. Jean devra manger.
+if ( VDOMAIN(#2,#1[fut,modal]) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// present conditional
+// e.g. Jean mangerait.
+if ( VDOMAIN(#1,#1[cond]) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1).
+// e.g. Jean devrait manger.
+if ( VDOMAIN(#2,#1[cond,modal]) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1).
+
+// compound tenses
+
+// Passé composé in active voice
+// Ambiguous, so no feature values yet, just the dependency.
+// Readings: VTENSE_T_PRES VASPECT_A_PERFECT or VTENSE_T_PAST VASPECT_A_SIMPLE
+// e.g. Jean a mangé.
+if ( VDOMAIN(#1[partpas]_aimé,#2[lemme:avoir,pre]_a) & ~VTENSE(#1) & (~DEEPSUBJ(#1,?) & ~DEEPOBJ(#1,?) ) )
+   VTENSE(#1),
+   VASPECT(#1).
+// e.g. Marie est venu.
+//      Marie s'est cassé le bras.
+//      NOT Marie est aimée par Jean. (this is PRESENT SIMPLE)
+if ( VDOMAIN(#1[partpas]_cassé,#2[lemme:être,pre]_est) & ~VTENSE(#1) & (~DEEPSUBJ(#1,?) & ~DEEPOBJ(#1,?) ) )
+   VTENSE(#1),
+   VASPECT(#1).
+
+// Passé composé passive voice
+// e.g. Jean a été aimé par Marie.
+//      Jean a été aimé vendredi.
+if ( VDOMAIN(#1[partpas]_aimé,#2[lemme:avoir,pre]_a) & VLINK(#2,#3[lemme:être,partpas]) & ~VTENSE(#1) )
+   VTENSE(#1),
+   VASPECT(#1).
+
+// modal
+// e.g. Jean a dû manger.
+if ( VLINK(#2[lemme:avoir,pre]_a,#1[partpas,modal]_dû) & VDOMAIN(#2_a,#3[inf]_venir) & ~VTENSE(#1) )
+   VTENSE(#1),
+   VASPECT(#1).
+
+// VTENSE_T_PAST VASPECT_A_SIMPLE passive with verb être
+// may need this:  & ( DEEPOBJ(#1,?) | DEEPSUBJ(#1,?))
+// e.g. Marie fut aimée par Jean.
+if ( ( VDOMAIN(#1[partpas],#2[lemme:être,pas,imparfait:~]) & ~REFLEX(#1,?) ) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// VTENSE_T_PAST VASPECT_A_PERFECT
+// e.g. Jean avait mangé.
+if ( VDOMAIN(#1[partpas],#2[lemme:avoir,imparfait]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_perfect=+](#1).
+// e.g. Marie s'était cassée le bras.
+//      NOT Marie fut aimée par Jean. (this is PAST SIMPLE - see previous rule)
+//      NOT Marie était aimée par Jean. (this is PAST PROGRESSIVE - see next rule)
+if ( VDOMAIN(#1[partpas],#2[lemme:avoir,imparfait]) & REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_perfect=+](#1).
+
+// modal
+// e.g. Jean avait dû venir.
+if ( VLINK(#2[lemme:avoir,imparfait]_avait,#1[partpas,modal]_dû) & VDOMAIN(#2_avait,#3[inf]_venir) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_perfect=+](#1).
+
+// VTENSE_T_FUT VASPECT_A_PERFECT
+// e.g. Jean aura mangé.
+if ( VDOMAIN(#1[partpas],#2[lemme:avoir,fut]) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_perfect=+](#1).
+// e.g. Marie se sera cassé le bras.
+if ( VDOMAIN(#1[partpas],#2[lemme:être,fut]) & REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_perfect=+](#1).
+
+// modal
+// e.g. Jean aura dû venir.
+if ( VLINK(#2[lemme:avoir,fut]_aura,#1[partpas,modal]_dû) & VDOMAIN(#2_aura,#3[inf]_venir) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_perfect=+](#1).
+
+// VTENSE_PRES VASPECT_A_SIMPLE passive with verb être 
+// may need this: ( & ( DEEPOBJ(#1,?) | DEEPSUBJ(#1,?))
+// e.g. Marie est aimée par Jean.
+if ( VDOMAIN(#1,#2[lemme:être,pre]) & ~REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// VTENSE_T_PAST VASPECT_A_PROGRESS passive with verb être
+// e.g. Jean aimait Marie.
+//      Marie était aimée par Jean.
+if ( VDOMAIN(#1[partpas],#2[lemme:être,pas,imparfait]) & ~REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_progress=+](#1).
+
+// VTENSE_FUT VASPECT_A_SIMPLE passive with verb être
+// e.g. Marie sera aimée par Jean.
+if ( VDOMAIN(#1,#2[lemme:être,fut]) & ~REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_fut=+](#1),
+   VASPECT[a_simple=+](#1).
+
+// present conditional passive with verb être
+// VTENSE_T_PRES
+// e.g. Marie serait aimée par Jean.
+if ( VDOMAIN(#1[partpas],#2[lemme:être,cond]) & ~REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE(#1).
+
+// past conditional
+// VTENSE_T_PAST
+// e.g. Jean aurait mangé.
+if ( VDOMAIN(#1[partpas],#2[lemme:avoir,cond]) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1).
+// e.g. Marie se serait cassé le bras.
+if ( VDOMAIN(#1[partpas],#2[lemme:être,cond]) & ~REFLEX(#1,?) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1).
+
+// infinitives
+// present infinitive
+// e.g. Jean doit avoir mangé.
+if ( VLINK(#1[inf,lemme:avoir]_avoir,#2[partpas]) )
+   VASPECT[a_perfect=+](#2)
+
+// THIS DOESN'T WORK AS REFLEX DEP IS NOT CALCULATED FOR INFINITIVES
+// e.g. Jean doit s'être barré.
+if ( VLINK(#1[inf,lemme:être]_être,#2[partpas]) & REFLEX(#1,?) )
+   VASPECT[a_perfect=+](#2)

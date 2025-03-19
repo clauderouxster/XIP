@@ -1,0 +1,465 @@
+// *******************
+// xmlguide_meto.xip : affichage des données et résultats de l'analyse xip pour la métonymie
+// 
+// - Pour chaque paragraphe (balise) de texte analysé, on crée une balise contenant le resultat de l'analyse //   xip ; ici, on ne s'intéresse qu'au mot marqué comme métonymique (par SemEval).
+//   ---> balises <par3><dependance type=metoreg ou type=metorect>
+// - Affichage du resultat de l'analyse meto au format "xip" (dependance)
+//   ---> balise <par3><dependance type=metonymie>
+// - Affichage du resultat de l'analyse meto au format SemEval
+//   ---> balise <par3><SemEvalRESULT granularity=fine/medium>
+// - Print des resultats au format SemEval dans 3 fichiers (evalCoarse,evalMedium,evalFine)
+// 
+// -----> Tout ça à commenter ou non en fonction de ce qu'on veut.
+
+Variables:
+	xml vxml;
+	xml pxml;
+	string s;
+	string rel;
+	string res;
+	dictionary dico;
+	string chemin1;
+	string chemin2;
+	string chemin3;
+
+Initial:
+	chemin1="evalFine_"+@pathname+".txt";
+	chemin2="evalMedium_"+@pathname+".txt";
+	chemin3="evalCoarse_"+@pathname+".txt";
+	fopen("fine",chemin1);
+	fopen("medium",chemin2);
+	fopen("coarse",chemin3);
+
+Script:
+
+@_current()->set(vxml);
+xmlparent(vxml,pxml);
+xmldata(pxml,dico);
+s=dico["id"];
+
+//  Pour afficher les dependances impliquant l'unité à annoter:
+
+ if ($1[metorectOrg](#1,#2)) {
+     rel="\n"+$1+"_"+$1[form_prep]+"("+#1[lemme]+"["+#1[gen_numb]+"],"+#2[lemme]+"["+#2[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metorect"])->Create(rel);
+     }
+
+ if ($1[metoregOrg](#1,#2)) {
+     rel="\n"+$1+"_"+$1[form_prep]+"("+#1[lemme]+"["+#1[gen_numb]+"],"+#2[lemme]+"["+#2[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metoreg"])->Create(rel);
+}
+
+
+ if ($1[metorectLoc](#1,#2)) {
+     rel="\n"+$1+"_"+$1[form_prep]+"("+#1[lemme]+"["+#1[gen_numb]+"],"+#2[lemme]+"["+#2[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metorect"])->Create(rel);
+     }
+
+ if ($1[metoregLoc](#1,#2)) {
+     rel="\n"+$1+"_"+$1[form_prep]+"("+#1[lemme]+"["+#1[gen_numb]+"],"+#2[lemme]+"["+#2[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metoreg"])->Create(rel);
+}
+
+
+// Pour afficher les dependances de metonymie:
+// alamano pour afficher les traits --> demander a Claude
+// ici uniquement les NE de SemEval (metosem), pour afficher ce qui concerne les NE de xip : metoxip
+
+// bydefault:
+
+if ($1[metosem,bydefault](#1)) {
+     rel="\n"+$1+"_BYDEFAULT"+$1[metonymy]+"("+#1[lemme]+"["+#1[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metonymie"])->Create(rel);
+}
+
+//sure
+if ($1[metosem,sure](#1)) {
+     rel="\n"+$1+"_SURE"+$1[metonymy]+"("+#1[lemme]+"["+#1[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metonymie"])->Create(rel);
+}
+
+//entre les deux
+if ($1[metosem,sure:~,bydefault:~](#1)) {
+     rel="\n"+$1+$1[metonymy]+"("+#1[lemme]+"["+#1[gen_numb]+"])\n";
+     @_current(/sampletexts/sample[@id=s]/par3/dependance[@type="metonymie"])->Create(rel);
+}
+
+
+// Resultats au format SemEval dans fichier sortie
+
+if ($1[metosem,orglit](#1)) {
+     res="\n"+s+"|"+"literal"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orglit](#1)) {
+     res="\n"+s+"|"+"literal"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgmemb](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orgmemb](#1)) {
+     res="\n"+s+"|"+"organisation-for-members"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgprod](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orgprod](#1)) {
+     res="\n"+s+"|"+"organisation-for-product"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgname](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orgname](#1)) {
+     res="\n"+s+"|"+"object-for-name"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgfacility](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orgfacility](#1)) {
+     res="\n"+s+"|"+"organisation-for-facility"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+
+if ($1[metosem,orgindex](#1)) {
+     res="\n"+s+"|"+"organisation-for-index"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgindex](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+
+if ($1[metosem,orgevent](#1)) {
+     res="\n"+s+"|"+"organisation-for-event"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgevent](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+if ($1[metosem,orgmixed](#1)) {
+     res="\n"+s+"|"+"organisation-mixed"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="fine"])->Create(res);
+}
+
+if ($1[metosem,orgmixed](#1)) {
+     res="\n"+s+"|"+"metonymic"+"\n";
+   @_current(/sampletexts/sample[@id=s]/SemEvalRESULT/granularity[@type="medium"])->Create(res);
+}
+
+//***********************
+// Print OUT pour eval.pl
+
+//*** Granularity level : fine
+
+// for organisation:
+
+//normal
+
+//if ($1[metosem,orglit](#1)) {
+//    res=s+"|"+"literal"+"\n";
+//    fwrite("fine",res);
+//}
+
+
+//guillaume
+if ($1[metosem,orglit,bydefault](#1)) {
+    res=s+"|"+"unknown"+"\n";
+    fwrite("fine",res);
+}
+
+if ($1[metosem,orglit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("fine",res);
+}
+
+
+
+if ($1[metosem,orgmemb](#1)) {
+     res=s+"|"+"organisation-for-members"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgprod](#1)) {
+     res=s+"|"+"organisation-for-product"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgname](#1)) {
+     res=s+"|"+"object-for-name"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgfacility](#1)) {
+     res=s+"|"+"organisation-for-facility"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgmixed](#1)) {
+     res=s+"|"+"mixed"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgindex](#1)) {
+     res=s+"|"+"organisation-for-index"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,orgevent](#1)) {
+     res=s+"|"+"organisation-for-event"+"\n";
+     fwrite("fine",res);
+}
+
+
+// for countries:
+
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"unknown"+"\n";
+    fwrite("fine",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("fine",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"place-for-people"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"place-for-event"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,locobj](#1)) {
+     res=s+"|"+"object-for-name"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,locmixed](#1)) {
+     res=s+"|"+"mixed"+"\n";
+     fwrite("fine",res);
+}
+
+if ($1[metosem,locother](#1)) {
+     res=s+"|"+"othermet"+"\n";
+     fwrite("fine",res);
+}
+
+
+//*** Granularity level : medium
+
+if ($1[metosem,orglit](#1)) {
+     res=s+"|"+"literal"+"\n";  
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgmemb](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgprod](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgname](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgfacility](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgmixed](#1)) {
+     res=s+"|"+"mixed"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgindex](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,orgevent](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+// for countries:
+
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"unknown"+"\n";
+    fwrite("medium",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("medium",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,locmixed](#1)) {
+     res=s+"|"+"mixed"+"\n";
+     fwrite("medium",res);
+} 
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+}
+
+if ($1[metosem,locobj](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+
+}
+
+if ($1[metosem,locother](#1)) {
+     res=s+"|"+"metonymic"+"\n";
+     fwrite("medium",res);
+
+}
+//*** Granularity level : coarse
+
+// for organisation :
+
+if ($1[metosem,orglit](#1)) {
+     res=s+"|"+"literal"+"\n";  
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgmemb](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgprod](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgname](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgfacility](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgmixed](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgindex](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,orgevent](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+// for countries:
+if ($1[metosem,loclit,bydefault](#1)) {
+    res=s+"|"+"unknown"+"\n";
+    fwrite("coarse",res);
+}
+
+if ($1[metosem,loclit,bydefault:~](#1)) {
+    res=s+"|"+"literal"+"\n";
+    fwrite("coarse",res);
+}
+
+if ($1[metosem,locpeople](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,locevent](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,locobj](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,locmixed](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+if ($1[metosem,locother](#1)) {
+     res=s+"|"+"non-literal"+"\n";
+     fwrite("coarse",res);
+}
+
+//***********************
+// OUTPUT : génération automatique du fichier sortie XML
+
+Final:
+
+//génération  du fichier sortie XML:
+s="resmeto_"+@pathname;
+@_current()->save(s);
+
+
+fclose("fine");
+fclose("medium");
+fclose("coarse");
+
+
+//***********************
+// Analyse Xip XML :
+
+XMLGuide:
+#default->skip(text).
+
+
+par2->merge(dependency).
+
+annotorg->feature(annotationOrg,annotationOrg).
+annotloc->feature(annotationLoc,annotationLoc).
+
+
+
+
+
+

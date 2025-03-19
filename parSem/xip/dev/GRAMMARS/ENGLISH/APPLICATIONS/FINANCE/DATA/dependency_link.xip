@@ -1,0 +1,161 @@
+DependencyRules:
+
+// missing dependency
+//Securities lending program.
+//MOD_PRE(program,Securities)
+//MOD_PRE(program,lending)
+//NP{Securities lending program}
+
+| np{#1,#2,#3[last]}|
+if ( MOD[pre](#3,#1) & MOD[pre](#3,#2) & #1 < #2 )
+   MOD[secdep=+](#2,#1).
+
+//NP{Accounts AP{receivable} securitization}
+
+| #1[lemme:account], ap{#2[lemme:receivable]}, #3 |
+if ( ~MOD[post](#1,#2) )
+    MOD[post=+,secdep=+](#1,#2).
+
+
+////////////////////////// NUMBERS \\\\\\\\\\\\\\\\\\\\
+
+// The NUMBER dependency is needed to find the LIs
+// NUMBER_SECOFF-DIR does not contain decimal numbers, but we need them
+
+| #1[num,rom:~,time:~,guess:~] |
+if ( ~NUMBER(#1) )
+   NUMBER(#1).
+
+| #1[card,rom:~,time:~,guess:~] |
+if ( ~NUMBER(#1) )
+   NUMBER(#1).
+
+
+
+////////////////////////// SECTION HEADERS \\\\\\\\\\\\\\\\\\\
+
+//want to find potential section headers: sentences without verbs
+
+//finite verbs that constitute a sentence 
+
+| fv{?*,#1[last,sentverb=+]} |
+    ~.
+
+| #1[sentverb] |
+if ( ^SENT(#2) )
+   SENT[verb=+](#2).
+
+if ( ^SENT[verb:~](#1) )
+   SENT[pot-sh=+](#1).
+
+| #1[form:fsemicolon] |
+if ( ^SENT[pot-sh](#2) )
+    SENT[pot-sh=~](#2).
+
+//a section header must contain at least one noun and should be a short sentence
+
+| ?{?*,#1[verb,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[verb=+](#1).
+
+
+| ?{?*,#1[noun,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+//NP{Loans AP{Receivable}}
+
+| np{noun#1,ap} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+//NP{AP{Consolidated} Financial Statements}
+| np{ap,noun#1,noun#2} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+//{Securities lending program}
+
+| np{#1[noun], #2[noun], #3[noun,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+| np{#1[noun], #2[noun], #3[noun,last]} |
+if (~LINKWORD(#2) )
+    LINKWORD[noun=+](#2).
+
+| np{#1[noun], #2[noun,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+
+| ?{?*,#1[adj,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[adj=+](#1).
+
+| ?{?*,#1[nadj,last]} |
+if (~LINKWORD(#1) )
+    LINKWORD[noun=+](#1).
+
+if ( HEAD(#1,#2) & ^LINKWORD(#2) )
+    ~.
+
+if ( ^LINKWORD(#1) & ^LINKWORD(#1) )
+    ~.
+
+| #1{?*,#2{?*,#3}} |
+if ( ^LINKWORD(#2) & LINKWORD(#3) )
+    ~.
+
+//some words, when they are the only common words between the LI and the SH do not create links. They are nolinkwords
+
+//conditional nolinkword
+
+| #1[nolinkword=+] |
+if ( QUANTD(#1[lemme:share],#2) )
+   ~.
+
+if ( ^SENT(#1) & LINKWORD(#2) & LINKWORD(#3) & LINKWORD(#4) & LINKWORD(#5) & LINKWORD(#6) & LINKWORD(#7) & LINKWORD(#8) & LINKWORD(#9) )
+    SENT[long=+](#1).
+
+if ( ^SENT[long:~](#1) )
+    SENT[short=+](#1).
+
+if ( ^SENT[long,pot-sh](#1) )
+    SENT[pot-sh=~](#1).
+
+
+if ( ^SENT[pot-sh](#1) & ~LINKWORD[noun](#2) )
+    SENT[pot-sh=~,short=~](#1).
+
+if ( ^LINKWORD[verb](#1) )
+    ~.
+
+
+//////////////////////// LINKS \\\\\\\\\\\\\\\\\\\\\
+
+if ( ^MOD(#1,#2) & LINKWORD(#1) & LINKWORD(#2) )
+    MOD[linkdep=+](#1,#2).
+
+//Oil and gas (successful efforts method).
+if ( ^NCOORD(#1,#2) & LINKWORD(#1) & LINKWORD(#2) )
+    NCOORD[linkdep=+](#1,#2).
+
+
+
+// exceptions
+
+if ( ^$1[linkdep](#1[lemme:note],#2) | ^$1[linkdep](#1,#2[lemme:note]) )
+   $1[linkdep=~](#1,#2).
+   
+if ( ^$1[linkdep](#1[lemme:share,nolinkword],#2) | ^$1[linkdep](#1,#2[lemme:share,nolinkword]) )
+   $1[linkdep=~](#1,#2).
+   
+
+//////////////////////// Notes to * financial statements \\\\\\\\\\\\
+
+if ( LINKWORD(#1[lemme:note]) & LINKWORD(#2[lemme:Financial]) & LINKWORD(#3[lemme:statement]) & ^SENT[pot-sh](#4) )
+    SENT[ncfs=+](#4).
+
+if ( LINKWORD(#1[lemme:note]) & LINKWORD(#2[lemme:financial]) & LINKWORD(#3[lemme:statement]) & ^SENT[pot-sh](#4) )
+    SENT[ncfs=+](#4).

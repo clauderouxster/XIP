@@ -1,0 +1,136 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2009 Xerox Corporation.  All Rights Reserved.
+//!
+//! File : localgram_temp_1.xip
+//! GENERIQUES ET AGREGATS TEMPORELS
+//! Description : local grammar rules for generic and sets
+//! origine: Maud Ehrmann - repris et complete par Caroline Hagege - June 2009
+//! 
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Séquence:
+
+// DIVERS A FAIRE EN AMONT
+
+// CH - juin 2009
+// regrouper "jusqu'en"
+// cette regle n'est pas dans multiwords car desamb s'applique avant pour enlever une lecture de pronom sur "en".
+3> prep[predate=+,tfin=+,temp_pos="<"] = prep[lemme:jusque], prep[lemme:en] .
+
+
+// Les intervalles de temps
+// Rqe: Les heures sont traitées dans le fichier heure
+// De 3 à 6 mois
+3> noun[time=+,interval=+,tempexpr=+,duree=+,mwe=+,date=+] = | prep[lemme:de] | num, prep[lemme:"à"], num, noun[periode,timeduree] .
+
+
+
+// de 3 mois à 6 mois
+// CH - constraint added on the period noun. It has to be the same period
+// Avoid "*il est parti (3 mois à deux jours) de l'arrivée de son père.
+3> noun[time=+,interval=+,tempexpr=+,duree=+,mwe=+,date=+] = 
+   | prep[lemme:de] | 
+   num, noun#1[periode], prep[lemme:"à"], num, noun#2[periode],
+   where ( #1[val_duree]:#2[val_duree] )
+ .
+
+// entre 3 mois et 6 mois
+3> noun[time=+,interval=+,tempexpr=+,duree=+,mwe=+,date=+] = 
+   | prep[lemme:entre] | 
+   num, noun#1[periode], coord[lemme:"et"], num, noun#2[periode],
+   where ( #1[val_duree]:#2[val_duree] )
+ .
+
+//---------------------------------------------------------------		
+//---------------------------------------------------------------	
+//           GENERIQUE
+//---------------------------------------------------------------		    
+//---------------------------------------------------------------	
+
+
+Marqueur:
+
+//???? attention trait genericsignal a revoir
+
+// Traitement de qlqs generiques
+// Sinon, c'est dans deduction temp post
+
+// prime/fete de Noel --> generique
+4> noun[genericsignal:+],?[num:~,verb:~],noun[periode,generic=+,tempexpr=+,nondate=+],?[timemod:~, num:~].
+
+// journee mondiale .... (non prise en compte ds multiwords.xip)
+4> noun[periode,generic=+,tempexpr=+], adj[genericsignal:+].
+
+//***********"non date"
+
+// au grand jour
+4> adj[nondate],noun[periode,lemme:"jour",nondate=+].
+
+// ?????? a traiter plus globalement
+// 2008 sera l'annee du retablissement :  les 2 ET sont generiques
+4> num[generic=+,nondate=+],verb[form:fetre,lemme:"Ãªtre"],det,noun[periode,lemme:"annÃ©e",nondate=+,generic=+],prep[form:fde].
+
+
+
+//---------------------------------------------------------------
+//---------------------------------------------------------------
+//      SET
+//---------------------------------------------------------------
+//---------------------------------------------------------------
+
+
+Séquence:
+
+// CH - juin 2009 - modification de la segmentation de "tous les" changement dans les regles
+
+// SET : tous les jeudis (ou autre)
+// contxt droit : pas de num pour éviter de prendre "toute l'année 87"
+// ancienne regle Maud commentee
+//6> NP[tempexpr=+,set=+] @= |?[predate:~,t_mod:~]| ?[setsignal], (num), noun[periode];noun[jour] |?[datepot:~]|.
+
+// AB 2012.04.13 chaque jour
+6> NP[tempexpr=+,set=+] @= det[quant,lemme:chaque], noun[periode];noun[jour];noun[daytime] .
+
+// tous les jours , tous les mardis
+6> NP[tempexpr=+,set=+] @= | ?[predate:~, t_mod:~] | det[quant,pl,lemme:tout], det[def:+], (num), noun[periode];noun[jour];noun[daytime] | ?[datepot:~] | .
+6> NP[tempexpr=+,set=+] @= | | det[quant,pl,lemme:tout], det[def:+], (num), noun[periode];noun[jour];noun[daytime] | ?[datepot:~] | .
+
+// toute la journee
+// duree par defaut mais ambig avec date
+6> NP[tempexpr=+,duree=+,date=+,dur_ou_date=+] @= | ?[predate:~, t_mod:~] | det[quant,sg,lemme:tout], det[def:+], (num), noun[periode];noun[jour];noun[daytime] | ?[datepot:~] | .
+
+// toute cette journee 
+// est une date !
+6> NP[tempexpr=+,date=+,relative=+,temp_ref=e] @= | ?[predate:~, t_mod:~] | det[quant,sg,lemme:tout], det[dem:+], (num), noun[periode];noun[jour];noun[daytime] | ?[datepot:~] | .
+
+// presque/quasi tous les jours
+6> ADV[tempexpr=+,set=+] @= adv[t_mod], ?[setsignal], (num), noun[periode];noun[jour] |?[datepot:~]|.
+
+
+// en debut de phrase
+6> NP[tempexpr=+,set=+] @= ?[start,setsignal], (num),noun[periode];noun[jour] |?[datepot:~]|.
+
+
+// les matins
+8> NP[tempexpr=+,set=+] @= det[def,pl], noun[daytime,pl] .
+
+
+
+// SETS modifies:
+
+// A la fin de chaque trimestre
+6> PP[mwe=+,tempexpr=+,setmod=+,relative=+] @= prep[predate,t_mod], ?[setsignal], (num), noun[periode] |?[num:~]|.
+
+// chaque trimestre environ
+// attention : 'il dépense chaque trimestre environ 3000 euros'
+6> NP[mwe=+,tempexpr=+,setmod=+,relative=+] @= |?[predate:~,t_mod:~]| ?[setsignal], (num), noun[periode],adv[t_mod]|?[num:~]|.
+
+// 7 jours sur 7
+// AB 2012.04.13 changed category from noun to adv (analogous to "24 heures sur 24")
+6> adv[mwe=+,set=+,tempexpr=+] @= num[lemme:"7"],noun[periode,heure:~],prep[form:fsur], num[lemme:"7"].
+
+

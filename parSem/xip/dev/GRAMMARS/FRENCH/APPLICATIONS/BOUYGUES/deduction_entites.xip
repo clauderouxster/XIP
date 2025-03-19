@@ -1,0 +1,402 @@
+
+
+/############################## DEDUCTION   ################################################\
+
+Déduction:
+
+/
+15> |#1[test:+]| TEEST(#1)
+15> |#1[test1:+]| TEEEST(#1)
+\
+
+
+5> |#1[date:+]| DATE(#1)
+5> |#1{#2[date:+], coord, #3[date:+]}| if ((DATE(#2)) & (DATE(#3))) DATE(#1)
+5> |#1[periode:+]| PERIODE(#1)
+10> |#1[person:+]| PERSONNE(#1)
+20> |#1[batimentorg:+]| ORG[lieu=+, batiment=+](#1)
+20> |#1[org:+, lieu:+]| ORG[lieu=+](#1)
+20> |#1[lieu:+, batimentorg:~, !batiment:!, !quartier:!, !ville:!, !region:!, !pays:!, !continent:!]| LIEU(#1)
+20> |#1[org:+, firme:~]| ORG(#1)
+20> |#1[firme:+]| ORG[entreprise=+](#1)
+20> |#1[batiment:+]| if (~LIEU[batiment](#1)) LIEU[batiment=+](#1)
+20> |#1[quartier:+]| if (~LIEU[quartier](#1)) LIEU[quartier=+](#1)
+22> |#1[ville:+]| if (~LIEU[ville](#1)) LIEU[ville=+](#1)
+22> |#1[region:+]| if (~LIEU[region](#1)) LIEU[region=+](#1)
+22> |#1[pays:+]| if (~LIEU[pays](#1)) LIEU[pays=+](#1)
+
+/1e suppression des dépendances superflues, pour éviter qu'elles soient propagées\
+24> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+24> |#1{#2, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+25> |#1[villereg:+]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) ~
+
+
+/******* marquage des éléments à propager **********\
+
+Script:
+
+|NOUN#1[person, inconnu:+, lieupers:~, orgpers1:~]|
+          { PERS##1=1;}
+
+|NOUN#1[person, inconnu:+, lieu:~, orgpers1:~]|
+          { PERS##1=1;}
+
+|NOUN#1[person]{NOUN#2[tit],NOUN#3[pren], NOUN#4[last, initial:~, inconnu:+]}|
+     { PERS##4=1;}
+
+|NOUN#1[person]{NOUN#2[tit], NOUN#3[last, initial:~, inconnu:+]}|
+     { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[tit], NOUN#3[pren:~, partic:~], NOUN#4[last, initial:~, inconnu:+]}|
+     { PERSINT1##3=1; PERSINT2##4=1;}
+
+|NOUN#1[person]{NOUN#2[pren:~, partic:~, start, initial:~], NOUN#3[last, initial:~, inconnu:+]}|
+     { PERSINT1##2=1; PERSINT2##3=1;}
+
+
+|NOUN#1[person]{NOUN#2[pren], NOUN#3[inconnu:+, last, initial:~]}|
+     { PERS##3=1;}
+
+|NOUN#1[person]{NOUN#2[pren], NOUN#3[inconnu:+, initial:~], Noun#4[last]}|
+     { PERSINT1##3=1; PERSINT2##4=1;}
+
+|NOUN#1[lieu:+, inconnu:+, perslieu:~]| if (LIEU(#1))
+          { LIEUX##1=1;}
+
+|NOUN#1[lieu:+, inconnu:+, person:~]| if (LIEU(#1))
+          { LIEUX##1=1;}
+
+|NOUN#1[lieu:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU(#1))
+     { LIEUINT1##2=1; LIEUINT2##3=1;}
+
+|NOUN#1[lieu:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU(#1))
+     { LIEUINT1##2=1; LIEUINT2##3=1;}
+
+|NOUN#1[ville:+, inconnu:+, perslieu:~]| if (LIEU[ville](#1))
+          { VI##1=1;}
+
+|NOUN#1[ville:+, inconnu:+, person:~]| if (LIEU[ville](#1))
+          { VI##1=1;}
+
+|NOUN#1[vville:+, inconnu:+]|
+          { VI##1=1;}
+
+|NOUN#1[ville:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[ville](#1))
+     { VIINT1##2=1; VIINT2##3=1;}
+
+|NOUN#1[ville:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[ville](#1))
+     { VIINT1##2=1; VIINT2##3=1;}
+
+|NOUN#1[region:+, perslieu:~]| if (LIEU[region](#1))
+          { REG##1=1;}
+
+|NOUN#1[region:+, person:~]| if (LIEU[region](#1))
+          { REG##1=1;}
+
+|NOUN#1[region:+, perslieu:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[region](#1))
+     { REGINT1##2=1; REGINT2##3=1;}
+
+|NOUN#1[region:+, person:~]{NOUN#2[inconnu], NOUN#3[inconnu:+, last]}|  if (LIEU[region](#1))
+     { REGINT1##2=1; REGINT2##3=1;}
+
+|NOUN#1[org:+, inconnu:+, person:~, lieu:~]|
+          { ORGA##1=1;}
+
+|NOUN#1[firme:+, inconnu:+, person:~, lieu:~]|
+          {FIRME##1=1;}
+
+|NOUN#1[batimentorg:+, inconnu:+, person:~, lieu:~]|
+          {ORGBAT##1=1;}
+
+|NOUN#1[batimentorg:+, person:~]{NOUN#2[batimentorg1], NOUN#3[inconnu:+, person:~, lieu:~, last]}|
+          {ORGBAT##3=1;}
+
+|NOUN#1[batiment:+]{NOUN#2[maj, batimentorg1:~], NOUN#3[maj, last]}|  if (ORG[batiment](#1))
+     { ORGBAT1##2=1; ORGBAT2##3=1;}
+
+
+|NOUN#1[org:+, firme:~, persorg1:~]{NOUN#2[maj], NOUN#3[maj, last]}|  if (ORG(#1))
+     { ORGINT1##2=1; ORGINT2##3=1;}
+
+|NOUN#1[firme:+, persorg1:~]{NOUN#2[maj], NOUN#3[maj, last]}|  if (ORG[entreprise](#1))
+     { FIRMEINT1##2=1; FIRMEINT2##3=1;}
+
+
+Déduction:
+/propagation d'un seul élément\
+|NOUN#1[maj, lieu:~, org:~, firme:~]| if(PERS##1:1 & ~PERSONNE(#1))
+        PERSONNE(#1)
+
+|NOUN#1[maj, lieupers:~, orgpers:~]| if(PERS##1:1 & ~PERSONNE(#1))
+        PERSONNE(#1)
+
+|NOUN#1[maj, person:~, org:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(VI##1:1 & ~LIEU[ville](#1))
+        LIEU[ville=+](#1)
+
+|NOUN#1[maj, person:~, org:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(REG##1:1 & ~LIEU[region](#1))
+        LIEU[region=+](#1)
+
+
+|NOUN#1[maj, person:~, org:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, perslieu:~, org:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, person:~, orglieu:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, perslieu:~, orglieu:~]| if(LIEUX##1:1 & ~LIEU(#1))
+        LIEU(#1)
+
+|NOUN#1[maj, persorg:~]| if(ORGA##1:1 & ~ORG(#1))
+        ORG(#1)
+
+|NOUN#1[maj, persorg:~]| if(FIRME##1:1 & ~ORG[entreprise](#1))
+        ORG[entreprise=+](#1)
+
+|NOUN#1[maj, persorg:~]| if(ORGBAT##1:1 & ~ORG[batiment](#1))
+        ORG[batiment=+](#1)
+
+
+/propagation de plusieurs éléments d'un chunk\
+|NP#1{NOUN#2, NOUN#3[last]}| if ((PERSINT1##2:1) & (PERSINT2##3:1))
+	PERSONNE(#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((REGINT1##2:1) & (REGINT2##3:1))
+	LIEU[region=+](#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((VIINT1##2:1) & (VIINT2##3:1))
+	LIEU[ville=+](#1)
+
+|NP#1{NOUN#2, NOUN#3[last]}| if ((LIEUINT1##2:1) & (LIEUINT2##3:1))
+	LIEU(#1)
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((ORGINT1##2:1) & (ORGINT2##3:1))
+	ORG(#1)
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((FIRMEINT1##2:1) & (FIRMEINT2##3:1))
+	ORG[entreprise=+](#1)
+
+|NP#1{NOUN#2[maj], NOUN#3[maj, last]}| if ((ORGBAT1##2:1) & (ORGBAT2##3:1))
+	ORG[batiment=+](#1)
+
+
+/************* élimination des dépendances superflues ********\
+/ lorsqu'un noeud parent et un noeud fils portent tous deux une dépendance d'entité nommée\
+/on garde la dépendance du noeud fils lorsque c'est un nom seul fils d'un autre nom (en vue d'une élimination du noeud parent)\
+/
+30> |NOUN#1{NOUN#2[org, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[firme, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[batimentorg, first, last]}| if ((^ORG(#1)) & (ORG(#2))) ~
+30> |NOUN#1{NOUN#2[person, first, last]}| if ((^PERSONNE(#1)) & (PERSONNE(#2))) ~
+30> |NOUN#1{NOUN#2[lieu, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[pays, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[continent, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[ville, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[quartier, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[batiment, first, last]}| if ((^LIEU(#1)) & (LIEU(#2))) ~
+30> |NOUN#1{NOUN#2[date, first, last]}| if ((^DATE(#1)) & (DATE(#2))) ~
+30> |NOUN#1{NOUN#2[periode, first, last]}| if ((^PERIODE(#1)) & (PERIODE(#2))) ~
+\
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[entreprise:~, batiment:~](#1)) ORG(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[entreprise](#1)) ORG[entreprise=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^ORG[batiment](#1)) ORG[batiment=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^PERSONNE(#1)) PERSONNE(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[pays:~, continent:~, ville:~, region:~, quartier:~, batiment:~](#1)) LIEU(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[pays](#1)) LIEU[pays=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[continent](#1)) LIEU[continent=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[ville](#1)) LIEU[ville=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[region](#1)) LIEU[region=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[quartier](#1)) LIEU[quartier=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^LIEU[batiment](#1)) LIEU[batiment=+](#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^DATE(#1)) DATE(#2)
+30> |NOUN#1{NOUN#2[first, last]}| if (^PERIODE(#1)) PERIODE(#2)
+
+
+/dans tous les autres cas, on garde la dépendance du noeud père\
+
+40> |#1{?*, #2}| if ((DATE(#1)) & (^DATE(#2))) ~
+40> |#1{?*, ?{?*, #2}}| if ((DATE(#1)) & (^DATE(#2))) ~
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+40> |#1{?*{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((PERSONNE(#1)) & (^PERSONNE(#2))) ~
+40> |#1{?*, #2}| if ((LIEU[ville](#1)) & (^LIEU[ville](#2))) ~
+40> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[region](#2))) ~
+40> |#1{?*, #2}| if ((LIEU[pays](#1)) & (^LIEU[pays](#2))) ~
+40> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+40> |#1{#2, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+40> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^LIEU(#2))) ~
+
+
+//40> if ((PAYS(#1)) & (^REGION(#1))) ~
+40> if ((LIEU[pays](#1)) & (^LIEU[region](#1))) ~
+40> |#1[Perslieu:+]|if ((PERSONNE(#1)) & (^LIEU(#1))) ~
+40> |#1[LieuPers:+]|if ((^PERSONNE(#1)) & (LIEU(#1))) ~
+
+50> |#1{?*, #2}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((DATE(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((DATE(#1)) & (^PERIODE(#2))) ~
+
+50> |#1{?*, #2}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((PERIODE(#1)) & (^DATE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^PERSONNE(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^LIEU(#2)) & ) ~
+40> |#1{?*{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^LIEU(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((PERSONNE(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^LIEU(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((ORG(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((ORG(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((ORG(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^LIEU[ville](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU[region](#1)) & (^LIEU[ville](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU[region](#1)) & (^LIEU[pays](#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU[batiment](#1)) & (^LIEU(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((ORG(#1)) & (^ORG(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((ORG(#1)) & (^ORG(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((ORG(#1)) & (^ORG(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^ORG(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^ORG(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^ORG(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^ORG(#2)) & ) ~
+40> |#1{?*{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^ORG(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((PERSONNE(#1)) & (^ORG(#2))) ~
+
+/dépendances concurrencetes sur un même noeud\
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[region:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[batiment:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[ville:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[quartier:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[pays:+](#1))) ~
+60> if ((^LIEU[batiment:~, quartier:~, ville:~, region:~, pays:~, continent:~](#1)) & (LIEU[continent:+](#1))) ~
+
+70> |#1[villereg:~]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) LIEU[region=+, ville=+](#1)
+70> |#1[villereg:+]| if ((^LIEU[region](#1)) & (LIEU[ville](#1))) ~
+
+71> if ((LIEU[region, ville](#1)) & (^LIEU[ville](#1))) ~
+70> if ((ORG[entreprise](#1)) & (^ORG(#1))) ~
+71> if ((ORG[lieu](#1)) & (^ORG(#1))) ~
+
+70> |#1[orgpers1, persorg:~]| if ((ORG(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg1, orgpers:~]| if ((^ORG(#1)) & (PERSONNE(#1)))	~
+70> |#1[orgpers, persorg:~]| if ((ORG(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg, orgpers:~]| if ((^ORG(#1)) & (PERSONNE(#1)))	~
+70> |#1[lieupers1, perslieu:~]| if ((LIEU(#1)) & (^PERSONNE(#1)))	~
+70> |#1[persorg1, lieupers:~]| if ((^LIEU(#1)) & (PERSONNE(#1)))	~
+70> |#1[lieupers, perslieu:~]| if ((LIEU(#1)) & (^PERSONNE(#1)))	~
+70> |#1[perslieu, lieupers:~]| if ((^LIEU(#1)) & (PERSONNE(#1)))	~
+
+
+/à enlever qd on ne se sert pas des dépendances sous-types de LIEU\
+/
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+40> |#1{?*{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((PERSONNE(#1)) & (^VILLE(#2))) ~
+
+40> |#1{?*, #2}| if ((PERSONNE(#1)) & (^PAYS(#2)) & ) ~
+40> |#1{?*{?*, #2}, ?*}| if ((PERSONNE(#1)) & (^PAYS(#2))) ~
+45> |#1{?*, ?*{?*, #2}}| if ((PERSONNE(#1)) & (^PAYS(#2))) ~
+
+50> |#1{?*, #2}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((BATIMENT(#1)) & (^LIEU(#2))) ~
+
+50> |#1{?*, #2}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LOCORG(#1)) & (^REGION(#2))) ~
+
+50> |#1{?*, #2}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((BATIMENT(#1)) & (^PERSONNE(#2))) ~
+
+50> |#1{?*, #2}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((LIEU(#1)) & (^VILLE(#2))) ~
+
+50> |#1{?*, #2}| if ((REGION(#1)) & (^VILLE(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((REGION(#1)) & (^VILLE(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((REGION(#1)) & (^VILLE(#2))) ~
+
+50> |#1{?*, #2}| if ((REGION(#1)) & (^PAYS(#2))) ~
+50> |#1{?*{?*, #2}, ?*}| if ((REGION(#1)) & (^PAYS(#2))) ~
+55> |#1{?*, ?*{?*, #2}}| if ((REGION(#1)) & (^PAYS(#2))) ~
+\
+/***************** changement d'affichage *******************\
+
+//pour faire des périodes une sous-catégorie de DATE
+58> if (^PERIODE(#1)) DATE[periode=+](#1).
+
+/
+// pour qu'un noeud ne porte pas deux dépendances
+60> if (PERSONNE$1(#1) & ORG$2(#1)) ~$1, ~$2.
+60> if (PERSONNE$1(#1) & LIEU$2(#1)) ~$1, ~$2.
+\
+/
+//pour afficher des dépendances différentes pour toutes les sous-catégories d'entités nommées
+60> if (^LIEU[pays](#1)) PAYS[pays=~](#1).
+60> if (^LIEU[quartier](#1)) QUARTIER[quartier=~](#1).
+60> if (^LIEU[continent](#1)) PAYS[continent=~](#1).
+60> if (^LIEU[ville](#1)) VILLE[ville=~](#1).
+60> if (^LIEU[region](#1)) REGION[region=~](#1).
+60> if (^LIEU[batiment](#1)) BATIMENT[batiment=~](#1).
+60> if (^ORG[batiment](#1)) BATIMENT[batiment=~, lieu=~](#1).
+60> if (^ORG[entreprise](#1)) ENTREPRISE[entreprise=~](#1).
+60> if (^DATE[periode](#1)) PERIODE[periode=~](#1).
+
+\
+// supprimer un noeud noun qui ne contient qu'un noeud noun\
+reconstructeur:
+90> #1{noun#2{noun#3[first, last]}}	=#1{#3}.
+
+Final :
+
+CleanAllLemmas;

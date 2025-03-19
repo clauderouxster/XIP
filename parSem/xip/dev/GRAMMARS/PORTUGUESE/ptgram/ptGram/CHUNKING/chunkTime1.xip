@@ -1,0 +1,615 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunkTime1.xip                                              !
+//!   Date       : March 2008                                                  !
+//!   Author     : Caroline Hagege                                             !
+//!   Revised by : Andreia Maurício (2010/2011)                                !
+//!   Revised by : Nuno Mamede & Jorge Baptista (2012/May)                     !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   ADDITION CHUNKING FOR COMPLEX TEMPORAL EXPRESSIONS.                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+//==============================================================================
+//==============================================================================
+// Adds feature T-FOCUS to PP nodes that do not have a real t-focus head
+//==============================================================================
+//==============================================================================
+
+//NJM+JB, 2012/05/17
+// Example: [na primeira metade] do século
+//
+| PP[quant,t-focus=+]{?*, ?[SEM-measother,last]}, PP{prep[lemma:de], ?*, noun[last,time]} | ~
+
+//NJM+JB, 2012/05/17
+// Example: [nesta altura] do ano
+//
+| PP[t-focus=+]{?*, ?[t-denot-time,last]}, PP{prep[lemma:de], ?*, noun[last,time]} | ~
+
+
+
+
+//==============================================================================
+//==============================================================================
+// Propagates features to the header nodes
+//==============================================================================
+//==============================================================================
+
+
+// Marking constituents in order to be able to construct the rules
+// PP or NP which head is a weekday will have feature weekday
+// Example:
+//
+| PP[t-weekday=+]{prep[lemma:de], ?[t-weekday]} | ~
+| NP[t-weekday=+]{?[t-weekday]} | ~
+| NP[t-date=+,time=+,t-tempref=absolut]{?[t-date,time,t-tempref:absolut]} | ~
+| PP[t-part-of-day=+]{?*, ?[t-part-of-day]} | ~
+| NP[t-part-of-day=+]{?[t-part-of-day]} | ~
+
+//CH: restriction added to have a correct tagging of expression
+//NJM: restriction removed to have a correct tagging of expression
+// PP which head is a part of day will have feature part of day
+// durante a tarde...
+// Example:
+//
+| PP[t-part-of-day=+]{prep, (art[def];art[indef];?[dem]), ?[t-part-of-day]} | ~
+//| PP[t-part-of-day=+]{prep[lemma:~durante], (art[def];art[indef];?[dem]), ?[t-part-of-day]} | ~
+
+// PP which head is a time measure will have feature time_meas
+// Example:
+//
+| PP[t-meas=+]{prep, (art[def];art[indef];?[dem]), ?[t-meas];?[t-as-a-meas]} | ~
+
+// Example: de 2008
+| PP[time=+,t-tempref=absolut,t-year=+]{prep, (art[def];art[indef];?[dem]), ?[time,t-year]} | ~
+| PP[time=+,t-tempref=absolut,t-year=+]{prep, adv, ?[time,t-year]} | ~
+
+// Example: desde as primeiras horas da manhã
+| PP[time=+, t-ref-after=+]{prep[lemma:"depois de"], (art[def];art[indef];?[dem]), ?[time]} | ~
+| PP[time=+, t-ref-before=+]{prep[lemma:"antes de"], (art[def];art[indef];?[dem]), ?[time]} | ~
+| PP[time=+, t-ref-after=+, t-ref-simult=+]{prep[lemma:desde], (art[def];art[indef];?[dem]), ?[time]} | ~
+| PP[time=+, t-ref-before=+, t-ref-simult=+]{prep[lemma:até], (art[def];art[indef];?[dem]), ?[time]} | ~
+
+| PP[time=+]{prep, (art[def];art[indef];?[dem]), ?[time]} | ~
+
+|PP[time=+, t-fuzzy=+] {prep[lemma:"cerca de"];prep[lemma:"perto de"];prep[lemma:"por volta de"], (art[def];art[indef];?[dem]), ?[time]} |~
+
+| PP[time=+, t-hora=+, t-date=+]{prep, (art[def];art[indef];?[dem]), ?[time, t-date, t-hora];?[time, t-hora]} | ~
+
+//NJM, 2012/04/02
+// Example: de as 11 horas
+| PP[time=+, t-hora=+, t-date=+]{prep, art[def], num[t-hour], noun[lemma:hora]} | ~
+
+// Example: por 5 anos
+| PP[time=+,t-meas=+]{prep, noun{num, ?*, ?[t-meas]}} | ~
+
+// Example: por muitos anos
+| PP[time=+,t-meas=+]{prep, num;?[dem];?[q3];?[indef:+], ?*, ?[t-meas]} | ~
+
+// PP which head is a time measure will have feature time
+// Example:
+//
+| PP[time=+,t-tempref=text]{prep, (art[def];art[indef];?[dem]), ?[time,t-tempref:text]} | ~
+
+| PP[time=+,t-tempref=enunc,t-ref-before=+] {prep, (art[def];art[indef];?[dem]), ?[time,t-tempref:enunc,t-ref-before]} | ~
+| PP[time=+,t-tempref=enunc,t-ref-simult=+] {prep, (art[def];art[indef];?[dem]), ?[time,t-tempref:enunc,t-ref-simult]} | ~
+| PP[time=+,t-tempref=enunc,t-ref-after=+ ] {prep, (art[def];art[indef];?[dem]), ?[time,t-tempref:enunc,t-ref-after]}  | ~
+| PP[time=+,t-tempref=enunc]              {prep, (art[def];art[indef];?[dem]), ?[time,t-tempref:enunc]}            | ~
+
+// PP/ADVP which head is a adverb tref_enunc will have feature tref_enunc
+// Example:
+//
+| PP[t-tempref=enunc,t-ref-before=+] {prep[lemma:de], ?[t-tempref:enunc,t-ref-before,last]} | ~
+| PP[t-tempref=enunc,t-ref-simult=+] {prep[lemma:de], ?[t-tempref:enunc,t-ref-simult,last]} | ~
+| PP[t-tempref=enunc,t-ref-after=+]  {prep[lemma:de], ?[t-tempref:enunc,t-ref-after,last]}  | ~
+| PP[t-tempref=enunc]                {prep[lemma:de], ?[t-tempref:enunc,last]}            | ~
+
+| ADVP[t-tempref=enunc,t-ref-before=+] {prep[lemma:de], ?[t-tempref:enunc,t-ref-before,last]} | ~
+| ADVP[t-tempref=enunc,t-ref-simult=+] {prep[lemma:de], ?[t-tempref:enunc,t-ref-simult,last]} | ~
+| ADVP[t-tempref=enunc,t-ref-after=+]  {prep[lemma:de], ?[t-tempref:enunc,t-ref-after,last]}  | ~
+| ADVP[t-tempref=enunc]                {prep[lemma:de], ?[t-tempref:enunc,last]}            | ~
+
+| ADVP[t-tempref=text,t-ref-after=+]  {prep[lemma:de], ?[t-tempref:text,t-ref-after,last]}  | ~
+| ADVP[t-tempref=text,t-ref-before=+] {prep[lemma:de], ?[t-tempref:text,t-ref-before,last]} | ~
+| ADVP[t-tempref=text,t-ref-simult=+] {prep[lemma:de], ?[t-tempref:text,t-ref-simult,last]} | ~
+| ADVP[t-tempref=text]                {prep[lemma:de], ?[t-tempref:text,last]}            | ~
+
+//seguinte semana
+| ?[timeref=-]                {?*, ?[timeref:-] , ?[t-meas]} | ~
+| ?[timeref=-]                {?*, ?[timeref:-] , ?[t-as-a-meas]} | ~
+| ?[timeref=-]                {?*, ?[timeref:-] , ?[t-denot-time]} | ~
+| ?[timeref=-]                {?*, ?[timeref:-] , ?[t-part-of-day]}| ~
+
+| ?[timeref=+]                {?*, ?[timeref:+] , ?[t-meas], ?*} | ~
+| ?[timeref=+]                {?*, ?[timeref:+] , ?[t-as-a-meas], ?*} | ~
+| ?[timeref=+]                {?*, ?[timeref:+] , ?[t-denot-time], ?*} | ~
+| ?[timeref=+]                {?*, ?[timeref:+] , ?[t-part-of-day], ?*} | ~
+
+| ?[timeref=0]                {?*, ?[timeref:0] , ?[t-meas], ?*}| ~
+| ?[timeref=0]                {?*, ?[timeref:0] , ?[t-as-a-meas], ?*}| ~
+| ?[timeref=0]                {?*, ?[timeref:0] , ?[t-denot-time], ?*} | ~
+| ?[timeref=0]                {?*, ?[timeref:0] , ?[ t-part-of-day], ?*} | ~
+
+
+
+//semana seguinte
+| ?[timeref=-]                {?*, ?[t-meas], ?[timeref:-], ?*} | ~
+| ?[timeref=-]                {?*, ?[t-as-a-meas], ?[timeref:-], ?*} | ~
+| ?[timeref=-]                {?*, ?[t-denot-time], ?[timeref:-] , ?*} | ~
+| ?[timeref=-]                {?*, ?[ t-part-of-day], ?[timeref:-] ,?*} | ~
+
+| ?[timeref=+]                {?*, ?[t-meas],  ?[timeref:+] , ?*} | ~
+| ?[timeref=+]                {?*, ?[t-as-a-meas],   ?[timeref:+] , ?*} | ~
+| ?[timeref=+]                {?*, ?[t-denot-time],  ?[timeref:+] ,  ?*} |  ~
+| ?[timeref=+]                {?*, ?[t-part-of-day], ?[timeref:+] ,  ?*}| ~
+
+| ?[timeref=0]                {?*, ?[t-meas], ?[timeref:0], ?*} | ~
+| ?[timeref=0]                {?*, ?[t-as-a-meas],  ?[timeref:0], ?*} | ~
+| ?[timeref=0]                {?*, ?[t-denot-time], ?[timeref:0], ?* }| ~
+| ?[timeref=0]                {?*, ?[t-part-of-day],?[timeref:0], ?*} | ~
+
+| AP[timeref=-]                {  PASTPART[timeref:-] }| ~
+| AP[t-tempref=enunc]                {  PASTPART[t-tempref:enunc] }| ~
+// PP which head is a absolut t-date will have feature t-tempref:absolut
+// Example:
+//
+| PP[t-tempref=absolut]{prep[lemma:de], ?*, ?[t-date,t-tempref:absolut,last]} | ~
+
+// PP which head is a time_focus will have feature time_focus
+// Example:
+//
+| PP[t-focus=+]{prep, ?*, ?[t-focus,last]} | ~
+
+// NP which head is a time_focus will have feature time_focus
+// Example:
+//
+| NP[t-focus=+]{ ?*, ?[t-focus,last]} | ~
+// desde meio  (NJM)
+| PP[t-focus=+]{prep, ?[lemma:meio,t-focus,last]} | ~
+
+// advp which head is a lonely adverb bearing feature advtimedate, also have this feature
+| ADVP[t-tempref=enunc]   {adv[first,last,t-tempref:enunc]}  | ~
+| ADVP[t-tempref=text]   {adv[first,last,t-tempref:text]}   | ~
+
+| ADVP[advtimedate=+,t-ref-before=+,t-ref-simult=+]    {adv[first,last,advtimedate,t-ref-before,t-ref-simult]} | ~
+| ADVP[advtimedate=+,t-ref-after=+,t-ref-simult=+]     {adv[first,last,advtimedate,t-ref-after,t-ref-simult]}  | ~
+| ADVP[advtimedate=+,t-ref-before=+]                   {adv[first,last,advtimedate,t-ref-before]}              | ~
+| ADVP[advtimedate=+,t-ref-after=+]                    {adv[first,last,advtimedate,t-ref-after]}               | ~
+| ADVP[advtimedate=+]                                  {adv[first,last,advtimedate]}                           | ~
+
+
+// Example: em pleno dia (útil)
+| PP[time=+,t-tempref=enunc,t-ref-simult=+]{prep[lemma:em], ?[lemma: pleno]} | ~
+// XEROX other segmentation
+| PP[time=+,t-tempref=enunc]{prep, ?*, ?[lemma:"dia"], ?[lemma:"útil"]} | ~
+
+
+// Example: entre o fim da manhã e início da tarde
+| PP[t-interval=+]{prep[lemma:entre]} | ~
+
+// Example: ao fim a manhã e início da tarde
+| AP[t-not-alone=+,t-tempref=text,t-ref-before=+]{?*, ?[last,t-not-alone,t-tempref:text,t-sentido:before]} | ~
+| AP[t-not-alone=+,t-tempref=text,t-ref-simult=+]{?*, ?[last,t-not-alone,t-tempref:text,t-sentido:simult]} | ~
+| AP[t-not-alone=+,t-tempref=text,t-ref-after=+]{?*,  ?[last,t-not-alone,t-tempref:text,t-sentido:after]} | ~
+
+| AP[t-not-alone=+,t-tempref=enunc,t-ref-before=+]{?*, ?[last,t-not-alone,t-tempref:enunc,t-sentido:before]} | ~
+| AP[t-not-alone=+,t-tempref=enunc,t-ref-simult=+]{?*, ?[last,t-not-alone,t-tempref:enunc,t-sentido:simult]} | ~
+| AP[t-not-alone=+,t-tempref=enunc,t-ref-after=+]{?*,  ?[last,t-not-alone,t-tempref:enunc,t-sentido:after]} | ~
+
+// Example: até aquele dia
+| ?[time=+,t-tempref:~enunc,t-tempref=text,t-ref-before=+]{?*, ?[t-tempref:text,t-sentido:before]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,t-ref-simult=+]{?*, ?[t-tempref:text,t-sentido:simult]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,t-ref-after=+] {?*, ?[t-tempref:text,t-sentido:after]} | ~
+
+// Example: desde/depois daquele dia
+| ?[time=+,t-tempref:~text,t-tempref=enunc,t-ref-before=+]{?*, ?[t-tempref:enunc,t-sentido:before]} | ~
+| ?[time=+,t-tempref:~text,t-tempref=enunc,t-ref-simult=+]{?*, ?[t-tempref:enunc,t-sentido:simult]} | ~
+| ?[time=+,t-tempref:~text,t-tempref=enunc,t-ref-after=+] {?*, ?[t-tempref:enunc,t-sentido:after]} | ~
+
+
+// Example: no mês corrente
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=0]{?* ,?[time], ?[t-tempref:text,timeref:0]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=+]{?*, ?[time], ?[t-tempref:text,timeref:+]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=-] {?*, ?[time], ?[t-tempref:text,timeref:-]} | ~
+
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=0]{?*, ?[time], ?[t-tempref:enunc,timeref:0]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=+]{?*, ?[time], ?[t-tempref:enunc,timeref:+]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=-] {?*, ?[time], ?[t-tempref:enunc,timeref:-]} | ~
+
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=0]{?*, ?[t-tempref:text,timeref:0], ?[time]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=+]{?*, ?[t-tempref:text,timeref:+], ?[time]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=text,timeref=-] {?*, ?[t-tempref:text,timeref:-], ?[time]} | ~
+
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=0]{?*,  ?[t-tempref:enunc,timeref:0], ?[time]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=+]{?*, ?[t-tempref:enunc,timeref:+], ?[time]} | ~
+| ?[time=+,t-tempref:~enunc,t-tempref=enunc,timeref=-] {?*,  ?[t-tempref:enunc,timeref:-], ?[time]} | ~
+
+
+// Example: depois de as duas de a manhã
+| PP[t-date, t-hora=+,time=+]{?*,?[last,t-date, t-hora,time]} | ~
+
+// Example: depois de as duas de a manhã de ontem
+| PP[t-hora=+,t-tempref:~text,t-tempref=enunc,t-ref-before=+]{?*,?[last,t-hora,t-ref-before,t-tempref:enunc]} | ~
+| PP[t-hora=+,t-tempref:~text,t-tempref=enunc,t-ref-simult=+]{?*,?[last,t-hora,t-ref-after, t-tempref:enunc]} | ~
+| PP[t-hora=+,t-tempref:~text,t-tempref=enunc,t-ref-after=+] {?*,?[last,t-hora,t-ref-after, t-tempref:enunc]} | ~
+
+// Example: do feriado
+| PP[t-one-day=+]      {?*,?[t-one-day]} | ~
+| PP[t-several-days=+] {?*,?[t-several-days]} | ~
+| PP[t-weekday=+]      {?*,?[t-weekday]} | ~
+| PP[t-fuzzy=+]        {prep[lemma:"por volta de"], ?*,?[t-weekday]} | ~
+| PP[t-monthday=+]     {?*,?[t-monthday,t-date=+,last,t-tempref:~text,t-tempref:~enunc]} | ~
+| PP[t-fuzzy=+]        {prep[lemma:"por volta de"],?*,?[t-monthday,t-date=+,last,t-tempref:~text,t-tempref:~enunc]} | ~
+
+| PP[t-weekday=+, t-fuzzy=+]      {prep[lemma:"por volta de"],?[t-weekday]} | ~
+| PP[t-monthday=+, t-fuzzy=+]     {prep[lemma:"por volta de"],?[t-monthday,t-date=+,last,t-tempref:~text,t-tempref:~enunc]} | ~
+
+// Example: pouco
+| ADVP[advnum=+]{?[advnum]}     | ~
+| ADVP[advsupra=+]{?[advsupra]} | ~
+| ADVP[advinfra=+]{?[advinfra]} | ~
+| ADVP[advfuzzy=+]{?[advfuzzy]} | ~
+| ADVP[advexact=+]{?[advexact]} | ~
+| ADVP[t-duration=+]{?[t-duration]} | ~
+
+// Example: 3 dias
+| NP[time=+]{noun[time]} | ~
+
+// Example: 3 dias depois de duras negociações
+| NP[time=+,t-tempref=text, t-ref-before=+]{noun[time]{num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}}, PP[t-ref-before=+]{prep[t-ref-before]} | ~
+| NP[time=+,t-tempref=text, t-ref-after=+] {noun[time]{num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}}, PP[t-ref-after=+]{prep[t-ref-after]};PP{prep[lemma:após]} | ~
+
+| NP[time=+,t-tempref=text, t-ref-before=+]{num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}}, PP[t-ref-before=+]{prep[t-ref-before]} | ~
+| NP[time=+,t-tempref=text, t-ref-after=+] {num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}}, PP[t-ref-after=+] {prep[t-ref-after]};PP{prep[lemma:após]} | ~
+
+| NP[time=+,t-tempref=text, t-ref-before=+]{?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}, PP[t-ref-before=+]{prep[t-ref-before]} | ~
+| NP[time=+,t-tempref=text, t-ref-after=+] {?[t-meas,pl];?[lemma:instante,pl];?[lemma:momento,pl]}, PP[t-ref-after=+] {prep[t-ref-after]};PP{prep[lemma:após]} | ~
+
+| NP[time=+,t-tempref=text, t-ref-before=+]{num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[lemma:tempo,sg]}, PP[t-ref-before=+]{prep[t-ref-before]} | ~
+| NP[time=+,t-tempref=text, t-ref-after=+] {num;?[q3];?[vario];?[indef2];?[tanto], ?*, ?[lemma:tempo,sg]}, PP[t-ref-after=+]{prep[t-ref-after];prep[lemma:após] } | ~
+
+
+// Example: no primeiro dia
+| PP[time=+]{?*,noun[last,time,t-date,t-uncertain:~,t-tempref:text]} | ~
+| NP[time=+]{?*,noun[last,time,t-date,t-uncertain:~]} | ~
+
+// Example: em pleno dia de Natal
+| NP{?*,noun[time,t-ref-simult=+]{prep[lemma:em],?[lemma:pleno]}} | ~
+
+// Example: Até ao último dia
+| PP[t-ref-after=~,  t-ref-before=+,t-ref-simult=+]{prep[lemma:"até a"]} | ~
+| ADVP[t-ref-after=~,t-ref-before=+,t-ref-simult=+]{prep[lemma:"até a"]} | ~
+| ADV[t-ref-after:~, t-ref-simult=+,t-ref-before=+]{prep[lemma:"até a"]} | ~
+
+| PP[t-ref-after=~,  t-ref-before=+,t-ref-simult=+]{prep[lemma:até]} | ~
+| ADVP[t-ref-after=~,t-ref-before=+,t-ref-simult=+]{prep[lemma:até]} | ~
+| ADV[t-ref-after:~, t-ref-simult=+,t-ref-before=+]{prep[lemma:até]} | ~
+
+// Example: desde
+| ADV[t-ref-before:~,t-ref-simult=+,t-ref-after=+]{prep[lemma:desde]} | ~
+| PP[t-ref-before=~, t-ref-simult=+,t-ref-after=+]{prep[lemma:desde]} | ~
+
+// Example: a partir de
+| PP[t-ref-before=~,t-ref-simult=+,t-ref-after=+]{prep[lemma:"a partir de"]} | ~
+
+// Example: antes de ontem
+// Example: antes de Domingo
+| PP[time=+,t-ref-after=~,t-ref-simult=~,t-ref-before=+]{prep[lemma:"antes de"], ?*, ?[last,time,t-hora:~]} | ~
+
+// Example: depois de ontem
+// Example: depois de Domingo
+| PP[time=+,t-ref-after=+,t-ref-simult=~,t-ref-before=~]{prep[lemma:"depois de"], ?*, ?[last,time,t-hora:~]} | ~
+
+
+// Example: dentro de 5 dias
+| PP[time=+,t-ref-after=+,t-tempref=enunc]{prep[lemma:"dentro de"], ?*, ?[last,time,quant,t-hora:~]} | ~
+
+// Example: dentro de 5 horas
+| PP[time=+,t-hora=+]{prep[lemma:"dentro de"], ?*, ?[last,t-hora,quant]} | ~
+
+// Example: mais tarde
+| ADVP[time=+, t-ref-after=+]{adv[lemma:mais], adv[lemma:tarde]} | ~
+
+// Example: mais cedo
+| ADVP[time=+,t-ref-before=+]{advp[lemma:mais], adv[lemma:cedo]} | ~
+
+// Example: mais cedo
+| ADVP[time=+, t-part-of-day=+]{adv, adv[t-part-of-day,advtimedate]} | ~
+
+// Example: no último dia depois do Natal
+| PP[t-ref-after=+]{?*,noun{?*,noun[last,t-part-of-day]}};NP[t-ref-after=+]{?*,noun[last,t-part-of-day]}, PP{prep[lemma:"depois de"]} | ~
+
+// Example: no último dia antes do Natal
+| PP[t-ref-before=+]{?*,noun{?*,noun[last,t-part-of-day]}};NP[t-ref-before=+]{?*,noun[last,t-part-of-day]}, PP{prep[lemma:"antes de"]} | ~
+
+// Example: em Abril RUNHAREM
+| PP[time=+,t-date=+,t-tempref=absolut]{?*,noun#2[last,time,t-date,t-uncertain:~,t-tempref:absolut]} | ~
+
+// Example: nos primeiros três meses
+// THIS RULE may enable to delete other rules ....
+| PP[time=+,t-date=+,t-tempref=text]{?*, ?[ord], ?*, noun[time,quant]} | ~
+
+| PP[time=+,t-date=+,t-tempref=enunc]{?*, adj[lemma:último], ?[t-meas];?[t-as-a-meas];?[t-part-of-day]} | ~
+
+// Example: nos primeiros meses
+// THIS RULE may enable to delete other rules ....
+| PP[time=+,t-date=+,t-tempref=text]{?*, ?[ord], ?*, ?[t-meas];?[t-as-a-meas];?[t-part-of-day]} | ~
+
+// Example: primaveril
+| AP[t-season=+]{adj[t-season]} | ~
+
+
+// Example: no passado dia 21
+| ADVP[t-tempref:enunc], NP[t-tempref=absolut]{noun{noun[lemma:dia], num[t-monthday=+,t-month:~,t-year:~,t-hour:~]}} | ~
+
+| NP[time=+]{(?), (?[lemma:um]), ?[time, t-meas], (num)} | ~
+
+// Example: passada;anterior
+| AP[t-not-alone=+]{pastpart[t-not-alone];adj[t-not-alone]} | ~
+
+
+// Partes de uma data absoluta
+// Example: dia 21
+// Example: de Novembro
+// Example: de 1958
+| NP[t-monthday=+]{noun[t-monthday]} | ~
+| PP[t-month=+]{prep[lemma:de];prep[lemma:em], ?*, noun[t-month]} | ~
+| PP[t-month=+, t-fuzzy=+]{prep[lemma:"por volta de"], ?*, noun[t-month]} | ~
+| PP[t-year=+]{prep[lemma:de];prep[lemma:em], ?*, num[t-year]} | ~
+| PP[t-year=+, t-fuzzy=+]{prep[lemma:"por volta de"], ?*, num[t-year]} | ~
+| NP[t-month=+]{noun[t-month]} | ~
+
+
+//Abreviaturas HORAS
+// Example: 2 AM
+| NP[abbr=+]{ noun[lemma:am]} | ~
+
+// Example: para o meio-dia
+// ou para
+| PP[t-hour=+,time=+]{ prep[lemma:para], art[def, art], noun[t-hour, time] } | ~
+| PP[t-hour=+,time=+]{ prep[lemma:para], art[def, art], num[t-hour], noun[t-meas] } | ~
+
+// Example: aos dez mintuos
+| PP[t-hour=+,time=+]{ prep[lemma:a], art[def, art], num[t-minute], noun[t-meas]} | ~
+
+// Example: duas semanas
+// Example: dois meses
+// Example: duas decadas
+| NP[t-meas=+, t-month=+, time=+]{ num[t-month], noun[ t-meas, time]} | ~
+| NP[t-meas=+, t-week=+, time=+ ]{ num[t-week], noun[ t-meas]} | ~
+| NP[t-meas=+, t-year=+, sem-dur=+, time=+ ]{ num[t-year], noun[ t-meas, sem-dur]} | ~
+
+// Example: duas tardes
+| NP[time=+, t-part-of-day=+]{ num, noun[t-part-of-day, time]} | ~
+| NP[time=+, t-meas=+]{ (num;art), noun[t-meas, time]} | ~
+| NP[time=+, t-monthday=+ ]{ (adv[advfuzzy]), num[time, t-monthday]} | ~
+
+
+// Example: mais tarde
+// Example: mais cedo
+// Example: antes
+| ADVP[t-ref-after=+ ]{ ?*, adv[t-ref-after]} | ~
+| ADVP[t-ref-before=+ ]{ ?*, adv[t-ref-before]} | ~
+| ADVP[t-ref-simult=+ ]{ ?*, adv[t-ref-simult]} | ~
+
+
+// Example: ano novo
+| NP[t-one-day=+, time=+ ]{ art, noun[t-one-day]} | ~
+
+// Example: Natal, Páscoa,
+| NP[t-several-days=+, time=+]{ art, noun[time, t-several-days]} | ~
+
+// Example: Natal, Páscoa,
+| PP[t-several-days=+, time=+]{ prep, art, noun[time, t-several-days]} | ~
+
+// Example: Natal, Páscoa,
+| PP[t-season=+, time=+]{ ?*, noun[time, t-season]} | ~
+
+// Example: primeira metade
+| PP[time=+, t-focus=+ ]{ prep, art, num, noun[t-focus]} | ~
+
+//durante todo
+| pp[time=+, t-ref-simult=+] { prep[t-ref-simult], ?*, ?[time]} | ~
+
+// Example: toda a noite
+| NP[time=+, t-part-of-day=+] { pron, art, noun[time, t-part-of-day]} | ~
+
+// Example: toda a Primavera
+| NP[time=+, todo=+] { pron, art, noun[time]} | ~
+
+// Example: de tarde
+| ADVP[time=+, t-part-of-day=+] {ADV[t-part-of-day]} | ~
+
+// Example: anoitecer
+| VINF [time=+, t-part-of-day=+] {VERB[time, t-part-of-day]} | ~
+
+// Example: ao anoitecer
+| SC [time=+, t-part-of-day=+] {conj, VINF[t-part-of-day, time]} | ~
+
+// Example: a tarde; a manhã; a madrugada
+| NP[time=+, t-part-of-day=+] { art, noun[time, t-part-of-day]} | ~
+
+// Example: a Primavera
+| NP[time=+, t-as-a-meas=+] {art, noun[time, t-as-a-meas]} | ~
+
+// Example: anualmente, frequentemente
+| ADVP [time=+, t-frequency=+] {ADV[t-frequency, time]} | ~
+
+// Example: recentemente
+| ADVP [time=+] {ADV[advtimedate]} | ~
+
+// Example: neste preciso momento
+| PP [time=+, t-denot-time=+] {?*, noun[t-denot-time]} | ~
+
+// Example: muitas vezes; várias vezes
+| NP [time=+, sem-temp=+, t-freq-pn=+] {pron, noun[surface:"vezes"];noun[surface:"vez"] } | ~
+
+// Example: mais de duas vezes
+| NP [time=+, sem-temp=+, t-freq-tn=+] {num , noun[surface:"vezes"];noun[surface:"vez"] } | ~
+| NP [time=+, sem-temp=+, t-freq-tn=+] {adv, num, noun[surface:"vezes"];noun[surface:"vez"] } | ~
+
+// Example: mais de duas vezes por semana
+| NP [time=+, sem-temp=+, t-freq-tn=+] {art, pron, noun[surface:"vez"] } | ~
+
+// Example: há três anos
+| ADVP [time=+] {ADV[time]} | ~
+
+// Example: para o outro
+| PP[outro=+] {prep, art, pron[outro] } | ~
+
+// Example: de vezes
+| PP[sem-temp=+] {prep,  noun[sem-temp]} | ~
+
+// Example: época, periodo
+| PP[time=+, sem-period=+] {prep, art,  noun[sem-period]} | ~
+
+// Example: todo
+| NP[todo=+] {pron[todo]} | ~
+
+// Example: logo
+| ADVP[t-ne-forbiden=+] {adv[t-ne-forbiden]} | ~
+
+// Example: próximo
+| AP[t-tempref=enunc] {adj[t-tempref:enunc]} | ~
+| AP[t-tempref=enunc] {adj[t-tempref:text]} | ~
+
+// Example: 1º/ultimo quartel
+| PP[time=+, sem-period=+] {prep, art, num;adj, noun[sem-period]} | ~
+
+// Example: desde ontem
+| PP[time=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+] {prep[lemma:desde], noun[t-tempref:enunc, time]} | ~
+| PP[time=+, t-tempref=enunc, t-ref-after=+,  t-ref-simult=+] {?[lemma:até], noun[t-tempref:enunc, time]} | ~
+
+// Example: desde hoje à noite
+| PP[time=+, t-tempref=enunc] {prep, noun[t-tempref:enunc, time]} | ~
+
+// Example: até 15
+| NP[time=+, t-monthday=+, t-ref-simult=+, t-ref-before=+] {adv[lemma:até], num[t-monthday]} | ~
+| NP[time=+, t-monthday=+, t-ref-simult=+, t-ref-after=+] {adv[lemma:desde], num[t-monthday]} | ~
+
+// Example: desde 1994
+| PP[time=+, t-year=+, t-ref-after] {prep[t-ref-after], num[t-year]} | ~
+| PP[time=+, t-year=+, t-ref-before] {prep[t-ref-before], num[t-year]} | ~
+
+// Example: desde Outubro
+// Example: até Novembro
+| PP[time=+,  t-tempref=enunc, t-ref-simult=+, t-ref-after=+]  {prep[lemma:desde], noun[time, t-month];noun[time,t-weekday]} | ~
+| PP[time=+,  t-tempref=enunc, t-ref-after=+,  t-ref-simult=+] {prep[lemma:até], noun[time, t-month];noun[time,t-weekday]} | ~
+
+// Example: desse dia
+| PP[time=+, t-tempref=text] {prep, pron[surface:esse];pron[surface:aquele], noun[t-meas]} | ~
+
+// Example: no decurso de
+| PP[time=+, preptemp=+, t-ref-simult=+] { prep[preptemp, t-ref-simult], ?*} | ~
+
+// Example: faz 3 anos e meio
+| ADVP[time=+, t-complex=+] { adv[time, t-complex]} | ~
+
+
+| PP[time=+, t-meas=+] { ?*, ?[time, t-meas], ?*} | ~
+
+// Example: a esse instante
+|PP[t-tempref=text, time=+] {prep, pron[lemma:esse], noun[t-denot-time]} | ~
+|PP[t-tempref=text, time=+] {prep, pron[lemma:aquele], noun[t-denot-time]} | ~
+
+// Example: no mesmo ano
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:mesmo], noun[t-meas]} | ~
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:mesmo], noun[sem-period]} | ~
+
+// Example: no outro ano
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:outro], noun[t-meas]} | ~
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:outro], noun[sem-period]} | ~
+
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:esse], noun[t-meas]} | ~
+|PP[t-tempref=text, time=+] {prep, (art), pron[lemma:aquele], noun[sem-period]} | ~
+
+// Example: o outro ano
+|NP[t-tempref=text, time=+] {art, pron[lemma:outro], noun[t-meas]} | ~
+
+|PP[t-ref-simult=+, t-ref-before=+] {prep[lemma:até], pron, noun[t-denot-time]} | ~
+|PP[t-ref-simult=+, t-ref-before=+] {prep[lemma:até], pron, noun[t-denot-time]} | ~
+
+// Example: no pior momento possível
+|AP[time=+, t-denot-time=+] { adv[t-denot-time], adj} | ~
+|ADVP[time=+, t-denot-time=+] { adv[t-denot-time]} | ~
+
+// Example: de agora em diante
+// Example: de agora para a frente
+// Example: de agora para diante
+|?[time], PP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{prep[lemma:em], adv[surface:diante]} | ~
+|?[time], PP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{prep[lemma:para], ?[surface:a], ?[surface:frente]} | ~
+|?[time], PP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{prep[lemma:para], ?[surface:diante]} | ~
+
+// Example: de agora [em seguida]
+// Example: de agora adentro/dentro/fora/afora
+// Example: de agora adiante
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:"em seguida"]} | ~
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:adentro]} | ~
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:dentro]} | ~
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:fora]} | ~
+|?[time],   PP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:fora]} | ~
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:afora]} | ~
+|?[time],   PP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:afora]} | ~
+|?[time], ADVP[time=+, t-focus-simul-after=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]{adv[lemma:adiante]} | ~
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// propagar os tracos dos PPs e NPs pelo chunker e que precisam de ser
+// convertidos em ADVP
+//
+/////////////////////////////////////////////////////////////////////////
+
+// Example: muitas;poucas;algumas;tantas vezes
+| NP[t-advp=+] {pron, (art),  noun[sem-temp]} | ~
+| NP[t-advp=+] {art,  noun[surface:"vezes"]} | ~
+
+// Example: durante muitas vezes
+| PP[t-advp=+] {prep, pron, (art), noun[sem-temp]} | ~
+
+// Example: por duas vezes
+|PP[t-advp=+] {prep, num, noun[sem-temp]} | ~
+
+// Example: 4 horas por dia
+|NP[t-advp=+] {num, noun[t-frequency]} | ~
+
+// Example: a cada instante;ocasiao;momento;altura
+|PP[t-advp=+] {prep, pron;art;adj, noun[t-denot-time]} | ~
+
+// Example: no preciso;primeiro momento
+|PP[t-advp=+] {prep, art, num;adj, noun[t-denot-time]} | ~
+
+// Example: neste mesmo momento;instante;altura;ocasiao
+// Example: durante toda a época
+|PP[t-advp=+] {prep, pron, pron;art, noun[t-denot-time]} | ~
+
+// Example: para sempre
+|PP[t-advp=+] {prep, adv[advtimeasp];adv[t-ne-forbiden]} | ~
+
+// Example: por toda a tarde
+|PP[t-advp=+, time=+] {prep, pron[todo], art, noun[t-part-of-day]} | ~
+
+// Example: a 1995/12/04
+|PP[t-tempref=absolut, t-data-string=+, time=+] {prep, NUM[t-data-string, time]} | ~
+
+// Example: a.C
+|ADVP[t-era=+] {?*, ?[t-era]} | ~
+
+// Example: a.C
+|PP[t-month=+] {prep, ?[t-month, time]} | ~
+
+// Example: 1222-1333
+|NP[t-interval=+, time=+, t-tempref=absolut, t-tempref2=absolut] {num[t-interval, time, t-tempref:absolut, t-tempref2:absolut]} | ~
+|NP[t-interval=+, time=+, t-tempref=absolut, t-tempref2=absolut] {noun[t-interval, time, t-tempref:absolut, t-tempref2:absolut]} | ~
+
+//========================================================
+// Example: grande parte
+//
+| NP[SEM-measother=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-measother, SEM-unitype], (num)} | ~
+| NP[SEM-measother=+]{(?), (?[lemma:um]), ?[SEM-measother, SEM-unitype], (num)} | ~

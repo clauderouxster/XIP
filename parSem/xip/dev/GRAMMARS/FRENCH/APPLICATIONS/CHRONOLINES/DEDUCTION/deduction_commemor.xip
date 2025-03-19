@@ -1,0 +1,80 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2012 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : French XIP grammar
+//!   filename   : dependency_commemor.xip
+//!   Date       : June 2012
+//!   Author     : André Bittar
+//!   Description: Recognizes sentences introducing a commemoration
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+// rendre hommage
+| verb#1[lemme:rendre,comemor=+] |
+if ( DEEPOBJ(#1,#2[lemme:hommage]) )
+~
+
+// marquer l'anniversaire
+| verb#1[lemme:marquer,comemor=+] |
+if ( DEEPOBJ(#1,#2[lemme:anniversaire]) )
+~
+
+// ouvrir les cérémonies
+| verb#1[lemme:ouvrir,comemor=+] |
+if ( DEEPOBJ(#1,#2[lemme:cérémonie]) )
+~
+
+// ajout comemor=+ sur verbe introduction de "en noun[comemor:+] de"
+// ex.
+| verb#1[comemor=+] |
+if ( VMOD(#1,?[noun,comemor]) | VARG(#1,?[noun,comemor]) )
+~
+
+// noun[comemor] rappelle que...
+// ex. la cérémonie nous rappelle que...
+| #1[lemme:rappeler, comemor=+] |
+if ( DEEPSUBJ(#1,?[comemor]) )
+~
+
+| #1[comemor=+,t_mod] |
+if ( NMOD(#1,#2) & EVENEMENT(#2) )
+~
+
+// ajout comemor=+ sur les verbes gouverneurs d'une clause infinitive dont le verbe principal a le trait comemor
+// ex. ils se retrouvent pour/afin de fêter la victoire
+| verb#1[comemor=+] |
+if ( EMBED[inf](#2[comemor],#1) )
+~
+
+// un verbe de discours introduit une clause dont le verbe principal a le trait comemor
+// ex. ils disent qu'ils fêtent la victoire
+| verb#1[comemor=+] |
+if ( EMBED(#2[comemor],#1[vcom]) )
+~
+
+// un verbe modifié par l'expression "à l'occasion des/pour les X ans" a le trait comemor
+| SC{?*, ?[verb]{?*,verb#1[comemor=+,last]}}, ?*, PP#2{prep[lemme:"à l'occasion de"];prep[lemme:pour], NP[tempexpr,duree]} |
+if ( VMOD(#1,#2) )
+~
+
+// percolate feature to sentence for sentence-level post-processing
+
+// main verb is comemor
+| GROUPE[comemor=+] |
+if ( MAIN(#1[comemor]) )
+~
+
+// main verb is vcom and subordinates a comemor verb
+| GROUPE[comemor=+] |
+if ( MAIN(#1[vcom]) & EMBED(#2[comemor],#1) )
+~
+
+// a temporal expression modifies a verb or noun that is comemor
+| GROUPE[comemor=+] |
+if ( TIMEX3(#1) & ( TEMP(?[comemor],#1) | ( NMOD(?[comemor],#3) & HEAD(#3,#1) ) ) )
+~

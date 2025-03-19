@@ -1,0 +1,184 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar with temporal normalization
+//!   filename   : chunk_temp.xip
+//!   Date       : October 2006
+//!   Author     : Caroline Hagege
+//!   Comment	 : This file is meant to replace old version reshuffle_temp.xip
+//!		   construction of complex temporal expressions
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+// This file needs the previous application of marking_temp_first.xip
+
+
+// start feature is no more a free feature at this stage because of the applications 
+// of marking (dependency) rules before
+
+5> ? = ?[!start:!] .
+
+// rule that applied previously in localdates and that makes "every + month" be a noun.
+// Don't touch this rule because can be useful for entities
+// either reshuffling in this case
+//2> NP{noun[tempexpr:+]{quant#1[lemme:every,first:+], noun#2[last:+,tempexpr:+]}}
+ //  = NP[tempexpr=+,c_set=+]{#1,#2}.
+// not translated because treated in localgram_temp.xip
+
+
+// <time_span> prep <date> - The period to 1993
+// the period to 1993
+10> NP[tempexpr=+] = NP[time_span], PP[tempexpr,form:fto] .
+10> PP[tempexpr=+] = PP[time_span], PP[tempexpr,form:fto] .
+
+
+
+// adj[period], noun[tempexpr] - recent years
+// Added rule in localgram_temp.xip
+
+// for ADV NP[tempexpr]
+// e.g. for nearly forty years
+10> PP[tempexpr=+,c_relat=+] = prep[lemme:for], adv, NP[tempexpr] .
+
+// IN ADV NP[head est period:+]
+// e.g. in just|exactly a minute
+10> PP[tempexpr=+,c_relat=+] = prep[lemme:in], adv, NP[period] .
+
+// e.g. (AT) Three o'clock in the afternoon
+10> NP[tempexpr=+,c_relat=+,hour=+] = NP[hour], PP[tempexpr:+] .
+10> PP[tempexpr=+,c_relat=+,hour=+] = PP[hour], PP[tempexpr:+] .
+
+// (IN) the first quarter of 2003.
+10> NP[tempexpr=+,c_relat=+] = NP[period], PP[tempexpr,form:fof] .
+10> PP[tempexpr=+,c_relat=+] = PP[period], PP[tempexpr,form:fof] .
+
+// Friday at 8:00 pm
+10> NP[tempexpr=+,hour=+,day=+] = NP[day], PP[form:fat,hour] .
+10> PP[tempexpr=+,hour=+,day=+] = PP[day], PP[form:fat,hour] .
+
+// The third of October
+10> NP[tempexpr=+,day=+,c_absolut=+] = NP[ord], PP[form:fof,tempexpr] .
+
+// Some Tuesdays in 1998
+10> NP[tempexpr=+, day=+, c_set=+] = quant, NP[day], PP[year] .
+
+// From Monday to/till/until/through Wednesday
+10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], PP[form:fto];PP[form:ftill];PP[form:funtil];PP[form:fthrough] .
+// pb. si through est un adverbe
+10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], adv[lemme:through], NP[tempexpr] .
+
+// From Monday-Thursday
+10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], punct[form:fhyph], NP[tempexpr] .
+
+// Between Monday and Friday
+10> NP[tempexpr=+,interval=+] = PP[form:fbetween,tempexpr], conj[lemme:and], NP[tempexpr] .
+
+// Sept, 23 - Oct, 5
+10> NP[tempexpr=+,interval=+] = NP[tempexpr], punct[form:fhyph], NP[tempexpr] .
+
+// (very) late last night
+10> NP[tempexpr=+,c_relat=+,hasadv=+] = ?[adv,time], NP[tempexpr] .
+
+// early in the morning
+10> NP[tempexpr=+,c_relat=+] = ?[adv,time], PP[tempexpr] .
+
+
+// next + mwe date - next 31 August
+10> NP[tempexpr=+,c_relat=+,day=+] = AP[c_relat,preperiod], NP[date] .
+
+
+// dig+period+prep+period
+// 20 days in July, 4 days in Summer.
+15>NP[tempexpr=+,c_dur=+] = NP[firstdig,period], PP[tempexpr,form:fin] .
+
+
+// two weeks from next Tuesday
+15>NP[tempexpr=+,c_relat=+] = NP[firstdig,period], PP[tempexpr:+,c_relat:+,form:ffrom] .
+
+// the morning of January 2003
+15>PP[tempexpr=+,posttime=+] = NP[tempexpr,posttime], PP[tempexpr,form:fof] .
+
+// In January of this year
+15> PP[tempexpr=+,c_relat=+] = PP[tempexpr,period], PP[tempexpr,form:fof,period] .
+
+// In January this year (avoiding here to have frequencies like every year
+15> PP[tempexpr=+,c_relat=+] = PP[tempexpr,period], NP[period,firstquant:~] .
+
+// January every year
+15> NP[tempexpr=+,c_set=+] = NP[period], NP[firstquant,period] .
+15> PP[tempexpr=+,c_set=+] = PP[period], NP[firstquant,period] .
+
+/// Joining 2 adjacents temporal expressions into a single one
+// 2nd NP is a freq:+, whole NP is a freq:+
+
+// Two days before yesterday (no quantifier that makes a frequency see below
+// restriction on the first NP (day:~) as it can't be a raw NP with day name
+15> NP[tempexpr=+,c_relat=+] = NP[tempexpr,day:~], NP[firstquant:~,tempexpr:+] .
+
+// Three days each week
+15> NP[tempexpr=+,c_set=+] = NP[tempexpr,day:~], NP[firstquant] .
+
+// No example associated, but was in the former file
+15> NP[tempexpr=+] = NP[tempexpr:+], PP[tempexpr:+,interval:+] .
+
+// 4 days after September, 11
+15> NP[tempexpr=+] = NP[tempexpr,period,day:~], PP[tempexpr:+,reftime:+] .
+
+
+
+//////////////////////////////////////////////////////////////
+// Building PPs from complex NP build in this file
+
+// complex NP expressions bearing feature hour can build an PP when preceeded by "at"
+30> PP[tempexpr=+] = prep[form:fat], NP[tempexpr:+,hour:+] .
+
+// complex NP expressions bearing feautre day can build a PP when preceede by "on"
+30> PP[tempexpr=+] = prep[form:fon], NP[tempexpr:+,day:+] .
+
+// Complex PP expressions containing time adverbial
+// e.g. until early in the morning - until early next century
+30> PP[tempexpr=+] = prep[lemme:until]; prep[lemme:till], NP[tempexpr,hasadv] .
+
+// PP build from complex NP which head is a possttime
+// in the morning of October 2003
+30> PP[tempexpr=+] = prep[form:fin], NP[tempexpr,posttime:+] .
+
+// PP build from complex NP with c_set 
+30> PP[tempexpr=+,c_set=+,day:~] = prep[lemme:in], NP[tempexpr:+,c_set:+] .
+
+// at three o'clock January 5, 1993
+// PP build from PP[hour] + NP[day]
+30> PP[tempexpr=+,hour=+, c_absolut=+] = PP[hour], NP[date] .
+
+
+// PERIOD + ADV compar
+// e.g. a day later - a week earlier
+// a day before
+
+35> NP[tempexpr=+, c_relat=+] = (adv[lemme:about]), NP[period], ADV[reftime:+]; ADV[time:+,compar:+] | ?[verb:~] | .
+
+// TEMPEXPR or TEMPEXPR
+// e.g. within days or weeks - during days and weeks.
+35> NP[tempexpr=+, c_relat=+] = NP[tempexpr];PP[tempexpr], conj[coord], NP[tempexpr] |@ ?*[verb:~] | .
+
+// Between now and DATE
+35> PP[tempexpr=+,interval=+] = prep, ?[lemme:now], conj[coord], NP[date,tempexpr:+] .
+
+// the period/duration of three months/weeks ....
+//40> PP[tempexpr=+,c_dur=+] = PP[time_span], PP[tempexpr,period,form:fof] .
+
+
+// Put together DAY COMMA ABSOLUTE DATE
+//e.g. Monday, 30th of January 2012
+45> NP[tempexpr=+,day=+,c_absolut=+] = NP[tempexpr, day,period], punct[comma], NP[tempexpr,day,c_absolut] .
+// same for PP
+45> PP[tempexpr=+,day=+,c_absolut=+] = PP[tempexpr, day,period], punct[comma], NP[tempexpr,day,c_absolut] .
+
+
+

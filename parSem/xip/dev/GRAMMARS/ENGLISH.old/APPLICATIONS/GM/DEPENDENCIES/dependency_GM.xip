@@ -1,0 +1,86 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for Litigation
+//!   filename   : dependency.xip
+//!   Date       : 06/07/2006
+//!   Author     : Elena López García
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Script:
+
+|#1[non_doc_date:~]|
+	if(DATE(#1) & ~DATE_DOC(#1))
+	{_compteurdate=_compteurdate+1;
+	 _vectOfDates[_compteurdate]=#1[lemme];
+	 if(_compteurdate:1){
+	_isFirst[#1[lemme]]=1;
+	}
+	if(_compteurdate>1){
+	_isFirst[#1[lemme]]=0;
+	}
+	}
+
+if(DATE_DOC(#1))
+ 	{_dateTrouvee=1;}
+
+DependencyRules:
+
+
+//EXP: the author of a document
+|noun#1[exp]|
+	EXP(#1).
+
+//RECIPIENT: the recipient of a document
+|noun#1[recipient]|
+	RECIPIENT(#1).
+
+//COPYEE: the copyee of a document
+|noun#1[copyee]|
+	COPYEE(#1).
+
+//DATE_DOC: the date of a document
+|?#1[doc_date]|
+	DATE_DOC(#1).
+
+//OTHER_DATE: other date than the date of a document appearing in the doc
+
+|?#1[other_date,non_doc_date:~]|
+	if(_isFirst[#1[lemme]]:0)
+	OTHER_DATE(#1).
+
+|?#1[other_date,non_doc_date]|
+	OTHER_DATE(#1).
+
+|noun#1{?*, dig#2}|
+	if(^other_date(#2)
+	& other_date(#1))
+	~.
+
+//
+|noun#1{?*, dig#2}|
+	if(^other_date(#2)
+	& date_doc(#1))
+	~.
+
+
+
+Final :
+
+if( _dateTrouvee:1 & _compteurdate> 0 )
+{print("OTHER_DATE("); print(_vectOfDates[1]); print(")\n");}
+
+if( _dateTrouvee:0 & _compteurdate> 0 )
+{print("DATE_DOC("); print(_vectOfDates[1]); print(")\n");}
+
+
+
+
+CleanAllLemmas;

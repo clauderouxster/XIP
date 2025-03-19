@@ -1,0 +1,196 @@
+
+Déduction:
+
+// Changement de la dependance LIEU[telfax] en dependance TELEFAX
+if ( ^LIEU[telfax:+](#1) )
+	TELEFAX[telfax=~](#1)
+
+
+// 'Docteur CAMFE Service de Pneumologie CHLS' marqué comme ORG
+// les règles suivantes permettent de récupérer PERSONNE(CAMFE) et LIEU(CHLS)
+
+
+|noun#1[person:~]{?*,#2[person],?*}|
+	if( ~PERSONNE(#2) & ORG(#1))
+	PERSONNE(#2).
+	
+|noun#1[lieu:~]{?*,#2[lieu],?*}|
+	if( ~LIEU(#2) & ORG(#1))
+	LIEU(#2).
+	
+
+
+
+
+// CH - marquage si personne est medecin
+| #1[medecin] |
+if ( ^PERSONNE[medecin:~](#1) )
+   PERSONNE[medecin=+](#1).
+
+// le médecin Mr Tsrwer est venu -> Tserwer est un médecin
+| #2[person, medecin=+] |
+if ( NMOD(#1[tit_med],#2) & ^PERSONNE[medecin:~](#2) )
+   PERSONNE[medecin=+](#2)
+
+
+
+// Martelage ALADIN - prise en compte de la structure
+// vu en REA
+// e.g. ]nternes: Leila PORT-BESSU - Jean CHEURLI - Charlotte Bouc"
+// traite sur les trois regles qui suivent
+// mauvaise structure INS
+| NP{?*,noun[tit_med,pl]}, (punct[form:f2pts]), NP{#2[person]}, punct[lemme:"-"], NP{#3} |
+if ( PERSONNE[medecin](#2) & ^PERSONNE[medecin:~](#3) )
+	PERSONNE[medecin=+,coord=+](#3)
+
+
+| NP{#1[person]}, INS{punct[form:fhyph], NP{#2[person]}, punct} |
+if ( PERSONNE[medecin](#1) & ^PERSONNE[medecin:~](#2) )
+	PERSONNE[medecin=+,coord=+](#2)
+
+| INS{?*,NP{#1[person]}}, NP{#3[person]} |
+if (PERSONNE[medecin,coord](#1) & ^PERSONNE[medecin:~](#3) )
+	PERSONNE[medecin=+,coord=+](#3)
+
+
+	
+// CH - si 2 etiquettes lieu et personne et l'entite est VMOD de transferer, alors on supprime l'etiquette personne
+// eg "On le transfère à Saint Roch"
+if ( ^PERSONNE(#1) & LIEU(#1) & ( VMOD[posit1](?[lemme:"transférer"],#1) | VMOD[posit1](?[lemme:arriver],#1) ) )
+	LIEU[traits=~,org=+,batiment=+](#1)	
+if ( ^PERSONNE(#1) & LIEU(#1) & ( NMOD[posit1](?[lemme:"transfert"],#1) | NMOD[posit1](?[lemme:"arrivée"],#1) ) )
+	LIEU[traits=~,org=+,batiment=+](#1)	
+if ( ^LIEU[ville:+](#1) & LIEU[batiment:+](#1) )
+	~
+
+// Redon si modifié par un adjectif ou nom contigu n'est pas une personne
+// Redon aspiratif / charriere
+| #1[surface:"Redon"] |
+if ( ^PERSONNE(#1) & NMOD[posit1](#1,?[adj]) )
+   ~
+
+
+// CH enlever l'étiquette personne du nom propre Simpson utilisé seul
+// coupe Simpson, méthode Simpson etc.
+| #1[lemme:"Simpson"] |
+if ( ^PERSONNE(#1) )
+~
+
+
+// CH - Enlever l'etiquette personne d'un nom de personne se trouvant a l'interieur d'un term_med
+// mesure de Forrest III
+| ?[term_med]{?*,#1} | 
+if ( ^PERSONNE(#1) )
+~	
+  		
+
+
+	
+// du 12/12/2004 au 14/01/2005
+|?[date:+,absolue:+,interval:+,ajour=+,amois=+,aannee=+]{	prep,
+									?#1[ajour=+,amois=+,aannee=+]{num#3,punct,num#4,punct,num#5},
+									prep,
+									?#2[ajour=+,amois=+,aannee=+]{num#6,punct,num#7,punct,num#8} }|
+	if( ~DATE_ALADIN(#1,#3,#4,#5) & ~DATE_ALADIN(#2,#6,#7,#8) )
+	DATE_ALADIN(#1,#3,#4,#5),DATE_ALADIN(#2,#6,#7,#8).	
+
+	
+// du 12/08 au 14/08/2005
+|?[date:+,absolue:+,interval:+,ajour=+,amois=+,aannee=+]{	prep,
+									?#1[complete=+,absolue=+,ajour=+,amois=+,aannee=+]{num#3,punct,num#4},
+									prep,
+									?#2[ajour=+,amois=+,aannee=+]{num#5,punct,num#6,punct,num#7} }|
+	if( ~DATE_ALADIN(#1,#3,#4,#7) & ~DATE_ALADIN(#2,#5,#6,#7) )
+	DATE_ALADIN(#1,#3,#4,#7),DATE_ALADIN(#2,#5,#6,#7).		
+	
+	
+// 14/05/2005 ou 14 mai 2005
+|?#1[date:+,complete:+,absolue:+,ajour=+,amois=+,aannee=+]{
+		(num#2,(punct),num#3,(punct),num#4) ;
+		(num#2,noun#3,num#4) 
+}|
+	if( ~DATE_ALADIN(#1,#2,#3,#4) )
+	DATE_ALADIN(#1,#2,#3,#4).
+
+	
+// MM AAAA
+|noun#1[date:+,incomplete:+,absolue:+,amois=+,aannee=+]{#2,#3}|
+	if( ~DATE_ALADIN(#1,#2,#3) & ~DATE_ALADIN(?,?,#2,#3) )
+	DATE_ALADIN(#1,#2,#3).
+
+	
+// AAAA	
+|#1[date:+,incomplete:+,absolue:+,aannee=+]{num}|
+	if( ~DATE_ALADIN(#1) & ~DATE_ALADIN(?,?,?,#1) & ~DATE_ALADIN(?,?,#1) )
+	DATE_ALADIN(#1).
+	
+	
+// 3 septembre	
+|noun#1[date:+,relative:+,ajour=+,amois=+]{ num#2[first],noun#3[mois,last] }|
+	if( ~DATE_ALADIN(#1,#2,#3) & ~DATE_ALADIN(?,#2,#3,?) )
+	DATE_ALADIN(#1,#2,#3).
+	
+// (le) 03/09	
+|num#1[date:+,relative:+,ajour=+,amois=+]{ num#2[first],punct,num#3[last] }|
+	if( ~DATE_ALADIN(#1,#2,#3) & ~DATE_ALADIN(?,#2,#3,?))
+	DATE_ALADIN(#1,#2,#3).
+
+
+// transformer dependance DATE[relative:+] en DATE_RELAT
+if ( DATE[relative:+](#1) & ~DATE_RELAT(#1) )
+DATE_RELAT[relative=~](#1)
+
+
+// transformer dependance DATE[absolue:+] en DATE_ABS
+if ( DATE[absolue:+](#1) & ~DATE_ABS(#1) )
+DATE_ABS[absolue=~](#1) 
+ 
+
+// CH - decembre 2009
+// propagation de l'info que l'on a un medecin
+
+Script: 
+
+| noun#1[medecin:+] |
+  { MEDEC##1=1; }
+
+// Pr M. RAUCOULE-AIME (marque RAUCOULE-AIME)
+| noun#1[medecin:+]{#2,#3[medecin:~]} |
+if ( PATRONYME(#3,#1) )
+   { MEDEC##3=1; }
+
+   
+Déduction:
+
+| noun#1 |
+if ( MEDEC##1:1 & ^PERSONNE[medecin:~](#1) )
+   PERSONNE[medecin=+](#1).
+
+
+// Verifier si pas trop large... 
+| noun#1[proper];noun#1[maj:+,cr:~] |
+if ( MEDEC##1:1 & ~PERSONNE(#1) )
+   PERSONNE[hum=+,medecin=+](#1).
+
+
+// detruire les sous-entites nommees personnes medecin
+| noun#1{?*,noun#2} |
+if ( PERSONNE[medecin](#1) & ^PERSONNE[medecin](#2) )
+~
+
+// Transformer dep personne en dep PERSMED
+if ( ^PERSONNE[medecin](#1) )
+   PERS_MED[medecin=~](#1).
+
+// cleaning
+if ( ^PERS_MED[coord:+](#1) )
+	PERS_MED[traits=~,hum=+](#1)
+
+
+// région "lyonnaise" n'est pas anonymisé
+// afin de ne pas modifier la structure on marque slt "lyonnaise"
+| #1[lemme:"région"] |
+if ( NMOD(#1,#2[maj:~]) & AGEO(#2,?) )
+   LIEU[region=+](#2)
+
+

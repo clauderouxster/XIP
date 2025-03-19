@@ -1,0 +1,85 @@
+<project name="" default="test" basedir=".">
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<!-- to be used in the delivery directory-->
+<property name="root.dir"		location="..${fs}.." />
+<property name="cc.debug"		value="false" />
+<property name="include.dir"            location="${root.dir}${fs}include" />
+<property name="fst.dir"            	location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}fst${fs}delivery${fs}fst-8.4.3" />
+<property name="fst.include.dir"        location="${fst.dir}${fs}include" />
+
+<target name="test" depends="compile" description=" ">
+        <exec executable="sample" failonerror="true" >
+		<arg line= "" />
+        </exec>
+</target>
+
+<!-- compile and link(static lib)  code -->
+<target name="compile" depends="clean, setCommonProperties" >
+	<echo message="${lib.dir}${fs}staticLib" />
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="." subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="sample" >
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<fileset dir="." includes="sample.c" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+				<pathelement location="${fst.include.dir}"/>
+				<pathelement location="${fst.include.dir}${fs}fst"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libC.names}" />
+			<libset dir="${lib.dir}${fs}staticLib" libs="ntm" type="static"/> 
+			<libset dir="${fst.lib.dir}${fs}staticLib" libs="fst" type="static"/> 
+		</linker>
+	</cc>
+</target>
+
+<target name="setCommonProperties" depends="setWin32Properties, setSolarisProperties, setLinuxProperties"
+                description="set common properties">
+        <property name="lib.dir"                location="${root.dir}${fs}lib${fs}${platform}" />
+	<property name="fst.lib.dir"        	location="${fst.dir}${fs}lib${fs}${platform}" />
+</target>
+
+<target name="setWin32Properties" depends="platformIdentification" if="windows"
+        description="define properties for the platform : win32" >
+        <property name="platform" value="windows" />
+        <property name="compilerC.name" value="msvc" />
+        <property name="system.libC.names"   value="c" />
+</target>
+
+<target name="setSolarisProperties" depends="platformIdentification" if="solaris"
+        description="define properties for the platform : solaris" >
+        <property name="platform" value="solaris" />
+        <property name="compilerC.name" value="gcc" />
+        <property name="system.libC.names"   value="c, m"/>
+</target>
+
+<target name="setLinuxProperties" depends="platformIdentification" if="linux"
+        description="define properties for the platform : linux" >
+        <property name="platform" value="linux" />
+        <property name="compilerC.name" value="gcc" />
+        <property name="system.libC.names"   value="c, m" />
+</target>
+
+<target name="platformIdentification"
+        description="platform identification: set the property solaris, windows or linux to true when one of this platform has been identified">
+       <condition property="solaris"> <os name="SunOS" arch="sparc"/> </condition>
+       <condition property="windows"> <os name="Windows 2000" arch="x86"/> </condition>
+       <condition property="windows"> <os name="Windows XP" arch="x86"/> </condition>
+       <condition property="linux"> <os name="Linux" arch="i386"/> </condition>
+       <taskdef resource="cpptasks.tasks"> </taskdef>
+       <typedef resource="cpptasks.types"> </typedef>
+</target>
+
+ 
+<target name="clean" depends="" >
+	
+</target>
+	<delete file="sample"/>
+	<delete file="sample.o"/>
+	<delete file="sample.exe"/>
+	<delete file="sample.obj"/>
+	<delete file="history.xml"/>
+</project>
+

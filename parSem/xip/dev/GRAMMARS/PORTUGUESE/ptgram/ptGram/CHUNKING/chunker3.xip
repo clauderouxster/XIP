@@ -1,0 +1,230 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunker2.xip                                                 !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Based on a previous version developed by Caroline Hagege at Xerox        !
+//!   Research Centre Europe - Grenoble Laboratory.                            !
+//!                                                                            !
+//!  The Chunks are buit in the following order:    NP                         !
+//!                                                 ADVP                       !
+//!                                                 VASP                       !
+//!                                                 VMOD                       !
+//!                                                 VTEMP                      !
+//!                                                                            !
+//!                            file: chunker2       VASP (2nd stage)           !
+//!                                                 VPP                        !
+//!                                                 VCOP                       !
+//!                                                 VCPART                     !
+//!                                                 VGER                       !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                 AP                         !
+//!                                                 NP (2nd stage)             !
+//!                                                                            !
+//!                            file: chunker3       PP                         !
+//!                                                 VCPART (2nd stage)         !
+//!                                                 AP (2nd stage)             !
+//!                                                 AP (2nd stage)             !
+//!                                                                            !
+//!                            file: chunckVB       VASP (3nd stage)           !
+//!                                                 VMOD (3nd stage)           !
+//!                                                 VTEMP (3nd stage)          !
+//!                                                 VASP (4nd stage)           !
+//!                                                 VPP (2nd stage)            !
+//!                                                 VCOP (3nd stage)           !
+//!                                                 VCPART (3nd stage)         !
+//!                                                 VGER (3nd stage)           !
+//!                                                 VINF (3nd stage)           !
+//!                                                 PP                         !
+//!                                                 SC                         !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+| NP[noPPhead=+]{?*,pron[last,noPPhead]} | ~
+| ?[lemma:haver], prep[lemma:de,noPPprep=+] | ~
+Sequence:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PP - PREPOSITIONAL CHUNK
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/02/20 (moved the option of forming a PP with a  ADVP to after all verbs)
+// Example: PARA O RAPAZ
+// Example: os chefes DE AMANHÃ
+//195> PP = prep, NP[noPPhead:~];ADVP;adj;pastpart.
+1> PP = prep[noPPprep:~], NP[noPPhead:~];adj;pastpart.
+
+// Example: a casa DELA
+2> PP = | NP;PP;AP | prep[lemma:"dele"].
+
+//CH, 2007/05/15
+// Atenção aqui estou a utilizar traços que não existem no INESC-ID
+//
+// Esta regra e necessária para poder depois funcionar outra no dependency6.xip
+// relativas com "cujo"
+//
+// Example: AOS do Pedro with AOS that is now splitted in PREP+PRON
+4> PP = prep[tokenstart], pron[tokenend];art[tokenend] | pp | .
+
+// Reshuffling in order to recuperate PPs from NPs that have been previously constructed
+// with art that have the feature prep too (contractions)
+
+Reshuffling:
+// Reshuffling in order to recuperate PPs that have been previously constructed
+// with art that have the feature prep too (contractions)
+//
+//CH, 2007/05/29
+// introduced the restriction on interrogative in order to avoid to cut part
+// of interrogative PPs
+//
+// Example: os chefes de amanhã
+// Example: os amigos de sempre
+// Example: do qual, para o qual, com quem
+//
+8> PP{prep#1,NP{#2[rel]} } = PP[rel=+]{#1,#2}.
+
+8> PP[interrog:~]{prep#1,#2[qu]} = PP[qu=+]{#1,#2}.
+
+//NJM+JB, 2010/04/06
+// removed "quant" restriction
+//200> PP[interrog:~]{prep#1,NP[quant:~]{?-#2} } = PP{#1,#2}.
+8> PP[interrog:~]{prep#1,NP[quant]{?-#2} } = PP[quant=+]{#1,#2}.
+8> PP[interrog:~]{prep#1,NP{?-#2} } = PP{#1,#2}.
+
+// Converte [pela linda]PP [e]CONJ [adorável menina]NP
+// em (pela (linda e adoravel)AP menina)PP
+//
+10> PP{prep#1, adj#2[last]}, CONJ#3, NP{adj#4, noun#5[last]} =
+     PP{#1, AP{#2, #3, #4}, #5}.
+
+// Converte [com a linda]PP [e]CONJ [adorável menina]NP
+// em (com a (linda e adoravel)AP menina)PP
+//
+12> PP{prep#1, art#6, adj#2[last]}, CONJ#3, NP{adj#4, noun#5[last]} =
+     PP{#1, #6, AP{#2, #3, #4}, #5}.
+
+// Converte [com a linda]PP [,]PUNCT [bela]AP [e]CONJ [adorável menina]NP
+// em (com a (linda, bela e adoravel)AP menina)PP
+//
+12> PP{prep#1, art#8, adj#2[last]}, PUNCT#3, AP{adj#4[first,last]}, CONJ#5, NP{adj#6, noun#7[last]} =
+     PP{#1, #8, AP{#2, #3, #4, #5, #6}, #7}.
+
+12> PP{prep#1, art#8, adj#2[last]}, PUNCT#3, AP{adj#4[first,last]}, PUNCT#3, AP{adj#4[first,last]}, CONJ#5, NP{adj#6, noun#7[last]} =
+     PP{#1, #8, AP{#2, #3, #4, #5, #6}, #7}.
+
+// Converte [pela linda]PP [,]PUNCT [bela]AP [e]CONJ [adorável menina]NP
+// em (pela (linda, bela e adoravel)AP menina)PP
+//
+12> PP{prep#1, adj#2[last]}, PUNCT#3, AP{adj#4[first,last]}, CONJ#5, NP{adj#6, noun#7[last]} =
+     PP{#1, AP{#2, #3, #4, #5, #6}, #7}.
+
+12> PP{prep#1, adj#2[last]}, PUNCT#3, AP{adj#4[first,last]}, PUNCT#3, AP{adj#4[first,last]}, CONJ#5, NP{adj#6, noun#7[last]} =
+     PP{#1, AP{#2, #3, #4, #5, #6}, #7}.
+Sequence:
+
+
+//========================================================
+// VCPART = verbo particípio passado (no fim da cadeia verbal)
+//========================================================
+
+// In reduced participal subclauses, the participle may select an argument
+// (eventually prepositional) subclause.
+// The past participle must be chunked as a VCPART in order to be tagged with 
+// the ViPEr lexical information.
+
+//NJM+JB, 2011/03/10
+// Example: lavada a loiça, o Pedro comeu a sopa
+//
+//NJM+JB, 2013/02/07
+// Example: Desiludido com o local, DeMille segue mais para Oeste
+//
+14> VCPART = pastpart[start] |conj*[lemma:como], NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+
+//NJM+JB, 2013/02/07
+// Example: Completamente desiludido com o local, DeMille segue mais para Oeste
+//
+14> VCPART = |ADVP[start]| pastpart |NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+
+//NJM+JB, 2013/02/08
+// Example: Lido e relido durante a década de 50
+//
+14> VCPART = |ADVP[start]| pastpart |conj[coord], pastpart, conj*[lemma:como], NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+14> VCPART = pastpart[start] |conj[coord],        pastpart, conj*[lemma:como], NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+
+15> VCPART = |ADVP[start], VCPART, conj[coord]| pastpart |NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+15> VCPART = |VCPART[start], conj[coord]|       pastpart |NP;ADVP;PP;adj, ?*[verb:~], ?[punct]|.
+
+// Example: lavada, a loiça seca melhor
+//
+16> VCPART = |ADVP[start]| pastpart |?[punct], NP|.
+16> VCPART = pastpart[start] |?[punct], NP|.
+
+// Example: Caído, entretanto, no 12º lugar
+//
+16> VCPART = |ADVP[start]| pastpart |?[comma], ADVP, ?[punct]|.
+16> VCPART = pastpart[start] |?[comma], ADVP, ?[punct]|.
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// AP - second stage - Especially made for post modifying adjectives
+//      For post modifying APs other possibilities (pastpart, possessive alone etc.)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example:
+17> AP = | NP;PP;AP;VCOP;CONJ | adj;pastpart;pron[poss].
+
+// Example: 2 litros MAL MEDIDOS de leite
+17> AP = adv;ADVP, adj;pastpart.
+
+
+// To take into account of postponed pronouns
+//
+// Example: rapaz algum
+17> AP = | NP;PP;AP | pron[indef2].
+
+// In the case of two consecutive adjectives, we assume that
+// the first is the head of the NP, and the second is a modifier AP on the first one.
+//
+//Example: belos vedantes
+18> NP = adj;pastpart |AP;adj;pastpart|.
+
+// To take into account isolated adjectives
+//
+// Example: que comandava ISOLADO
+18> AP = adj;pastpart.
+
+Reshuffling:
+19> AP{ADVP{#3[reducedmorph:~], ?-#1}, ?-#2} = AP{#3,#1,#2}.
+Sequence:
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PP - second stage (PPs which head is an AP)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: do chuvoso
+20> PP = prep, AP.
+
+Reshuffling:
+21> PP{prep#1, AP[last]{?-#2} } = PP{#1,#2}.
+Sequence:
+

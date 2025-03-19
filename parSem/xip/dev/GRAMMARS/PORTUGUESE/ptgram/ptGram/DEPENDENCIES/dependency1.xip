@@ -1,0 +1,480 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency1.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede, Paula Vaz                                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating heads, quantification and some coordination     !
+//!                                                                            !
+//!   Dependencies handled in this file:   HEAD                                !
+//!                                        QUANTD  (uma parte)                 !
+//!                                        DETD                                !
+//!                                        COORD (related with quantification) !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// HEAD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: muito grande -> HEAD(grande,muito grande)
+//
+| AP#1[inquote:~]{?*,#2[last]} |
+   HEAD(#2,#1)
+
+// Example: 'muito grande' -> HEAD(grande,'muito grande')
+//
+| AP#1[inquote]{?*,#2,#3[last]} |
+   HEAD(#2,#1)
+
+// Example: 2 laranjas e meia -> HEAD(laranjas,2 laranjas e meia)
+//
+| NP#1[inquote:~]{?*,#2,conj[lemma:e],num[frac,last];?[lemma:meio,last]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: o belo rapaz -> HEAD(rapaz,o belo rapaz)
+//
+| NP#1[inquote:~]{?*,#2[last]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: "o belo rapaz" -> HEAD(rapaz,"o belo rapaz")
+//
+| NP#1[inquote]{?*,#2,#3[last]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: do colégio -> HEAD(colégio,do colégio)
+//
+| PP#1[inquote:~]{?*,#2[last]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: 'do colégio' -> HEAD(colégio,'do colégio')
+//
+| PP#1[inquote]{?*,#2,#3[last]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: ter que -> HEAD(ter,ter que)
+//
+| VMOD#1{VERB#2;PASTPART#2,?+} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: começar a -> HEAD(começar,começar a)
+//
+| VASP#1{PRON*,VERB#2;PASTPART#2,?+} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example:
+//
+| VTEMP#1{VERB#2;PASTPART#2,?+} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// Example: começar -> HEAD(começar,começar)
+//
+| #1[verb]{?*,#2[prep:~;art:~;conj:~,last,verb]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+//CH: Not used in XEROX environment
+// Example:
+//
+| #1[verb]{?*,#2[prep:~;art:~;conj:~,last,pastpart]} |
+  if (~HEAD(?,#1))
+   HEAD(#2,#1)
+
+// for SC -> head is the head of the head
+// Example: que seja  -> HEAD(seja,que seja)
+//
+| SC#1{?*,#2[last,verb]} |
+ if ( HEAD(#3,#2) )
+   HEAD(#3,#1)
+
+// Example:
+//
+| ADVP#1{?*,ADV{?*,#2[last]}} |
+   HEAD(#2,#1)
+
+// Example: optimamente ainda -> HEAD(ainda,optimamente ainda)
+//
+| ADVP#1[inquote:~]{?*,#2[last]} |
+ if ( ~HEAD(?,#1) )
+   HEAD(#2,#1)
+
+// Example: optimamente ainda -> HEAD(ainda,optimamente ainda)
+//
+| ADVP#1[inquote]{?*,#2,#3[last]} |
+ if ( ~HEAD(?,#1) )
+   HEAD(#2,#1)
+
+// Example: e -> HEAD(e,e)
+//
+| CONJ#1{?*,#2[last]} |
+ if ( ~HEAD(#2,#1) )
+   HEAD(#2,#1)
+
+// Example:
+//
+| CONJ#1 |
+ if ( ~HEAD(?,#1) & ~HEAD(#1,?) )
+   HEAD(#1,#1)
+
+// Example: que
+//
+| PRON#1[qu] |
+ if ( ~HEAD(?,#1) & ~HEAD(#1,?) )
+   HEAD(#1,#1)
+
+// Example: cujo
+//
+| rel#1 |
+ if ( ~HEAD(?,#1) & ~HEAD(#1,?) )
+   HEAD(#1,#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// QUANTD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+//========================================================
+//  QUANTIFICATION WITHIN A NP or PP CHUNK
+//========================================================
+
+// Example: (de) uma (grande) banana         -> QUANTD(banana,uma)
+// Example: (de) 5 (belissimas) estrelas     -> QUANTD_PRE(estrelas,5)
+// Example: (de) duas (brilhantes) estrelas  -> QUANTD_PRE(estrelas,duas)
+// Example: (de) todas as estrelas           -> QUANTD_PRE(estrelas,todas)
+//
+| NP#2{?*,#1[num,last:~];#1[indef,last:~,qu:~];#1[lemma:nenhum,last:~]};
+  PP#2{?*,#1[num,last:~];#1[indef,last:~,qu:~];#1[lemma:nenhum,last:~]}
+|
+ if ( HEAD(#3,#2) & ~QUANTD(#3,#1) )
+   QUANTD(#3,#1)
+
+
+// Example: aproximadamente vários livros    -> QUANTD(vários,aproximadamente)
+//
+| NP{ADV#1[advnum],PRON#3[indef4]} |
+ if ( ~QUANTD(#3,#1) )
+   QUANTD(#3,#1)
+
+
+// Example: 2 laranjas e meia    -> QUANTD[frac](laranjas,meia)
+//
+| NP#1{?*,#2,conj[lemma:e],num#3[frac,last];#3[lemma:meio,last]};
+  PP#1{?*,#2,conj[lemma:e],num#3[frac,last];#3[lemma:meio,last]}
+|
+ if ( HEAD(#2,#1) & ~QUANTD(#2,#3) )
+   QUANTD[frac=+](#2,#3)
+
+
+
+//========================================================
+//  QUANTIFICATION NP tudo
+//  QUANTIFICATION NP multiplicativo
+//========================================================
+
+// Example: Nós todos           -> QUANTD(nós,todos)
+// Example: As raparigas todas  -> QUANTD(raparigas,todas)
+// Example: das raparigas todas -> QUANTD(raparigas,todas)
+// Example: rapariga nenhuma    -> QUANTD(raparigas,nenhuma)
+// Example: rapariga alguma     -> QUANTD(raparigas,alguma)
+//
+//NJM+JB, 2012/06/05
+// Example: uísque duplo        -> QUANTD(uísque,duplo)
+//
+| PP#2;NP#2, NP#1{PRON[indef,last,first];PRON[indef2,last,first];NUM[mult,last,first]} |
+ if ( HEAD(#3,#2) & HEAD(#4,#1) & ~QUANTD(#3,#4) )
+   QUANTD[post=+](#3,#4)
+
+
+//========================================================
+//  QUANTIFICATION tudo isso/isto/aquilo (repairing...)
+//========================================================
+
+// Example: tudo isso me importa -> QUANTD(isso,tudo)
+//
+ if ( ^QUANTD(#3[lemma:tudo],#4[lemma:isso]) || ^QUANTD(#3[lemma:tudo],#4[lemma:isto]) || ^QUANTD(#3[lemma:tudo],#4[lemma:aquilo]) )
+   QUANTD[pre=+,post=~](#4,#3)
+
+
+
+//========================================================
+//  QUANTIFICATION WITHIN A NP, PP or AP
+//========================================================
+
+// Example: o (muito) mais eternamente bonito  -> QUANTD(bonito,mais)
+// Example: do (muito) mais eternamente bonito -> QUANTD(bonito,mais)
+// Example: (muito) mais eternamente bonito    -> QUANTD(bonito,mais)
+//
+| #1{?*,adv#2[advcomp], adv*, adj#3} |
+ if ( HEAD(#3,#1) & ~QUANTD(#3,#2) )
+   QUANTD(#3,#2)
+
+
+
+//========================================================
+// QUANTIFICATION from a NP to a PP
+//========================================================
+
+// Example: 2 canecas de leite -> QUANTD(canecas,2) [already computed]
+//                             -> QUANTD(leite,canecas)
+//
+// Example: (estas;as) 2 canecas (bem medidas) de leite -> QUANTD(leite,canecas)
+//
+//CH, 2007/05/15
+// Added restriction on preposition in order to avoid bad QUANTD captured
+// "Garantiu quatro anos no Palácio do Planalto" *QUANTD(palácio,anos)
+//
+//NJM, 2007/06/08
+// Added restriction on preposition in order to avoid bad QUANTD captured
+// "4 meses de 1996" *QUANTD(1996,mês)
+//
+// This Rule still produces bad results:
+// "temos momentos de perda" *QUANTD(perda,momentos)
+//
+| NP#1;PP#1, (AP), PP#2{prep#5[lemma:de]} |
+  if ( HEAD(#3[SEM-unitype],#1) & HEAD(#4[time:~],#2) & ~QUANTD(#4[proper:~],#3) )
+   QUANTD(#4,#3)
+
+
+//NJM+JB, 20012/06/05
+// Example: o sêxtuplo dos livros -> QUANTD(livros,sêxtuplo)
+// Example: o dobro dos livros    -> QUANTD(livros,dobro)
+// Example: *o duplo dos livros   ->
+//
+| NP#1;PP#1, (AP), PP#2{prep#5[lemma:de]} |
+  if ( HEAD(#3[mult],#1) & HEAD(#4,#2) & ~QUANTD(#4[proper:~],#3) )
+   QUANTD(#4,#3)
+
+
+//NJM, 20011/05/03
+// Example: tem 25 anos de idade -> QUANTD(idade,anos)
+//                               -> QUANTD(idade,25)
+//
+// Example: tem 25 anos de vida -> QUANTD(idade,anos)
+//                               -> QUANTD(idade,25)
+//
+| NP#1{noun{num#5, noun#6[t-meas]}}, PP#2{prep[lemma:de]} |
+  if ( HEAD(#3,#1) &
+       ( HEAD(#4[surface:idade],#2) || HEAD(#4[surface:vida],#2) ) &
+       ~QUANTD(#4[proper:~],#3)
+      )
+   QUANTD(#4,#3),QUANTD(#6,#5)
+
+//NJM, 20011/05/03
+// Example: tem de idade 25 anos -> QUANTD(idade,anos)
+//                               -> QUANTD(idade,25)
+//
+| PP#2{prep[lemma:de]}, NP#1{noun{num#5, noun#6[t-meas]}} |
+  if ( HEAD(#3,#1) &
+       ( HEAD(#4[surface:idade],#2) || HEAD(#4[surface:vida],#2) ) &
+       ~QUANTD(#4[proper:~],#3)
+     )
+   QUANTD(#4,#3),QUANTD(#6,#5)
+
+
+
+//========================================================
+// QUANTIFICATION between nouns and indefinite quantifiers
+// in complex structures
+//========================================================
+
+//NJM+JB, 2013/05/07 - added restriction of lemma:~outro (added a new rule, also)
+//                     (participaram um do outro à polícia)
+// Example: Muitos dos rapazes -> QUANTD(rapazes,muitos)
+//
+| NP#1;PP#1, (AP), PP#2 |
+   if ( (HEAD(#3[indef,proxindef:~,lemma:~outro],#1)|HEAD(#3[indef3,lemma:~outro],#1)) & HEAD(#4,#2) & ~QUANTD(#4,#3) )
+   QUANTD(#4,#3)
+
+//NJM+JB, 2013/05/07 - see comment above
+// Example: participaram um do outro à polícia -> *QUANTD(outro,polícia)
+//
+| NP#1;PP#1, (AP), PP#2 |
+   if ( (HEAD(#3[indef,proxindef:~,lemma:outro],#1)|HEAD(#3[indef3,lemma:outro],#1)) & HEAD(#4,#2) &
+        ~QUANTD(#4,#3) & ~QUANTD(#3,?[lemma:um]))
+   QUANTD(#4,#3)
+
+// Example: 5 (or 5%) dos rapazes -> QUANTD(rapazes,5)
+//
+//CH: restriction added for cases like "O numero dois dos Farc"
+// were we do not want "dois" to quantify "Farc"
+| NP#5;PP#5, NP#1;PP#1, (AP) |
+  if (HEAD(#6[lemma:número],#5) & HEAD(#3[num],#1) )
+   QUANTD(#6,#3)
+
+| NP#1;PP#1, (AP), PP#2 |
+   if ( HEAD(#3[num],#1) & HEAD(#4,#2) & ~QUANTD(?,#3) )
+   QUANTD(#4,#3)
+
+//NJM+JB, 2009/06/29
+// Example: aproximadamente 20 laranjas -> QUANTD(laranjas,aproximadamente)
+//
+| NP#1{ADV#2, NUM#3, NOUN#4} |
+   if ( HEAD(#4,#1) & ~QUANTD(#4,#2) )
+   QUANTD(#3,#2)
+
+//NJM+JB, 2010/04/05
+// Example: aproximadamente 20 -> QUANTD(20,aproximadamente)
+// Example: só vinte mil       -> QUANTD(vinte mil,só)
+//
+| NP#1{ADV#2, NUM#3[last]} |
+   if ( HEAD(#3,#1) & ~QUANTD(#3,#2) )
+   QUANTD(#3,#2)
+
+
+//NJM+JB, 2010/04/05
+// If the quantifier has the neg feature it is passed to the QUANTD fuction
+// (only "nenhum" has this property)
+//
+// Example: nennhum livro  -> QUANTD_NEG(livro,nenhum)
+//
+ if ( ^QUANTD(#2,#4[neg]) )
+   QUANTD[neg=+](#2,#4)
+
+
+
+//========================================================
+// QUANTIFICATION and COORDINATION
+//========================================================
+
+// Example: (as) 2 canecas e meia
+// Example: (as) 2 canecas (bem medidas) de leite e meia
+// Example: (as) 2 canecas e meia (bem medidas) de leite
+// Example: NP{2 canecas[SEM-unitype]} e (bem cheias) NP{meia} (bem medidas) PP{de leite} -> QUANTD(leite,canecas)
+//
+| NP#1{?*,num#3;noun#3[SEM-unitype]}, (AP), conj#5[lemma:e],  (AP), NP#2{?*,num#4;noun#4[frac]} |
+ if ( QUANTD(#6,#4[num]) & HEAD(#3,#1) & HEAD(#4,#2) & #4<#6 )
+ COORD(#5,#3),
+ COORD(#5,#4),
+ CLINK(#3,#4).
+
+
+
+//========================================================
+// QUANTIFICATION : UPPER and LOWER bounds
+//========================================================
+
+//NJM+JB, 2011/05/16
+// Removes a mistakenly computed quantd
+//
+// Example: entre 2 e 3 milhões de laranjas      -> *QUANTD(2,3 milhões)
+//
+|?{?[lemma:entre], #2, ?*, ?[lemma:e], #3}|
+ if ( ^QUANTD(#3,#2) & & QUANTD(#1,#3) )
+   QUANTD[lbound=+](#1,#2)
+
+//NJM+JB, 2011/05/16
+// Example: entre 2 e 3 canecas      -> QUANTD[LBOUND](canecas,2)
+//
+|?{?[lemma:entre], #2, ?*, ?[lemma:e], #3}|
+ if ( ^QUANTD(#1,#2) & QUANTD(#1,#3) )
+   QUANTD[lbound=+](#1,#2)
+
+//NJM+JB, 2011/05/16
+// Example: entre 2 e 3 canecas      -> QUANTD[UBOUND](canecas,3)
+//
+|?{?[lemma:entre], #2, ?*, ?[lemma:e], #3}|
+ if ( QUANTD[lbound](#1,#2) & ^QUANTD(#1,#3) )
+   QUANTD[ubound=+](#1,#3)
+
+
+
+//NJM+JB, 2011/05/16
+// Removes a mistakenly computed quantd
+//
+// Example: de 2 a 3 milhões de laranjas      -> *QUANTD(2,3 milhões)
+//
+|?{?[lemma:de], #2, ?*, ?[lemma:a], #3}|
+ if ( ^QUANTD(#3,#2) & & QUANTD(#1,#3) )
+   QUANTD[lbound=+](#1,#2)
+
+//NJM+JB, 2011/05/16
+// Example: de 2 a 3 canecas         -> QUANTD[LBOUND](canecas,2)
+//
+|?{?[lemma:de], #2, ?*, ?[lemma:a], #3}|
+ if ( ^QUANTD(#1,#2) & QUANTD(#1,#3) )
+   QUANTD[lbound=+](#1,#2)
+
+//NJM+JB, 2011/05/16
+// Example: de 2 a 3 canecas         -> QUANTD[UBOUND](canecas,3)
+//
+|?{?[lemma:de], #2, ?*, ?[lemma:a], #3}|
+ if ( QUANTD[lbound](#1,#2) & ^QUANTD(#1,#3) )
+   QUANTD[ubound=+](#1,#3)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CLASSD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/05/02
+// Example: esse tipo de leite -> CLASSD(leite,tipo)
+//
+| NP#1;PP#1, (AP), PP#2{prep#5[lemma:de]} |
+  if ( HEAD(#3[SEM-nclass],#1) & HEAD(#4[time:~,SEM-unitype:~],#2) & ~CLASSD(#4,#3) )
+   CLASSD(#4,#3)
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// DETD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: (de) uma (belissima) banana -> DETD_PRE(banana,a)
+// Example: (de) uma (grande) banana    -> DETD_PRE(banana,uma)
+//
+| #1{?*,ART#2;#2[dem],?*,#3} |
+ if ( HEAD(#3,#1) & ~DETD(#3,#2) & ~QUANTD(#3,#2) )
+   DETD(#3,#2)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CORRECTING BAD QUANTIFICATIONS - NEEDS TO HAVE QUANTD AND DETD CALCULATED
+//
+////////////////////////////////////////////////////////////////////////////////
+//CH, 2007/05/28
+// if the first NP is determined by a definite singular article or a demonstrative
+// then we delete the QUANTD between the determined potential quantifier and the head
+// of a following PP[de]
+//
+// Example: A caneca do vizinho - deleting QUANTD(vizinho,caneca)
+//
+| NP#1;PP#1, ?*, PP{prep#5[lemma:de]} |
+if ( HEAD(#3,#1) & ( DETD(#3,?[art,def,sg]) | DETD(#3,?[dem,sg]) ) & ^QUANTD(?,#3[mult:~,lemma:~"parte"]) )
+   ~
+
+// Example: O duplo do vizinho - deleting QUANTD(vizinho,duplo)
+| NP#1;PP#1, ?*, PP{prep#5[lemma:de]} |
+if ( HEAD(#3,#1) & ( DETD(#3,?[art,def,sg]) | DETD(#3,?[dem,sg]) ) & ^QUANTD(?,#3[lemma:"dupl[oa]"]) )
+   ~

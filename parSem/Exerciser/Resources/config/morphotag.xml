@@ -1,0 +1,315 @@
+<xf>
+  <config>
+    <string escape="!win32" key="Xerox\Xerox FST\CurrentVersion" name="version" value="8.4" />
+    <string escape="!win32" key="Xerox\Xerox FST\$version\InstallDir" name="topdir" value=""/>
+    <dirname escape="!win32" name="data-topdir" value="$topdir/lingdata" />
+    <!-- Optimization to be done when a transducer is loaded.
+    	- reduce-labelset: The labelSet reduction aims at reducing the size of
+    	  finite-state networks by partitioning the the label alphabet of the
+    	  net into equivalence classes.
+    	- optimize-arcs: Optimizes an fsm for linear encoding: it reduces its
+    	  arc count, introducing however new states, by using the special
+    	  ALTCHAIN symbol.
+    	- un-optimize-arcs: Undo optimize-arcs.
+    	- share-arc-list: This function works on the output of the optimize-arcs
+    	  function only. In addition to the arc-optimization, the network may
+    	  also have been vectorized; this is not incompatible.
+		  The "share-arcs" operation aims at replacing the arcs with the 
+		  ALTCHAIN label of each state by a shared arc list, eliminating in this
+		  way the states that have been added during the arc optimization phase.
+    	- vectorize: vectorizing consists in using a tabular representation of
+    	  the arc set of the states, so as to provide direct access to the
+    	  destination states. It requires the net to be deterministic, otherwise
+    	  the state destinations can't have a tabular representation.
+    -->
+    <string name="optimizations" value="optimize-arcs vectorize share-arc-list" />
+    <integer name="vectorize-minarcs" value="-1" />
+    <!-- Tune the memory/speed performace ratio. Values:
+    	 - min-mem : minimum memory consumption
+    	 - max-perf: maximum performances
+    	 - fastest : maximum performances with some minor information removed
+    	 			 from the result (i.e. no spelling variant indicator, ...)
+    -->
+    <string name="tune" value="min-mem" />
+    <boolean name="raw-result" value="false" />
+    <boolean name="lookdown" value="false" />
+    <integer name="tagset" value="1" />
+    <string name="nptype" value="nrm" />
+    <string name="npform" value="full" />
+    <string name="inputstring" value="This is a default sentence." />
+    <filename name="inputfile" value="" />
+    <filename name="outputfile" value="-" />
+    <string name="lang" value="English" />
+    <string name="input-codeset" value="utf-8" />
+    <string name="output-codeset" value="utf-8" />
+    <string name="message-level" value="warning" />
+    <boolean name="disambiguation" value="true" />
+    <boolean name="help" value="false" />
+    <!-- xxx name="help" value="false" />
+    <dump />
+    <delete name="lang" />
+    <dump / -->
+  </config>
+  <main message-level="$message-level">
+
+
+         <reader filename="$inputfile" string="$inputstring" codeset="$input-codeset" bufsize="1000" />
+
+
+	<condition op="str-eq" left="$lookdown" right="false">
+		<!-- do segmentation into sentence/word only in lookup mode -->
+		<segmentation separator="\n\n" element="sentence"/>
+
+	    <apply-fst>
+    		<fst filename="$data-topdir/Tokenization/FST/$lang/tokenize.fst"/>
+   		</apply-fst>
+	</condition>
+
+    <segmentation separator="\n" group="lexeme-list" element="lexeme" />
+
+	<priority-union default-dir="$data-topdir/MorphoAnalysis/FSTPOSTag/$lang"
+					morpho-tags="true" pos-tag="true" lookdown="$lookdown"
+					process-result="!$raw-result">
+		<!-- default special tags -->
+		<tags confidence="+open +guessed" last-resort="+open +NOUN" />
+		<!-- optimizations -->
+		<optimize optimizations="$optimizations" vectorize-min-arcs="$vectorize-minarcs" />
+		<!-- CZECH -->
+		<condition op="str-eq" left="$lang" right="Czech">
+			<fst id="norm" filename="norm-std.ufsto" />
+			<fst id="normcap" filename="norm-allcap.ufsto" />
+			<fst id="normacc" filename="norm-accents.ufsto" />
+			<fst id="lex" filename="lex+morph.ufsto" />
+			<fst id="guess" filename="guesser.ufsto" />
+			<fst id="open" filename="openclass.ufsto" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<!-- DUTCH -->
+		<condition op="str-eq" left="$lang" right="Dutch">
+			<tags special="^_ ^#  ^\ ^|" last-resort="+open +NOUN" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="normacc" filename="norm-accents.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<!-- ENGLISH -->
+		<condition op="str-eq" left="$lang" right="English">
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normcap lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<!-- FRENCH -->
+		<condition op="str-eq" left="$lang" right="French">
+			<tags last-resort="+open +NOUN_SG" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="lex2" filename="lex+morph-noacc.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm lex2" />
+	      	<strategy cascade="norm normcap lex2" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+
+
+		<!-- GERMAN -->
+            <!-- modif Grassaud Vianney no german yet 
+		<condition op="str-eq" left="$lang $tune" right="German min-mem">
+			<tags special="^_ ^#  ^- ^/ ^} ^{ ^] ^. ^&amp; ^= ^+" last-resort="+open +NOUN" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="umlaut" filename="norm-umlaut.fst" />
+			<fst id="nopref" filename="filter-pref.fst" />
+			<fst id="nocpd" filename="filter-cpd.fst" />
+			<fst id="guess" filename="guess+morph.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex nocpd nopref" />
+	      	<strategy cascade="norm lex nopref" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="normcap lex" />
+	      	<strategy cascade="normcap umlaut lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<condition op="str-eq" left="$lang $tune" right="German max-perf">
+			<tags special="^_ ^#  ^- ^/ ^} ^{ ^] ^. ^&amp; ^= ^+" last-resort="+open +NOUN" />
+			<fst id="lex" filename="lex+morph-lf.fst" />
+			<fst id="lex1" filename="lex1+morph-lf.fst" />
+			<fst id="lex2" filename="lex2+morph-lf.fst" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="umlaut" filename="norm-umlaut.fst" />
+			<fst id="guess" filename="guess+morph.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex2" />
+	      	<strategy cascade="norm lex1" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="normcap lex" />
+	      	<strategy cascade="normcap umlaut lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<condition op="str-eq" left="$lang $tune" right="German fastest">
+			<tags special="^_ ^#  ^- ^/ ^} ^{ ^] ^. ^&amp; ^= ^+" last-resort="+open +NOUN" />
+			<fst id="lex" filename="lex+morph-nospell.fst" />
+			<fst id="lex1" filename="lex1+morph-nospell.fst" />
+			<fst id="lex2" filename="lex2+morph-nospell.fst" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="umlaut" filename="norm-umlaut.fst" />
+			<fst id="guess" filename="guess+morph.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex2" />
+	      	<strategy cascade="norm lex1" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="normcap lex" />
+	      	<strategy cascade="normcap umlaut lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+           -->
+		<!-- GREEK -->
+		<condition op="str-eq" left="$lang" right="Greek">
+			<fst id="norm" filename="norm-std.ufsto" />
+			<fst id="normcap" filename="norm-allcap.ufsto" />
+			<fst id="normacc" filename="norm-accents.ufsto" />
+			<fst id="lex" filename="lex+morph$tagset.ufsto" />
+			<fst id="guess" filename="guesser+morph$tagset.ufsto" />
+			<fst id="open" filename="openclass$tagset.ufsto" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="normcap norm lex" />
+	      	<strategy cascade="normacc norm lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+		<!-- HUNGARIAN -->
+            <!-- no hun garian yet 
+		<condition op="str-eq" left="$lang" right="Hungarian">
+			<tags last-resort="+open +NOUN_NOM" />
+			<fst id="norm" filename="norm-std.ufsto" />
+			<fst id="normcap" filename="norm-allcap.ufsto" />
+			<fst id="normacc" filename="norm-accents.ufsto" />
+			<fst id="lex" filename="lex+morph.ufsto" />
+			<fst id="guess" filename="guesser.ufsto" />
+			<fst id="open" filename="openclass.ufsto" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+            -->
+		<!-- ITALIAN -->
+            <!-- no italian yet 
+		<condition op="str-eq" left="$lang" right="Italian">
+			<tags special="^_ ^| ^=" last-resort="+open +NSG" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="normacc" filename="norm-accents.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+            -->
+		<!-- POLISH -->
+            <!-- no polish 
+		<condition op="str-eq" left="$lang" right="Polish">
+			<fst id="norm" filename="norm-std.ufsto" />
+			<fst id="normcap" filename="norm-allcap.ufsto" />
+			<fst id="normacc" filename="norm-accents.ufsto" />
+			<fst id="lex" filename="lex+morph$tagset.ufsto" />
+			<fst id="guess" filename="guesser$tagset.ufsto" />
+			<fst id="open" filename="openclass$tagset.ufsto" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="norm normcap normacc lex" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+            -->
+		<!-- PORTUGUESE -->
+            <!-- no portugese
+		<condition op="str-eq" left="$lang" right="Portuguese">
+			<tags special="^_ ^| ^=" last-resort="+open +NSG" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="normacc" filename="norm-accents.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+            -->
+		<!-- RUSSIAN -->
+            <!-- no russian 
+		<condition op="str-eq" left="$lang" right="Russian">
+			<fst id="norm" filename="norm-std.ufsto" />
+			<fst id="normcap" filename="norm-allcap.ufsto" />
+			<fst id="lex" filename="lex+morph$tagset.ufsto" />
+			<fst id="cpd" filename="compound+morph$tagset.ufsto" />
+			<fst id="guess" filename="guesser$tagset.ufsto" />
+			<fst id="open" filename="openclass$tagset.ufsto" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normcap lex" />
+	      	<strategy cascade="norm cpd" />
+	      	<strategy cascade="norm normcap cpd" />
+	      	<strategy cascade="norm guess" />
+	      	<strategy cascade="open" />
+		</condition>
+            --> 
+            
+		<!-- SPANISH -->
+		<condition op="str-eq" left="$lang" right="Spanish">
+			<tags special="^_ ^| ^=" />
+			<fst id="norm" filename="norm-std.fst" />
+			<fst id="normcap" filename="norm-allcap.fst" />
+			<fst id="normacc" filename="norm-accents.fst" />
+			<fst id="lex" filename="lex+morph.fst" />
+			<fst id="guess" filename="guesser.fst" />
+			<fst id="open" filename="openclass.fst" />
+	      	<strategy cascade="norm lex" />
+	      	<strategy cascade="norm normacc lex" />
+	      	<strategy cascade="normcap norm normacc lex" />
+	      	<strategy cascade="guess" />
+	      	<strategy cascade="open" />
+		</condition>
+	</priority-union>
+
+	<condition op="str-eq" left="$lookdown $raw-result $disambiguation" right="false false true">
+		<disambiguation filename="$data-topdir/Disambiguation/HMM/$lang/tagger.hmm" />
+	</condition>
+
+	<format-xml tag-codeset="utf-8" stylesheet="&lt;?xml-stylesheet type=&#34;text/xsl&#34; href=&#34;xml2html.xsl&#34;?&gt;" />
+
+    <writer filename="$outputfile" codeset="$output-codeset" />
+  </main>
+</xf>

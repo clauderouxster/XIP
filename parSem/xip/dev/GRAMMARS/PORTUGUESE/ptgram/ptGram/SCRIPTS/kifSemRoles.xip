@@ -1,0 +1,50 @@
+//file that contains the function responsible for assigning the semantic roles to the verb node
+
+kif:
+
+// Semantic Roles
+loadin(_paths[1]+"/kifSemRolesMap.kif");
+
+function assignSemRoles(node n){
+
+	if(debugViper==true) { println("\n"); println("===== Assigning Semantic Roles ====="); println("\n");}
+
+	//acesso ao lemma
+	string lemma=n.lemma(); //more than one value can be returned return(true);
+
+	//features viper
+	list vipersInNode=getVipersInNode(n);
+
+	//concat lemma and class to get the key to the Sem Role map
+	string srKey=lemma+"-"+vipersInNode.first();
+	
+	//test if it exists, if not -> do nothing (report error only with debug flag!)
+	if(semRolesMap.test(srKey)==true){
+
+		//get semantic roles
+		vector semRoles;
+		semRolesMap[srKey].split(" ",semRoles);
+
+		if (debugViper==true) {
+			println("  SemRoles >>> Node: ",lemma,"Vipers: ",vipersInNode);
+			println("  SemRoles >>> SemRoles Vector: ",srKey," ",semRoles);
+		}
+
+		//add semRoles until done
+		while (semRoles.size()>0){
+
+			//get role from vector
+			string role=semRoles.last();
+			semRoles.pop();
+
+			if (debugViper==true) { println("  SemRoles >>> Adding Role ",role); }
+
+			n.setfeature(role,"+");
+		}
+
+	}
+	else {
+		//report missing verb from the MFS mapa
+		if(debugViper==true) { println("  SemRoles >>> Missing in Semantic Roles Map: ",srKey); println("\n"); }
+	}
+} 

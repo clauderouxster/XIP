@@ -1,0 +1,460 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency4entit.xip                                        !
+//!   Author     : C. Hagege                                                   !
+//!   Date       : 2007/November                                               !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!  exploiting dependencies for NER Dealing with ambiguities and metonymy     !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/18
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+DependencyRules:
+
+////////////////////////////////////////////////
+//DCO, 2010/08/19 (last update: 2010/09/17)
+//
+// METONYMY HUMAN COLLECTIVE -> HUMAN INDIVIDUAL
+// SUBTYPES:
+// ADMINISTRATION  -> HUMAN INDIVIDUAL
+// INSTITUTION     -> HUMAN INDIVIDUAL
+// GROUP           -> HUMAN INDIVIDUAL
+////////////////////////////////////////////////
+
+// Se uma INSTITUICAO for sujeito de um verbo "human activity" ou dicendi, então temos metonímia de HUMANO COLECTIVO INSTITUICAO para HUMANO INDIVIDUAL
+// Example: "A Associação de Futebol de Lisboa deliberou ..."
+//if ( ^NE[institution](#1) & ( SUBJ(?[human_activity],#1) | SUBJ(?[dicendi],#1) ) )
+// NE[met-inst-to-ind=+](#1)
+
+// Se uma ADMINISTRACAO for sujeito de um verbo "human activity" ou dicendi, então temos metonímia de HUMANO COLECTIVO ADMINISTRACAO para HUMANO INDIVIDUAL
+// Example: "O Governo de Portugal descentralizou ..."
+//if ( ^NE[administration](#1) & ( SUBJ(?[human_activity],#1) | SUBJ(?[dicendi],#1) ) )
+// NE[met-admin-to-ind=+](#1)
+
+// Sujeito de "ir" (ADMINISTRACAO) que seja complementado por um local é transição de HUMANO COLECTIVO ADMINISTRACAO para HUMANO INDIVIDUAL
+// Example: O Governo Obama foi a Lisboa
+// ATENÇÃO: devido à ambiguidade de "ir", metemos "ser" e "ir" (apesar de só "ir" estar certo), para que a regra seja corrida...
+//| NP#3{?*, noun#2[last,proper]} |
+//if ( ( SUBJ[pre](#1[lemma:ser],#2) | SUBJ[pre](#1[lemma:ir],#2) | SUBJ[pre](#1[lemma:deslocar],#2) ) & PREDSUBJ(#1,#4[location])
+//    & ATTRIB(#2,#4[location]) & ~NE[people,individual](#2) & ^NE[administration](#2) )
+//  NE[met-admin-to-ind=+](#2)
+
+// O Governo Obama visitou Lisboa
+//| NP#3{?*, noun#2[last,proper]} |
+//if ( SUBJ[pre](?[lemma:visitar],#2) & CDIR[post](?[lemma:visitar],#4[location]) & ~NE[people,individual](#2) & ^NE[administration](#2) )
+//  NE[met-admin-to-ind=+](#2)
+
+// Se um quantificador quantificar uma EM do tipo HUMANO COLECTIVO INSTITUICAO, então existe uma transição desse para HUMANO INDIVIDUAL
+// Example: um GNR disse que eu ia ser multado
+// Careful and restriction for stuff like "O numero dois das Farc" restriction added in dependency1.xip
+//DCO, 2010/10/03
+// Esta regra é perigosa: "Defensores de 'uma associação' económica ..."
+//if ( ^NE[institution,partido:~](#1) & ( QUANTD(#1,?) | DETD(#1,?[lemma:um]) ) )
+// NE[met-inst-to-ind=+](#1)
+
+///////////////////////////////////////////////////////
+// END OF METONYMY HUMAN COLLECTIVE -> HUMAN INDIVIDUAL
+///////////////////////////////////////////////////////
+
+/////////////////////////////////////////
+//DCO, 2010/08/19 (updated 2010/09/18)
+// METONYMY LOCATION -> HUMAN COLLECTIVE
+// SUBTYPES:
+// COUNTRY  -> HUMAN COLLECTIVE
+// DIVISION -> HUMAN COLLECTIVE
+// REGION   -> HUMAN COLLECTIVE
+////////////////////////////////////////
+
+// Example: negociar com a Espanha
+//if ( ^NE[location,admin_area,country](#1) & MOD[post](?[lemma:negociar],#1) & PREPD(#1,?[lemma:com]) )
+//  NE[met-country-to-coll=+](#1)
+
+// Uma entidade do tipo LOCAL CRIADO PAIS que tenha relação de sujeito com um "verbo humano", é porque
+// existe um salto metonímico de LOCAL para HUMANO COLECTIVO
+// Example: "Portugal constatou que a crise estava forte"
+// Example: "O Brasil, irritado com Portugal, votou a favor na cimeira"
+//if ( ^NE[location,admin_area,country](#1) & SUBJ(?[human_activity],#1) )
+//  NE[met-country-to-coll=+](#1)
+
+// Uma entidade do tipo LOCAL CRIADO DIVISAO que tenha relação de sujeito com um "verbo humano", é porque
+// existe um salto metonímico de LOCAL para HUMANO COLECTIVO
+//
+// Example: Lisboa constatou que a crise estava forte"
+// Example: O Porto, irritado com Lisboa, homenageou Olegário Benquerença"
+//if ( ^NE[location,admin_area,city](#1) & SUBJ(?[human_activity],#1) )
+//  NE[met-div-to-coll=+](#1)
+
+// Uma entidade do tipo LOCAL CRIADO REGIAO que tenha relação de sujeito com um "verbo humano", é porque
+// existe um salto metonímico de LOCAL para HUMANO COLECTIVO
+// Example: "A América constatou que a crise estava forte"
+//if ( ^NE[location,admin_area,region](#1) & SUBJ(?[human_activity],#1) )
+//  NE[met-reg-to-coll=+](#1)
+
+// Example: As relações (diplomáticas) entre Israel e Síria
+//if ( ^NE[location,admin_area,country](#1) & ( MOD[post](?[lemma:"relação"],#1) | MOD[post](?[lemma:"relações diplomáticas"],#1) ) & PREPD(#1,?[lemma:entre]) )
+//   NE[met-country-to-coll=+](#1)
+
+// Example: As relações (diplomáticas) entre Lisboa e o Porto
+//if ( ^NE[location,admin_area,city](#1) & ( MOD[post](?[lemma:"relação"],#1) | MOD[post](?[lemma:"relações diplomáticas"],#1) ) & PREPD(#1,?[lemma:entre]) )
+//   NE[met-div-to-coll=+](#1)
+
+// Example: As relações (diplomáticas) entre a América e a Oceânia
+//if ( ^NE[location,admin_area,region](#1) & ( MOD[post](?[lemma:"relação"],#1) | MOD[post](?[lemma:"relações diplomáticas"],#1) ) & PREPD(#1,?[lemma:entre]) )
+//   NE[met-reg-to-coll=+](#1)
+
+// Example: O acordo (assinado, concluído, estabelecido, etc.) entre Portugal e Espanha
+// Example: O acordo (assinado, concluído, estabelecido, etc.) com a França
+//if ( ^NE[location,admin_area,country](#1) & MOD[post](?[lemma:acordo],#1) & ( PREPD(#1,?[lemma:entre]) | PREPD(#1,?[lemma:com]) ) )
+//  NE[met-country-to-coll=+](#1)
+
+// Example: O acordo (assinado) entre Lisboa e o Porto
+// Example: O acordo (assinado, concluído, estabelecido, etc.) com o Porto
+//if ( ^NE[location,admin_area,city](#1) & MOD[post](?[lemma:acordo],#1) & ( PREPD(#1,?[lemma:entre]) | PREPD(#1,?[lemma:com]) ) )
+//  NE[met-div-to-coll=+](#1)
+
+// Example: O acordo (assinado) entre a América e a Europa
+// Example: O acordo (assinado, concluído, estabelecido, etc.) com a Europa
+//if ( ^NE[location,admin_area,region](#1) & MOD[post](?[lemma:acordo],#1) & ( PREPD(#1,?[lemma:entre]) | PREPD(#1,?[lemma:com]) ) )
+//  NE[met-reg-to-coll=+](#1)
+
+// Example: (Ganhar, Obter, etc.) autonomia em relação à Espanha
+//if ( ^NE[location,admin_area,country](#1) & MOD[post](?[lemma:autonomia],#1) & PREPD(#1,?[lemma:"em relação a"]) )
+//  NE[met-country-to-coll=+](#1)
+
+// Example: (Ganhar, Obter, etc.) autonomia em relação ao Porto
+//if ( ^NE[location,admin_area,city](#1) & MOD[post](?[lemma:autonomia],#1) & PREPD(#1,?[lemma:"em relação a"]) )
+//  NE[met-div-to-coll=+](#1)
+
+// Example: (Ganhar, Obter, etc.) autonomia em relação à Europa
+//if ( ^NE[location,admin_area,region](#1) & MOD[post](?[lemma:autonomia],#1) & PREPD(#1,?[lemma:"em relação a"]) )
+//  NE[met-reg-to-coll=+](#1)
+
+// Se o nome de um país estiver dependente de palavras específicas como "coroa", "governo", etc.,
+// então não é um LOCAL, mas sim HUMANO COLECTIVO
+//if ( ^NE[location,admin_area,country](#1) & PREPD(#1,?[lemma:de]) & ( MOD[post](?[lemma:coroa],#1) | MOD[post](?[lemma:governo],#1) ) )
+// NE[met-country-to-coll=+](#1)
+
+// Example: A França está em guerra
+//if ( ^NE[location,admin_area,country](#1) & SUBJ[pre](?[lemma:estar],#1) & MOD[post](?[lemma:estar],?[lemma:guerra]) & PREPD(?[lemma:guerra],?[lemma:em]) )
+//  NE[met-country-to-coll=+](#1)
+
+// Example: estar em guerra com o Iraque
+//if ( ^NE[location,admin_area,country](#1) & MOD[post](?[lemma:estar],#1) & MOD[post](?[lemma:estar],?[lemma:guerra]) & PREPD(#1,?[lemma:com]) )
+//  NE[met-country-to-coll=+](#1)
+
+// Portugal obteve/alcançou/recuperou/ganhou a independência
+//if ( ^NE[location,admin_area,country](#1) & ( SUBJ[pre](?[lemma:obter],#1) | SUBJ[pre](?[lemma:alcançar],#1) | SUBJ[pre](?[lemma:recuperar],#1)
+//      | SUBJ[pre](?[lemma:ganhar],#1) ) & DETD(?[lemma:independência],?[surface:a]) )
+//  NE[met-country-to-coll=+](#1)
+
+// Lisboa obteve/alcançou/recuperou/ganhou a independência
+//if ( ^NE[location,admin_area,city](#1) & ( SUBJ[pre](?[lemma:obter],#1) | SUBJ[pre](?[lemma:alcançar],#1) | SUBJ[pre](?[lemma:recuperar],#1)
+//      | SUBJ[pre](?[lemma:ganhar],#1) ) & DETD(?[lemma:independência],?[surface:a]) )
+//  NE[met-div-to-coll=+](#1)
+
+// A América obteve/alcançou/recuperou/ganhou a independência
+//if ( ^NE[location,admin_area,region](#1) & ( SUBJ[pre](?[lemma:obter],#1) | SUBJ[pre](?[lemma:alcançar],#1) | SUBJ[pre](?[lemma:recuperar],#1)
+//      | SUBJ[pre](?[lemma:ganhar],#1) ) & DETD(?[lemma:independência],?[surface:a]) )
+//  NE[met-reg-to-coll=+](#1)
+
+// A admiração/o orgulho/a ameaça/a garantia da Inglaterra
+//if ( ^NE[location,admin_area,country](#1) & ( MOD[post](?[lemma:admiração],#1) | MOD[post](?[lemma:orgulho],#1) | MOD[post](?[lemma:ameaça],#1)
+//      | MOD[post](?[lemma:garantia],#1) ) )
+//  NE[met-country-to-coll=+](#1)
+
+// A admiração/o orgulho/a ameaça/a garantia de Lisboa
+//if ( ^NE[location,admin_area,city](#1) & ( MOD[post](?[lemma:admiração],#1) | MOD[post](?[lemma:orgulho],#1) | MOD[post](?[lemma:ameaça],#1)
+//      | MOD[post](?[lemma:garantia],#1) ) )
+//  NE[met-div-to-coll=+](#1)
+
+// A admiração/o orgulho/a ameaça/a garantia da Europa
+//if ( ^NE[location,admin_area,region](#1) & ( MOD[post](?[lemma:admiração],#1) | MOD[post](?[lemma:orgulho],#1) | MOD[post](?[lemma:ameaça],#1)
+//      | MOD[post](?[lemma:garantia],#1) ) )
+//  NE[met-reg-to-coll=+](#1)
+
+////////////////////////////////////////////////
+// END OF METONYMY LOCATION -> HUMAN COLLECTIVE
+////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+//DCO, 2010/08/21 (updated 2010/09/17)
+// METONYMY HUMAN COLLECTIVE INSTITUTION -> LOCATION
+////////////////////////////////////////////////////////////
+
+// Enquanto houver regras com base em sintaxe para apanhar metonímia (e.g. no ficheiro LGOrg.xip), esta regra tem de existir
+// Idealmente no futuro todas as regras deverão ser com base nas relações entre os elementos da frase
+//DCO, 2010/10/03: esta regra já não é necessária!
+//| NP{?*, noun#1[met-inst-to-loc,location=+,virtual=+]} ; PP{?*, noun#1[met-inst-to-loc]} |
+//if ( ~NE[collective](#1) )
+//  NE[met-inst-to-loc=+](#1)
+
+// Publicado/escrito/redigido/presente no Diário de Notícias
+//if ( ^NE[institution](#1) & ( MOD[post](?[lemma:publicar],#1) | MOD[post](?[lemma:escrever],#1) | MOD[post](?[lemma:redigir],#1)
+//      | MOD[post](?[lemma:presente],#1) ) & PREPD(#1,?[lemma:em]) )
+//  NE[met-inst-to-loc=+](#1)
+
+// Artigo no Diário de Notícias
+//if ( ^NE[institution](#1) & ( MOD[post](?[lemma:artigo],#1) | MOD[post](?[lemma:história],#1) ) & PREPD(#1,?[lemma:em]) )
+//  NE[met-inst-to-loc=+](#1)
+
+// Passar na Rádio Comercial, ouvir na M80, aparecer na SIC, estar na Google, ficar na Pousada do Gerês
+//if ( ^NE[institution](#1) & ( MOD[post](?[lemma:passar],#1) | MOD[post](?[lemma:ouvir],#1) | MOD[post](?[lemma:aparecer],#1)
+//      | MOD[post](?[lemma:estar],#1) | MOD[post](?[lemma:ficar],#1) ) & PREPD(#1,?[lemma:em]) )
+//  NE[met-inst-to-loc=+](#1)
+
+///////////////////////////////////////////////////////////
+// END OF METONYMY HUMAN COLLECTIVE INSTITUTION -> LOCATION
+///////////////////////////////////////////////////////////
+
+////////////////////////////////////
+//DCO, 2010/09/18
+// NÃO RELACIONADAS COM A MINHA TESE
+////////////////////////////////////
+
+// planet name not preceeded by "em" is COISA OBJECTO
+| #1[celestialbody,maj] |
+   if ( ~NE(#1) )
+   NE[coisa=+,objecto=+](#1)
+
+// PLANO (ABSTRACCAO)
+| ?[pp]{prep, ?*, noun#1[plano,last]}; ?[np]{?*,noun#1[plano,last]}; noun[mwe,proper,untyped]{?*,noun#1[plano,last]} |
+   if ( ~NE(#1) )
+   NE[abstraccao=+,plano=+](#1)
+
+// HAREM SPECIFIC
+// ABSTRACCAO - NOME
+// e.g deu-lhe o nome de Joao Sem Medo.
+if ( ^NE[people,individual](#1) & MOD[post](#2[lemma:nome],#1) & CDIR(?[lemma:dar],#2) )
+   NE[features=~,abstraccao=+,nome=+](#1)
+
+// nomeou-o Joao Sem Medo
+| #1[verb];sc{?*,#1[verb]}, NP#5, NP#3 |
+if ( ^NE[people,individual](#4) & HEAD(#4,#3) & HEAD(#2[lemma:nomear],#1) & VDOMAIN(?,#2) & HEAD(#6,#5) & CDIR(#2,#6) )
+   NE[features=~,abstraccao=+,nome=+](#4)
+
+// denominado Joao Sem Medo
+| ?{#1[pastpart,lemma:denominar]}, NP#2 |
+if ( ^NE[people,individual](#3) & HEAD(#3,#2) )
+   NE[features=~,abstraccao=+,nome=+](#3)
+
+// Very general rule. Check if OK maybe too general ...
+// If untyped complex proper noun  with mwe, if this complex proper noun is between " or '' or '
+// If there is an direct or indirect dependency link between this complex proper noun and the noun
+// album, livro, obra
+// Then consider it as a NE culture inquote
+//álbum
+| punct[quote], NP{noun#1[proper,untyped,mwe,first,last]}, punct[quote] |
+   NE[culture=+,inquote=+](#1)
+
+////////////////////////////////////
+////////////// FIM ////////////////
+//////////////////////////////////
+
+//////////////////////////////////
+//DCO, 2010/09/18
+// POR ANALISAR
+/////////////////////////////////
+
+// >>>>>>>>>>>>> PESSOA
+
+// nouns have  been considered as proper but are not typed or badly typed (metonimic uses)
+// using dependency relations to type them better
+
+// if untyped mwe proper noun is subject of morrer, then we consider that it is a person.
+| noun#1[proper,mwe,untyped] |
+if ( ~NE(#1) & SUBJ(?[lemma:morrer,sg,3p],#1) )
+   NE[people=+,individual=+](#1)
+
+// very, very, schematic
+// Planet name preceeded by "em" is LOCAL, GEOGRAFICO, PLANETA
+| ?[pp]{prep[lemma:em], ?*, noun#1[last,celestialbody,maj]} |
+   if ( ~NE[celestialbody](#1) )
+   NE[location=+,geographic=+,celestialbody=+](#1)
+
+// Planets which are MOD[post] introduced by "para" of a verb marked as change_place are location
+| ?[pp]{prep[lemma:para], ?*, noun#1[last,celestialbody,maj]} |
+   if ( ~NE[celestialbody](#1) & MOD(?[SEM-change-place],#1)  )
+   NE[location=+,geographic=+,celestialbody=+](#1)
+
+// CULTURAL PLACES
+// if a NE bears feature culture and if it is a monument,
+// then if it is in a PP[em], we consider it as a location
+if ( NE[culture,monument](#1) & PREPD(#1,?[lemma:em]) )
+   NE[features=~,location=+,admin_area=+,building=+](#1)
+
+// >>>>>>>>>>>>> ORG - INSTITUTION
+
+// post-modifier PP[de] de campus is an institution
+// eg O campus da UnB
+if ( MOD[post](?[lemma:campus],#1[proper]) & ~NE(#1) & PREPD(#1,?[lemma:de]) )
+   NE[collective=+,institution=+,university=+](#1)
+
+// >>>>>>>>>>>>> MOUNTAIN - REGION
+
+// If a mountain name is modifier of some noun like "regiao", "zona", "area" etc. it is no more
+// to be tagged as relief, but as region
+if ( NE(#1[relief]) & ( MOD[post](?[lemma:região],#1) | MOD[post](?[lemma:zona],#1) ) & PREPD(#2,?[lemma:de]) )
+   NE[features=~,location=+,geographic=+,region=+](#1)
+
+// >>>>>>>>>>>>> UNTYPED - REGION
+
+// if an unknown mwe named entity is the head of a NP which follows a NP/PP which head contains zona, regiao, area etc. then the unknown NE is typed as
+// location=+, admin_area=+, region=+
+// eg. A regiao romana Hispanica Betica
+| NP{?*,noun#3[last]};PP{?*,noun#3[last]}, NP{?*,#2[last,proper,noun,maj,untyped]} |
+if ( ~NE(#2) & #3[lemma:zona] | #3[lemma:província] | #3[lemma:região] )
+   NE[location=+,admin_area=+,region=+](#2)
+
+// unknown mwe or people NE is direct object of "denominar" when subject of this verb
+// is zona, provincia, regiao etc.
+// eg. A região ocidental da península era nomeada Gharb Al-Andalus.
+| noun#1[mwe,noun,maj,proper] |
+if ( (~NE(#1) | NE[people](#1) ) &
+            (
+        CDIR(#2[lemma:denominar],#1) | CDIR(#2[lemma:chamar],#1) | CDIR(#2[lemma:nomear],#1)
+      )
+        &
+          (
+      SUBJ(#2,?[lemma:zona]) | SUBJ(#2,?[lemma:região]) | SUBJ(#2,?[lemma:província])
+          )
+   )
+   NE[features=~,location=+,admin_area=+,region=+](#1)
+
+// >>>>>>>>>>>>> TAKING advantage of ATTRIB and MOD relations and PREPD relations
+
+// If underspecified NE in attributive relation with specific words, we can further specify
+// Example: o estado de Wwerwre
+| ?{?*,#1[last,lemma:estado,maj:~]}, PP{prep[lemma:de], ?*, #2[last]} |
+if ( ^NE[state:~](#2) &  ~NE[state](#2) )
+   NE[features=~,location=+,admin_area=+,state=+](#2)
+
+// universidade de Columbia
+| ?{?*,#1[last,lemma:universidade,maj:~]}, PP{prep[lemma:de], ?*, #2[last]} |
+if ( ^NE[university:~](#2) | ~NE[university](#2) )
+   NE[features=~,collective=+,institution=+,university=+](#2)
+
+// if underspecified NE modifies the word "tribo", then it is a NE of type person membergroup
+// Eg. O tribo dos Yamabushis
+| PP{prep[lemma:de], ?*, noun#1[proper,maj,pl]} |
+if ( ~NE[people](#1) &  MOD[post](?[lemma:tribo],#1) )
+   NE[people=+,membergroup=+](#1)
+
+// if underspecified NE is in apposition with word bearing relative feature, then it is a person individual
+// Example: A sua mulher, Yapuwer, chegou
+| NP{#1[noun,first,last,proper]} |
+if ( APPOSIT(?[relative],#1) & ~NE(#1) )
+   NE[people=+,individual=+](#1)
+
+// ATTRIB relations with a trigger word
+// Example: A cidade sempre se chamou Itaporanga - Itaporanga is considered as person but has ATTRIB with cidade
+if ( ATTRIB(#1[location,maj:~],#2) & ^NE[location:~](#2) )
+   NE[features=~,location=+](#2)
+
+// MOD of vir/ir and preceeded by another LOCATION
+// e.g veio do Porto para Zzerzrz
+if ( MOD[post](#1[lemma:vir],#2) & NE[location,admin_area](#2) & PREPD(#2,?[lemma:de]) & MOD[post](#1,#3) & #2 < #3  & ~NE[location](#3) & PREPD(#3,?[lemma:para]) )
+   NE[location=+,admin_area=+](#3)
+
+// IF a NE is people
+// if this NE is in a PREPD relation with prep EM without determiner
+// Then destroy NE people relation
+// e.g em Nogueira
+if ( ^NE[individual,people](#1) & PREPD(#1,?[lemma:em]) & ~DETD(#1,?) )
+~
+
+// HAREM SPECIFIC
+// MOD[post]em "de"
+// a prep[de] mod of the word "site" is a LOCAL, VIRTUAL SITIO
+// Example: o site da FCCN
+| ?{?*,#1[lemma:site]}, PP{?[lemma:de], ?*, #2[last,proper]} |
+if ( ^NE[site:~](#2) | ~NE(#2) )
+   NE[features=~,location=+,virtual=+,site=+](#2)
+
+
+// HAREM SPECIFIC
+// MOD em "em"
+// if NE is collective, jornal and introduced by EM
+// then consider as LOCAL VIRTUAL, OBRA
+// Leu no Expresso. Leu no Jornal Xsefsfswer.
+| PP{?[lemma:em], ?*, #2[last]} |
+if ( ^NE[collective,jornal](#2) )
+   NE[features=~,location=+,virtual=+,comsocial=+](#2)
+
+
+// Leu no jornal Xwerwer (jornal does not start by an uppercase in this case
+// thus does not belong to the NE
+| PP{?[lemma:em], ?*, ?[last,lemma:jornal]}, NP{#2[first,last]} |
+if ( ^NE[collective,jornal](#2) )
+   NE[features=~,location=+,virtual=+,comsocial=+](#2)
+
+// >>>>>>>>>>>>> COORDINATION - COMPLEX CASES
+
+// Complex coordination cases
+// Camaras de Alijo e Vila Nova de Pouca
+// Camara de Alijo is marked as INSTITUITO + Vila Nova de Pouca is marked as city
+// We want Vila Nova de Pouca marked as organization too...
+
+// other COORD if the second is a location which is coordinated on its left with a NE which is not location, then the second has
+// the same features than the first
+
+//DCO, 2011/02/23
+// This rule is dangerous: "O Benfica e a cidade de Olhão" --> is "cidade de Olhão" an INSTITUTION?
+// Added mwe:~ restriction
+if ( NE[location:~,!features:!](#2) & ^NE[location](#3) & #3[mwe:~] & COORD(#4,#2) & COORD(#4,#3) & #2 < #3  )
+NE[features=~](#3)
+
+// Ambiguity in NE
+// intrinsic ambiguity betwen ORG INSTITUITION and LOCAL ADMINISTRATIVO
+// Example: A Escola Padre Antonio Vieira can be both an organization and a location
+// by default it is coded as a organization
+
+// if a ORG INSTITUTION is ambiguous with LOCAL
+// Example: fica perto|a 100 metros da Escola Padre Antonio Vieira
+if ( MOD[post](?[lemma:ficar],#1) & ^NE[collective,institution](#1) )
+   NE[collective=~,institution=~,location=+,admin_area=+](#1)
+
+////////////////////////////////////
+////////////// FIM ////////////////
+//////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// cleaning rules...
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/03/09
+// Comentadas (já existem em entit_propagation.xip)
+// Added location:~ restrictions
+// if a NE within a NE take the most embedded out
+//| #1{?*,#2} |
+//if ( $1(#1) & ^$1[location:~](#2) )
+//~
+//
+//// if a NE within a NE take the most embedded out
+//| #1{?*,?{#2}} |
+//if ( $1(#1) & ^$1[location:~](#2) )
+// ~
+
+// if a complex number in lower case is taken as NE[quantity], then destroy it
+// HAREM only considered digits and upper-cases
+//NJM: was not working with último"
+// Example: no último lugar
+| num#1[surface:"%c%+",SEM-fuzzy:~];num#1[lemma:último];num#1[maj:~,toutmaj:~,dig:~,frac:~,SEM-fuzzy:~]{?[prep:~,dig:~,frac:~]} |
+if ( ^NE[quant](#1) )
+ ~
+
+// Cleaning HAREM competition only
+// Xerox only
+// avoiding to take ID values as NE[quant]
+| ?[lemma:"%*(ID)="], punct, np{num#1[first,last]} |
+if ( ^NE[quant](#1) )
+ ~

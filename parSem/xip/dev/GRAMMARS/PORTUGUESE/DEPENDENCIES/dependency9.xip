@@ -1,0 +1,253 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency9.xip                                             !
+//!   Date       : 2007/May                                                    !
+//!   Author     : Caroline Hagege                                             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! Syntactic functions for interrogative sentences			                   !
+//! Important note : in dependency6.xip see cleaning rule that deletes SUBJ    !
+//! CDIR and MOD functions for qu:+ pronouns (rule 3106 May 30th,)	          !
+//! CH - May 2007                                                              !			
+//!									                                                 !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency9.xip,v 1.1 2008/10/21 12:39:42 chagege Exp $
+
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// TOOL DEPENDENCY MAINFUNC and MARKING RULE
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Tool dependency
+// Creates a unary link MAINFUNC if a node has a main syntactic function as
+// SUBJ, CDIR, MOD etc.
+//
+if ( SUBJ(?,#1) | CDIR(?,#1) | MOD(?,#1) | PREDSUBJ(?,#1) )
+   MAINFUNC(#1)
+
+
+// Um NP[interrog] À esquerda de uma forma verbal não pode ser nem sujeito nem
+// objecto directo se não for expresso por "quem", "O que", "qual" ou "que/qual NP".
+//
+// This rule marks NPs which can be potential SUBJ or potential CDIR
+// adding feature nom:+ (for nominative, this feature already exists)
+//
+| NP[interrog:+,nom=+]{?[lemma:que];?[lemma:qual];?[lemma:o_que];?[lemma:quem];?[lemma:quanto]} |
+  ~
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// INTERROGATIVE PRONOUNS AS MODIFIERS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Rule 1 - If we have a PP[interrog]
+// If this PP is not linked to any verb then this PP is linked to the verb
+// as MOD[interrog]
+//
+// Example: Com quem brincou? -> MOD[pre,interrog](brincou,quem)
+//
+| PP#1[interrog], ?*[verb:~], ?[verb]{?*,#2[last]} |
+if ( HEAD(#4,#1) & VDOMAIN(#2,#3) & ~MOD(#3,#4) )
+   MOD[pre=+,interrog=+](#3,#4)
+
+
+// Rule 2 - If we have a NP interrogative that has not feature nom:+ (see marking rule above)
+//  then it is a pre-modifier
+//
+// Example: Onde comeu o bolo?
+// Example: Quando apareceu?
+//
+| NP#1[interrog,nom:~], ?*[verb:~], ?[verb]{?*,#2[last]} |
+if ( HEAD(#4,#1) & VDOMAIN(#2,#3) & ~MOD(#3,#4) )
+   MOD[pre=+,interrog=+](#3,#4),
+   MAINFUNC(#4).
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// INTERROGATIVE PRONOUNS AS SUBJECT OR DIRECT OBJECT OR ATTRIB
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Qual;O_que + SER + NP
+// If NP[interrog] containing "qual" or "o_que" or "quem" followed by SER followed by NP
+// In this case qual is PREDSUBJ and NP is SUBJ
+//
+// Example1: O que foi o GI Joe?
+// Example3: Quem foi Alexander Bell?
+// Example2: Qual é a altura?  -> SUBJ(ser,altura),
+//                             -> ATTRIB[interrog](altura,qual),
+//                             -> PREDSUBJ[interrog](ser,qual)
+//
+| NP[interrog]{#1[first,last,lemma:qual]};NP[interrog]{#1[first,last,lemma:"o_que"]};NP[interrog]{#1[first,last,lemma:"quem"]};NP[interrog,lemma:"o_que ser que"]{#1[lemma:"o_que"]}, VF{?*, #2[lemma:ser]}, NP#3 |
+if ( HEAD(#4,#3) & ^PREDSUBJ(#2,#4) )
+   SUBJ[features=~,post=+](#2,#4),
+   PREDSUBJ[interrog=+](#2,#1),
+   MAINFUNC(#1),
+   ATTRIB[interrog=+](#4,#1).
+
+
+//  If we have a NP[interrog] containing "quem"
+// If this NP is not linked to any verb
+// If The main verb of the interrogative has no SUBJ
+// Then "quem" is the SUBJ of the main verb of the interrogative
+//
+// Example: Quem participou na tentativa? -> SUBJ[pre,interrog](participou,quem)
+//
+| NP[interrog]{#1[lemma:quem, first,last]}, ?[verb]{?*,#2[last]} |
+if ( VDOMAIN(#2,#3) & ~SUBJ(#3,?) &  ~MAINFUNC(#1) )
+   SUBJ[pre=+,interrog=+](#3,#1),
+   MAINFUNC(#1).
+
+
+// Correcting this rule to allow to have also the form "o que e que" CH June 2007
+// If we have a NP[interrog] which is "que" alone or "o que" alone then
+// it is an object and not a subject.
+// Note : the verb is not a copula
+//
+// Example: O que fez o Pedro?
+//
+| NP#1[interrog,lemma:"que"];NP#1[interrog,lemma:"o_que"];NP#1[interrog,lemma:"o_que ser que"], ?*[verb:~], ?[verb]{?*,#3[last,cop:~]} |
+if ( HEAD(#2,#1) & VDOMAIN(#3,#4) & ~MAINFUNC(#2) )
+   CDIR[pre=+,interrog=+](#4,#2),
+   MAINFUNC(#2).
+
+
+// CH - June 2007
+// rule for giving a function to "que" or "o que" or "o que e que" when the verb
+// is in the passive form
+//
+// Example: O que foi feito?
+// Example: Que foi feito?
+// Example: O que é que foi feito?
+//
+// In this case the interrogative NP is the syntactic SUBJECT that will be
+// converted as a PATIENT later
+//
+| NP#1[interrog,lemma:"que"];NP#1[interrog,lemma:"o_que"];NP#1[interrog,lemma:"o_que ser que"], ?*[verb:~], ?[verb]{?*,#3[last,lemma:ser]} |
+if ( HEAD(#2,#1) & VDOMAIN(#3,#4[pastpart]) & ~MAINFUNC(#2) )
+   SUBJ[pre=+,interrog=+](#4,#2),
+   MAINFUNC(#2).
+
+
+// Cleaning erroneous CDIR in the same cases.
+//
+// Example: O que fez o Pedro?  deleting *CDIR(fez,Pedro) and
+//                              constructing SUBJ(fez,Pedro)
+//
+| NP#1[interrog] |
+if ( HEAD(#2,#1) & CDIR[interrog](#3,#2) & ^CDIR[interrog:~](#3,#4) & #2 < #4 & ~SUBJ(#3,?) )
+   SUBJ(#3,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Adding interrog features for main functions when the interrogative pronoun
+// is not head of NP
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If we hava a NP[interrog:+] in which the interrogative pronoun has a function
+// of determiner then feature interrog:+ is not added to the main dependencies
+//
+// Example: Quantos rapazes sairam?
+//              adds feature interrog on SUBJ(sairam, rapazes)
+//
+| NP#1[interrog,nom], ?*[verb:~], ?[verb]{?*,#2[last]} |
+if ( HEAD(#3,#1) & VDOMAIN(#2,#4) & ^$1[interrog:~](#4,#3) )
+   $1[interrog=+](#4,#3)
+
+
+// If we have a NP[interrog] introducing a relative
+// If the relative pronoun has a main function with the verb
+// Then we transfer the SUBJ function to the NP[interrog] and add feature interrog
+// on the main function dependency
+//
+// Example: Qual o rapaz que fugiu?
+//              adds feature interrog on SUBJ[interrog](fugiu,rapaz)
+//
+| NP#1[interrog,nom], SC{#2[qu:+],?*,?[verb]{?*,#4[last]}} |
+if ( HEAD(#3,#1) & VDOMAIN(#4,#5) & ^$1[interrog:~](#5,#2) & INTROD[relat](#3,#2) )
+   $1[interrog=+](#5,#3)
+
+
+// If we have a NP[nom,interrog] introducing a relative "cujo/a"
+// Then we transfer the MOD[pre] function between the cujo and a nominal head
+// to the antecedant of the cujo
+//
+// Example: Qual a estrutura cujo afundamento causou 3 mortes?
+//              adds feature interrog on MOD[interrog](afundamento,estrutura)
+//
+| NP#1[interrog,nom], SC{NP{#2[first,last,lemma:cujo]}} |
+if ( HEAD(#3,#1) & INTROD[relat](#3,#2) & ^MOD[pre](#4,#2) )
+   MOD[interrog=+](#4,#3).
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Treating the useless "ser que" in interrogative clauses
+// CH, June 2007
+////////////////////////////////////////////////////////////////////////////////
+
+//
+// Example1 : Em que cidade é que nasceu Camoes? -> MOD[pre,interrog](nasceu,cidade)
+// Example2 : Em que ano é que faltaste?
+// Example3 : Por que razão é que chumbaste?
+// Example4 : Quando é que teve lugar o evento?
+//
+// Has to be analyzed the same way than "Em que cidade nasceu Camões?"
+// Note that the expression "O que é que" is already treated
+// The following rule is only useful for PP[interrog] with nominal head followed
+// by "e que" and also for NP[interrog,nom:~] (that is NP that have a modifier
+// function e.g. onde, quando
+//
+| PP#5[interrog];NP#5[interrog:+,nom:~], VF{#1[first,last,lemma:ser,pres,ind]}, NP{#2[first,last,lemma:que]}, VF{?*,#6} |
+if ( HEAD(#4,#5) & PREDSUBJ(#1,#2) & ^MOD[pre:+,interrog:+](#1,#4) & VDOMAIN(#6,#7) )
+   MOD[interrog=+](#7,#4)
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Algumas hipóteses para heuristicas que eventualmente poderão permitir melhorar
+//  a análise dentro das interrogativas
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Hypothese 1: dans questions rattacher la date au predicat principal
+// Que sinfonia compôs Beethoven em 1824 ? Attachment of "em 1824" to "compôs"
+// Verificar se bate certo antes de escrever a regra para limitar os attachment
+// inúteis...
+
+
+
+// Hypothese 2 : SUBJ and CDIR ???
+// NP#1[interrog,nom,humano:~] VF NP#2[proper] -> alors NP#2 est sujet et NP#1 est objet
+// Que sinfonia compôs Beethoven em 1824? SUBJ e Beethoven while CDIR is sinfonia
+// But we also can have counter examples like
+// Que general venceu Cleopatra?
+// No entanto, acho que se temos NP[não humano] Verbo NP[pessoa ou humano]? então
+// na grande maioria dos casos o segundo NP vai ser um sujeito e o primeiro o Objecto directo
+
+

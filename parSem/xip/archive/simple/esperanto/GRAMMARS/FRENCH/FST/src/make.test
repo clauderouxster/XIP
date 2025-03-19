@@ -1,0 +1,108 @@
+# ============================================================================
+# CONTENT:	Makefile for regression tests for lexical FSTs
+#
+# LANGUAGE:	ENGLISH
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	1-Feb-2006
+#		
+# ============================================================================
+
+# for compilation on Linux:
+ECHO = echo -e
+
+# for compilation on Solaris:
+# ECHO = echo
+
+
+# Directory for intermediate data
+AUX =	../aux
+
+# directory for target files
+DATA = 	../data
+
+# TOOLS:
+FST = 		fst -q -e "set quit-on-fail on"
+
+
+# compare data files
+testall:	test-norm1 \
+		test-norm2 \
+		test-norm3 \
+		test-normxml \
+		test-terrors \
+		test-guesser \
+		test-finalguesser \
+		test-Basictok \
+		test-num+ \
+		test-Prefix2
+
+
+################################################################################
+# REGRESSION TEST (to compare with previous FSTs)
+################################################################################
+#OLDDATA = /home/chanod/projects/NewParser/french2/NTMlex2003
+OLDDATA = /home/schiller/parSem/xip/dev/GRAMMARS/FRENCH/BASIC
+
+# Basictok.fst: replaced "\v" by "\r" 
+#		ignore entries with -<+PUNCT:0>RC
+
+test-Basictok:		$(DATA)/Basictok.fst \
+			$(OLDDATA)/Basictok.fst
+	@$(ECHO) "--- comparing $+"
+	@$(FST)	-s $(DATA)/Basictok.fst \
+		-s $(OLDDATA)/Basictok.fst \
+		-e 'substitute symbol "\r" for "\v" ;' \
+		-e "test eq" \
+		-e "def OLD" \
+		-e "def NEW" \
+		-e "echo >>> in $(DATA)/Basictok.fst: " -e "regex OLD - NEW; " -e "print words" \
+		-e "echo >>> in $(OLDDATA)/Basictok.fst:" -e "regex NEW - OLD; " -e "print words" \
+		-stop
+
+# terrors.fst:	removed additional network (should be: norm3)
+test-terrors:		$(DATA)/terrors.fst \
+			$(OLDDATA)/terrors.fst
+	@$(ECHO) "--- comparing $+"
+	@$(FST)	-s $(DATA)/terrors.fst \
+		-s $(OLDDATA)/terrors.fst \
+		-e "stack top 1" -e "pop" \
+		-e "test eq" -stop
+
+# num+.fst:	replaced multi-char symbols DEM and FF by character sequences
+test-num+:		$(DATA)/num+.fst \
+			$(OLDDATA)/num+.fst
+	@$(ECHO) "--- comparing $+"
+	@$(FST)	-s $(DATA)/num+.fst \
+		-s $(OLDDATA)/num+.fst \
+		-e "def TMP {DEM} ;" \
+		-e "substitute defined TMP for DEM" \
+		-e "def TMP {FF} ;" \
+		-e "substitute defined TMP for FF" \
+		-e "test eq" -stop
+
+# guesser.fst:	removed entries with multi-char symbols (missing definitions!)
+test-guesser:		$(DATA)/guesser.fst \
+			$(OLDDATA)/guesser.fst
+	@$(ECHO) "--- comparing $+"
+	@$(FST)	-s $(DATA)/guesser.fst \
+		-s $(OLDDATA)/guesser.fst \
+		-e "define OLD ;" \
+		-e 'regex ~$$[VerbCO1sg | VerbCO2sg | VerbIF12 | VerbII1sg | VerbII2sg ] .o. OLD ;' \
+		-e "test eq" -stop
+
+
+# other FSTs should be identical
+test-%:		$(DATA)/%.fst \
+		$(OLDDATA)/%.fst 
+	@$(ECHO) "--- comparing $+"
+	@$(FST)	-s $(DATA)/$*.fst \
+		-s $(OLDDATA)/$*.fst \
+		-e "test eq" -stop
+
+
+
+
+
+

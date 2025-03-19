@@ -1,0 +1,201 @@
+# ============================================================================
+# TYPE:		(x)fst script 
+# CONTENT:	mapping of morph. categories to standard POS tags
+#
+# LANGUAGE:	GERMAN
+# TAGSET:	1
+#
+# AUTHOR:	Anne Schiller
+#
+# CREATED:	31-Jul-2003
+# UPDATED:	28-Aug-2006	(simplified mappings)
+#
+# ============================================================================
+# USAGE:	xfst -l ThisFile
+# ============================================================================
+
+
+# main categories 
+define MAIN	[ 
+  %+Noun 	# common noun
+| %+Prop 	# proper noun
+| %+Adj 	# adjective
+| %+Adv 	# adverb
+| %+Pronadv 	# pronominal adverb			e.g. hiermit
+| %+Verb 	# verb
+| %+Det 	# determiner
+| %+Predet 	# pre-determiner			e.g. solch [ein]
+| %+Pron	# pronoun
+| %+PAdj	# pronoun-like adjective		e.g. andere
+| %+Prep	# preposition
+| %+Postp	# postposition
+| %+PrepDet	# fused preposition and determiner	e.g. zum
+| %+Conj	# conjunction
+| %+Ptcl	# particle
+| %+Itj		# interjection
+| %+Num		# numeral
+| %+Symbol	# special symbol
+| %+Dig		# digital number
+| %+Punct	# punctuation
+| %+Expr	# expression( date, time, ...)
+| %+Foreign	# foreign language
+];
+
+define REST	~$[MAIN];
+
+# some subcategories
+
+define VTYPE	[ # marked only if inflection differs
+  %+Trans	# transitive 		er hängte es an die Wand
+| %+Intr	# intransitive 		er hing an der Wand
+];
+
+define VMOOD	[
+  %+Indc	# indicative			(er) kommt
+| %+Subj	# subjunctive			(er) komme
+| %+IndcSubj	# indicative or subjunctive	(ich) komme
+| %+Imp		# imperative			komm (rein!)
+];
+
+define NTYPE	[ # symbol categories to be treated as nouns
+  %+Music
+| %+Letter 
+| %+Init 
+| %+Curr 
+| %+Unit 
+];
+
+# ----------------------------------------------------------------------------------------
+define MAP [
+  %+Cpd	REST					%+hmm%_TRUNC:0
+
+| %+Noun REST					%+hmm%_NOUN:0
+| %+Prop REST					%+hmm%_NOUN:0
+
+| %+Adj	[ REST & $%+Invar ]				[ %+hmm%_ADJA:0 | %+hmm%_ADJD:0 ]
+| %+Adj	[ REST & $%+Pos & ~$%+Pred ]			%+hmm%_ADJA:0
+| %+Adj	[ REST & $%+Pos & $%+Pred ]			%+hmm%_ADJD:0
+| %+Adj	[ REST & $%+Comp & ~$%+Pred ]			%+hmm%_ADJA2:0
+| %+Adj	[ REST & $%+Comp & $%+Pred ]			%+hmm%_ADJD2:0
+| %+Adj	[ REST & $%+Sup & ~$%+Pred ]			%+hmm%_ADJA3:0
+| %+Adj	[ REST & [%+Sup|%+Sup2] & $%+Pred ]		%+hmm%_ADJD3:0
+
+| %+Adv [ REST & ~$[%+Wh] ]			%+hmm%_ADV:0
+| %+Adv [ REST & $[%+Wh] ]			%+hmm%_WADV:0
+
+| %+Pronadv [ REST & ~$[%+Wh] ]			%+hmm%_ADV:0
+| %+Pronadv [ REST & $[%+Wh] ]			%+hmm%_WADV:0
+
+| %+Verb (VTYPE) %+Inf REST			%+hmm%_VVINF:0
+| %+Verb (VTYPE) %+Izu REST			%+hmm%_VVIZU:0
+| %+Verb (VTYPE) %+PPres REST			%+hmm%_ADJD:0
+| %+Verb (VTYPE) %+PPast REST			%+hmm%_VVPP:0
+| %+Verb (VTYPE) VMOOD REST			%+hmm%_VVFIN:0 
+
+| %+Verb %+Modal %+Inf REST			%+hmm%_VMINF:0
+| %+Verb %+Modal %+PPres REST			%+hmm%_ADJD:0
+| %+Verb %+Modal %+PPast REST			%+hmm%_VMPP:0
+| %+Verb %+Modal VMOOD  REST			%+hmm%_VMFIN:0 
+
+| %+Det	%+Indef	REST				%+hmm%_INDDET:0
+| %+Det %+Neg REST				%+hmm%_INDDET:0
+| %+Det %+Def REST				%+hmm%_ART:0
+| %+Det %+Wh REST				%+hmm%_WDET:0
+| %+Det %+Dem REST				%+hmm%_DEMDET:0
+| %+Det %+Quant REST				%+hmm%_INDDET:0
+| %+Det %+Poss REST				%+hmm%_POSDET:0
+	
+| %+Predet %+Indef REST				%+hmm%_INDINV:0
+| %+Predet %+Wh	REST				%+hmm%_WINV:0
+| %+Predet %+Dem REST				%+hmm%_DEMINV:0
+| %+Predet %+Quant REST				%+hmm%_INDINV:0
+
+
+| %+Pron %+Pers REST				%+hmm%_PERSPRO:0
+| %+Pron %+Refl REST				%+hmm%_REFLPRO:0
+| %+Pron %+Recp REST				%+hmm%_REZPRO:0
+| %+Pron %+Rel REST				%+hmm%_RELPRO:0
+| %+Pron %+Indef REST				%+hmm%_INDPRO:0
+| %+Pron %+Neg REST				%+hmm%_INDPRO:0		# nichts
+| %+Pron %+Wh REST				%+hmm%_WPRO:0
+| %+Pron %+Dem REST				%+hmm%_DEMPRO:0
+| %+Pron %+Quant REST				%+hmm%_INDPRO:0
+| %+Pron %+Poss REST				%+hmm%_POSPRO:0
+
+| %+PAdj %+Dem REST 				%+hmm%_DEMADJ:0
+| %+PAdj %+Indef REST				%+hmm%_INDADJ:0
+| %+PAdj %+Neg REST				%+hmm%_INDADJ:0		# keinerlei
+| %+PAdj %+Wh REST				%+hmm%_WDET:0
+| %+PAdj %+Quant [REST & ~$[%+Sup2] ]		%+hmm%_INDADJ:0
+| %+PAdj %+Quant [REST & $[%+Sup2] ]		%+hmm%_ADJD3:0	# am meisten/wenigsten
+
+| %+Prep REST					%+hmm%_PREP:0
+| %+Postp [REST & ~$[%+Crc]]			%+hmm%_POSTP:0
+| %+Postp %+Crc REST				%+hmm%_CIRCP:0
+| %+PrepDet REST				%+hmm%_PREPART:0
+
+| %+Conj %+Coord REST				%+hmm%_COORD:0
+| %+Conj %+Coord1 REST				%+hmm%_COP1:0
+| %+Conj %+Coord2 REST				%+hmm%_COP2:0
+| %+Conj %+Subord REST				%+hmm%_COSUB:0
+| %+Conj %+SAdv REST 				%+hmm%_COADV:0
+| %+Conj %+Infzu REST				%+hmm%_COINF:0
+
+| %+Ptcl %+Neg REST				%+hmm%_PTKNEG:0
+| %+Ptcl %+Sent REST				%+hmm%_PTKANT:0
+| %+Ptcl %+Izu REST				%+hmm%_PTKINF:0
+| %+Ptcl %+PAdv REST				%+hmm%_ADV:0
+| %+Ptcl (%+AMod) %+Pos REST			%+hmm%_PTKPOS:0
+| %+Ptcl (%+AMod)%+Comp REST			%+hmm%_PTKCOM:0
+| %+Ptcl (%+AMod)%+Sup REST			%+hmm%_PTKSUP:0
+| %+Ptcl %+Pref REST				%+hmm%_VPREF:0 
+
+| %+Itj	 REST					%+hmm%_ITJ:0
+
+| %+Num	%+Card REST				%+hmm%_CARD:0
+| %+Num %+Ord REST				%+hmm%_ORD:0
+| %+Num %+Fract REST				%+hmm%_ADJA:0
+
+| %+Symbol %+Sgml %+Sent REST			%+SENT:0
+| %+Symbol %+Sgml [ REST & ~$[%+Sent] ]		%+hmm%_SGML:0
+| %+Symbol [ REST & $[NTYPE] ]			%+hmm%_NOUN:0
+| %+Symbol [ REST & ~$[NTYPE|%+Sgml] ]		%+hmm%_SYMB:0
+
+| %+Dig	[ REST & $[%+Card] ] 			%+hmm%_CARD:0
+| %+Dig [ REST & $[%+Ord] ]			%+hmm%_ORD:0
+
+| %+Punct [ REST & $[%+Sent] ] 			%+SENT:0
+| %+Punct [ REST & $[%+Comma] ] 		%+hmm%_CM:0
+| %+Punct [ REST & ~$[%+Sent|%+Comma] ] 	%+hmm%_PUNCT:0
+
+| %+Expr %+Date REST				%+hmm%_DATE:0
+| %+Expr %+Time REST				%+hmm%_DATE:0
+
+| %+Foreign REST				%+hmm%_FM:0
+];
+
+
+# -----------------------------------------------------------------------
+echo >>> special words
+define ART	[ {ein} ];
+define AUX	[ {haben} | {sein} | {werden} ] %+Verb (%+Aux) ;
+
+define SPECIAL [
+  ART %+Det %+Indef REST		%+hmm%_ART:0
+
+| AUX %+Inf REST			%+hmm%_VAINF:0
+| AUX %+PPres REST			%+hmm%_ADJD:0
+| AUX %+PPast REST			%+hmm%_VAPP:0
+| AUX VMOOD REST			%+hmm%_VAFIN:0 
+
+| {wie} %+Conj REST			%+hmm%_COWIE:0
+| {als} %+Conj REST			%+hmm%_COALS:0
+];
+
+
+# -----------------------------------------------------------------------
+echo >>> combine
+read regex	 SPECIAL .p. [ ?* MAP ];
+
+
+

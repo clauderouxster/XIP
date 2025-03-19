@@ -1,0 +1,150 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2004 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English Normalization XIP grammar
+//!   filename   : dependency_circ1.xip
+//!   Date       : May 2004
+//!   Author     : Caroline Hagege
+//!   Description : Typing some adjuncts (typically XMOD dependencies) 
+//!			when we can (preposition form, etc.). 
+//!			Does not take advantage of NE and semantic typing
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+/////////////////////////////////////////////////////////////////////////////
+// RANGE (FMT:from-to) relation 
+/////////////////////////////////////////////////////////////////////////////
+
+// Rule XXXX
+// When we have a range From XXX to YYY then the MOD relation between XXXX and YYYY is type with FMT feature
+// e.g. The weekdays from Monday to Friday
+| PP{#1}, PP{#3} |
+if ( PREPD(#1[lemme:from],#2) & 
+     ( PREPD(#3[lemme:to],#4) | PREPD(#3[lemme:till],#4) | PREPD(#3[lemme:until],#4) ) & 
+     ^NMOD[post,fmt:~](#2,#4) )
+	NMOD[fmt=+](#2,#4)
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// LOCATION
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+// Rule 569
+// Adding the loc feature for VMOD and NMOD relations when the head of the PP has feature place and the preposition is in
+// Note: The features on the ? dependency in the conditions are passed to the dependency in the conclusion of the rule
+| PP{prep[form:fin], NP{?*,noun#1[last,place];noun#1[last,city]}} |
+	if ( ^?[loc:~](#2,#1) )
+	?[loc=+](#2,#1)
+
+
+// Rule 414
+// Adding the loc:+ feature for VMOD and NMOD dependencies when the PP is introduced by "along"
+| PP#1{prep[p_along]} |
+	if ( HEAD(#2,#1) & ^?[loc:~](#3,#2) )
+	?[loc=+](#3,#2)
+
+
+// Rule 415
+// Adding the loc:+ feature for VMOD dependencies when the PP is introduced by "about" and when the verb that is modified is a vmotion.
+// e.g. I wandered about the flat, they danced about the table....
+| SC{?*, FV{?*, verb#1[vmotion]}};?{?*,verb#1[vmotion]}, ?*, PP#2{prep[p_about]} |
+	if ( HEAD(#3,#2) & ^VMOD[loc:~](#1,#3) )
+	VMOD[loc=+](#1,#3)
+
+
+// Rule 425
+// Adding the feature loc:+ to a VMOD dependency involving "there"
+if ( ^VMOD(#1,#2[adv,form:fthere]) )
+	VMOD[loc=+](#1,#2)
+
+
+// Rule 426
+// Attaching here to a verb (VMOD) while adding a feature local:+ to this link
+// When here is before the verb (under a SC node) or not (in this case there is a NP inbetween)
+// e.g. Here is the train. 
+| SC{?*,adv#3[form:fhere], FV{?*,#1[last]} } |
+	if ( VDOMAIN(#2,#1) )
+	VMOD[pre=+,loc=+](#2,#3)
+
+
+// Rule 480
+// Avoiding to take as VMOD a form of there which is a non referential subject
+// e.g They think there are people to attend
+| SC{?*,?[verb]{?*,#1[last]}};?[verb]{?*,#1[last]}, ?*[verb:~], adv#5[form:fhere];adv#5[form:fthere] |
+	if ( VDOMAIN(#2,#1) & ~SUBJ[pre](?,#5) )
+	VMOD[post=+,loc=+](#1,#5)
+
+// Rule 481
+// When the adverb here/there is between the subject and the verb
+// e.g. People there are not aware
+| SC{?*, adv#5[form:fthere];adv#5[form:fhere], ?[verb]{?*,#1[last]}} |
+	if ( VDOMAIN(#2,#1) & SUBJ[pre](#1,#3) & #3 < #5 )
+	NMOD[post=+,loc=+](#3,#5)
+
+
+
+// Rule XXXXX
+// Loc complements of verb "leave"
+// John left Madrid
+if ( ^OBJ(#1[lemme:leave],#2[proper:+,place:+]) )
+	VMOD[post=+,loc=+](#1,#2)
+
+// John left Madrid for Lisbon
+| PP#30{prep[lemme:for], NP} | 
+if ( VMOD[post:+,loc:+](#1[lemme:leave],#2) & VMOD[post:+](#1,#3[place:+]) & #2 < #3 & HEAD(#3,#30) )
+	VMOD[post=+,loc=+](#1,#3),
+	NMOD[fmt=+](#2,#3).
+//	LIXO(#3,#3).
+
+
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// REASON (RSN feature)
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Defines a reason why an event or a state happens.
+
+// Rule XXXX
+// A PP modifier introduced by "because of" is marked as REASON
+// They left because of the rain
+if ( ^VMOD[post,rsn:~](#1,#2) & PREPD(#3[lemme:because_of],#2) )
+	VMOD[rsn=+](#1,#2)
+
+
+// Rule XXXXX
+// A sentencial modifier introduced by "because" is marked as REASON
+// e.g. They can start because Mary arrived.
+if ( CONNECTOR[subord](?[lemme:because],#2) & ^VMOD[sentence,rsn:~](#3,#2) )
+	VMOD[rsn=+](#3,#2)
+
+
+// Rule XXXX
+// CHECK with corpus if it does not introduce problems...
+// Past Participle or adjectives e.g. a city famous for its beauty.
+if ( (  (^ADJMOD[rsn:~](#1[sc_pfor:+],#2) & NMOD[post](?[noun],#1))
+       | (^VMOD[rsn:~](#1[partpas:+,sc_pfor:+],#2) & NUCL[vlink,passive](?,#1))
+     ) 
+      & PREPD(?[lemme:for],#2) & DETD(#2,?[pron:+,p3,gen:+]) )
+		MOD[rsn=+](#1,#2)
+
+

@@ -1,0 +1,331 @@
+#Kif Formalism 
+#Error message strings, attached to a ';'. Last error message beyond which you cannot backtrack
+*1 = Wrong index format
+*2 = Wrong expression after an operator
+*3 = Wrong list of parameters
+*4 = Wrong expressions in parentheses
+*5 = Wrong FRAME declaration
+*6 = Wrong argument declaration
+*7 = Wrong FUNCTION declaration
+*8 = Wrong BOOLEAN EXPRESSION
+*9 = Wrong BOOLEAN expression
+*10 = Wrong IF declaration
+*11 = Wrong WHILE declaration
+*12 = Wrong FOR declaration
+*13 = Wrong FUNCTION CALL
+*14 = Wrong Expression
+*15 = Wrong Instruction
+*16 = Wrong SWITCH
+*17 = Wrong test in a SWITCH
+*18 = Wrong IN or ON expression
+*19 = Wrong WITH expression
+*20 = Wrong PREDICATE declaration
+*21 = Wrong PATTERN in A RULE
+*22 = Wrong TRY-CATCH expression
+*23 = Wrong INTERVAL
+*24 = Wrong ELSE section
+*25 = Wrong VECTOR definition
+*26 = Wrong MAP definition
+*27 = Wrong Function call in an index reference
+*28 = Wrong comments
+*29 = Wrong dotted expression
+*30 = Wrong expression or Missing ';'
+*31 = Missing '}'
+*32 = Wrong declaration
+*33 = Wrong FOR IN declaration
+*34 = Wrong PREDICATE definition
+*35 = Wrong PREDICATE expression
+*36 = Wrong PREDICATE parameter list
+*37 = Wrong PREDICATE term
+*38 = Wrong tuple
+*39 = Wrong ASSERT definition
+*40 = Wrong PREDICATE VARIABLE
+*41 = Wrong RANGE definition
+*42 = Wrong LISP expression
+*43 = Wrong TAG expression
+*44 = Wrong DCG declaration
+*45 = Wrong DCG or Missing '.'
+*46 = Wrong Predicate Rule or Missing '.'
+*47 = Wrong LAMBDA use
+*48 = Wrong FUNCTIONAL description
+
++analyse
+
+# we use the following rules for pre-tokenization: <,>,^,=,&  double quote string (<), simple quote string(>), token (^), number (=),punctuation (&)
+# '!' is used to not keep tracks of these specific characters in the final output...
+# '%' is used to not store substrings within the analysis tree
+
+char := [A-Z|a-z|%_|%#]
+digit := 0-9
+
+#^ --> we use string tokens
+^word := char [char^0-9]*
+&punct := .
+
+path := %/ word (path)
+
+#If you define a #!path, then you do not want to parse it in your kif program
+!shell := %# %! [path^word]
+!signature := \239 \187 \191
+
+label := %# word
+
+private := $private 
+common := $common 
+const := $const
+
+feature := [private (common)]^[common^const]
+
+^typename := char [char^0-9]*
+type := (feature) typename
+
+anydouble := [%\ .]^[~%"]
+anysimple := ~%'
+
+anycolon := [%% .]^[~%;]
+
+operator := [%& %& %&]^[%: %:]^%&^%|^[%< %<]^[%> %>]^%+^%-^%*^%/^[%^ %^]^%%^%^
+
+operatoraffectation := [%& %& %& %=]^[%: %: %=]^[$is ($not)]^%=^[%< %< %=]^[%> %> %=]^[%+ %=]^[%- %=]^[%* %=]^[%/ %=]^[%% %=]^[%& %=]^[%| %=]^[%^ %^ %=]^[%^ %=]^[%< %< %<]
+
+orand := [%| %|]^[%& %&]^$or^$and
+
+
+comparator := [%~ %=]^[%! %=]^[%< %>]^[%= %=]^[%< %=]^[%> %=]^%<^%>
+
+depend := $with ;19 word
+
+%declaration := type word (%( parameters %)) (depend) (%= expressions)
+
+%declarationlist := word (%( parameters %)) (depend) (%= ;32 expressions) (%, ;32 declarationlist)
+
+%multideclaration := type word (%( parameters %)) (depend) (%= ;32 expressions) (%, ;32 declarationlist)
+
+declarationending := %;
+
+%frame := (private) $frame ;5 typename (depend) [declarationending^instruction] 
+
+instruction := %{ ;15 (blocs) %}
+
+nonlimited := %. %. %.
+
+arguments := declaration (%, ;6 [nonlimited^arguments])
+
+strict := $strict 
+join := $joined
+
+protecclusive := [$protected^$exclusive] 
+
+functionsort := $polynomial^$function^$autorun^$thread
+
+typefunction := (join) (protecclusive) (private) (strict) functionsort
+
+indexname := %[ %]
+intervalname := %[ %: %]
+%function := typefunction ;7 [word^plusplus^operator^comparator^indexname^intervalname] %( (arguments) %) [declarationending^instruction] 
+%lambda := $lambda %( (arguments) %) instruction
+
+
+%sousbloc := [multideclaration^affectation^expressions]
+%bloc :=  predicatefact^[dcg ;45 %.]^[predicatedefinition ;46 %.]^[sousbloc ;30 %;]
+%complexbloc := switch^trycatch^loop^doloop^test^forin^for
+%blocs := [label^frame^complexbloc^function^bloc]+
+
+%analyse := (signature) (shell) ([$kif^$Kif^$KIf^$KIF^$KiF^$kIf^$kiF^$kIF] %:) blocs
+
+%subfunc := %. ;27 regularcall
+%subfuncbis := %. regularcall
+%subvar := %. ;29 variable
+framesep := %: %:
+frameup := word framesep
+functioncall := (frameup) word
+%regularcall := functioncall %(;13 (parameters) %) (interval^indexes^subfunc)
+
+returncall := [$return^$_return]
+breakcall := $break
+continuecall := $continue
+
+%call := breakcall^continuecall^regularcall^returncall
+
+sep := %: 
+
+indexes := %[;1 expressions %] (interval^indexes^subfunc)
+interval := %[ (expressions) sep;23 (expressions) %] (interval^indexes^subfunc)
+variable := word (interval^indexes^subfuncbis^subvar)
+
+plusplus := [%+ %+]^[%- %-]
+%affectation := variable [plusplus^[operatoraffectation;14 expressions]]
+
+%increment := variable plusplus
+
+%notin := $notin^[$not $in]^[$absent $from]
+%in := $in
+%on := $on
+operatorin := notin^in^on
+%operationin := operatorin ;18 expression ($with ;19 word)
+%operationon := on ;18 expression
+
+%operation := operator expressions
+%comparison := comparator expressions
+
+%valvector := %[;25 (expressions [%, expressions]*) %]
+intentionsep := %. %.
+%intentionvector := %[ [[intentionsep ;25 expression]^[expression intentionsep ;25 (expression)]] %]
+
+negation := %~^[$not]
+
+########### PREDICATE ##############################################
+
+%cut := %!
+%fail := $fail
+
+%predicate := word %( (predicateparameters) %)
+%predicatecall := functioncall %( (predicateparameters) %)
+
+retractcommand := $retract^$retractdb
+assertcommandbefore := $asserta
+assertcommandafter := $assertz^$assert^$assertdb
+%assertpredicate := [retractcommand^assertcommandbefore^assertcommandafter] %( ;39 predicate (%, expression) %)
+
+predicatevariable := %? ;40 word
+term := %? word %(;37 (predicateparameters) %)
+tuple := %( predicateparameters %)
+
+allvariable := predicatevariable^variable
+
+%affectationpredicate := allvariable [plusplus^[operatoraffectation;14 expressions]]
+%comparepredicate := allvariable [comparator;14 expressions]
+
+#For predicate vectors...
+
+%merging := pexpression
+%apredicatelist := pexpression ([%, ;25 apredicatelist]^[%| ;25 merging {%]}])
+%valpredicatevector := %[ (apredicatelist) %]
+
+%pexpression := term^tuple^predicatevariable^valpredicatevector^valmappredicate^abool^xnumber^astringdouble^afullstring^astringsimple^anumber^call^variable
+%predicateparameters := pexpression (%, predicateparameters)
+
+%dico := expressions %: expressions
+%valmap := %{ ;26 (dico [%, dico]*) %}
+
+#For predicate map... The order is important for the unification
+%valmappredicate := %{ (dico [%, dico]*) %}
+
+predicateoperator := %,^%;
+
+dboperation := $get^$store^$remove
+predicatedatabase := dboperation %( expression %)
+
+%predicateexpression := [fail^cut^assertpredicate^[(negation) predicatecall]^affectationpredicate^comparepredicate^valpredicatevector^valmappredicate^expressions] (predicateoperator ;35 predicateexpression)
+%predicatedefinition := predicate %: %- ;20 [abool^predicatedatabase^predicateexpression]
+%predicatefact := predicate %.
+
+dcgword := predicate^word
+finaltoken := %[ [predicatevariable^xnumber^astringdouble^astringsimple^anumber^astring] [%, [predicatevariable^xnumber^astringdouble^astringsimple^anumber^astring]]* %]
+finaldcg := %{ predicateexpression %}
+%dcg := dcgword %- %- %> ;44 [finaltoken^[dcgword [%, dcgword]+]] (%, finaldcg)
+
+########### LAMBDA && HASKELL ##############################################
+
+%haskelltail := %| haskellexpression
+%haskellexpression := haskellvector^abool^xnumber^astringdouble^afullstring^astringsimple^anumber^word
+%haskellvector := %[ (haskellexpression [%, haskellexpression]* (haskelltail)) %]
+
+letkeyword := $let^$iterator
+%let := letkeyword variable %= hmetafunctions^[hfunctioncall|expressions]
+
+%range := let^[variable %< %- expression]
+%haskell := word %( [haskellvector^word] [%, [haskellvector^word]]* %) %=
+
+%otherwise := %| $otherwise %= [telque^expression]
+%guard := %| booleanexpression %= ;48 [telque^expression] [otherwise^guard]
+
+%hlambda := %\ [haskellvector^word] [haskellvector^word]* %- %> expressions
+
+%hfunction := word expression*
+
+lfold := $foldl
+rfold := $foldr
+lscan := $scanl
+rscan := $scanr
+
+fold := lfold^rfold^rscan^lscan
+%folding := fold %( [hlambda^hfunction^operator] %) [evallambda^expression] [evallambda^expression]
+
+lfold1 := $foldl1
+rfold1 := $foldr1
+lscan1 := $scanl1
+rscan1 := $scanr1
+
+fold1 := lfold1^rfold1^rscan1^lscan1
+%folding1 := fold1 %( [hlambda^hfunction^operator] %) [evallambda^expression]
+filterkeyword := $takeWhile^$filter
+
+%inverted := expression operator
+%mapping := $map %( [hlambda^operation^inverted^hfunction^operator] %) [hcompose^hcomposecall^evallambda^expression]
+%filtering := filterkeyword %( [hlambda^comparison^hfunction] %) [hcompose^hcomposecall^evallambda^expression]
+
+%zipping := $zipWith %( [operator^hfunction] %) [evallambda^expression] [evallambda^expression]+
+
+%hfunctioncall := word [hcompose^hcomposecall^evallambda^expression]+
+hoperator := %,^%&
+%hmetafunctions := folding^folding1^mapping^filtering^zipping
+%hcompose := %. [mapping^filtering^zipping^folding^folding1]
+%hcomposecall := %. hfunctioncall
+
+%whereexpression := %, $where [word %= expression] [%; word %= expression]*
+%hinexpression := $in expression
+%telque := %<  ;48 [(haskell) [hmetafunctions^guard^[let [%, let]* hinexpression (whereexpression)]^[[evallambda^[expression|hfunctioncall]] (%| [range [hoperator range]* (whereexpression) (%, booleanexpression)]^booleanexpression)]]]  %>
+
+%evallambda := telque^[lambda ;47 operationon]
+##################################################################
+
+%parameters := expressions (%, ;3 parameters)
+%optional := %( ;4 expressions %)
+expression := (negation) [localif^abool^xnumber^astringdouble^afullstring^astringsimple^anumber^call^optional^increment^allvariable^intentionvector^valvector^valmap] 
+%expressions := evallambda^[expression (operation^comparison^operationin)]
+
+%localif := $if %( ;10 booleanexpression %) expression $else expression
+
+numbers := expression (operation)
+
+#< --> we use the doublestring map
+<astringdouble := %" anydouble* %"
+#> --> we use the simplestring map
+>astringsimple := %' anysimple* %'
+~afullstring := %@ %" .+ %" %@
+
+#= --> we use numbers
+=anumber := (%-) [0-9]+ (%. [0-9]+) 
+xnumber := %0 %x [0-9^A-F^a-f]+
+abool := $true^$false
+
+blocfor := [affectation^expression] (%, blocfor)
+
+%optionalboolean := %( booleanexpression %)
+%booleanexpression := [optionalboolean|expressions] (orand ;8 [optionalboolean|booleanexpression])
+
+%arange := %< ;41 expressions %, expressions %, expressions %>
+
+%test := $if %( ;10 booleanexpression %) [instruction^complexbloc^bloc] (testelif) ($else ;24 [instruction^complexbloc^bloc]) 
+%testelif := $elif %( ;10 booleanexpression %) [instruction^complexbloc^bloc] (testelif) ($else ;24 [instruction^complexbloc^bloc]) 
+%loop := $while %( ;11 booleanexpression %) [instruction^complexbloc^bloc] 
+%doloop := $do [instruction^complexbloc^bloc] $while %( ;11 booleanexpression %) declarationending
+%for := $for %( ;12 blocfor %; booleanexpression %; blocfor %) [instruction^complexbloc^bloc] 
+%forin := $for %( variable $in ;33 [arange^expressions] %) [instruction^complexbloc^bloc]
+%switch := $switch %( ;16 expression %) (depend) %{ ;31 testswitch+ %} 
+%trycatch := $try %{ ;22 blocs %} $catch ;22 (%( (word) %)) [%;^[%{ ;22 blocs %}]]
+%testswitch := [default^xnumber^astringdouble^afullstring^astringsimple^anumber^abool] %: ;17 [instruction^complexbloc^bloc] 
+default := $default 
+
+
+^astring := char [char^0-9]*
+lispexpression := xnumber^astringdouble^afullstring^astringsimple^anumber^astring^punct
+lispexpressions := onelisp^lispexpression 
+onelisp := @( lispexpressions ;42 lispexpressions* @)
+lisp := onelisp onelisp*
+
+tagexpression := xnumber^astringdouble^afullstring^astringsimple^anumber^astring^punct
+tagexpressions := onetag^tagexpression 
+onetag := :OPEN tagexpressions ;43 tagexpressions* :CLOSE
+tag := onetag onetag*

@@ -1,0 +1,87 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! CH - Decembre 2009 - Desamb spécifique à ALADIN
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!v!!!!!!!!!!!!!!!!!!!!
+
+ 
+Désambiguïsation:
+
+
+1> noun[surface:"°"] = noun[unit_temper=+] .
+
+1> noun<proper:+>,noun<diagnostic:+> = noun[diagnostic:+] .
+
+
+1> noun[lemme:gastro,guessed:+] %= prefix[body_part:+] | punct[hyph] | .
+// voir FST add-lex-term_med.xfst pour autres prefixes body_part codés
+
+
+// péri is a prefix if followed by hyphen and adj
+//1> adj[surface:"péri"] %= prefix | punct[form:fhyph], adj | .
+1> ?<lemme:"péri"> %= prefix | punct[form:fhyph], adj | .
+
+
+// groupe is a noun and not a verb in a context following a bacteria name and preceeding a letter name
+// streptococcus groupe B
+1> noun<lemme:groupe,sg:+>, verb = | noun[bacterie], adj* | noun | ?[lettre:+,toutmaj:+] | .
+
+1> adj<body_part:+>, noun<body_part:+> = | prefix, (punct) | adj[body_part:+] .
+
+1> adj<post_diagnost:+>, verb = | noun[diagnostic];noun[lemme:atrophie], adj* | adj .
+
+
+// scanner is a noun and not a verb when followed by a body_part adj
+// scanner abdomino pelvien
+1> noun<lemme:scanner>, verb = noun | adj[body_part:+] | .
+
+// reprise is a noun and not a verb when followed by "chirurgical"
+verb, noun<lemme:reprise> = noun | adj[lemme:chirurgical,fem:+] | .
+
+
+
+
+// colique est un adj qui veut dire relatif au colon. Non code dans FST
+1> noun[lemme:colique] %= | noun | adj[body_part=+] .
+
+1> noun[lemme:colique] %= | prefix[body_part], punct[hyph] | adj[body_part=+] .
+
+
+1> noun<lemme:liquide>,verb  = noun | ?[lemme:jaune] | .
+1> noun<lemme:liquide>,verb  = noun | ?[lemme:louche] | .
+
+// fracture suivi par body_part est un nom meme si pas d'article
+// eg "fracture jambe gauche"
+1> noun<lemme:fracture,sg:+>, verb = noun | (adj), ?[body_part] | .
+
+// si ambig verb, body_part suivi de gauche ou droite alors body_part
+// eg sepsis hanche droite
+verb, noun<body_part:+,sg:+> = noun | adj[lemme:"droit",sg]; adj[lemme:"gauche",sg] | .
+
+
+// antibiotique en debut de phrase est un nom
+1> noun, adj<lemme:antibiotique> = | | noun .
+
+// aigu
+// reaction inflammatoire aigue
+1> noun, adj<gradation> = | noun[diagnostic], adj* | adj .
+
+1> noun<lemme:Dakin>, noun<lemme:dakin> = noun[lemme:dakin] .
+
+// tissu
+1> noun<lemme:tissu>, verb<lemme:tisser> = noun .
+
+// sale dans la proximité de écoulement
+1> adj<lemme:sale>, verb = | noun[lemme:écoulement], adv* | adj .
+
+// profond apres nom d'infection est adj et pas adv
+1> adj<lemme:profond>, adv = | ?[noun:+,infection] | adj .
+
+// sur (sans accent) suivi par virgule est detruit en tant que prep et devient adj
+1> prep<lemme:sur> %= adj | punct[form:fcm] | .
+
+
+
+// DU toutmaj dans contexte toutmaj si precede un nom sing. masc est une prep-det
+1> prep<lemme:de,toutmaj:+,det:+>, verb, adj = | ?[toutmaj] | prep | noun[toutmaj,sg:+,masc:+] | .

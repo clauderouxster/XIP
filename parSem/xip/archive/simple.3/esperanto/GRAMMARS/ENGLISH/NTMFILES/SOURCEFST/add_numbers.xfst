@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------
+# FILE:		add_numbers.xfst
+# CONTENT:	converting numbers <-> digits
+#		for German, French, English
+#
+# AUTHOR:	A. Schiller
+# CREATED:	03-DEc-1999
+# ---------------------------------------------------------------
+
+# USAGE: fst -s LEX.fst -l numbers.xfst  -l [ThisFile]
+
+define NUMBERS
+define LEX
+
+# remove analyses from lexicon
+
+define OLDNUM [ [NUMBERS.l] %+Num %+Card ?* ] .o. LEX ;
+
+# numbers that were not in the lexicon before
+define MORENUM NUMBERS .o. ~[OLDNUM.l] ;
+
+
+define RESTLEX  LEX  - OLDNUM ;
+
+read regex [
+  [ [ NUMBERS %+Num %+Card ?* ] .o. OLDNUM ]	# map old analyses
+| MORENUM %+Num:0 %+Card:0 %+CARD:0 		# add new (multi-) words
+| RESTLEX
+];
+
+define LEX
+
+# add features
+
+define DIG 	[%0|1|2|3|4|5|6|7|8|9];
+define YEAR	[1|2] DIG DIG DIG ;
+define SHORT	[DIG DIG] ;
+
+
+read regex [
+	%+Year <- [..] || .#. YEAR %+Num ?* _ %+CARD 
+.o.	%+ShortYear <- [..] || .#. SHORT %+Num ?* _ %+CARD 
+.o.	LEX 
+];
+

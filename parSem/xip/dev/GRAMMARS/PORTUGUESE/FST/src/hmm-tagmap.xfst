@@ -1,0 +1,268 @@
+# ============================================================================
+# TYPE:		(x)fst
+# CONTENT:	mapping morph. categories to POS tags (for XIP)
+#
+# LANGUAGE:	PORTUGUESE
+# ENCODING:	UTF-8
+#
+# AUTHOR:	Anne Schiller, Caroline Hagege
+#
+# CREATED:	03-Aug-2006	AS: relaxed mapping definirions
+#
+# ============================================================================
+# USAGE:	fst -utf8 -l ThisFile
+# ============================================================================
+
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+
+define BD 	DBD | CBD ;
+
+
+
+# main categories (indicate beginning of sequence for POS mapping)
+
+define MAIN	[ %+Noun | %+Prop | %+Title | %+Adj | %+Adv | %+Verb 
+		| %+Det | %+Art | %+Pron | %+Prep | %+Conj 
+		| %+Dig | %+Num | %+Prt
+		| %+Initial | %+Let | %+Onom | %+Interj | %+Command
+		| %+For | %+Item | %+Meas | %+Curr
+		| %+Symbol | %+Punct | %+Sgml
+];
+
+
+define STEM	~$[MAIN];
+define DERIV	STEM BD STEM ;
+
+define TAGS	~$[BD] ;
+define ANY	?* ;
+
+# ---------------------------------------------------------------------------
+# definitions for verb forms
+# finite verb
+define VFin	TAGS & 
+		$[ %+PresInd | %+PresSubj | %+ImpInd | %+ImpSubj | %+Impv
+               	| %+FutInd | %+FutSubj | %+Perf | %+Pluperf | %+Cond ];
+
+# infinitive
+define VInf	TAGS & $[ %+Inf | %+InfFlex ];
+
+# clitical pronoun
+define PRON	BD $[%+Pron] ;
+
+
+define SG	TAGS & $[%+Sg] ;
+define PL	TAGS & $[%+Pl] ;
+define SP	TAGS & $[%+SP] ;
+
+# definitions that are necessary to distinguish pronouns:
+define CASE     [ %+Nom | %+Acc | %+Dat ];
+define PERSON   [ %+1P | %+2P | %+3P ];
+define GENDER   [ %+Fem | %+Masc | %+MF ];
+define PERS	[ %+P | %+Pers ];
+
+# definitions to distinguish digital numbers
+define DIGNOUN	[ %+Meas | %+Deg | %+Percent | %+Curr ] ;
+
+
+# ---------------------------------------------------------------------------
+echo >>> general mappings
+define MAP 	STEM [
+
+# nouns
+  %+Noun SG			"+hmm_NSG":0
+| %+Noun PL			"+hmm_NPL":0
+| %+Noun SP 			"+hmm_NOUN":0
+
+| %+Prop ANY			"+hmm_NPROP":0
+
+| %+Title SG			"+hmm_NSG":0
+| %+Title PL			"+hmm_NPL":0
+
+# adjectives
+| %+Adj SG			"+hmm_ADJSG":0
+| %+Adj PL			"+hmm_ADJPL":0
+| %+Adj SP			"+hmm_ADJ":0
+
+| %+Adj DERIV %+Adv ANY		"+hmm_ADV":0
+
+# adverbs (including following clitical pronoun!)
+| %+Adv ~$[%+Neg]			"+hmm_ADV":0
+| %+Adv $[%+Neg]			"+hmm_NEG":0
+
+
+# verbs
+| %+Verb VFin			"+hmm_VERBF":0
+| %+Verb VFin PRON		"+hmm_VERBFPRON":0
+| %+Verb VInf			"+hmm_INF":0
+| %+Verb VInf PRON		"+hmm_INFPRON":0
+
+| %+Verb %+Gerund TAGS		"+hmm_GER":0
+| %+Verb %+Gerund PRON		"+hmm_GERPRON":0
+
+| %+Verb %+PastPart ANY		"+hmm_VPP":0
+
+#  determiners
+
+| %+Det %+Rel SG		"+hmm_DETRELSG":0
+| %+Det %+Rel PL		"+hmm_DETRELPL":0
+
+| %+Det %+Interrog SG		"+hmm_DETINTSG":0
+| %+Det %+Interrog PL		"+hmm_DETINTPL":0
+| %+Det %+Interrog SP		"+hmm_DETINT":0
+
+| %+Art %+Def SG		"+hmm_DETSG":0
+| %+Art %+Def PL		"+hmm_DETPL":0
+
+| %+Art %+Indef SG		"+hmm_QUANTSG":0
+| %+Art %+Indef PL		"+hmm_QUANTPL":0
+
+| %+Det %+Indef SG		"+hmm_QUANTSG":0
+| %+Det %+Indef PL		"+hmm_QUANTPL":0
+
+# "que de"
+| %+Det %+Excl ANY		"+hmm_DETPL":0
+
+# pronouns
+
+| %+Pron %+Rel SG		"+hmm_PRONRELSG":0
+| %+Pron %+Rel PL		"+hmm_PRONRELPL":0
+| %+Pron %+Rel SP		"+hmm_PRONREL":0
+
+| %+Pron %+Poss SG		"+hmm_POSSSG":0
+| %+Pron %+Poss PL		"+hmm_POSSPL":0
+
+| %+Pron CASE PERSON SG		"+hmm_PRONSG":0
+| %+Pron CASE PERSON PL		"+hmm_PRONPL":0
+
+| %+Pron (PERS) PERSON SG	"+hmm_PRONSG":0
+| %+Pron (PERS) PERSON PL	"+hmm_PRONPL":0
+
+| %+Pron %+Dem %+NP SG		"+hmm_PRONSG":0
+| %+Pron %+Dem %+NP PL		"+hmm_PRONPL":0
+
+| %+Pron %+Indef %+NP SG	"+hmm_PRONSG":0
+| %+Pron %+Indef %+NP PL	"+hmm_PRONPL":0
+
+| %+Pron %+Interrog SG		"+hmm_PRONSG":0
+| %+Pron %+Interrog PL		"+hmm_PRONPL":0
+
+| %+Pron %+Dem GENDER SG	"+hmm_DEMSG":0
+| %+Pron %+Dem GENDER PL	"+hmm_DEMPL":0
+
+| %+Pron %+Indef GENDER SG	"+hmm_QUANTSG":0
+| %+Pron %+Indef GENDER PL	"+hmm_QUANTPL":0
+
+| %+Pron %+Refl ANY		"+hmm_PRON":0
+
+| %+Pron DERIV %+Pron ANY	"+hmm_PRON":0
+
+
+#  prepositions
+
+| %+Prep TAGS					"+hmm_PREP":0
+
+| %+Prep DERIV %+Pron %+Rel SG			"+hmm_PREPRELSG":0
+| %+Prep DERIV %+Pron %+Rel PL			"+hmm_PREPRELPL":0
+| %+Prep DERIV %+Pron %+Rel SP			"+hmm_PREPREL":0
+
+| %+Prep DERIV %+Pron %+Indef %+NP ANY		"+hmm_PREPPRON":0
+| %+Prep DERIV %+Pron %+Indef GENDER SG		"+hmm_PREPQUANTSG":0
+| %+Prep DERIV %+Pron %+Indef GENDER PL		"+hmm_PREPQUANTPL":0
+
+| %+Prep DERIV %+Pron %+Dem %+NP ANY		"+hmm_PREPPRON":0
+| %+Prep DERIV %+Pron %+Dem GENDER SG		"+hmm_PREPDEMSG":0
+| %+Prep DERIV %+Pron %+Dem GENDER PL		"+hmm_PREPDEMPL":0
+
+| %+Prep DERIV %+Pron (%+Refl) PERS ANY		"+hmm_PREPPRON":0
+
+| %+Prep DERIV %+Art %+Def SG 			"+hmm_PREPDETSG":0
+| %+Prep DERIV %+Art %+Def PL 			"+hmm_PREPDETPL":0
+
+| %+Prep DERIV %+Art %+Indef SG			"+hmm_PREPQUANTSG":0
+| %+Prep DERIV %+Art %+Indef PL			"+hmm_PREPQUANTPL":0
+
+| %+Prep DERIV %+Adv ANY			"+hmm_PREPADV":0
+
+# conjunctions
+| %+Conj ~$[%+Comp]				"+hmm_CONJ":0
+| %+Conj $[%+Comp]				"+hmm_CONJCOMP":0
+
+
+#  numbers
+| %+Dig $[DIGNOUN ]		"+hmm_NOUN":0
+| %+Dig ~$[DIGNOUN|%+Ord]	"+hmm_DIG":0
+| %+Dig $%+Ord 			["+hmm_NOUN":0 |"+hmm_ADJ":0]
+
+| %+Num %+Ord SG		["+hmm_NSG":0 | "+hmm_ADJSG":0]
+| %+Num %+Ord PL		["+hmm_NPL":0 | "+hmm_ADJPL":0]
+
+| %+Num %+Ord DERIV %+Adv ANY	"+hmm_ADV":0
+
+| %+Num %+Card ANY		"+hmm_QUANTPL":0
+
+
+# other
+
+| %+Initial ANY			"+hmm_LETTER":0
+| %+Let	ANY			"+hmm_LETTER":0
+| %+Onom ANY			"+hmm_INTERJ":0
+| %+Interj ANY			"+hmm_INTERJ":0
+| %+Command ANY			"+hmm_INTERJ":0
+| %+For	ANY			"+hmm_NPROP":0
+| %+Item ANY			"+hmm_ITEM":0
+| %+Meas ANY			"+hmm_NOUN":0
+| %+Curr ANY			"+hmm_NOUN":0
+
+| %+Prt ~$[%+Excl]		"+hmm_ADV":0
+| %+Prt $%+Excl			"+hmm_CONJ":0
+
+
+# punctuations and symbols
+| %+Symbol ANY			"+hmm_SYM":0
+
+| %+Punct $[%+Comma] 		"+hmm_CM":0
+| %+Punct ~$[%+Sent|%+Comma]	"+hmm_PUNCT":0
+
+| %+Sgml  ~$%+Sent		"+hmm_SYM":0 
+
+# sentence final tags
+# NOTE: The program "disamb" requires POS symbol "+SENT"
+| %+Punct %+Sent ANY		"+SENT":0
+| %+Sgml  %+Sent ANY		"+SENT":0 
+
+];
+
+
+
+# -----------------------------------------------------------------------------
+echo >>> special word forms:
+define AdvComp	[ {mais} | {menos} ];
+define AuxHav	[ {ter} | {haver} ] ;
+define AuxBe	[ {ser} | {estar} ] ;
+
+define ConjSub	[ STEM q u e | STEM s e | q u a n d o ] ;
+
+
+define SPECIAL [
+  AdvComp %+Adv	ANY		"+hmm_ADVCOMP":0
+	
+| AuxBe %+Verb VFin		"+hmm_AUXBE":0
+| AuxBe %+Verb VFin PRON	"+hmm_AUXBEPRON":0
+| AuxBe %+Verb VInf		"+hmm_AUXBEINF":0
+| AuxBe %+Verb VFin PRON	"+hmm_AUXBEINFPRON":0
+
+| AuxHav %+Verb VFin		"+hmm_AUXHAV":0
+| AuxHav %+Verb VFin PRON	"+hmm_AUXHAVPRON":0
+| AuxHav %+Verb VInf		"+hmm_AUXHAVINF":0
+| AuxHav %+Verb VFin PRON	"+hmm_AUXHAVINFPRON":0
+
+| ConjSub %+Conj ANY		"+hmm_CONJSUB":0
+];
+
+
+# -----------------------------------------------------------------------------
+echo >>> combine (priority union)
+read regex SPECIAL .p. MAP ;
+

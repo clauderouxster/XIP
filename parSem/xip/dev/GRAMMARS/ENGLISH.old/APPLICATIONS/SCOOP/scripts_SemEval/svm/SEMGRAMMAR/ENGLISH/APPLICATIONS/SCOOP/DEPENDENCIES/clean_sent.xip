@@ -1,0 +1,376 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2001 - 2009 Xerox Corporation.  All Rights Reserved.
+//!Author: C. Brun.
+//!
+//!  Date: Nov. 2009
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+// I would recommend not buying this product
+
+   |IV{verb#1[lemme:"recommend"]},adv[lemme:"not"],GV{verb#2[lemme:"buy"]}|
+   SENTIMENT[negative=+](#1,#2)
+   
+
+// it is an easy/difficult task --> it is easy/difficult
+
+
+if (^SENTIMENT[!sentiments:!](#1[lemme:"task"],#2[adj]) & ATTRIB(#3,#1))
+   SENTIMENT(#3,#2)
+
+// not recommend ==> include not in the sentiment predicate for the GUI
+
+//|IV#3{adv[lemme:"not"],verb#1}| 
+//	if ( ^SENTIMENT(#1,#2))
+//	SENTIMENT(#3,#2)
+
+//********************************************************************
+// In case no relation but something on a word
+// to be tested deeply in case of negation
+//********************************************************************
+
+
+//never get bored 
+
+|#2[negative,verb]|
+	if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) & NUCl[subjcompl](#3,#2) & NEGAT(#3))
+		SENTIMENT[positive=+,modified=+](#2)
+
+|#2[positive,verb]|
+	if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) & NUCl[subjcompl](#3,#2) & NEGAT(#3))
+		SENTIMENT[negative=+,modified=+](#2)
+
+|#1[sentiments,!sentiments:!]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) &  ~SENTIMENT(#1) & ~PREPD(#1,#3[lexneg]) & ~NEGAT(#1) & ~MOD(#2[no-sents],#1) )
+	SENTIMENT(#1)
+
+|#2[sentiments,!sentiments:!]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) & ~SENTIMENT(#2)  ~PREPD(#2,#3[lexneg]) & ~NEGAT(#1)  & ~MOD(#1[no-sents],#2) )
+	SENTIMENT(#2)
+
+
+|#1[positive,modified:~]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) &  ~SENTIMENT(#1) & ( PREPD(#1,#3[lexneg]) | NEGAT(#1) )  & ~MOD(#2[no-sents],#1) )
+	SENTIMENT[negative=+,modified=+](#1)
+
+|#2[positive,modified:~]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) & ~SENTIMENT(#2)  & ( PREPD(#2,#3[lexneg]) |NEGAT(#1)  ) &  ~MOD(#1[no-sents],#2) )
+	SENTIMENT[negative=+,modified=+](#2)
+
+|#1[negative,modified:~]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) &  ~SENTIMENT(#1) & ( PREPD(#1,#3[lexneg])|NEGAT(#1)   ) & ~MOD(#2[no-sents],#1)   )
+	SENTIMENT[positive=+,modified=+](#1)
+
+|#2[negative,modified:~]|
+if (~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) & ~SENTIMENT(#2)  & ( PREPD(#2,#3[lexneg])|NEGAT(#1)   ) &  ~MOD(#1[no-sents],#2)  )
+	SENTIMENT[positive=+,modified=+](#2)
+
+
+if ( ^SENTIMENT[negative,modified:~](#1) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[positive=+,modified=+,negative=~](#1)
+
+if ( ^SENTIMENT[positive,modified:~](#1) & MANNER(#1,#3[lemme:"rarely"]))
+		SENTIMENT[negative=+,modified=+,positive=~](#1)
+
+
+|#1[negative,modified]|
+if ( ~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) &  ~SENTIMENT(#1))
+   SENTIMENT[negative=+](#1)
+
+|#1[positive,modified]|
+if ( ~SENTIMENT(#1,#2) & ~SENTIMENT(#2,#1) &  ~SENTIMENT(#1))
+   SENTIMENT[positive=+](#1)
+
+//****************************************************************
+// distinction opinion versus appreciation
+// I think is beautiful versus It is beautiful
+//****************************************************************
+//**more work needed on negation
+
+
+if (EMBED[complthat](#1,#2[opinion,certitude]) & ~NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[!features:!](#3,#4))
+	SENTIMENT[opinion=+](#3,#4).
+	
+if (EMBED[complthat](#1,#2[opinion,certitude]) & ~NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[!features:!](#4,#3))
+	SENTIMENT[opinion=+](#4,#3).
+
+
+if (EMBED[complthat](#1,#2[opinion,certitude]) & NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[positive,modified:~](#3,#4))
+	SENTIMENT[opinion=+,negative=+,positive=~,modified=+](#3,#4).
+
+if (EMBED[complthat](#1,#2[opinion,certitude]) & NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[negative,modified:~](#3,#4))
+	SENTIMENT[opinion=+,positive=+,negative=~,modified=+](#3,#4).
+
+	
+if (EMBED[complthat](#1,#2[opinion,certitude]) & NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[positive=+,modified:~](#4,#3))
+	SENTIMENT[opinion=+,negative=+,positive=~,modified=+](#4,#3).
+
+if (EMBED[complthat](#1,#2[opinion,certitude]) & NEGAT(#2) & ?(#1,#3) & ^SENTIMENT[negative,modified:~](#4,#3))
+	SENTIMENT[opinion=+,positive=+,negative=~,modified=+](#4,#3).
+
+// express the opinion that
+
+if (EMBED(#1,#2[lemme:"express"]) &  & ~NEGAT(#2) & OBJ-N(#2,#3[noun,opinion]) & ^SENTIMENT[!features:!](#4,#5))
+	SENTIMENT[opinion=+](#4,#5).
+
+//*** otherwise 
+
+if (^SENTIMENT[!features:!,opinion:~,positive](#1,#2))
+	SENTIMENT[appreciation=+](#1,#2).
+if (^SENTIMENT[!features:!,opinion:~,negative](#1,#2))
+	SENTIMENT[appreciation=+](#1,#2).
+
+if (^SENTIMENT[!features:!,opinion:~,positive](#2))
+	SENTIMENT[appreciation=+](#2).
+if (^SENTIMENT[!features:!,opinion:~,negative](#2))
+	SENTIMENT[appreciation=+](#2).
+
+//*****************************************************************
+//*****************************************************************
+// deletions
+
+
+
+
+//Epson recommends to do that : not a positive assesment
+
+if ( OBJ-N(#1[lemme:"recommend"],#2) & ^SENTIMENT(#1,#2) & SUBJ-N(#1,#3) & ORGANISATION(#3))
+	~
+
+if (  ^SENTIMENT(#1[lemme:"recommend"]) & SUBJ-N(#1,#3) & ORGANISATION(#3))
+	~
+
+if (^SENTIMENT[!sentiments:!](#1,#2[lemme:"yes"]))
+   SENTIMENT(#1)
+
+if (^SENTIMENT[!sentiments:!](#1,#2[lemme:"no"]))
+   SENTIMENT(#1)
+
+|NOUN#1{#2,#3}|
+	if (ORGANISATION(#1) & ^SENTIMENT(#2))
+	~
+
+// remove any sentiments in case of question
+|TOP#3{?*,punct[form:fquest]}|
+	if (^SENTIMENT(#1[compar],#2))
+	~
+
+|TOP#3{?*,punct[form:fquest]}|
+	if (^SENTIMENT(#1[compar]))
+	~
+
+//if (MOD(#1[lemme:"question"],#2[lemme:"top"]) & ^SENTIMENT(#1,#2))
+//	~
+
+//if (MOD(#1[lemme:"edge"],#2[lemme:"top"]) & ^SENTIMENT(#1,#2))
+//	~
+
+if (MOD(#1[lemme:"feeder"],#2[lemme:"top"]) & ^SENTIMENT(#1,#2))
+	~
+
+
+|?#1{#2,#3}|
+ if (SENTIMENT(#1) & (^SENTIMENT(#2) |  ^SENTIMENT(#3)))
+	~
+
+|?#1{#2,#3}|
+ if (SENTIMENT(#1,?) & (^SENTIMENT(#2) |  ^SENTIMENT(#3)))
+	~
+
+|?#1{#2,#3}|
+ if (SENTIMENT(?,#1) & (^SENTIMENT(#2) |  ^SENTIMENT(#3)))
+	~
+
+
+|ADJ#1{#2,#3,#4}|
+	if (SENTIMENT(?,#1) & (^SENTIMENT(#2) |  ^SENTIMENT(#4) ) ) 
+
+	~
+
+
+
+
+//runs out of ink fast --> fast not posit
+
+if (GLOBALMOD(#1[consume],#2[lemme:"fast"]) & ^SENTIMENT[negative](#1,#3) & ^SENTIMENT[positive](#2))
+	~
+
+// the drivers works well --> erase on well because double
+
+if (GLOBALMOD(#1,#2[lemme:"well"]) & ^SENTIMENT(#2) & SENTIMENT(#1,?))
+	~
+
+
+if (OBJ-N(#1[lemme:"configure"],#2[lemme:default]) 
+	& ( ^SENTIMENT(#2,?) | ^SENTIMENT(?,#2) | ^SENTIMENT(#2) ) )
+	~
+	
+// Iwas working
+
+if (^SENTIMENT(#1[lemme:"work"],#2[lemme:"I"]) | ^SENTIMENT(#1[lemme:"work"],#2[lemme:"you"]))
+	~
+
+
+// sentiment about "other printer" 
+
+//if ( ^SENTIMENT(#1,#2) & GLOBALMOD(#2,#3[lemme:"other"]))
+//	~
+
+
+// heavy use or heavy graphics
+
+
+
+if (  ^SENTIMENT(#1[lemme:"use"],#2[lemme:"heavy"]) | 
+      ^SENTIMENT(#1[lemme:"graphic"],#2[lemme:"heavy"]) |
+      ^SENTIMENT(#1[lemme:"color"],#2[lemme:"slow"])
+	)
+	~
+
+// iwould like
+
+if ( ( ^SENTIMENT(#1[lemme:"like"]) | ^SENTIMENT(#1[lemme:"like"],#2) | ^SENTIMENT(#2,#1[lemme:"like"])) & VMODAL(#1))
+	~
+
+// benefit of the doubt
+
+if ( ^SENTIMENT(#1[lemme:"benefit"],#2[lemme:"doubt"]) )
+	~
+
+//#@rulespace=general.domain.printer
+// plural subjects : they lobe
+
+//if ( ^SENTIMENT(#1[pos-money:~,neg-money:~],#2) & SUBJ-N(#1,#3[pl,printer-related:~,pron]) )
+//	~
+//#@rulespace=general.domain
+
+//if (  ^SENTIMENT[negative:~,positive:~](#1,#2))
+//	~
+
+//if (  ^SENTIMENT[negative:~,positive:~](#1))
+//	~
+
+// it was better : past + compar ==> other topic
+
+//if (^SENTIMENT(?,#1[compar,lemme:"good"]) & NUCL(#2[past],#1))
+//	~
+
+// trust me : not a sentiment
+
+if (^SENTIMENT(#1[lemme:"trust"],#2[pron,p1]))
+	~
+
+// for movies titles : no sentiments on the title ...
+
+|NOUN[movie-title]{?*,#1,?*}|
+	if (^SENTIMENT(#1))
+	~
+
+|NOUN[movie-title]{?*,#1,?*}|
+	if (^SENTIMENT(#1,#2))
+	~
+|NOUN[movie-title]{?*,#1,?*}|
+	if (^SENTIMENT(#2,#1))
+	~
+
+
+|NOUN#1[inmovie]|
+	if (^SENTIMENT(#1))
+	~
+
+|NOUN#1[inmovie]|
+	if (^SENTIMENT(#1,#2))
+	~
+
+|NOUN#1[inmovie]|
+	if (^SENTIMENT(#2,#1))
+	~
+
+
+|NP{AP{adj#1[lemme:"bad"]},noun[lemme:"Blake"]}|
+	if (^SENTIMENT(#1))
+	~
+
+|NP{AP{adj#1[lemme:"bad"]},noun[lemme:"Blake"]}|
+	if (^SENTIMENT(#1,?))
+	~
+
+|NP{AP{adj#1[lemme:"bad"]},noun[lemme:"Blake"]}|
+	if (^SENTIMENT(?,#1))
+	~
+
+if (^SENTIMENT(#1[lemme:"con"],#2[sentiments]))
+   SENTIMENT(#2)
+
+if (^SENTIMENT(#1[lemme:"pro"],#2[sentiments]))
+   SENTIMENT(#2)
+
+if ( SENTIMENT(#1,#2) & ^SENTIMENT(#1) )
+		~
+
+if ( SENTIMENT(#2,#1) & ^SENTIMENT(#1) )
+		~
+
+if ( SENTIMENT(#1,#3) & HEAD(#3,#2)  & ^SENTIMENT(#2) )
+		~
+
+if ( SENTIMENT(#3,#1)& HEAD(#3,#2) & ^SENTIMENT(#2) )
+	~
+
+
+if (SENTIMENT(#1,#2[easyto]) & ^SENTIMENT(#3,#1))
+   ~
+
+/if (SENTIMENT[!sentiments:!](#1[sentiments],#2))
+   OPINION-ON(#2)
+
+if (SENTIMENT[!sentiments:!](#2,#1[sentiments]))
+   OPINION-ON(#2)
+
+if (SENTIMENT[!sentiments:!](#1))
+   OPINION-ON(##DEFAULT[lemme=PICTURE]) \
+
+if ( ^SENTIMENT[!sentiments:!](#1[topic-subj],#2) & MANNER(#1,#2) & SUBJ-N(#1,#3) & ~SENTIMENT(#3,#1))
+     SENTIMENT(#3,#1)
+
+
+if ( ^SENTIMENT[!sentiments:!](#1[topic-obj],#2) & MANNER(#1,#2) & OBJ-N(#1,#3) & ~SENTIMENT(#3,#1) )
+     SENTIMENT(#3,#1)
+
+
+// If you make a mistake,
+
+|SC{BG{CONJ[lemme:"if"]}},NP{?*,NOUN#1}|
+	if (^SENTIMENT[negative](#1))
+	~
+
+// it deprives X of Y 
+
+If (MOD[post](#1[lemme:"deprive"],#2) & PREPD(#2,#3[lemme:"of"]) & ^SENTIMENT[positive,modified:~](#2) & OBJ-N(#1,#4) & ~NEGAT(#1) )
+		SENTIMENT[negative=+,positive=~,modified=+](#1,#2) 
+
+If (MOD[post](#1[lemme:"deprive"],#2) & PREPD(#2,#3[lemme:"of"]) & ^SENTIMENT[negative,modified:~](#2) & OBJ-N(#1,#4) & ~NEGAT(#1))
+		SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+If (MOD[post](#1[lemme:"deprive"],#2) & PREPD(#2,#3[lemme:"of"]) & ^SENTIMENT[positive,modified:~](#2) & OBJ-N(#1,#4) & NEGAT(#1) )
+		SENTIMENT[negative=~,positive=+,modified=+](#1,#2) 
+
+If (MOD[post](#1[lemme:"deprive"],#2) & PREPD(#2,#3[lemme:"of"]) & ^SENTIMENT[negative,modified:~](#2) & OBJ-N(#1,#4) & NEGAT(#1))
+		SENTIMENT[negative=+,positive=~,modified=+](#1,#2) 
+
+
+|NOUN#1[mwe]{?*,#2,?*}|
+        if ( ^SENTIMENT(#2))
+        ~
+Final:
+
+ _firstdateindoc=0 ;
+ _firstprodindoc=0 ;
+ _firsttitleindoc=0 ;

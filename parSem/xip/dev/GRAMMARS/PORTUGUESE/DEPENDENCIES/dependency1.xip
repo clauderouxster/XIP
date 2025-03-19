@@ -1,0 +1,284 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency1.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede, Paula Vaz                                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating heads, quantification and some coordination     !
+//!                                                                            !
+//!   Dependencies handled in this file:   HEAD                                !
+//!                                        PREPD                               !
+//!                                        QUANTD  (uma parte)                 !
+//!                                        DETD                                !
+//!                                        COORD (related with quantification) !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency1.xip,v 1.6 2008/10/27 08:46:12 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// HEAD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: muito grande -> HEAD(grande,muito grande)
+//
+| AP#1{?*,#2[last]} |
+   HEAD(#2,#1)
+
+// Example: o belo rapaz -> HEAD(rapaz,o belo rapaz)
+//
+| NP#1{?*,#2[last]} |
+   HEAD(#2,#1)
+
+// Example: do colégio -> HEAD(colégio,do colégio)
+//
+| PP#1{?*,#2[last]} |
+   HEAD(#2,#1)
+
+// Example: ter que -> HEAD(ter,ter que)
+//
+| VMOD#1{VERB#2;PASTPART#2,?+} |
+   HEAD(#2,#1)
+
+// Example: começar a -> HEAD(começar,começar a)
+//
+| VASP#1{PRON*,VERB#2;PASTPART#2,?+} |
+   HEAD(#2,#1)
+
+// Example:
+//
+| VTEMP#1{VERB#2;PASTPART#2,?+} |
+   HEAD(#2,#1)
+
+// Example: começar -> HEAD(começar,começar)
+//
+| #1[verb:+]{?*,#2[prep:~;art:~;conj:~,last,verb]} |
+   HEAD(#2,#1)
+
+// CH -> Not used in XEROX environment
+// Example:
+//
+| #1[verb:+]{?*,#2[prep:~;art:~;conj:~,last,pastpart]} |
+   HEAD(#2,#1)
+
+// for SC -> head is the head of the head
+// Example: que seja  -> HEAD(seja,que seja)
+//
+| SC#1{?*,#2[last,verb]} |
+ if ( HEAD(#3,#2) )
+   HEAD(#3,#1)
+
+// Example:
+//
+| ADVP#1{?*,ADV{?*,#2[last]}} |
+   HEAD(#2,#1)
+
+// Example: optimamente ainda -> HEAD(ainda,optimamente ainda)
+//
+| ADVP#1{?*,#2[last]} |
+ if ( ~HEAD(?,#1) )
+   HEAD(#2,#1)
+
+// Example: e -> HEAD(e,e)
+//
+| CONJ#1{?*,#2[last]} |
+ if ( ~HEAD(#2,#1) )
+   HEAD(#2,#1)
+
+// Example:
+//
+| CONJ#1 |
+ if ( ~HEAD(?,#1) & ~HEAD(#1,?) )
+   HEAD(#1,#1)
+
+// Example: que
+//
+| PRON#1[qu] |
+ if ( ~HEAD(?,#1) & ~HEAD(#1,?) )
+   HEAD(#1,#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PREPD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: os restantes chefes de amanhã -> PREPD(amanhã,de)
+// Example: os chefes dos grupos          -> PREPD(grupos,dos)
+//
+| PP#1{prep#2,?*,#3} |
+ if ( HEAD(#3,#1) )
+   PREPD(#3,#2)
+
+// Example: para alimentar            -> PREPD(alimentar,para)
+// Example: para poder ter alimentado -> PREPD(alimentar,para)
+//
+| prep#1, ?{verb#2}, ?*, VINF{verb#4} |
+ if ( VDOMAIN(#2,#4) )
+   PREPD(#4,#1)
+
+// PREPD between a preposition and a WH- pronoun
+//
+// Example: A rapariga a quem ligou -> PREPD(quem,a)
+//
+| prep#1, SC{#2[first,qu:+] } |
+   PREPD(#2,#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// QUANTD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+//========================================================
+//  QUANTIFICATION WITHIN A NP or PP CHUNK
+//========================================================
+
+// Example: (de) uma (grande) banana         -> QUANTD(banana,uma)
+// Example: (de) 5 (belissimas) estrelas     -> QUANTD_PRE(estrelas,5)
+// Example: (de) duas (brilhantes) estrelas  -> QUANTD_PRE(estrelas,duas)
+//
+| NP#2{?*,#1[num,last:~];#1[indef,last:~,qu:~]};PP#2{?*,#1[num,last:~];#1[indef,last:~,qu:~]} |
+ if ( HEAD(#3,#2) & ~QUANTD(#3,#1) )
+   QUANTD(#3,#1)
+
+
+// Example: Nós todos           -> QUANTD(nós,todos)
+// Example: As raparigas todas  -> QUANTD(raparigas,todas)
+// Example: das raparigas todas -> QUANTD(raparigas,todas)
+//
+| PP#2;NP#2, NP#1{PRON[indef]} |
+ if ( HEAD(#3,#2) & HEAD(#4,#1) & ~QUANTD(#3,#4) )
+   QUANTD(#3,#4)
+
+
+
+//========================================================
+//  QUANTIFICATION WITHIN A NP, PP or AP
+//========================================================
+
+// Example: o (muito) mais eternamente bonito  -> QUANTD(bonito,mais)
+// Example: do (muito) mais eternamente bonito -> QUANTD(bonito,mais)
+// Example: (muito) mais eternamente bonito    -> QUANTD(bonito,mais)
+//
+| #1{?*,adv#2[advcomp], adv*, adj#3} |
+ if ( HEAD(#3,#1) & ~QUANTD(#3,#2) )
+   QUANTD(#3,#2)
+
+
+
+//========================================================
+// QUANTIFICATION WITHIN A NP CHUNK
+//========================================================
+
+// Example: 2 canecas de leite -> QUANTD(canecas,2) [already computed]
+//                             -> QUANTD(leite,canecas)
+//
+// Example: (estas;as) 2 canecas (bem medidas) de leite -> QUANTD(leite,canecas)
+//
+// CH, May, 15th
+// Added restriction on preposition in order to avoid bad QUANTD captured
+// "Garantiu quatro anos no Palácio do Planalto" *QUANTD(palácio,anos)
+//
+// Nuno, June, 8th
+// Added restriction on preposition in order to avoid bad QUANTD captured
+// "4 meses de 1996" *QUANTD(1996,mês)
+//
+// This Rule still produces bad results:
+// "temos momentos de perda" *QUANTD(perda,momentos)
+//
+| NP#1;PP#1, (AP), PP#2{prep#5[lemma:de]} |
+  if ( HEAD(#3[meas:+],#1) & HEAD(#4[time:~],#2) & ~QUANTD(#4,#3) & PREPD(#4[proper:~],#5) )
+   QUANTD(#4,#3)
+
+
+
+//========================================================
+// QUANTIFICATION between nouns and indefinite quantifiers
+// in complex structures
+//========================================================
+
+// Example: Muitos dos rapazes -> QUANTD(rapazes,muitos)
+//
+| NP#1;PP#1, (AP), PP#2 |
+   if ( HEAD(#3[indef],#1) & HEAD(#4,#2) & ~QUANTD(#4,#3) )
+   QUANTD(#4,#3)
+
+
+// Example: 5 (or 5%) dos rapazes -> QUANTD(rapazes,5)
+//
+// CH restriction added for cases like "O numero dois dos Farc" 
+// were we do not want "dois" to quantify "Farc"
+| NP#5;PP#5, NP#1;PP#1, (AP) |
+  if (HEAD(#6[lemma:número],#5) & HEAD(#3[num],#1) )
+	QUANTD(#6,#3)
+
+| NP#1;PP#1, (AP), PP#2 |
+   if ( HEAD(#3[num],#1) & HEAD(#4,#2) & ~QUANTD(?,#3) )
+   QUANTD(#4,#3)
+
+
+
+//========================================================
+// QUANTIFICATION and COORDINATION
+//========================================================
+
+// Example: (as) 2 canecas e meia
+// Example: (as) 2 canecas (bem medidas) de leite e meia
+// Example: (as) 2 canecas e meia (bem medidas) de leite
+// Example: NP{2 canecas[meas:+]} e (bem cheias) NP{meia} (bem medidas) PP{de leite} -> QUANTD(leite,canecas)
+//
+| NP#1{?*,num#3;noun#3[meas]}, (AP), conj#5[lemma:e],  (AP), NP#2{?*,num#4;noun#4[frac]} |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & QUANTD(#6,#4[num]) & #4<#6 )
+ COORD(#5,#3),
+ COORD(#5,#4),
+ CLINK(#3,#4).
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// DETD DEPENDENCY
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: (de) uma (belissima) banana -> DETD_PRE(banana,a)
+// Example: (de) uma (grande) banana    -> DETD_PRE(banana,uma)
+//
+| #1{?*,ART#2;#2[dem],?*,#3} |
+ if ( HEAD(#3,#1) & ~DETD(#3,#2) & ~QUANTD(#3,#2) )
+   DETD(#3,#2)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CORRECTING BAD QUANTIFICATIONS - NEEDS TO HAVE QUANTD AND DETD CALCULATED
+//
+////////////////////////////////////////////////////////////////////////////////
+// CH May, 28th
+// if the first NP is determined by a definite singular article or a demonstrative
+// then we delete the QUANTD between the determined potential quantifier and the head
+// of a following PP[de]
+// 
+// Example: A caneca do vizinho - deleting QUANTD(vizinho,caneca)
+// 
+| NP#1;PP#1, ?*, PP{prep#5[lemma:de]} |
+if ( HEAD(#3,#1) & ( DETD(#3,?[art,def,sg]) | DETD(#3,?[dem,sg]) ) & ^QUANTD(?,#3) )
+   ~ 

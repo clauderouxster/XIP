@@ -1,0 +1,142 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Center Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 -2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP portuguese grammar
+//!   filename   : entit_propagation.xip
+//!   author	 : C. Hagege
+//!   Date       : 20/11/2007 
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Marking parts of discovered Named Entities in order to take advantage of
+// propagation
+
+Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MARKING
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Pedro Ferreira           -> marks: Pedro and Ferreira
+// Example: Presidente Cavaco Silva  -> marks: Cavaco and Silva
+// 
+| noun#1[people,individual,unsure:~]{?*,noun#2[title:~,location:~,org:~,initial:~,maj:+],?*,noun#3[last,title:~,location:~,initial:~,maj:+]} |
+if (NE[people](#1) ) 
+	{ PERSON##2=1; PERSON##3=1; }
+
+
+// Example : Senhor Silva -> marks Silva
+
+
+// W. (O.) Silva -> marks Silva
+
+
+// a NER found because of a context is propagated
+//
+// Example: o primo do Zé. O Zé foi fixe
+//
+| noun#1[people,cargo:~,individual:+,unsure:~] |
+if (NE[people](#1) )
+{ PERSON##1=1; }
+
+
+//a NER type person which starts with relative
+// we propagate what follows the relative
+// a irma/tia Kiazer marks Kiazer
+| noun[mwe:+,individual:+,unsure:~]{?[relative], noun#2[proper:+]} |
+if ( NE[people](#1) )
+{ PERSON##2=1; }
+
+
+
+// marking for propagation an acronym that has be found by a rule
+//
+| noun#1[org,acron] |
+if ( NE[org](#1) )
+	{ ORGA##1=1; }
+
+
+// marking the proper name just following "ONG" as organization
+// e.g. A ONG Atini -> marks Atini
+| noun#1[org,institution]{?[lemma:ONG], noun#2[proper:+]} |
+if ( NE[org,institution](#1) )
+   { INSTIT##2=1; }
+
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PROPAGATION
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if two nouns have been marked by the previous rule but do not bear any people 
+// feature (only proper feature), then the PESSOA Ne is the concatenation of
+// these two nouns.
+//
+// Example: o Tito Tutu Tata da Tete falou. Tito Tete foi fixe.
+//
+| noun#3[proper,people=+]{?*,noun#1[maj], ?*, noun#2[maj]} |
+	if ( ~NE[people](#3) & PERSON##1:1 & PERSON##2:1 )
+	NE[people=+,individual=+,propag=+](#3)
+
+
+// noun alone that has been marked for propagation
+//
+| noun#1[toutmaj:~,maj:+] | 
+if ( PERSON##1:1 & ~NE[people](#1) )
+	NE[people=+,individual=+,propag=+](#1)
+
+
+// institution that has been marked
+// 
+| noun#1[maj:+] |
+  if ( INSTIT##1 & ~NE[org](#1) )
+  NE[org=+,institution=+,propag=+](#1)
+
+
+// if the noun is an acronym, can be all capitalized
+//
+| noun#1[maj:+] |
+	if ( ORGA##1 & ~NE[org](#1)  & ~NE[people](#1) )
+	NE[org=+](#1)
+
+| noun#1[maj:+] |
+	if ( ORGA##1 & ~NE[org](#1)  & (^NE[people,individual](#1) | ~NE[people,indgroup](#1) )  )
+	NE[features=~,people=+,indgroup=+,propag=+](#1)
+
+// Cleaning Rule
+// If we have a noun under a noun and both nouns are of same NE type, then only
+// keep the higher level.
+//
+| noun#1{?*,#2} |
+if ( NE(#1) & ^NE(#2) )
+ ~
+
+if (NE[propag:~](#1) & ^NE[propag](#1) )
+~
+
+Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// STOP PROPAGATION
+// (cleans lemmas when a closing DOC tag is found)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If token </DOC> is found, then clean all variables that have been modified
+// (propagation)
+//
+| #1[lemma:"</DOC>"]; #1[lemma:"</doc>"] |
+{	CleanAllLemmas; }
+

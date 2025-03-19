@@ -1,0 +1,255 @@
+<?xml version="1.0" ?>
+<project name="xrce.annotator.common"
+	 xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+    <dirname property="xrce.annotator.common.dir"
+        file="${ant.file.xrce.annotator.common}"/>
+
+    <property file="${xrce.annotator.common.dir}/common.properties"/>
+
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+	<classpath>
+	    <pathelement location="${ant-contrib.jar}"/>
+	</classpath>
+    </taskdef>
+
+    <path id="maven-ant-tasks.classpath"
+	  path="/opt/ParSem/tools/maven-ant-tasks/maven-ant-tasks-2.1.0.jar" />
+    <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+             uri="antlib:org.apache.maven.artifact.ant"
+             classpathref="maven-ant-tasks.classpath" />
+
+    <property name="packageName" value="${ant.project.name}"/>
+
+    <property name="annotator.descriptor" value="desc/${packageName}.xml"/>
+
+    <!-- parse the descriptor in order to get the version number -->
+    <xmlproperty file="${annotator.descriptor}"
+        prefix="annotatorDescriptor"
+        keeproot="false"/>
+
+    <property name="jcasgen.input.file" value="${annotator.descriptor}"/>
+    <property name="jcasgen.out.dir" value="src-jcasgen"/>
+    <property name="src.dir" value="src"/>
+    <property name="resource.dir" value="${src.dir}"/>
+    <property name="javac.target" value="1.6"/> <!-- can be overridden -->
+
+    <property name="pear.file"
+	      location="dist/${packageName}_${annotatorDescriptor.analysisEngineMetaData.version}.pear"/>
+
+    <property name="shared.types.dir" location="../shared-type-systems"/>
+
+    <path id="uima.classpath">
+        <path path="${uima.home}/lib/uima-core.jar"/>
+        <path path="${uima.home}/lib/uima-tools.jar"/>
+        <path path="${uima.home}/lib/uima-cpe.jar"/>
+        <path path="${uima.home}/lib/uima-document-annotation.jar"/>
+        <path path="${uima.home}/lib/uima-examples.jar"/>
+    </path>
+
+    <path id="src.path">
+        <dirset dir="." includes="${src.dir},${jcasgen.out.dir}"/>
+    </path>
+
+
+
+    <target name="set.properties" depends="set.compile.classpath,set.test.classpath"/>
+
+    <!-- **************************************************************** -->
+    <!-- not to be overridden -->
+    <target name="set.annotator.compile.classpath">
+	<path id="annotator.compile.classpath">
+	    <fileset dir="." includes="lib/*.jar"/>
+	    <path refid="uima.classpath"/>
+	</path>
+    </target>
+    <!-- ok to override -->
+    <target name="set.compile.classpath" depends="set.annotator.compile.classpath">
+        <path id="compile.classpath">
+	    <path refid="annotator.compile.classpath"/>
+	</path>
+    </target>
+    <!-- not to be overridden -->
+    <target name="set.annotator.test.classpath" depends="set.compile.classpath">
+	<path id="annotator.test.classpath">
+	    <path path="bin/"/>
+	    <path refid="compile.classpath"/>
+	</path>
+    </target>
+    <!-- ok to override -->
+    <target name="set.test.classpath" depends="set.annotator.test.classpath">
+	<path id="test.classpath">
+            <path refid="annotator.test.classpath"/>
+	</path>
+    </target>
+    <!-- **************************************************************** -->
+    <!-- end property setting targets -->
+
+
+    <target name="check.do.jcasgen">
+	<uptodate property="jcasgen.uptodate"
+	          targetfile="${jcasgen.out.dir}/.timestamp">
+	    <srcfiles dir="desc" includes="*.xml"/>
+	</uptodate>
+	<condition property="do.jcasgen">
+	    <not>
+	        <or>
+		    <isset property="skip.jcasgen"/>
+		    <isset property="jcasgen.uptodate"/>
+		</or>
+	    </not>
+	</condition>
+    </target>
+
+    <!-- NOTE: This simply wipes out any previously existing files,
+    so the generated files shouldn't be modified by hand (even though
+    this is allowed and expected by the UIMA tools).  If
+    hand-modifications are to be made, then we need to use
+    jcasgen_merge.sh (which has dependencies on eclipse and EMF)
+    instead of jcasgen.sh.  The jcasgen and clean targets should also
+    be modified in that case.  The reason I prefer to put the
+    generated source in a separate directory that is wiped out by
+    clean is that jcasgen never deletes a file, so once code has been
+    generated for a class, it sticks around even after you delete that
+    type from the descriptor. Cruft accumulates in the src directory
+    and can be difficult to clean up because it's mixed up with real
+    code. -->
+
+    <!-- todo: since jcasgen is java, it should be possible to skip
+    the os-dependent launcher script and make jcasgen directly into an
+    ant task. -->
+
+    <!-- In old versions of UIMA the failonerror had no effect, because
+    the jcasgen script had an exit status of 0 even when it
+    failed. This has been fixed as of 2.3.0 -->
+
+    <target name="jcasgen" depends="check.do.jcasgen" if="do.jcasgen">
+	<delete dir="${jcasgen.out.dir}"/>
+        <mkdir dir="${jcasgen.out.dir}"/>
+        <exec os="Linux" executable="/bin/sh" failonerror="true">
+            <arg file="${uima.home}/bin/jcasgen.sh"/>
+            <arg file="${jcasgen.input.file}"/>
+            <arg file="${jcasgen.out.dir}"/>
+            <env key="UIMA_HOME" value="${uima.home}"/>
+        </exec>
+        <exec os="Windows 2000,Windows 2003,Windows XP" executable="cmd.exe" failonerror="true">
+            <env key="UIMA_HOME" value="${uima.home}"/>
+            <arg line='/c "${uima.home}/bin/jcasgen.bat" "${jcasgen.input.file}" "${jcasgen.out.dir}"'/>
+        </exec>
+	<touch file="${jcasgen.out.dir}/.timestamp"/>
+    </target>
+
+    <!-- An aggregate annotator has no java source.  In that case,
+	 skip the java compilation. -->
+    <available property="src.exists" file="${src.dir}" type="dir"/>
+    <available property="src.exists" file="${jcasgen.out.dir}" type="dir"/>
+
+    <target name="compile" depends="jcasgen,set.properties" if="src.exists">
+        <mkdir dir="bin"/>
+        <javac destdir="bin"
+            classpathref="compile.classpath"
+            debug="yes"
+            target="${javac.target}"
+	    includeAntRuntime="false">
+	    <src refid="src.path"/>
+        </javac>
+        <copy todir="bin">
+            <fileset dir="${resource.dir}" excludes="**/*.java"/>
+        </copy>
+    </target>   
+
+    <target name="clean">
+        <delete dir="bin"/>
+        <delete dir="${jcasgen.out.dir}"/>
+        <delete dir="dist"/>
+    </target>
+
+    <target name="test.cvd" depends="set.properties">
+        <java classname="org.apache.uima.tools.annot_view.Gladis"
+              fork="true" maxmemory="512m" 
+              classpathref="test.classpath">
+            <arg value="-desc"/>
+            <arg value="${annotator.descriptor}"/>
+	    <arg value="-exec"/>
+            <arg value="-text"/>
+            <arg value="test/test.txt"/>
+
+	    <!-- only relevant for uimaxip annotators, but doesn't
+	    hurt for the others, so I put it here rather than
+	    overriding the target in the uimaxip build -->
+	    <sysproperty key="com.xerox.xrce.uimaxip.core.grammar.grmfile"
+		file="${parSem}/${grammar.grmfile.relative}"/>
+        </java>
+    </target>
+
+    <target name="test.cpe" depends="set.properties">
+	<java classname="org.apache.uima.examples.cpe.SimpleRunCPE"
+	      fork="true" maxmemory="512m"
+	      classpathref="test.classpath">
+	    <arg value="test/desc/test-cpe.xml"/>
+	</java>
+    </target>
+
+    <target name="test.cpeGui" depends="set.properties">
+        <java classname="org.apache.uima.tools.cpm.CpmFrame"
+              fork="true" maxmemory="512m" 
+              classpathref="test.classpath">
+	    <!-- only relevant for uimaxip annotators, but doesn't
+	    hurt for the others, so I put it here rather than
+	    overriding the target in the uimaxip build -->
+	    <sysproperty key="com.xerox.xrce.uimaxip.core.grammar.grmfile"
+		file="${parSem}/${grammar.grmfile.relative}"/>
+        </java>
+    </target>
+
+    <target name="test.da" depends="set.properties">
+        <java classname="org.apache.uima.tools.docanalyzer.DocumentAnalyzer"
+              fork="true"
+              classpathref="test.classpath">
+	    <sysproperty key="com.xerox.xrce.uimaxip.core.grammar.grmfile"
+		file="${parSem}/${grammar.grmfile.relative}"/>
+        </java>
+    </target>
+
+    <patternset id="pear.files.pattern"
+		excludes="*~"
+		includes="bin/, lib/, desc/, metadata/, resources/, doc/"/>
+
+    <target name="set.shared.descriptors">
+	<zipfileset id="shared.descriptors" dir="." excludes="**"/>
+    </target>
+
+    <target name="set.dependency.pear.files">
+	<fileset id="dependency.pear.files" dir="." excludes="**"/>
+    </target>
+
+    <!-- overridden in build-uimaxip-annotator-common.xml -->
+    <target name="pear" depends="compile,mkdist,set.shared.descriptors,set.dependency.pear.files">
+	<jar destfile="${pear.file}" duplicate="preserve">
+  	    <fileset dir=".">
+		<patternset refid="pear.files.pattern"/>
+	    </fileset>
+	    <zipfileset refid="shared.descriptors"/>
+	    <fileset refid="dependency.pear.files"/>
+	</jar>
+    </target>
+
+    <target name="echofile">
+      <echo message="FOO ${file}"/>
+    </target>
+
+    <target name="mkdist">
+        <mkdir dir="dist"/>
+    </target>
+
+    <!-- test.pear crucially does *not* depend on set.properties,
+	 because we want to make sure the pear doesn't require
+	 anything on its classpath other than UIMA.  -->
+    <target name="test.pear"> 
+        <java classname="org.apache.uima.tools.pear.install.InstallPear"
+              fork="true"
+	      classpathref="uima.classpath"
+            />
+    </target>
+
+</project>

@@ -1,0 +1,115 @@
+kif:
+
+use("kifliblinear");
+use("kifsys");
+
+//This is the actual path of the script file, from which we can derived our accesss to the grammars
+string localpath=kifsys.env("SCRIPTKIF");
+
+
+loadin(kifsys.env("SCRIPTKIF")+"/dictionariesPolarity.kif");
+
+liblinear predFood(localpath+"/model_test_food");
+liblinear predPrice(localpath+"/model_test_price");
+liblinear predAmbience(localpath+"/model_test_ambience");
+liblinear predService(localpath+"/model_test_service");
+liblinear predMisc(localpath+"/model_test_annecdote");
+
+//Global variables
+map categmodel={"food":predFood,"price":predPrice,"ambience":predAmbience,"service":predService,"anecdotes/miscellaneous":predMisc};
+istreemap polarities={0:"positive",1:"negative",2:"neutral",3:"conflict"};
+
+simap allwordsinstring;
+vector OpinionAspectTerm;
+map sentimentAndCategory;
+ssmap modifiedterms;
+
+
+function storewords(node n) {
+     string s=n.lemma().lower();
+     allwordsinstring[s]++;
+}
+
+function storedepwords(string s) {
+     s = s.lower();
+     allwordsinstring[s]++;
+}
+
+function getdeps(dependency d,vector infos) {
+     vector v1,v2;
+     node n1;
+     string s1;
+     ssmap dfeats;
+     string currentCategory=infos[0];
+
+     switch(d.name()) {
+          "OPINION-ON-ASPECT-CATEGORY": {
+               v1 = d.features();
+               v2 = d.parameters();
+               n1 = v2[0];
+               string pol = v1[0];
+               if(pol!="") {
+                    storedepwords(pol + "_" + currentCategory);
+                    storedepwords(pol);
+               }
+          }
+          "SENTIMENT-AND-CATEGORY": {
+               dfeats=d.features();
+               if (dfeats.test(currentCategory.upper())) {
+                    if (dfeats.test("POSITIVE")) {
+                         storedepwords("POSITIVE_"+currentCategory);
+                    }
+                    elif (dfeats.test("NEGATIVE")) {
+                         storedepwords("NEGATIVE_"+currentCategory);
+                    }
+                    elif (dfeats.test("NEUTRAL")) {
+                         storedepwords("NEUTRAL_"+currentCategory);
+                         OpinionAspectTerm.push(d);
+                    }
+                    elif (dfeats.test("CONFLICT")) {
+                         storedepwords("CONFLICT_"+currentCategory);
+                    }
+               }
+          }
+     }
+}
+
+function resetall() {
+     modifiedterms.clear();
+     OpinionAspectTerm.clear();
+     allwordsinstring.clear();
+}
+
+function predictforstring(vector infos) {
+     vector donnees;
+     fvector labels=[0];
+     iftreemap imd;
+     string str;
+     string cat=infos[0];
+     string polarity;
+
+     for (str in allwordsinstring) {
+          if (allthewords.test(str)) {
+               imd[allthewords[str]]=allwordsinstring[str];
+          }
+     }
+     donnees.push(imd);
+     vector reponse=categmodel[cat].predict(donnees,true,true);
+     map predictedclassresults = reponse[1];
+     int predictedclass = predictedclassresults.keys()[0];
+     int pospredictedclass=predictedclass in reponse[0]["labels"];
+     float weight=predictedclassresults[predictedclass][pospredictedclass];
+     polarity = polarities[predictedclass];
+     infos.push(polarity);
+
+     if (weight>=0.5) {
+          if (polarity!="neutral") {
+               //We store this predicted polarity as a feature to this dependency
+               dependency d;
+               for (d in OpinionAspectTerm)
+                    modifiedterms[d.parameters()[0].surface()]=polarity;
+          }
+     }
+     infos.push(modifiedterms);
+}
+

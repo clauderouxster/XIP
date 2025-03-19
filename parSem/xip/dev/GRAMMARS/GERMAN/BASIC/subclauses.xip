@@ -1,0 +1,135 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	subclauses.xip
+//! Content:	chunking for subclauses
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//!
+//! Created: 	06-Feb-2008
+//! Updated: 	30-Oct-2009
+//!
+//! ENCODING : UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+Marker:
+1> verb[finite:~,spart=+].
+1> conj[coord,subord:~,spart=+].
+1> conj[comp,subord:~,spart=+].
+1> punct[coord_ap,coord=+].
+1> punct[coord_np,coord=+].
+1> punct[coord_pp,coord=+].
+1> punct[coord,spart=+].
+1> punct[skip,spart=+].
+1> num[spart=+].
+
+1> adv[spart=+].
+1> negat[spart=+].
+1> ptcl[spart=+].
+
+Sequence:
+2> ?[coord_sent=+] = conj[coord,coord_ap:~,coord_np:~,coord_pp:~,sadv:~] | ?*[spart], verb[finite] |.
+2> ?[coord_sent=+] = conj[coord,coord_ap:~,coord_np:~,coord_pp:~,sadv:~] | negat[end] |.
+2> ?[coord_sent=+] = conj[coord,coord_ap:~,coord_np:~,coord_pp:~,sadv:~] | negat, punct |.
+3> ?[punct,dash] = punct[coord_sent=+] | (np;pp;adv;?[sadv])*, verb[finite] |.
+
+Marker:
+4> conj[coord, coord_sent:~,spart=+].
+
+5> np[rel=+]{pron[rel]}.
+5> np[wh=+]{pron[wh]}.
+5> pp[rel=+]{?*,np{pron[rel]}}.
+5> pp[wh=+]{?*,np{pron[wh]}}.
+
+Sequence:
+// Insertions
+10> ins @= punct[dash], ?*[dash:~], punct[dash]. 
+10> ins @= punct[pleft], ?*[paren:~], punct[pright].
+
+// infinitival clauses
+//:: er kommt herein ohne anzukopfen.
+12> infc @= conj[cinf], ?*[spart], verb[infzu].
+
+//:: es ist ein Problem, morgen nach Hamburg zu kommen und dann nach München zu fahren.
+12> infc @= | conj[coord];punct[comma,coord:~] | ?*[spart], verb[infzu].
+
+
+//:: er behauptet nicht kommen zu wollen
+//:: er behauptet nicht gekommen zu sein
+12> infc @= (negat), (verb[ppast];verb[inf])*, verb[infzu,sub_ppast];verb[infzu,sub_inf].
+
+//:: er bittet ihn jetzt mit Nachdruck mitzukommen
+12> infc @= (negat), verb[infzu].
+12> infc @= | infc | conj[coord], ?*[spart], verb[infzu] .
+
+// interrogative or relative subclauses
+// :: er fragt, wer gekommen sei
+// :: Wie das funktioniert, wollte er ganz genau wissen.
+// :: er fragt, wer kommt.
+// :: Wissen Sie, wer kommt?
+//:: er fragt, mit welchem Zug er kommt
+// BUT :: Wer kommt?
+
+// relative clauses
+// :: Ich kaufe das Buch, das ich gestern gesehen habe.
+// :: Ich kaufe nur Bücher, deren Autor ich kenne
+// :: Ich kaufe ein Buch, von dem ich noch nie gehört habe.
+// :: Er fragt, warum das passiert sei.
+//14> sc[whrel:!] @= ?[whrel,!whrel:!], ?*[spart], verb[finite]| ins;punct[comma];?[sent];?[coord_sent] |. // , ?*[spart,coord_sent:~,finite:~].
+
+14> sc[whrel:!] @= ?[whrel,!whrel:!], ?*[spart], verb[finite]| ?*[skip], ins;punct[comma];?[sent];?[coord_sent] |. // , ?*[spart,coord_sent:~,finite:~].
+
+14> sc[whrel:!] @= | sc[whrel,!whrel:!] | conj[coord], ?*[spart], verb[finite] .
+
+
+// subclauses with conjunctions
+// :: wenn nicht, dann ...
+15> sc[sconj=+] @= conj[subord], ?*[spart], verb[finite] .
+
+15> sc[sconj=+] = conj[lemma:wenn], ?*[spart], negat | punct[comma] |.
+15> sc[sconj=+] @= | sc[sconj] | conj[coord], ?*[spart], verb[finite] .
+
+
+
+
+//:: und so, oder nicht ...
+20> ins = conj[coord_sent], negat;adv;ap | punct |.
+20> ins = conj[coord_sent], negat;ap;adv[end].
+
+//!!! refine for named entities  ??????
+20> ins = punct[comma], np[is_person], punct[comma].
+
+//:: Der Reisende, kaum angekommen, fuhr gleich weiter
+//:: Der Reisende, auf seinen Rechten bestehend, ...
+20> ins = | np | punct[comma],  ?*[sc:~,infc:~,finite:~,comma:~], punct[comma] .
+
+//:: subclauses
+21> ins @= (conj[coord_sent];punct)*, sc;infc, (conj[coord_sent];punct)*.
+
+Tagging:
+// disambiguate remaining verb forms
+30> verb[inf,finite] = | verb[sub_inf], ?*[spart, comma:~] | verb[inf,spart=+].		// CHECK !!!!!
+
+
+Sequence:
+// MAIN CLAUSES
+// CHECK !!!
+
+//:: er hat in Mailand und für Inter gespielt.
+50> mc @= (conj[sadv]), ?*[spart], verb[finite,aux], ?*[spart], (verb[ppast];verb[inf])+, ?*[spart,coord_sent:~] .
+
+//:: ..., denn der bürokratische Aufwand ist gewaltig.
+50> mc @= (conj[sadv]), ?*[spart], verb[finite], ?*[spart,coord_sent:~].
+
+//:: er hat eingekauft und dann das Auto gewaschen.
+51> mc @= | mc, ins*, ?[coord_sent] | ?*[spart,coord_sent:~] .
+
+//:: Kaum angekommen, fuhr er gleich weiter
+//:: Auf seinen Rechten bestehend, ...
+215> ins = ?[mc:~,finite:~,comma:~,start], ?*[mc:~,finite:~,comma:~], punct[comma,coord:~].
+215> ins = punct[comma,coord:~], ?*[mc:~,finite:~,comma:~], ?[mc:~,finite:~,comma:~,end].
+

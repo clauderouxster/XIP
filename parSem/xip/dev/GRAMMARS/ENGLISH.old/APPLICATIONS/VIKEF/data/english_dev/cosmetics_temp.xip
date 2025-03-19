@@ -1,0 +1,374 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : cosmetics_temp.xip
+//!   Date       : January 2005
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+// Expressions temporelles. 3 types
+// Point in time
+// Duration
+// Frequency (i.e. set of time points)
+
+
+DependencyRules: 
+
+
+// ADDING INCOMPLETE THINGS FROM GEN GRAMMAR
+// start_action verbs and end_action verbs
+| SC{?*,FV{?*,#1[start_action,last]}};SC{?*,FV{?*,#1[end_action,last]}}; FV{?*,#1[start_action,last]}; FV{?*,#1[end_action,last]}, adv*, GV{#2[vprog,first,last]} |
+if ( ~OBJ-N(#1,#2) )
+   OBJ-N[gerund=+,post=+](#1,#2)
+
+
+// Rule 1940
+// Possibile MOD[dur:+,temp:+] are going to be changed in DUR[temp:+]
+if ( ^MOD[dur:+](#1,#2))
+	TEMP[dur=~,t_dur=+](#1,#2)
+// Rule 1678
+if ( ^MOD[temp:+](#1,#2) )
+	TEMP[temp=~](#1,#2)
+
+
+
+// Rule 819
+// Suppression of erroneous features
+//if ( ^DUR[temp:+](#1,#2) )
+//	TEMP[temp=~,t_dur=+](#1,#2)
+
+
+// Rule 2012
+// When temporal expressions are used with a copula
+// e.g. The temporao will be late this year. The concert is Friday
+if ( ATTRIB(#1[tempexpr:~],#2[tempexpr]) )
+	TEMP(#1,#2)
+// Correction of the previous rule in case of expressions like it's time
+| NP{noun#2[first,last,lemme:time]} |
+  if ( ATTRIB(#1,#2) & ^TEMP(#1,#2) )
+  ~
+
+if ( ^ATTRIB(#1,#2) & TEMP(#1,#2) )
+   ~
+
+
+// Rule XXXX
+// Absolute Times or durations. 
+// It means that we do not need any external data to calculate the point in time or the interval in time
+// e.g. October 1998
+if ( ^TEMP(#1,#3[dig:+,card:+]) )
+	$1[t_absolut=+](#1,#3)
+
+
+// Rule 825
+if ( ^$1(#1,#2[date:+]) & ~MOD(#2,?) )
+	$1[t_absolut=+](#1,#2) 
+
+// at eight o'clock
+if ( ^$1(#1,#2[hour]) & PREPD(#2,?[lemme:at])  )
+	$1[t_absolut=+](#1,#2)
+
+if ( ^$1[t_absolut:~](#1,#2[t_absolut:+]) )
+	$1[t_absolut=+](#1,#2)
+
+
+if ( ^$1[t_dur:~](#1,#2[t_dur:+]) )
+     $1[t_dur=+](#1,#2)
+
+
+// Relative time. It means that we need an external reference to be able to calculate the temporal value.
+// e.g. Three weeks ago
+// Rule 2017
+| ADV#1[tempexpr:+] | 
+	if ( ^$1[t_relat:~,t_absolut:~](#2,#1[t_freq:~]) )
+	$1[t_relat=+](#2,#1),
+	TIMEX3[features=~,t_relat=+](#1).
+
+// Rule XXXXX
+// earlier, later - TEMP relations with feature t_relat already calculated
+| ADV#1[time,compar] |
+	if ( TEMP(#2,#1) )
+	TIMEX3[t_relat=+](#1)
+
+// Rule XXXXXX
+// For t_freq adverbs
+| ADV#1[tempexpr:+,t_freq:+] |
+  if ( $1(#2,#1) & ~TIMEX3(#1) )
+  TIMEX3[t_freq=+](#1)
+
+
+// Rule 20019
+// a weekly review
+if (^$1[t_freq:~,pre:+](#1,#2[t_freq:+]) & ~TIMEX3[t_freq:+](#2) )
+	$1[t_freq=+](#1,#2),
+	TIMEX3[features=~,t_freq=+](#2).
+
+
+// Rule 2020
+// COMPLETER POUR march shipment
+if (TEMP[t_relat:~,pre:+](#1,#2[period:+,noun:+,t_freq:~]) )
+	TIMEX3[features=~,t_relat=+](#2).
+
+// Rule 2021
+if ( ^$1[t_relat:~,t_absolut:~](#1,#2[t_relat:+]) )
+	$1[t_relat=+](#1,#2)
+
+// Rule 2022
+// Arranging TMF temporal relations (TMF initial time and TMT final time)
+// e.g. since 1997 or from Monday to Wednesday.
+//if ( TMF[temp:+](#1,#2) & TMT(#1,#3) )
+// VOIR COMMENT ON VEUT LES REPRESENTER
+// Durations in this case. The TIMEX3 would be the whole temporal expression.
+if ( TMF(#1,#20) & ~TMT(#1,?) )
+	TEMP(#1,#20)
+
+
+// Rule 2025
+// Attaching DUR relations to nouns in case of <temporal expression> of <noun>
+// e.g. ten years of war
+| PP{?*,NP{?*,#1[tempexpr,last]}};NP{?*,#1[last,tempexpr]}, PP{prep#10[lemme:of]} |
+if ( MOD[post](#1,#2) & PREPD(#2,#10) & ~TEMP(#2,?)  )
+  TEMP[t_dur=+,pre=+](#2,#1)
+
+	
+
+// Rule 2023
+// Changing the link TEMP|DUR(Verb,nominal_head) to the link TEMP|DUR(Verb,whole_temporal_np)
+// e.g. TEMP(arrived,week) to TEMP(arrived,last week) in he arrived last week.
+| ?[prep:~], NP#20[tempexpr] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20),
+	TIMEX3(#20).
+// for the beginning of the sentence
+| NP#20[tempexpr,startbis] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20),
+	TIMEX3(#20).
+// to complete the above rule when a PP is preceeding a NP
+| PP, NP#20[tempexpr] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20),
+	TIMEX3(#20).
+
+
+//| PP#20[tempexpr] |
+//	if ( HEAD(#2,#20) & ^DUR[!features:!](#1,#2) )
+//	DUR(#1,#20),
+//	TIMEX3(#20).
+
+//| NP#20[tempexpr] |
+//	if ( HEAD(#2,#20) & ^DUR[!features:!](#1,#2) )
+//	DUR(#1,#20),
+//	TIMEX3(#20).
+
+
+// Rule XXXX
+| ?[prep:~], NP#2 |
+if ( TEMP(#1,#2)  & ~TIMEX3(#2) )
+	TIMEX3(#2)
+// Rule XXXX
+// to complete the preceeding rule.
+| PP, NP#2 |
+if ( TEMP(#1,#2)  & ~TIMEX3(#2) )
+	TIMEX3(#2)
+
+| PP#1 |
+	if ( HEAD(#10,#1) & ~TIMEX3(#1) & TEMP(#2,#10) )
+	TIMEX3(#1)
+
+
+| ADVP#1 |
+	if ( TEMP(#2,#1) & ~TIMEX3(#1) )
+	TIMEX3(#1)
+
+
+
+// Non headed temporal expressions
+| PP#2[tempexpr:~];NP#2[tempexpr:~] |
+if ( HEAD(#20,#2) & TEMP[pre](#20,#3) & ~TIMEX3(#3) )
+	TIMEX3(#3)
+
+
+
+
+// Rule 2041
+// eliminating TIMEX on daughters when a mother node is also TIMEX
+if ( TIMEX3(#1) & ^TIMEX3(#2) &  HEAD(#2,#1) )
+	~
+
+if ( TEMP(#1,#2) & TIMEX3(#2) & ^TEMP(?,#3) & DAUGHTER(#2,#3) )
+	~
+
+// In January this year
+| PP#10{prep,NP{?*,#1}} |
+	if ( TIMEX3(#10) & ^TIMEX3(#1) )
+	~
+
+
+
+if ( ^TIMEX3[t_freq:~](#1[t_freq:+]) )
+   TIMEX3[t_freq=+](#1)
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Analysing verbal tenses
+
+///////////////////////////////////////////////////////////////////////////////
+if ( VDOMAIN(#1,?[lemme:will]) )
+	FUTURE(#1)
+
+
+if ( VDOMAIN(#1,?[lemme:shall]) )
+	FUTURE(#1)
+
+
+
+if ( VDOMAIN[passive:+](#1,?[past]) )
+	PAST(#1)
+
+if ( VDOMAIN(#1,#1[partpas]) )
+	PAST(#1)
+
+
+
+if ( VDOMAIN[perfect:+](#1,?) )
+	PAST(#1)
+
+
+if ( VDOMAIN(#1,#1[past:+]) )
+	PAST(#1)
+
+if ( VDOMAIN(#1,?[pres:+]) )
+	PRESENT(#1) 
+
+if ( VDOMAIN(#1,#1[pres:+]) ) 
+	PRESENT(#1)
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Characterization of temporal expressions
+// Analyzing TIMEX3 expressions
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+// hour + date
+// at 12 o'clock January 3, 1992 
+| PP#1[tempexpr]{prep,NP{noun[hour],(punct[comma]),NP{?[first,last,date]}} } | 
+if ( ^TIMEX3[t_absolut:~,t_relat:~](#1) )
+	TIMEX3[t_absolut=+](#1)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// The whole TIMEX expression is to attach to the predicate it's modifying
+///////////////////////////////////////////////////////////////////////////////
+
+| NP#1 |
+if ( TIMEX3(#1) & HEAD(#10,#1) & ^TEMP(#3,#10) )
+   TEMP(#3,#1)
+
+
+| PP#1{prep,NP#2} | 
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1)
+
+| PP#1{prep,dig#2} | 
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1)
+
+| PP#1{prep,noun#2[mwe]} |
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1) 
+
+
+// Same as above for named entities LOC, ORGANISATION or LOCORG
+| PP{prep, NP{noun#2[mwe]{?*#3}}} |
+  if ( ^MOD(#20,#3) & ~MOD(#20,#2) )
+  MOD(#20,#2)
+| PP{prep, NP#2{noun[mwe],part,noun#3[mwe]}} |
+  if ( ^MOD(#20,#3) & ~MOD(#20,#2) )
+  MOD(#20,#2)
+
+// DURATIONS
+| #2{?*,?[num],?*,noun[period,last]} |
+if ( ^TEMP[t_dur:~](#1[stay_v],#2) & TIMEX3[t_dur=+](#2) )
+   TEMP[t_dur=+](#1,#2)
+
+
+///////////////////////////////////////
+/// REFERENTIAL TEMPORAL EXPRESSIONS
+/// TIMREF DEPENDENCY
+//////////////////////////////////////
+| PP#1[reftime] |
+if ( HEAD(#10,#1) & ( ^MOD(#3[verb],#10) | ~MOD(#3,#10) )  )
+  TIMREF(#1),
+  TEMP(#3,#1).
+
+
+
+if ( ^TIMEX3(#1) & TIMREF(#1) )
+   ~
+
+
+
+// Passing features from TEMP to TIMEX
+if ( TEMP[t_absolut](#1,#2) & ^TIMEX3[t_absolut:~](#2) )
+      TIMEX3[t_absolut=+](#2)
+
+
+if ( TEMP[t_freq](#1,#2) & ^TIMEX3[t_freq:~](#2) )
+     TIMEX3[t_freq=+](#2)
+
+if ( TEMP[t_dur](#1,#2) & ^TIMEX3[t_dur:~](#2) )
+      TIMEX3[t_dur=+](#2)
+
+if ( TEMP[t_relat](#1,#2) & ^TIMEX3[t_relat:~](#2) )
+      TIMEX3[t_relat=+](#2)
+
+
+// Rule XXXXX
+// Adding t_freq feature on TIMEX3 when expression with throughout
+// e.g. throughout the week
+| PP#1{prep[lemme:throughout]} |
+  if ( ^TIMEX3[t_freq:~](#1) )
+  TIMEX3[t_freq=+](#1)
+
+
+
+
+// CLEANING RULES
+
+if ( ^TIMEX3[post](#1) )
+	TIMEX3[post=~](#1)
+
+if ( ^TIMEX3[pre](#1) )
+	TIMEX3[pre=~](#1)
+
+
+
+// Marking as TIMEX3 expressions, temporal expressions, even if they are not linked to any predicate. 
+// somewhere in perturbated text...
+| ?[prep:~], NP#1[tempexpr:+] |
+if ( ~TIMEX3(#1) )
+	TIMEX3(#1)
+
+| NP#1[tempexpr:+,startbis:+] |
+if ( ~TIMEX3(#1) )
+   TIMEX3(#1)
+
+

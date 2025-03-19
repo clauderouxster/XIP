@@ -1,0 +1,321 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      adapt morphological analyser for tagging
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      20-Jan-2006
+#		- based on older scripts
+# ============================================================================
+# USAGE:        xfst -s [MorphFST] -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+
+# determine tags and characters
+read regex LEX ;
+single char sigma net
+define SIG
+regex SIG .o. [ %+ ?+ ];
+multi char sigma net
+define TAG
+
+define CHAR	\[TAG] ;
+
+
+# -----------------------------------------------------------------------------
+
+echo >>> filter for upper side
+define SETUPP	[
+ 	{have} %+Aux ?* 
+| 	{do} %+Aux ?* 
+];
+
+echo >>> filter for lower side
+define SETLOW	[ 
+
+# verbs with attached auxiliaries mouns with possessives
+  [?* %' ([s | v e | m | d | l l | r e ]) ]
+
+# from file additions.xfst:
+| [ I L | D E ]
+				
+];
+
+regex 	~[SETUPP] .o. LEX .o. ~[SETLOW];
+define LEX
+
+# -----------------------------------------------------------------------------
+define SP	"_":" " ;
+
+echo >>> words to be removed
+define REMOVE [
+   a %+Let:0 %+Sg:0				#- amb. with article;
+| A:a %+Let:0 %+Sg:0				#- amb. with cap. article;
+| A %+Meas:0 %+Abbr:0				#- amb. with cap. article;
+| {above} %+NAdj:0 %+Sg:0			#- %WEUD: "the ~"
+| {ace} %+NAdj:0 %+Sg:0				#- %WEUD: yes
+| {but} %+Noun:0 %+Sg:0				#- %WEUD: "no ~s"
+| {callous} %+NAdj:0 %+Sg:0			#- %WEUD: no
+| {callous} 0:{es} %+Noun:0 %+P:0		#- %WEUD: no
+| {cc} %+Dig:0 %+Rom:0				#-
+| {due} %+Adv:0					#- %WEUD: = exactly
+| {empty} %+NAdj:0 %+Sg:0			#- rare; %WEUD: "the ~s
+| {entire} %+NAdj:0 %+Sg:0			#- archaic; %WEUD: "the ~"
+| {evening} %+Adj:0 %+VProg:0			#- rare
+| {evening} %+Noun:0 %+VProg:0 %+Sg:0		#- rare
+| {evening} 0:s  %+Noun:0 %+VProg:0 %+Pl:0	#- rare
+| {or} %+Noun:0 %+Sg:0				#-
+| {fore} %+Interj:0				#- %WEUD: yes
+| {glad} %+NAdj:0 %+Sg:0			#- %WEUD: =gladiolus
+| {hail} %+Interj:0				#- %WEUD: ok
+| {halt} %+NAdj:0 %+Sg:0			#- archaic; %WEUD: =lame
+| {here} %+Noun:0 %+Sg:0			#- %WEUD: "the ~ and now"
+| I %+Dig:0 %+Rom:0				#- ambiguous with pronoun;
+| i %+Dig:0 %+Rom:0				#- cap. amb. with pronoun
+| I %+Let:0 %+Sg:0				#- ambiguous with pronoun
+| i %+Let:0 %+Sg:0				#- cap. amb. with pronoun;
+| {if} %+Noun:0 %+Sg:0				#- %WEUD: "no ~s" 
+| {meet} %+NAdj:0 %+Sg:0			#- rare; %WEUD: = suitable, "a track ~"
+| {needs} %+Adv:0				#- rare; WEUD: "it must needs be so"
+| {new} %+Adv:0					#- %WEUD: "new washed" 
+| {next} %+Prep:0				#- %WEUD: "the closet ~ the door"
+| {nothing} %+Adv:0				#- %WEUD: "it was ~ like that"
+| {nothing} %+NAdj:0 %+Sg:0			#- %WEUD: "it's ~","a ~ job"
+| {now} %+Conj:0 %+Sub:0			#- %WEUD: "~ you're here"
+| {now} %+Noun:0 %+Sg:0				#- %WEUD: "up to ~"
+#| {offering} %+Noun:0 %+Sg:0			#-
+| {only} %+Conj:0 %+Sub:0			#- %WEUD: "I would have gone, ~ you objected"
+| {out} %+NAdj:0 %+Sg:0				#- %WEUD: "be at the ~s","he is ~"
+| {in} %+NAdj:0 %+Sg:0				#- 
+| {percent} %+Adv:0				#- %WEUD: adj.
+| {plus} %+NAdj:0 %+Sg:0			#- %WEUD: "a ~ quantity"
+| {plus} %+Prep:0				#- %WEUD: "ten ~ two"
+| {really} %+Verb:0 %+Pres:0 %+Non3sg:0		#- %WEUD: = re-ally
+| {save} %+Conj:0 %+Sub:0			#- %WEUD: "~ that he ..."
+| {steady} %+Interj:0				#- %WEUD: yes
+| {such} %+Adv:0				#- %WEUD: "~ pleasant people"
+| {then} %+NAdj:0 %+Sg:0			#- %WEUD: "since ~","the ~ prime minister" 
+| {there} %+Pron:0 %+Nom:0 %+3P:0 %+SP:0	#- %WEUD: "~ is"
+| {times} %+Prep:0				#-
+| {true} %+Adv:0				#- %WEUD: "come ~"
+| {up} %+NAdj:0 %+Sg:0				#- %WEUD: "on the ~ and ~";
+| {wanting} %+Prep:0				#- %WEUD: "a box ~ a lid"
+| {wet} %+NAdj:0 %+SP:0				#- %WEUD: yes
+| {whereas} %+Noun:0 %+Sg:0			#- %WEUD: "to read the ~ses"
+| {while} %+Verb:0 %+Pres:0 %+Non3sg:0		#- rare; %WEUD: = cause time to pass
+| {white} %+Verb:0 %+Pres:0 %+Non3sg:0		#- rare; %WEUD: = whiten
+| {why} %+Interj:0				#- {WEUD: yes
+| {why} %+Noun:0 %+Sg:0				#- %WEUD: the ~s
+| {will} 0:{ing} %+Verb:0 (%+Trans:0) %+Prog:0	#- amb. with adj.
+| {willing} %+Noun:0 %+VProg:0 %+Sg:0		#- amb. with adj.
+| {willing} %+Adj:0 %+VProg:0			#- amb. with adj.
+
+# quantifiers:
+| {all} %+Adv:0						#-
+| {all} %+Pron:0 %+NomObl:0 %+3P:0 %+Pl:0		#-
+| {all} %+Det:0 %+Pl:0					#-
+| {any} %+Pron:0 %+NomObl:0 %+3P:0 %+Sg:0		#-
+| {any} %+Det:0 %+Sg:0					#-
+| {both} %+Pron:0 %+NomObl:0 %+3P:0 %+Pl:0		#-
+| {both} %+Det:0 %+Pl:0					#-
+| {each} %+Det:0 %+Sg:0					#-
+| {each} %+Adv:0					#- %WEUD: "a dollar ~"
+| {every} %+Det:0 %+Sg:0				#-
+| {many} %+Pron:0 %+NomObl:0 %+3P:0 %+Pl:0		#-
+| {many} %+Det:0 %+Pl:0					#-
+| {many} %+Noun:0 %+Pl:0				#- %WEUD: "a good ~"
+| {some} %+Pron:0 %+NomObl:0 %+3P:0 %+Pl:0		#-
+| {some} %+Det:0 %+SP:0					#-
+| {no} %+Det:0 %+SP:0					#-
+| {neither} %+Det:0 %+Sg:0				#-
+| {enough} %+Adv:0					#-
+| {enough} %+Adj:0					#-
+| {few} %+Adj:0						#-
+| {half} %+Adv:0					#-
+| {half} %+NAdj:0 %+Sg:0				#-
+| {double} %+Adv:0					#-
+| {much} %+Adv:0					#-
+| {much} %+Adj:0					#-
+| {more} %+Pron:0 %+NomObl:0 %+3P:0 %+Pl:0		#-
+| {more} %+Adv:0					#-
+| {more} %+Noun:0 %+Sg:0				#- %WEUD: "take no ~"
+| {much}:{more} %+Adj:0 %+Comp:0			#-
+| {most} %+Det:0 %+Pl:0					#- %WEUD: adj.
+| {most} %+Noun:0 %+Sg:0				#- %WEUD: "the ~"
+| {most} %+Noun:0 %+SP:0				#-
+| {most} %+Adv:0					#-
+| {much}:{most} %+Adj:0 %+Sup:0				#-
+| {little} %+Adv:0					#-
+| {little} %+Noun:0 %+Sg:0				#- %WEUD: "for a ~" 
+| {little}:{less} %+Adj:0 %+Comp:0			#-
+| {little}:{least} %+Adj:0 %+Sup:0			#-
+| {less} %+Adj:0					#-
+| {less} %+Noun:0 %+SP:0				#- %WEUD: "for ~"
+| {less} %+Prep:0					#- %WEUD: "a year ~ two days"
+| {less} %+Adv:0					#-
+| {least} %+Adv:0					#-
+| {least} %+Noun:0 %+Sg:0				#- %WEUD: "at the ~"
+
+| {other} %+Pron:0 %+NomObl:0 %+3P:0 %+Sg:0		#-
+
+| {same} %+Adv:0					#- %WEUD: no
+| {same} %+Pron:0 %+Obl:0 %+3P:0 %+Sg:0			#-
+
+];
+echo >>> substract
+regex LEX - REMOVE;
+define LEX
+
+# -------------------------------------------------------------------------------
+echo >>> words to be added
+define ADD [
+# possessive markers
+  %' s:0 %+Part:0 %+Gen:0				#+ for tagger
+| {'s} %+Part:0 %+Gen:0					#+ for tagger
+
+# auxiliaries
+| {be}:{'m} %+Verb:0 %+Pres:0 %+1sg:0 %+Elid:0		#+ for tagger
+| {be}:{'re} %+Verb:0 %+Pres:0 %+Pl:0 %+Elid:0		#+ for tagger
+| {be}:{'s} %+Verb:0 %+Pres:0 %+3sg:0 %+Elid:0		#+ for tagger
+| {have}:{'d} %+Verb:0 %+PastTense:0 %+123SP:0 %+Elid:0	#+ for tagger
+| {have}:{'s} %+Verb:0 %+Pres:0 %+3sg:0 %+Elid:0		#+ for tagger
+| {have}:{'ve} %+Verb:0 %+Pres:0 %+Non3sg:0 %+Elid:0	#+ for tagger
+
+| {would}:{'d} %+Aux:0 %+Elid:0				#+ for tagger
+| {will}:{'ll} %+Aux:0 %+Elid:0				#+ for tagger
+
+| {let} %+Verb:0 %+Pres:0 %+Non3sg:0 %=:0 
+	{we}:{'s} %+Pron:0 %+Pers:0 %+Obl:0 %+1P:0 %+Pl:0
+
+| {do} 0:{es} %+Verb:0 %+Pres:0 %+3sg:0 %=:0 
+	{not}:{n't} %+Adv:0
+| {do} %+Verb:0 %+Pres:0 %+Non3sg:0 %=:0 
+	{not}:{n't} %+Adv:0
+| {do}:{did} %+Verb:0 %+PastTense:0 %+123SP:0 %=:0 
+	{not}:{n't} %+Adv:0
+# to+Infto
+| {to} %+Infto:0
+
+# more ...
+
+| {au} SP {pair} %+Adv:0				#+
+| {employe} %+Noun:0 %+Sg:0				#+
+| {employe} 0:s  %+Noun:0 %+Pl:0			#+
+| {half} %+Noun:0 %+Sg:0				#+
+| {above} %+Adj:0					#+
+| {ace} %+Noun:0 %+Sg:0					#+
+| {callous} %+Adj:0					#+
+| {centigrade} %+Noun:0 %+Sg:0				#+
+| {empty} %+Adj:0					#+
+| {entire} %+Adj:0					#+
+| {glad} %+Adj:0					#+
+| {halt} %+Noun:0 %+Sg:0				#+
+| {maximum} %+Noun:0 %+Sg:0				#+
+| {plus} %+Noun:0 %+Sg:0				#+
+| {shallow} %+Adj:0					#+
+| {steady} %+Adj:0					#+
+| {up} %+Adj:0						#+
+| {wet} %+Adj:0						#+
+
+# quantifiers:
+
+| (a SP) {few}	%+Quant:0			#+
+| {all}		%+Quant:0			#+
+| {any}		%+Adv:0				#+
+| {any}		%+Quant:0			#+
+| {both}	%+Quant:0			#+
+| {each}	%+Quant:0			#+
+| {ea.} 	%+Quant:0 %+Abbr:0		#+ =each
+| {every}	%+Quant:0			#+
+| (a SP [{good}|{great}] SP) {many} %+Quant:0	#+
+| {some}	%+Quant:0			#+
+| {neither}	%+Quant:0			#+
+| {no}		%+Quant:0			#+
+| {enough}	%+Quant:0			#+
+| {double}	%+Quant:0			#+
+| {half}	%+Quant:0			#+
+| {hf.} 	%+Quant:0 %+Abbr:0		#+ half
+| {much}	%+Quant:0 %+Adv:0		#+
+| {more}	%+Quant:0 %+Comp:0		#+
+| {most}	%+Quant:0 %+Sup:0		#+
+| {little}	%+Quant:0 %+Adv:0		#+
+| {less}	%+Quant:0 %+Comp:0		#+
+| {least}	%+Quant:0 %+Sup:0		#+
+
+];
+
+
+# -------------------------------------------------------------------------
+echo >>> punctuations and symbols 
+
+
+define Sent     [ %. | %! | %?  | %: | %. %. %. 
+		| "\u2026"	# HORIZONTAL ELLIPSIS
+		] ;
+
+define Comma    [ %, ];
+define Left     [ %( | %{ | %[ | %< ];
+define Right    [ %) | %} | %] | %>  ];
+define Quote    [ %" | %` (%`) | %' (%') | %« | %»
+		| "\u2018"	# LEFT SINGLE QUOTATION MARK
+	 	| "\u2019" 	# RIGHT SINGLE QUOTATION MARK
+		| "\u201A" 	# SINGLE LOW-9 QUOTATION MARK
+		| "\u201C"	# LEFT DOUBLE QUOTATION MARK
+		| "\u201D"	# RIGHT DOUBLE QUOTATION MAR
+		| "\u201E"	# DOUBLE LOW-9 QUOTATION MARK
+		| "\u2019" "\u2019" 
+		| "\u2018" "\u2018" 
+		];
+
+define Spec     [ %; | %~ | %= | %- | %_ | %+ | %^ | %/ | %¿ | %¡ | %\ | %| 
+		| "\u2013" 	# EN DASH
+		| "\u2014" 	# EM DASH
+		| "\u2022" 	# BULLET
+		| "\u2039"	# SINGLE LEFT-POINTING ANGLE QUOTATION MARK
+		| "\u203A"	# SINGLE RIGHT-POINTING ANGLE QUOTATION MAR
+		];
+
+define Sym	[ %%  | %& | %# | %@ | %* | %§ ];
+
+define PUNCT [
+  Sent			%+Punct:0 %+Sent:0
+| Comma			%+Punct:0 %+Comma:0
+| Left		        %+Punct:0 %+Paren:0
+| Right		        %+Punct:0 %+Paren:0
+| Quote		        %+Punct:0 %+Quote:0
+| Spec+		        %+Punct:0 %+Spec:0
+| Sym+			%+Symbol:0 
+];
+
+
+# -------------------------------------------------------------------------
+#echo >>> SGML markup
+#
+#define Digit	[ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ];
+#define Low	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z];
+#define Upp	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z];	
+#
+#define STag1	[ h | H | p | P | s ((e) n t) | S ((E) N T) ];
+#define AnyTag	[Low|Upp|Digit|%/]* ;
+#
+#define SENT	%< (%/) STag1 Digit* %> ;
+#define ATAG	[ %< AnyTag  %> ] - SENT ;
+#
+#define SGML 	[ SENT %+Sgml:0 %+Sent:0 
+#      		| ATAG  %+Sgml:0
+#      		];
+
+
+
+
+# -------------------------------------------------------------------------
+echo >>> punctuations and symbols 
+
+echo >>> union
+#regex [ LEX | ADD | PUNCT | SGML ];
+regex [ LEX | ADD | PUNCT ];
+

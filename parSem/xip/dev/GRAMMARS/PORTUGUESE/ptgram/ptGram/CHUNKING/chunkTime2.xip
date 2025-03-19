@@ -1,0 +1,815 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunkTime2.xip                                              !
+//!   Date       : March 2008                                                  !
+//!   Author     : Caroline Hagege                                             !
+//!   Revised by : Andreia Maurício (2010/2011)                                !
+//!   Revised by : Nuno Mamede & Jorge Baptista (2012/May)                     !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   ADDITION CHUNKING FOR COMPLEX TEMPORAL EXPRESSIONS.                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Sequence:
+
+
+//==============================================================================
+//==============================================================================
+// TIPO TEMPO_CALEND
+//==============================================================================
+//==============================================================================
+
+// Example: dia 2 de Novembro de 2010
+1> NP[time=+, t-date=+, t-tempref=absolut]  = NP[t-monthday], PP[t-month], PP[t-year].
+1> NP[time=+, t-date=+, t-tempref=absolut]  = NP[t-month], PP[t-year].
+1> NP[time=+, t-date=+, t-tempref=enunc]    = NP[t-monthday], PP[t-month].
+
+1> PP[time=+, t-date=+, t-tempref=absolut] @= (PP[t-monthday]), PP[t-month], PP[t-year].
+1> PP[time=+, t-date=+, t-tempref=enunc]    = PP[t-monthday], PP[t-month].
+
+// Creating big temporal expressions that have to be considered as a whole (according time directives)
+// operates after temporal Local grammars and after chunking
+//
+// Example: durante toda a tarde de ontem
+1> PP[time=+, t-duration=+] @= PP[time,t-duration,t-part-of-day];ADVP[t-duration], (AP[t-season]), PP[t-tempref:enunc].
+
+// Example: durante toda a tarde de sexta-feira
+1> PP[time=+, t-duration=+] @= PP[time,t-duration,t-part-of-day];ADVP[t-duration], (AP[t-season]), PP[t-weekday,t-no-normalization] .
+
+// Example: durante toda a tarde de 25 de Abril de 2008
+1> PP[time=+,t-duration=+]  @= PP[time,t-duration];ADVP[t-duration], ?[t-tempref:absolut,t-no-normalization].
+
+// Example: nas vésperas do dia 22
+2> PP[time=+,t-date=+,t-tempref=absolut] = PP[t-tempref:text], PP[t-tempref:absolut];PP[t-monthday].
+2> PP[time=+,t-date=+,t-tempref=absolut] = PP[t-tempref:text], PP[t-tempref:absolut];PP[t-monthday].
+2> PP[time=+,t-date=+,t-tempref=absolut] = PP[t-tempref:enunc], PP[t-tempref:absolut];PP[t-monthday].
+
+// Example: no passado dia 22
+2> PP[time=+,t-date=+,t-tempref=absolut] = ADVP[t-tempref:text], NP[t-tempref:absolut];NP[t-monthday].
+2> PP[time=+,t-date=+,t-tempref=absolut] = ADVP[t-tempref:enunc], NP[t-tempref:absolut];NP[t-monthday].
+
+// Example: entre o fim da manhã e o início da tarde
+3> PP[time=+,t-interval=+, t-tempref=enunc] @= PP[t-interval], (PP[t-part-of-day]), CONJ[lemma:e], NP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc]).
+3> PP[time=+,t-interval=+, t-tempref=enunc] @= PP[t-interval], (PP[t-part-of-day]), CONJ[lemma:e], NP[t-focus];PP[t-focus], PP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc]).
+
+// Example: por um período adverso de 3 a 5 meses.
+3> pp[time=+,t-date=+,t-interval=+] @= PP[t-focus], (AP), PP[time,t-interval].
+
+
+// Combination temporal adverbial + DE + day;absolut-date
+//
+// Example: pela tarde de sexta-feira
+5> PP[time=+,t-tempref=enunc] @= advp[advtimedate,t-tempref:~enunc], (PP[t-focus]), advp[advtimedate], (PP[t-weekday];?[t-part-of-day]).
+
+// Example: ontem da parte da manhã
+5> PP[time=+,t-tempref=enunc] @= advp[advtimedate,t-tempref:~enunc], (PP[t-focus];advp[advtimedate];PP[t-weekday];?[t-part-of-day])+.
+
+// Example: por altura dos anos 80
+5> PP[time=+,t-tempref=absolut, t-data-string] @= advp[advtimedate,t-tempref:~enunc], PP[t-tempref:absolut,time].
+
+// Example: na altura do ano
+5> PP[time=+,t-tempref=enunc] @= advp[advtimedate,t-tempref:~enunc], PP[t-meas].
+
+
+
+// Combination temporal adverbial + DE + day;absolut-date
+//
+// Example: pela tarde de sexta-feira
+7> PP[time=+,t-tempref=enunc] @= advp[advtimedate,t-tempref:~enunc], (punct[comma]), PP[t-weekday];PP[t-part-of-day].
+
+// Combination PP[t-focus], part_of_day
+//
+// Example: no final da tarde (de sexta-feira;de 25 de Abril)
+7> PP[time=+,t-date=+,t-tempref=absolut] @= PP[t-focus];NP[sem-measother],  (PP[t-part-of-day]), PP[t-tempref:absolut], ((punct[comma]), ?[t-weekday]).
+7> PP[time=+,t-date=+,t-tempref=absolut] @= (PP[t-focus]),                   PP[t-part-of-day],  PP[t-tempref:absolut], ((punct[comma]), ?[t-weekday]).
+
+
+// Example: entre o fim da manhã de ontem
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult=+]  = PP[t-focus],  (PP[t-part-of-day];AP[time]), PP[t-tempref:enunc,t-ref-before,t-ref-simult];ADVP[t-tempref:enunc,t-ref-before,t-ref-simult].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+]               = PP[t-focus],  (PP[t-part-of-day];AP[time]), PP[t-tempref:enunc,t-ref-before];ADVP[t-tempref:enunc,t-ref-before].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult=+]  = (PP[t-focus]), PP[t-part-of-day];AP[time],  PP[t-tempref:enunc,t-ref-before,t-ref-simult];ADVP[t-tempref:enunc,t-ref-before,t-ref-simult].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+]               = (PP[t-focus]), PP[t-part-of-day];AP[time],  PP[t-tempref:enunc,t-ref-before];ADVP[t-tempref:enunc,t-ref-before].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult=+]   = PP[t-focus],  (PP[t-part-of-day];AP[time]), PP[t-tempref:enunc,t-ref-after,t-ref-simult];ADVP[t-tempref:enunc,t-ref-after,t-ref-simult].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+]                = PP[t-focus],  (PP[t-part-of-day];AP[time]), PP[t-tempref:enunc,t-ref-after];ADVP[t-tempref:enunc,t-ref-after].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult=+]   = (PP[t-focus]), PP[t-part-of-day];AP[time],  PP[t-tempref:enunc,t-ref-after,t-ref-simult];ADVP[t-tempref:enunc,t-ref-after,t-ref-simult].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+]                = (PP[t-focus]), PP[t-part-of-day];AP[time],  PP[t-tempref:enunc,t-ref-after];ADVP[t-tempref:enunc,t-ref-after].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-simult=+]               = PP[t-focus],  (PP[t-part-of-day];AP[time]), PP[t-tempref:enunc,t-ref-simult];ADVP[t-tempref:enunc,t-ref-simult].
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-simult=+]               = (PP[t-focus]), PP[t-part-of-day];AP[time],  PP[t-tempref:enunc,t-ref-simult];ADVP[t-tempref:enunc,t-ref-simult].
+
+
+// Example: desde o fim da manhâ
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult=+] @= PP[t-focus,t-ref-before,t-ref-simult],  (PP[t-part-of-day]), PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc],  (AP[t-season]).
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult=+] @= PP[t-focus,t-ref-before,t-ref-simult],   PP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc]), (AP[t-season]).
+
+// Example: até ao fim da manhâ
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult=+] @= PP[t-focus,t-ref-after,t-ref-simult],  (PP[t-part-of-day]), PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc],  (AP[t-season]).
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult=+] @= PP[t-focus,t-ref-after,t-ref-simult],   PP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc]), (AP[t-season]).
+
+// Example:
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-simult=+] @= PP[t-focus,t-ref-simult],  (PP[t-part-of-day]), PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc], (AP[t-season]).
+9> PP[time=+,t-date=+,t-tempref=enunc,t-ref-simult=+] @= PP[t-focus,t-ref-simult],   PP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc]), (AP[t-season]).
+
+// Example: ao início da manhã
+9> PP[time=+,t-date=+,t-tempref=enunc]  @= PP[t-focus], (AP), (PP[t-part-of-day]), PP[t-monthday];PP[t-weekday];PP[t-month];PP[t-tempref:enunc];ADVP[t-tempref:enunc],  (AP[t-season]).
+9> PP[time=+, t-date=+, t-tempref=enunc] = PP[t-focus], (AP), PP[t-part-of-day].
+
+// Example: no fim da década de 1930
+// Example: parte das Primaveras
+9> PP[time=+, t-date=+, t-tempref=absolut] = PP[t-focus], PP[t-meas,time], PP[t-year].
+9> PP[time=+, t-date=+, t-tempref=enunc] = PP[t-focus], PP[t-meas,time];PP[t-season,time];PP[t-month,time].
+
+9> PP[time=+,t-date=+,t-tempref=enunc] @= PP[t-focus],   PP[t-part-of-day], (PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc]), (AP[t-season]).
+
+9> PP[time=+,t-date=+,t-tempref=enunc] @= (PP[t-focus]), PP[t-part-of-day],  PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc],  (AP[t-season]).
+9> PP[time=+,t-date=+,t-tempref=enunc] @= (PP[t-focus]), PP[t-part-of-day],  PP[t-weekday];PP[t-tempref:enunc];ADVP[t-tempref:enunc],  (AP[t-season]).
+
+// Example: durante parte da década de 30
+9> PP[time=+,t-date=+,t-tempref=absolut] = PP[t-focus], PP[t-meas], PP[quant].
+
+// Example: ao fim de 3 dias
+9> PP[time=+,t-date=+,t-tempref=text] @= PP[t-focus], (AP), PP[t-meas], (AP[t-season]).
+
+// Example: temp + seguinte;anterior;próximo
+10> PP[time=+,t-date=+,t-tempref=text,timeref=+]  = PP[t-focus];PP[t-part-of-day];PP[t-meas];NP[time], AP[t-not-alone,t-tempref:text,timeref:+], (AP[t-season]).
+10> PP[time=+,t-date=+,t-tempref=text,timeref=-] = PP[t-focus];PP[t-part-of-day];PP[t-meas];NP[time], AP[t-not-alone,t-tempref:text,timeref:-], (AP[t-season]).
+10> PP[time=+,t-date=+,t-tempref=text,timeref=0] = PP[t-focus];PP[t-part-of-day];PP[t-meas];NP[time], AP[t-not-alone,t-tempref:text,timeref:0], (AP[t-season]).
+
+10> PP[time=+,t-date=+,t-tempref=enunc,timeref=+]  = PP[t-focus];PP[t-part-of-day];PP[t-meas];PP[t-month];PP[t-weekday];NP[time],
+													 AP[t-not-alone,t-tempref:enunc,timeref:+], (AP[t-season]).
+
+// Example: no domingo passado ; na semana passada												
+10> PP[time=+,t-date=+,t-tempref=enunc,timeref=-] @= (ADVP[advsupra];ADVP[advinfra]),
+                                                     PP[t-focus];PP[t-part-of-day];PP[t-meas];PP[t-month];PP[t-weekday];NP[time],
+													 AP[t-not-alone,t-tempref:enunc,timeref:-], (AP[t-season]).
+													
+10> PP[time=+,t-date=+,t-tempref=enunc,timeref=0] = PP[t-focus];PP[t-part-of-day];PP[t-meas];PP[t-month];PP[t-weekday];NP[time],
+													AP[t-not-alone,t-tempref:enunc,timeref:0], (AP[t-season]).
+
+// Example: desde;até; o princípio de século
+11> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult=+] = PP[t-focus,t-ref-before,t-ref-simult],   PP[t-meas].
+11> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult=+]  = PP[t-focus,t-ref-after,t-ref-simult],    PP[t-meas].
+11> PP[time=+,t-date=+,t-tempref=enunc,t-ref-before=+,t-ref-simult:~] = PP[t-focus,t-ref-before,t-ref-simult:~], PP[t-meas].
+11> PP[time=+,t-date=+,t-tempref=enunc,t-ref-after=+,t-ref-simult:~]  = PP[t-focus,t-ref-after,t-ref-simult:~],  PP[t-meas].
+11> PP[time=+,t-date=+,t-tempref=enunc,t-ref-simult=+]                = PP[t-focus,t-ref-simult],                PP[t-meas].
+
+
+// Example: Pouco depois das duas da manhã de ontem
+// Example: Pouco antes das duas da manhã de ontem
+// Example:  "logo", "ainda" e "só" foi excluído unicamente por causa do HAREM II
+13> ADVP[time=+, t-hora=+,t-tempref=enunc,t-ref-before=+] = ADVP[advquant];ADVP[lemma:bem];ADVP[lemma:imediatamente];ADVP[lemma:impreterivelmente];ADVP[neg,t-NE-forbiden:~],
+                                                         PP[t-hora,t-ref-before,t-tempref:enunc].
+13> ADVP[time=+,t-hora=+,t-tempref=enunc,t-ref-after=+]  = ADVP[advquant];ADVP[lemma:bem];ADVP[lemma:imediatamente];ADVP[lemma:impreterivelmente];ADVP[neg,t-NE-forbiden:~],
+                                                         PP[t-hora,t-ref-after,t-tempref:enunc].													
+13> ADVP[time=+,t-hora=+]  = ADVP[advquant];ADVP[lemma:bem];ADVP[lemma:imediatamente];ADVP[lemma:impreterivelmente];ADVP[neg,t-NE-forbiden:~],
+                                                         PP[t-hora,time].
+
+
+// Example: na véspera do feriado
+13> PP[time=+,t-tempref=enunc,t-ref-before=+] = PP[time,t-tempref:enunc,t-ref-before], PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=enunc,t-ref-before=+, t-ref-simult=+] = PP[time,t-tempref:enunc,t-ref-before, t-ref-simult], PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=enunc,t-ref-after=+, t-ref-simult=+]  = PP[time,t-tempref:enunc,t-ref-after, t-ref-simult],  PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=enunc,t-ref-after=+]  = PP[time,t-tempref:enunc,t-ref-after],  PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=enunc,t-ref-simult=+] = PP[time,t-tempref:enunc,t-ref-simult], PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=enunc]              = PP[time,t-tempref:enunc],            PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+
+13> PP[time=+,t-tempref=text,t-ref-before=+] = PP[time,t-tempref:text,t-ref-before], PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=text,t-ref-after=+]  = PP[time,t-tempref:text,t-ref-after],  PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=text,t-ref-simult=+] = PP[time,t-tempref:text,t-ref-simult], PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+13> PP[time=+,t-tempref=text]              = PP[time,t-tempref:text],            PP[t-one-day];PP[t-tempref:absolut];PP[t-weekday];PP[t-monthday], (AP[t-season]).
+
+// Example: três dias depois do Natal
+13> PP[time=+,t-tempref=text,t-ref-before=+, t-complex=+] @= NP[time];PP[time], PP[t-one-day,t-ref-before];PP[t-several-days,t-ref-before], (AP[time,t-tempref:enunc];AP[t-season]).
+13> PP[time=+,t-tempref=text,t-ref-after=+, t-complex=+]  @= NP[time];PP[time], PP[t-one-day,t-ref-after]; PP[t-several-days,t-ref-after],  (AP[time,t-tempref:enunc];AP[t-season]).
+13> PP[time=+,t-tempref=text,t-ref-simult=+, t-complex=+] @= NP[time];PP[time], PP[t-one-day,t-ref-simult];PP[t-several-days,t-ref-simult], (AP[time,t-tempref:enunc];AP[t-season]).
+13> PP[time=+,t-tempref=text]              @= NP[time];PP[time], PP[t-one-day];PP[t-several-days],                       (AP[time,t-tempref:enunc];AP[t-season]).
+
+
+//CH: restriction added in order to avoid
+// Example: "durante a tarde" as an interval
+14> pp[time=+,t-date=+,t-interval=+]  @= pp[t-focus], PP[t-part-of-day,t-duration:~], (PP[t-weekday,t-duration:~];PP[t-tempref:enunc,t-duration:~]).
+14> pp[time=+,t-date=+,t-interval=+]  @= (pp[t-focus]), PP[t-part-of-day,t-duration:~], PP[t-weekday,t-duration:~];PP[t-tempref:enunc,t-duration:~].
+
+// Example: no início da manhã de sexta-feira, 25 de Abril de 2005
+14> advp[time=+,t-date=+,t-tempref=absolut] @= adv[advtimedate], punct[comma], noun[time,t-tempref:absolut] .
+
+
+// Example: em Abril deste ano
+15> PP[time=+,t-tempref=absolut] = PP[time,t-date,t-tempref:absolut], PP[time,t-tempref:enunc].
+15> PP[time=+,t-tempref=absolut] = PP[time,t-date,t-tempref:absolut], PP[time,t-tempref:text].
+
+
+// Example: no primeiro semestre do ano passado
+15> ADVP[time=+, t-tempref=enunc] = PP[time, t-meas], PP[time, t-meas, t-tempref:enunc].
+
+// Example: em Abril deste ano
+15> PP[time=+,t-tempref=text] = PP[time,t-tempref:text];ADVP[advtimedate,t-tempref:text], PP[time,t-tempref:enunc].
+15> PP[time=+,t-tempref=text] = PP[time,t-tempref:text];ADVP[advtimedate,t-tempref:text], PP[time,t-tempref:text].
+
+
+// Xerox Specific because of bad tokenization of "por volta de"
+reshuffling:
+
+16> pp#1[lemma:"por volta"]{#2,#3}, pp{prep#4,#5,#6[last,t-hora]} =
+	pp{#2,#3,#4,#5,#6} .
+
+// Example: no início da noite de sexta-feira
+// Example: no início da noite de 25 de Abril
+// Example: no início da noite de sexta-feira, 25 de Abril de 2008
+16> advp{adv#1[first,last,advtimedate]}, punct#2[comma], np[t-tempref:absolut]{#3[noun,first,last]} = advp[t-date,t-tempref=absolut]{#1,#2,#3} .
+Sequence:
+
+// Example: a primeira metade da decada de 30
+17> NP[time=+, t-date=+, t-tempref=absolut] = NP[t-focus, quant], PP[t-meas, time], PP[t-year].
+
+// Example: a decada de 30
+17> NP[time=+,t-date=+, t-tempref=absolut, t-data-string=+] =  NP[t-meas], PP[t-year].
+
+// Example: na primeira metade da decada de 90
+// Example: no ano de 1995 d.C
+17> PP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] @=(PP[time,t-date,t-focus]), PP[time, t-meas], PP[t-year], (ADVP[t-era]).
+
+
+// Example: o dia 1 de Setembro
+17> NP[time=+, t-date=+, t-tempref=enunc] = NP[t-meas,time], NP[quant], PP[time,t-month].
+
+// Example: ao fim de manhã de Junho de 2007
+17> PP[time=+,t-date=+,t-tempref=absolut] =  PP[t-part-of-day], PP[t-month], PP[t-year].
+
+// Example: no dia 25 de Abril de 2009
+17>  PP[time=+,t-date=+, t-tempref=absolut, t-ref-simult=+, t-ref-after=+] @=  PP[time, t-tempref:enunc, t-ref-simult,t-ref-after],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut, t-ref-simult=+, t-ref-before=+] @=  PP[time, t-tempref:enunc, t-ref-simult,t-ref-before],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut, t-ref-before=+] @=  PP[time, t-tempref:enunc,t-ref-before],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut, t-ref-after=+]  @=  PP[time, t-tempref:enunc,t-ref-after],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut, t-ref-simult=+] @=  PP[time, t-tempref:enunc],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+
+17>  PP[time=+,t-date=+, t-tempref=absolut] @=  PP[time, t-hora],  (PP[t-part-of-day]), (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+
+// Example: na manhã do dia 20 de Julho de 2007, sexta-feira
+17>  PP[time=+,t-date=+, t-tempref=absolut] @= (PP[time, t-tempref:enunc];PP[time, t-hora]),  PP[t-part-of-day],  (PP[t-monthday]), (PP[t-month]), PP[t-year], (?[comma],NP[t-weekday]).
+17>  PP[time=+,t-date=+, t-tempref=absolut] @= (PP[time, t-tempref:enunc];PP[time, t-hora]),  PP[t-part-of-day],  (PP[t-monthday]), (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut] @= (PP[time, t-tempref:enunc];PP[time, t-hora]), (PP[t-part-of-day]),  PP[t-monthday],  (PP[t-month]), PP[t-year], (ADVP[t-era]).
+17>  PP[time=+,t-date=+, t-tempref=absolut] @=  PP[time, t-tempref:enunc];PP[time, t-hora],  (PP[t-part-of-day]),  PP[t-tempref:absolut,t-date].
+
+// Example: de dia 20 Julho de 2007
+17>  PP[time=+,t-date=+, t-tempref=absolut] @= (PP[time, t-tempref:enunc];PP[time, t-hora]), (PP[t-part-of-day]),  PP[t-monthday],  NP[t-month], PP[t-year], (ADVP[t-era]).
+
+// Example: de 25 de Maio
+17>  PP[time=+,t-date=+, t-tempref=enunc, t-fuzzy=+] = PP[t-monthday, t-fuzzy], PP[t-month].
+17>  PP[time=+,t-date=+, t-tempref=enunc] = PP[t-monthday], PP[t-month].
+
+// Example: até 15 de Setembro
+//17>  PP[time=+,t-date=+, t-tempref=enunc, t-ref-before=+] = NP[t-monthday, t-ref-before=+], PP[t-month].
+
+
+// Example: 20 de Julho de 2007
+17> NP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] = NP[t-monthday,time], PP[t-year,time].
+
+// Example: dia 20 Junho de 2007
+17> NP[time=+, t-date=+, t-tempref=absolut,t-data-string=+] = NP[t-monthday,time],NP[t-month,time], PP[t-year,time].
+
+// Combination temporal PP + PP(DE + day;absolut-date)
+//
+// Example: no decurso do mês de  Abril de 2008
+18> PP[time=+,t-date=+,t-tempref=absolut, t-data-string=+] @= PP[t-ref-simult], (punct[comma]), PP[t-tempref:absolut].
+
+// Example: na madrugada de 2 de Outubro
+18> PP[time=+,t-date=+, t-tempref=enunc, t-data-string=+] =  PP[t-part-of-day], PP[time, t-date, t-tempref:enunc].
+
+// Example: toda a noite de 25 de Abril de 98          <----------------------------------------- retirei regra para verificar ??????????????? Andreia
+//18> PP[time=+, t-date=+, t-tempref=absolut,t-data-string] = NP[time,t-part-of-day], PP[time, t-date,  t-tempref:absolut].
+
+// Example: a manhã do dia 20 (de Agosto)
+18> NP[time=+, t-date=+, t-tempref=enunc, t-data-string=+] = NP[t-part-of-day, time], PP[time, t-monthday]; PP[time, t-date, t-tempref:enunc].
+
+// Example: a manhã do dia 20 de Agosto de 2001
+18> NP[time=+, t-date=+, t-tempref=absolut, t-data-string=+ ] = NP[t-part-of-day, time], PP[time, t-date, t-tempref:absolut].
+
+// Example: na tarde do dia 20
+18> PP[time=+, t-date=+, t-tempref=enunc, t-data-string=+] = PP[t-part-of-day, time], (AP), PP[time, t-monthday];PP[time, t-month].
+18> PP[time=+, t-date=+, t-tempref=enunc, t-data-string=+] = PP[t-part-of-day, time], (AP, conj[coord], AP), PP[time, t-monthday];PP[time, t-month].
+
+// Example: às primeiras horas da manhã de sexta-feira, 23 de Abril de 98
+18> PP[time=+, t-date=+, t-tempref=absolut, t-fuzzy=+, t-data-string=+] = PP[t-hora, time, t-fuzzy], PP[time, t-weekday], PUNCT[comma], NP[time, t-tempref:absolut].
+18> PP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] = PP[t-hora, time], PP[time, t-weekday], PUNCT[comma], NP[time, t-tempref:absolut].
+
+// Example: às primeiras horas da manhã de sexta-feira;de ontem
+18> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]  = ?[time, t-hora, t-ref-simult, t-ref-after], PP[time, t-weekday];PP[time,t-tempref:enunc].
+18> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+]  = ?[time, t-hora, t-ref-simult, t-ref-after], PP[time, t-weekday];PP[time,t-tempref:enunc].
+18> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-before=+] = ?[time, t-hora, t-ref-simult, t-ref-before], PP[time, t-weekday];PP[time,t-tempref:enunc].
+18> PP[time=+, t-date=+, t-tempref=enunc, t-ref-before=+] = ?[time, t-hora, t-ref-before], PP[time, t-weekday];PP[time,t-tempref:enunc].
+18> PP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+ ] = ?[time, t-hora, t-ref-after], PP[time, t-weekday];PP[time,t-tempref:enunc].
+
+18> PP[time=+, t-date=+, t-tempref=enunc, t-fuzzy=+ ] = ?[time, t-hora, t-fuzzy], PP[time, t-weekday];PP[time,t-tempref:enunc].
+18> PP[time=+, t-date=+, t-tempref=enunc] = ?[time, t-hora], PP[time, t-weekday];PP[time,t-tempref:enunc].
+
+// Example: Pelas 18h20 desse dia
+18> PP[time=+, t-date=+, t-tempref=text, t-fuzzy=+] = ?[time, t-hora, t-fuzzy], PP[time,t-tempref:text].
+18> PP[time=+, t-date=+, t-tempref=text] = ?[time, t-hora], PP[time,t-tempref:text].
+
+// Example: ao início da manhã de sexta-feira, 23 de Abril de 2009
+// (desde; até; no decurso) sexta-feira, 23 de Abril de 98
+18> PP[time=+, t-date=+, t-tempref=absolut, t-ref-simult=+,t-ref-after=+] = PP[time, t-date, t-tempref:enunc, t-ref-simult,t-ref-after], PUNCT[comma], NP[time, t-date, t-tempref:absolut].
+18> PP[time=+, t-date=+, t-tempref=absolut, t-ref-simult=+,t-ref-before=+] = PP[time, t-date, t-tempref:enunc, t-ref-simult,t-ref-after], PUNCT[comma], NP[time, t-date, t-tempref:absolut].
+18> PP[time=+, t-date=+, t-tempref=absolut, t-ref-after=+] = PP[time, t-date, t-tempref:enunc, t-ref-after], PUNCT[comma], NP[time, t-date, t-tempref:absolut].
+18> PP[time=+, t-date=+, t-tempref=absolut, t-ref-before=+] = PP[time, t-date, t-tempref:enunc, t-ref-before], PUNCT[comma], NP[time, t-date, t-tempref:absolut].
+18> PP[time=+, t-date=+, t-tempref=absolut, t-ref-simult=+] = PP[time, t-date, t-tempref:enunc], PUNCT[comma], NP[time, t-date, t-tempref:absolut].
+
+
+// Example: na sexta-feira 25 de Abril de 2008
+18>PP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] @= PP[t-weekday,time], (PUNCT[comma]), NP[t-tempref:absolut, time].
+
+// Example: sexta-feira, 23 de Abril de 98
+18> NP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] = NP[time, t-weekday], PUNCT[comma], NP[time, t-tempref:absolut].
+
+// Example: no dia 25 de Abril de 2009 sexta-feira
+// duas expressoes separadas
+//18>  PP[time=+,t-date=+, t-tempref=absolut, t-data-string=+] = PP[time, t-date, t-tempref:absolut], PP[t-weekday, time].
+
+
+// Example: no decurso do primeiro trimestre de 2005
+18> PP[time=+, t-tempref=absolut, t-date=+, t-data-string=+] = PP[t-date, time, t-tempref:text], PP[t-year].
+
+// Example: no decurso do primeiro trimestre deste ano
+18> PP[time=+, t-tempref=enunc, t-date=+] = PP[t-date, time, t-tempref:text], PP[time,t-meas].
+
+// Example: no dia 20 de Junho próximo
+18> PP[time=+, t-date=+, t-tempref=enunc , t-data-string=+] @= PP[t-date, time, t-tempref:enunc], AP[time, t-tempref:enunc].
+
+// Example: na semana da Páscoa
+19> PP[time=+, t-date=+, t-several-days=+] = PP[time, t-meas], PP[time, t-several-days].
+
+// Example: durante a Consoada de 2010
+19> PP[time=+, t-date=+, t-several-days=+, t-tempref=absolut, t-data-string=+] = PP[time, t-several-days], PP[t-year].
+
+// Example: durante os anos 30
+19> PP[time=+, t-date=+, t-tempref=absolut] = PP[time, sem-period], NP[quant].
+
+// Example: o Natal de 2010
+19>NP[time=+, t-date=+, t-tempref=absolut] = NP[time, t-feast-event], PP[t-year].
+
+// Example: no Natal de 2010
+19>PP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] = PP[t-feast-event], PP[t-year].
+
+// Example: a Primavera de 2001
+19> NP[time=+, t-date=+, t-tempref=absolut] = NP[time, t-as-a-meas], PP[t-year].
+
+// Example: na altura do Natal de 2010
+20>PP[time=+, t-date=+, t-tempref=absolut, t-data-string=+] = PP[surface:"na altura"], PP[time, t-date, t-tempref:absolut].
+
+// Example: ao início de uma manhã de 2007
+20> PP[time=+, t-date=+, t-tempref=absolut] =PP[t-part-of-day,time], PP[t-year].
+
+// Example: nas vésperas de dia 25 de Abril de 2007
+20> PP[time=+, t-date=+, t-tempref=absolut] = CONJ[temporal], NP[time, t-date, t-tempref:absolut].
+
+// Example: nas vésperas de dia 25 de Abril
+20> PP[time=+, t-date=+, t-tempref=enunc] = CONJ[temporal], NP[time, t-date, t-tempref:enunc].
+
+// Example: até dia 25 do corrente mês
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-before=+, timeref:0 ] = PP[t-monthday, time, t-ref-simult, t-ref-before], PP[time, t-tempref:text, timeref:0].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+, timeref:0 ] = PP[t-monthday, time, t-ref-simult, t-ref-after], PP[time, t-tempref:text, timeref:0].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+,  timeref:0 ] = PP[t-monthday, time, t-ref-after], PP[time, t-tempref:text, timeref:0].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-before=+, timeref:0 ] = PP[t-monthday, time, t-ref-before], PP[time, t-tempref:text, timeref:0].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, timeref:0 ] = PP[t-monthday, time], PP[time, t-tempref:text, timeref:0].
+
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-before=+, timeref:- ] = PP[t-monthday, time, t-ref-simult, t-ref-before], PP[time, t-tempref:text, timeref:-].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+, timeref:- ] = PP[t-monthday, time, t-ref-simult, t-ref-after], PP[time, t-tempref:text, timeref:-].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+,  timeref:- ] = PP[t-monthday, time, t-ref-after], PP[time, t-tempref:text, timeref:-].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-before=+, timeref:- ] = PP[t-monthday, time, t-ref-before], PP[time, t-tempref:text, timeref:-].
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, timeref:- ] = PP[t-monthday, time], PP[time, t-tempref:text, timeref:-].
+
+20> PP[time=+, t-date=+, t-tempref=enunc, t-ref-simult=+, timeref:+ ] = PP[t-monthday, time], PP[time, t-tempref:text, timeref:+].
+
+// ESTAVA DEOPOIS DAS DURACOES COM 23
+// Example: (quase) todos os dias          <----------------------------------------- problema para resolver o traco fuzzy
+20> ADVP[advtimefreq=+,time=+] @= (ADVP[advfuzzy]), NP[surface:"todos"], NP[time].
+
+// Example: pelas (cerca) 16h20 de ontem   <----------------------------------------- perceber se o cerca adiciona o traco fuzzy?
+20> PP[time=+, t-date=+, t-tempref=enunc] @= (ADVP[surface:"cerca"]), PP[time, t-hora], PP[time, t-tempref:enunc].
+
+// Example: primeiro quartel do séc XX.
+20> PP[time=+, t-date=+, t-tempref=absolut] = PP[sem-period], PP[t-date, t-tempref:absolut].
+
+// Example: no dia 20 de Junho próximo
+20> PP[time=+, t-date=+, t-tempref=enunc] =  PP[time, t-date, t-tempref:enunc], AP[t-tempref:enunc].
+
+// Example: Setembro de 1995
+20> PP[time=+, t-date=+, t-tempref=absolut] =  NP[time, t-month], PP[t-year].
+
+
+//NJM+JB, 2012/03/21
+// Example: dia 25 em diante
+// Example: de Outubro em diante
+20> PP[time=+, t-month=+,    t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-month],                      PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+, t-monthday=+, t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-monthday],                   PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+, t-weekday=+,  t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-weekday],                    PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+, t-year=+,     t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-year],                       PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+, t-meas=+,     t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-meas],                       PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+,               t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-ref-simult,t-tempref:enunc], PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+,               t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-date,t-tempref:enunc],       PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+,               t-date=+, t-tempref=absolut, t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[t-date,t-tempref:absolut],     PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+20> PP[time=+,               t-date=+, t-tempref=enunc,   t-ref-simult=+, t-ref-after=+, timeref=+ ] = PP[time],                         PP[t-focus-simul-after];ADVP[t-focus-simul-after].
+
+
+//NJM+JB, 2012/04/02
+// Example: [no último dia] [antes do final] da conferência
+20> PP[time=+, t-date=+, t-tempref=text,   t-ref-simult=+, timeref=+ ] = PP[t-ref-simult,t-tempref:enunc], PP[t-focus];ADVP[t-focus].
+20> PP[time=+, t-date=+, t-tempref=text,   t-ref-simult=+, timeref=+ ] = PP[t-date,t-tempref:enunc],       PP[t-focus];ADVP[t-focus].
+20> PP[time=+, t-date=+, t-tempref=text,   t-ref-simult=+, timeref=+ ] = PP[time],                         PP[t-focus];ADVP[t-focus].
+
+
+
+
+//==============================================================================
+//==============================================================================
+// Example: HORAS
+//==============================================================================
+//==============================================================================
+
+// Example: Isso aconteceu às 2h AM.
+// Problema!: nao devo juntar os segundos às horas aqui deve estar numa gramática local LGHours...
+// Por resolver
+19> PP[t-hora=+, time=+] = PP[t-hora, time], (NP[quant]), NP[abbr,quant].
+
+// Example: daqui a uma hora
+//expressão complexa mudar para as expressoes complexas mais em baixo
+20> PP[t-meas=+, time=+, t-tempref=enunc, t-complex=+ ] = PP[surface:"de aqui"], PP[t-meas, time].
+
+// Example: a um quarto para o meio-dia
+20> PP[t-meas=+, time=+, t-hora=+ ] = PP[surface:"a um quarto"], PP[t-hour, time].
+
+// Example: a um quarto para a 1 hora da manhã - nao FUNCIONA PERCEBER PK
+20> PP[t-meas=+, time=+, t-hora=+ ] = PP[t-hora, time], NP[surface:"quarto"], PREP[surface:"para"], PP[t-meas, t-hour, time].
+
+// Example: a um quarto para as 13 horas.
+20> PP[t-meas=+, time=+, t-hora=+ ] = PP[t-hora, time], NP[surface:"quarto"],  PP[t-hour, time].
+
+// Example: a um quarto para a uma hora
+20> PP[t-meas=+, time=+, t-hora=+ ] = PP[surface:"a um quarto"], PREP[surface:"para"], PP[t-meas, time].
+
+// Example: aos dez para a 1 (hora) (da manhã).
+20> PP[t-meas=+, time=+, t-hora=+ ] @= PP[quant], PREP[surface:"para"],  PP[t-meas, time];PP[quant], (PP[t-part-of-day]).
+
+// Example: aos dez minutos para a 1 hora.
+20> PP[t-meas=+, time=+, t-hora=+ ] = PP[t-hour,time], PREP[surface:"para"],  PP[t-meas, time].
+
+// Example: (aproximadamente, cerca de) dois minutos e meio
+20> NP[time=+, t-hora=+ ] @= (ADVP[!advfuzzy:!]), (NP[time], CONJ[surface:"e"]), NP[time], CONJ[surface:"e"], NP[surface:"meio"];?[surface:meia] .
+
+// Example:  às 2 h 30 m da manhã (de ontem; de quarta-feira).
+21> PP[t-meas=+, time=+, t-date=+] @= PP[t-hora,time], NP[quant], (PP[t-part-of-day, time]; PP[time, t-date]).
+
+// Example: 2 anos mais tarde
+// Example: 2 anos mais cedo
+//alterei para advp
+23> ADVP[time=+, t-date=+, t-tempref=text, t-ref-after=+] = NP[time], ADVP[t-ref-after].
+23> ADVP[time=+, t-date=+, t-tempref=text, t-ref-before=+] = NP[time], ADVP[t-ref-before].
+//23> ADVP[time=+, t-date=+, t-tempref=text] = NP[time], ADVP[advtimedate] .
+
+//NJM, 2012/04/02
+// Example: ao bater das 11 horas.
+21> PP[t-meas=+, time=+, t-hora=+] @= PP[lemma:"a o bater"], PP[time, t-hora].
+
+
+
+//==============================================================================
+//==============================================================================
+// TEMPO_CALEND     SUBTIPO COMPLEXO
+//==============================================================================
+//==============================================================================
+
+// Example: de 27 de Maio a 15 dias
+23>PP[t-complex=+, time=+, t-tempref=enunc] = PP[time, t-date, t-tempref:enunc, t-complex-data=+], PP[time, t-meas, t-complex-dur=+].
+
+// Example: desse dia a 15 dias
+23>PP[t-complex=+, time=+, t-tempref=text] = PP[time, t-tempref:text, t-complex-data=+], PP[time, t-meas, t-complex-dur=+].
+
+// Example: de esta semana a 15 dias
+23>PP[t-complex=+, time=+, t-tempref=enunc] = PP[time, t-meas, t-complex-data=+], PP[time, t-meas, t-complex-data=+].
+
+// Example: de segunda-feira a 15 dias
+// Example: de Janeiro a um mês
+// Example: de dia 25 a três meses
+23>PP[t-complex=+, time=+, t-tempref=enunc] = PP[time, t-weekday, t-complex-data=+];PP[time, t-month, t-complex-data=+];PP[time, t-monthday, t-complex-data=+],
+											  PP[time, t-meas, t-complex-dur=+].
+
+// Example: de hoje a 15 dias
+23>PP[t-complex=+, time=+, t-tempref=enunc] = PP[time, t-tempref:enunc, t-complex-data=+], PP[time, t-meas, t-complex-dur=+].
+
+
+
+// Example: faz hoje quinze dias
+23> ADVP[t-complex=+,time=+,t-tempref=enunc] = VF[lemma:fazer], NP[time, t-tempref:enunc, t-complex-data=+], NP[time, t-meas, t-complex-dur=+].
+
+// Example: faz no Verão de 2008 três anos
+23> ADVP[t-complex=+, time=+, t-tempref=absolut] = VF[lemma:fazer], PP[time, t-date, t-tempref:absolut, t-complex-data=+], NP[time, t-meas, t-complex-dur=+] .
+
+// Example: faz a 22 de Maio 2 anos
+23> ADVP[t-complex=+, time=+, t-tempref=enunc] = VF[lemma:fazer], PP[time, t-date, t-tempref:enunc, t-complex-data=+], NP[time, t-meas, t-complex-dur=+] .
+
+// Example: faz no próximo dia 22 3 anos
+23> ADVP[t-complex=+, time=+, t-tempref=enunc] =  VF[lemma:fazer], PP[time, t-tempref:enunc, t-monthday, t-complex-data=+], NP[t-meas,time, t-complex-dur=+].
+
+// Example: faz na quarta-feira 2 meses          <----------------------------------------- verficar se leva "," ou não
+23> ADVP[t-complex=+, time=+, t-tempref=enunc] @= VF[lemma:fazer], ADVP[time, advtimedate, t-complex-data=+];PP[time, t-weekday, t-complex-data=+], (PUNCT[comma]), NP[t-meas,time, t-complex-dur=+].
+
+
+
+//==============================================================================
+//==============================================================================
+// TEMPO_CALEND     SUBTIPO INTERVALO
+//==============================================================================
+//==============================================================================
+
+// Example: de 20 de Dezembro a 30 de Janeiro
+//23> PP[t-interval, time=+, t-tempref=enunc, t-tempref2=enunc] @= PP[time, t-month], PP[t-date, time, t-tempref:enunc].
+23> PP[t-interval=+, time=+, t-tempref=enunc, t-tempref2=enunc] @= PP[t-date, time, t-tempref:enunc], PP[t-date, time, t-tempref:enunc].
+
+// Example: de 1 a 30 de Novembro passado
+23> PP[t-interval=+, time=+, t-tempref=enunc, t-tempref2=enunc]= PP[time, t-monthday], PP[time, t-date, t-tempref:enunc], (AP[t-tempref:enunc, time]).
+
+// Example: entre Abril (de 1995) e Junho de 2000
+23> PP[t-date=+, time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] @= PP[time, t-date, t-tempref:enunc];PP[time, t-date, t-tempref:absolut], CONJ[aditive], NP[time,t-date, t-tempref:absolut].
+23> PP[t-date=+, time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] @= PP[time, t-interval, t-month], CONJ[aditive], PP[time,t-date, t-tempref:absolut].
+
+// Example: entre os dias 20 e 30 de Maio
+// Example: entre 20 e 30 de Maio
+23> PP[t-date=+, time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc] = PP[t-interval], CONJ[aditive], NP[time, t-date, t-tempref:enunc];PP[time, t-date, t-tempref:enunc].
+
+// Example: entre os anos 80 e 90
+// verificar se está a ser utilizada
+23> PP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[time, t-interval, t-meas], NP[quant], CONJ[aditive];CONJ[disjunctive], NP[quant].
+
+// Example: entre 2000 e 2013
+23> PP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[t-interval, time, t-tempref:absolut], CONJ[aditive], NP[quant,  t-tempref=absolut];NP[t-year, t-tempref:absolut].
+
+// Example: entre os hoje e amanhã
+23> PP[time=+, t-interval=+,  t-tempref=enunc, t-tempref2=enunc] = PP[time, t-interval, t-tempref:enunc], CONJ[aditive], ADVP[time].
+
+// Example: entre aquele dia e hoje
+23> PP[time=+, t-tempref=text, t-interval=+, t-tempref2=enunc] = PP[time, t-interval, t-tempref:text], CONJ[aditive], ADVP[time,t-tempref:enunc].
+
+// Example: na madrugada de 1 para 2 de Janeiro
+23> PP[time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc] = PP[time, t-part-of-day], PP[quant], PP[t-date, time, t-tempref:enunc].
+
+// Example: na madrugada de 1 para 2 de Janeiro de 1990
+23> PP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[time, t-part-of-day], PP[quant], PP[t-date, time, t-tempref:enunc].
+
+// Example: na transição do I para o III milénio
+23> ADVP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[surface:"em a transição"], PP[quant], PP[t-date, t-tempref:absolut].
+
+// Example: no início da manhã e início da tarde
+23> ADVP[time=+, t-interval=+, t-tempref=enunc,t-tempref2=enunc] = ADVP[time, t-date, t-tempref:enunc], CONJ[aditive], NP[time, t-part-of-day].
+
+// Example: no século XV e no século XVI
+// verificar que e subtipo t-interval
+// sao duas datas separadas
+23> ADVP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[time, t-date, t-tempref:absolut], CONJ[aditive], PP[time, t-date, t-tempref:absolut].
+
+// Example: no século XV e XVI            <--------------------------- verificar que é subtipo t-interval
+23> PP[time=+, t-interval=+, t-tempref=absolut, t-tempref2=absolut] = PP[time, t-date, t-tempref:absolut], CONJ[aditive];CONJ[disjunctive], NP[quant].
+
+// Example: entre Janeiro e Novembro
+23> PP[time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc] = PP[time, t-month, t-interval],CONJ[aditive], NP[t-month, time].
+
+
+// Example: de Janeiro a Novembro
+23> PP[time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc] @= PP[time, t-month], PP[t-month, time], (PP[t-year, time]).
+23> PP[time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc]  = PP[time, t-weekday], PP[t-weekday, time].
+23> PP[time=+, t-interval=+, t-tempref=enunc, t-tempref2=enunc]  = PP[time, t-tempref:absolut, t-year], PP[ t-tempref:absolut, time].
+
+// Example: entre hoje e domingo
+23> PP[time=+, t-tempref=enunc, t-interval=+, t-tempref2=enunc] = PP[time, t-interval, t-tempref:enunc];PP[time, t-interval, t-weekday],  CONJ[aditive], NP[time,t-weekday].
+
+
+
+
+//==============================================================================
+//==============================================================================
+// DURATIONS
+//==============================================================================
+//==============================================================================
+
+// Example: (aproximadamente) dois quintos de hora
+20> NP[t-meas=+, time=+, t-duration=+] @= NP[quant], (NP[quant]), PP[t-meas, sem-temp] .
+
+// Example: durante 1 hora (,20 minutos)e 20 minutos
+23> PP[t-meas=+, time=+, t-duration=+] @= PP[t-meas,time], (PUNCT[comma], NP[t-meas, time]), CONJ[aditive], NP[t-meas, time].
+
+// Example: 1 hora e 20 minutos
+23> NP[t-meas=+, time=+, t-duration=+] @= (PP[surface:"por mais de"];PP[surface:"por cerca de"]), NP[t-meas,time], CONJ[aditive], NP[t-meas, time].
+
+// Example: 1 hora, 20 minutos e 30 segundos
+23> NP[t-meas=+, time=+, t-duration=+] @= (PP[surface:"por mais de"];PP[surface:"por cerca de"]), NP[t-meas,time], PUNCT[comma], NP[t-meas, time], CONJ[aditive], NP[t-meas, time].
+
+// Example: aproximadamente;cerca de duas semanas (e 2 dias)
+23> NP[time=+, t-duration=+, advfuzzy=+] @= ADVP[advfuzzy], NP[time, t-meas], (CONJ[aditive], NP[time, t-meas]).
+
+// Example: nas próximas duas semanas e meia     <------------------------------------ retirar a regra
+23> PP[time=+, t-duration=+, t-tempref=enunc] = PP[time, t-tempref:enunc], CONJ[aditive], NP[lemma:"meio"].
+
+// Example: toda a noite de sexta-feira          <----------------------------------------- não esquecer de adicionar o traço que diz que tb pode ser duração
+23> PP [time=+, t-date=+, t-tempref=enunc ] = NP[time, t-part-of-day], PP[time, t-weekday];PP[time].
+
+// Example: no decurso de 20 anos
+23> PP[time=+, t-duration=+] = PP[time, t-ref-simult, preptemp], NP[time, sem-dur].
+
+// Example: durou 10 ou  15 anos
+23> NP[time=+, t-duration-interval=+] = NP[quant], CONJ[disjunctive], NP[time, t-meas].
+
+// Example: entre 10 a 20 anos
+23> PP[time=+, t-duration-interval=+] = PP[time, t-interval], PP[time, t-meas].
+
+// Example: 10 a 20 anos
+//23> PP[time=+, t-duration-interval=+] = NP[quant], PP[time, t-meas].
+
+// Example: 50 minutos ou 1 hora
+23> NP[t-meas=+, time=+, t-duration-interval=+] = NP[t-meas, time], CONJ[disjunctive], NP[t-meas, time].
+
+// Example: por mais de 1 minuto
+23>PP[t-meas=+, time=+, t-duration=+] = PP[surface:"por mais de"];PP[surface:"por cerca de"], NP[t-meas,time].
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Example: às primeiras horas da manhã de sexta-feira
+23> PP [time=+, t-date=+] = NP[time, t-hora], PP[time, t-weekday].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=enunc, t-ref-simult=+, t-ref-after=+] = ADVP[time, t-tempref:text, t-ref-simult, t-ref-after], PP[time, t-month];PP[time, t-year].
+
+// Example: desde o príncipio daquele dia
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=text, t-ref-simult=+, t-ref-after=+] = ADVP[time, t-tempref:text, t-ref-simult, t-ref-after], PP[time, t-part-of-day];PP[time, t-meas, t-tempref:text].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=text, t-ref-after=+] = ADVP[time, t-tempref:text, t-ref-after], PP[time, t-part-of-day];PP[time, t-meas, t-tempref:text].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=text, t-ref-simult=+, t-ref-before=+] = ADVP[time, t-tempref:text, t-ref-before, t-ref-simult], PP[time, t-part-of-day];PP[time, t-meas, t-tempref:text].
+
+// Example: desde o príncipio do dia
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=text, t-ref-simult=+, t-ref-after=+] = ADVP[time, t-tempref:text, t-ref-simult, t-ref-after], PP[time, t-part-of-day];PP[time, t-meas].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-tempref=text, t-ref-simult=+, t-ref-after=+] = ADVP[time, t-tempref:text, t-ref-simult, t-ref-after], PP[time, t-part-of-day];PP[time, t-meas].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-ref-after=+, t-tempref=text] = ADVP[time, t-tempref:text, t-ref-after], PP[time, t-part-of-day];PP[time, t-meas].
+23>ADVP [time=+, t-date=+, advtimedate=+, t-ref-simult=+, t-ref-before=+, t-tempref=text] = ADVP[time, t-tempref:text, t-ref-before, t-ref-simult], PP[time, t-part-of-day];PP[time, t-meas].
+
+// Example: logo após a Primavera
+23> ADVP[time=+, t-tempref=enunc, t-date=+] = ADVP[lemma:logo], PP[time, t-meas];PP[time, t-hora].
+
+// Example: durante a manhã e início da tarde   <--------------------- mudei para ADVP
+//                                              <--------------------- dúvida: data ou duração?
+23> ADVP[time=+, t-interval=+, t-tempref=enunc] = PP[time, t-part-of-day], CONJ[lemma:"e"], NP[time, t-part-of-day].
+
+// Example: na altura da Primavera
+// Example: na altura do Natal
+23> PP[time=+, t-date=+] = PP[t-denot-time, time], PP[time, t-meas].
+
+// Example: em meados dos 80
+23> PP[time=+, t-date=+, t-tempref=absolut] = PP[t-focus], PP[quant].
+23> NP[time=+, t-date=+, t-tempref=absolut] = NP[t-focus], PP[quant].
+
+
+
+//==============================================================================
+//==============================================================================
+// FREQUÊNCIA
+//==============================================================================
+//==============================================================================
+
+// Example: 2 vezes ao dia
+24> ADVP[time=+, t-frequency=+, advtimefreq=+, t-freq-tn=+] = NP[time, sem-temp, t-freq-tn], PP[time, t-part-of-day]; PP[time, t-meas].
+24> ADVP[time=+, t-frequency=+, advtimefreq=+, t-freq-pn=+] = NP[time, sem-temp, t-freq-pn], PP[time, t-part-of-day]; PP[time, t-meas].
+
+// Example: 2 vezes consecutivas
+24> ADVP[time=+, t-frequency=+, advtimefreq=+, t-freq-pn=+] = NP[time, sem-temp], AP[surface:consecutivas];AP[surface:seguidas];ADVP[surface:"de seguida"].
+
+// Example: um sem número de vezes
+24> ADVP[time=+, t-frequency=+, advtimefreq=+] = NP[quant], PP[sem-temp].
+
+// Example: todas as segundas-feiras do mês
+23> ADVP[time=+, t-frequency=+, advtimefreq=+ , t-freq-pn=+] = NP[time, todo], PP[time, t-meas].
+
+// Example: na;a maior parte das vezes
+24> ADVP[time=+, t-frequency=+, advfuzzy=+, advtimefreq=+, t-freq-nn=+] = PP[t-focus];NP[t-focus], PP[surface:"de as vezes"].
+
+// Example: de tanto em tanto tempo
+24> ADVP[time=+, t-frequency=+, t-freq-nn=+] = PP[surface:"de tanto"], PP[t-denot-time].
+
+
+
+//==============================================================================
+//==============================================================================
+// Must be done at the end
+//==============================================================================
+//==============================================================================
+
+// Example: durante parte da época
+26> ADVP[time=+, t-duration=+, advtimedur=+] = PP[t-focus], PP[sem-period].
+
+// Example: de um momento para o outro   <-------------------------------------------------confirmar que é tipo genérico
+26> ADVP[time=+, t-generico=+, advtimedate=+] = PP[time, t-denot-time], PP[outro].
+
+// Example: de um hora para a outra
+26> ADVP[time=+, t-date=+, t-tempref=enunc] = PP[time, t-meas], PP[outro].
+
+// Example: no melhor instante possível
+// Example: neste instante preciso
+26> ADVP [time=+, t-date=+, t-tempref=text] = PP[t-denot-time, time , t-tempref:text], AP[surface:"possível"]; AP[surface:"preciso"].
+26> ADVP [time=+, t-date=+] = PP[t-denot-time, time], AP[surface:"possível"]; AP[surface:"preciso"].
+
+// Example: ontem pelas 10 horas
+26> ADVP[time=+, t-date=+, advtimedate=+, t-tempref=enunc] = ADVP[time, t-tempref:enunc], PP[time, t-hora, t-fuzzy:~].
+
+// Example: ontem por volta das 10 horas
+26> ADVP[time=+, t-date=+, advtimedate=+, t-tempref=enunc, t-fuzzy=+] = ADVP[time, t-tempref:enunc], PP[time, t-hora, t-fuzzy].
+
+// Example: todo o dia
+26> ADVP[time=+, advtimedur=+, t-duration=+] = NP[todo], NP[t-part-of-day, t-meas].
+
+// Example: logo ao início da manhã de sexta-feira
+26> ADVP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+, t-ref-simult=+]= ADVP[t-ref-after, t-ref-simult,t-tempref:text], PP[t-date, t-tempref:enunc].
+26> ADVP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+]= ADVP[t-ref-after, t-tempref:text], PP[t-date, t-tempref:enunc].
+26> ADVP[time=+, t-date=+, t-tempref=enunc, t-ref-after=+]= ADVP[t-ref-after, t-tempref:text], PP[t-date, t-tempref:enunc].
+
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-after=+, t-ref-simult=+]= ADVP[t-ref-after, t-ref-simult, t-tempref:text], PP[t-date, t-tempref:absolut].
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-before=+, t-ref-simult=+]= ADVP[t-ref-before, t-ref-simult, t-tempref:text], PP[t-date, t-tempref:absolut].
+
+26> ADVP[time=+, t-date=+, t-tempref=absolut]= ADVP[t-ne-forbiden];ADVP[t-ref-after, t-tempref:text], PP[t-date, t-tempref:absolut].
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-before=+]= ADVP[t-ne-forbiden];ADVP[t-ref-before, t-tempref:text], PP[t-date, t-tempref:absolut].
+
+26> ADVP[time=+, t-date=+, t-tempref=enunc]= ADVP[t-ne-forbiden], PP[t-date, t-tempref:enunc].
+26> ADVP[time=+, t-date=+, t-tempref=absolut]= ADVP[t-ne-forbiden], PP[t-date, t-tempref:absolut].
+
+// Example: naquela;nesta altura do Natal
+26>PP[time=+,t-tempref=enunc] = PP[time, t-denot-time], PP[t-feast-event].
+
+// Example: no decurso do ano de 2009
+26> PP[time=+, t-date=+, t-tempref=absolut] = PP[sem-period, t-ref-simult, t-meas, time], PP[quant].
+
+// Example: o começo da semana
+26> NP[time=+, t-duration=+] = NP[t-focus], PP[t-meas];PP[t-part-of-day].
+
+// Example: grande parte do dia
+26> NP[time=+, t-duration=+] = NP[sem-measother], (AP), PP[t-meas];PP[t-part-of-day].
+
+// Example: numa manhã de Janeiro
+26> ADVP[time=+, t-date=+, t-tempref=enunc] = PP[t-part-of-day], PP[t-season];PP[t-month].
+
+// Example: no momento mais oportuno
+26> ADVP[time=+, t-date=+, t-tempref=enunc] = PP[time, t-denot-time], AP[surface:"mais oportuno"].
+
+// Example: antes de 1499 d.c.
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-after=+, t-ref-simult=+] = PP[t-ref-after, t-ref-simult, t-year], ADVP[lemma:"antes de Cristo"];ADVP[lemma:"depois de Cristo"].
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-after=+] = PP[t-ref-after, t-year], ADVP[lemma:"antes de Cristo"];ADVP[lemma:"depois de Cristo"].
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-before=+, t-ref-simult=+] = PP[t-ref-before, t-ref-simult, t-year], ADVP[lemma:"antes de Cristo"];ADVP[lemma:"depois de Cristo"].
+26> ADVP[time=+, t-date=+, t-tempref=absolut, t-ref-before=+] = PP[t-ref-before, t-year], ADVP[lemma:"antes de Cristo"];ADVP[lemma:"depois de Cristo"].
+26> ADVP[time=+, t-date=+, t-tempref=absolut] = PP[t-year], ADVP[lemma:"antes de Cristo"];ADVP[lemma:"depois de Cristo"].
+
+//NJM+JB, 2012/03/21
+// Example: pela tarde em diante
+//26> PP[lemma:"depois de Cristo"].
+
+
+
+
+
+DependencyRules:
+
+//==============================================================================
+//==============================================================================
+// repairing "da parte de"
+//==============================================================================
+//==============================================================================
+//  "da parte de" perde os traços que permitem extrair _PREPHUM se não for seguido de um Nhum
+// Example: da parte da manhã
+|PP[time]{prep[surface:"da parte de", prephum=~]}|
+~
+
+
+//==============================================================================
+//==============================================================================
+// Coordenação
+//==============================================================================
+//==============================================================================
+
+// Example: PP[ao fim da manhã] e NP[início da tarde]      
+| PP[t-date,time,t-tempref:enunc]{PP[t-focus]}, conj[coord], NP[time,t-date=+,t-tempref=enunc]{noun[pp_not_np=+]{noun[t-focus]}} | ~
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

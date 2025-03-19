@@ -1,0 +1,391 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : LGLast.xip                                                  !
+//!   Date       : 2008/January                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!  Default Proper Name Rules (used after the geografival and proper names)   !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/17
+// Changed all "company" occurrences to "SEM-Hinstitution", in order to comply with the new set of directives.
+// Changed all "start_org" and "end_org" occurrences to "start_collective" and "end_collective", respectively.
+
+////////////////////////////////////////////////////////////////////////////////
+// Proper names
+////////////////////////////////////////////////////////////////////////////////
+
+Sequence:
+
+//DCO, 2011/02/23
+//um passe de Jordão a Martins
+// Não construímos um nó, e dizemos que Martins é fuzzy (nas regras seguintes, só construímos o nó se NÃO for fuzzy)
+1> ? @= ?[firstname,maj,location:~] ; ?[lastname,maj,location:~] ; noun[SEM-Hpeople,SEM-Hindividual], art[def], noun[proper,maj,toutmaj:~,SEM-fuzzy=+,end_people=+].
+
+//DCO, 2011/04/07
+// Construímos um nó PEOPLE,INDIVIDUAL quando apanhamos algo que esteja entre START_PEOPLE e END_PEOPLE, com a possibilidade
+// de ter um ou mais CONT_PEOPLE pelo meio
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?+[start_people,title:~,SEM-Hprofession:~,SEM-Hcargo:~,SEM-fuzzy:~], ((?+[cont_people]), ?[end_people,SEM-fuzzy:~])*.
+
+//DCO, 2011/04/07
+// O cargo de uma pessoa fica num nó à parte do nome da pessoa
+3> NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?+[SEM-Hcargo,start_people,SEM-fuzzy:~], noun[SEM-Hpeople,SEM-Hindividual,SEM-fuzzy:~].
+
+//DCO, 2011/04/07
+// O título ou a profissão de uma pessoa ficam num nó à parte do nome da pessoa
+3> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?+[title,start_people,SEM-fuzzy:~];?+[SEM-Hprofession,start_people,SEM-fuzzy:~], noun[SEM-Hpeople,SEM-Hindividual,SEM-fuzzy:~].
+
+//
+//// Grouping parts of
+////CH - Regra que compensa a retirada do alisamento
+//// Os tracos de tipificacao da EN sobem para o nome da parte esquerda
+//// Do not use feature inheritance in order to keep track properly of embedded NE
+//
+//////////////////////////////
+//// PEOPLE
+//////////////////////////////
+//
+//// papa Clemente VII
+//1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+]              @= noun[title,start_people], ?+[end_people], num[dig,rom] .
+//
+//1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= noun[start_people,SEM-Hcargo,SEM-Hindgroup:~], ?*[end_people], ?[end_people,SEM-Hcargo:~] .
+//
+//// CARGO
+//1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hcargo=+]       @= noun[start_people,SEM-Hcargo], prep[lemma:de], (art[def]), noun[start_collective], (noun;prep;art)*, noun[end_collective].
+//
+////DCO, 2011/02/16
+////Comentada
+////1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hcargo=+]      @= noun[start_people,postpeople], (noun;prep;art;conj)*, noun[end_people].
+//
+////DCO, 2011/02/17
+//// Added num[rom]
+//1> NOUN[SEM-Hpeople=+,SEM-Hcargo=+,proper=+,maj=+,mwe=+] @= noun[start_people,SEM-Hcargo], (noun;prep;art;conj)*, noun[end_people], (num[rom,end_people]).
+//
+//
+////DCO, 2011/02/16
+//// Comentadas
+////1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+,member=+]     @= noun[start_people,member], (noun;prep;art;conj)*, noun[end_people].
+////1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+]              @= noun[start_people,member:~,SEM-Hindividual:~,postpeople:~], (noun;prep;art;conj)*, noun[end_people].
+//
+//// John (Jack) Reagan
+//1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= noun[maj,SEM-Hpeople,SEM-Hindividual], punct[paren,left], ?+[maj], punct[paren,right], noun[SEM-Hpeople,proper] .
+//
+//// Rainha da Suecia Isabel
+//1> NOUN[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+]              @= noun[title,mwe], ?[SEM-Hpeople,SEM-Hindividual] .
+
+////////////////////////////
+// TELEPHONE NUMBERS
+////////////////////////////
+1> NOUN[proper=+,maj=+,mwe=+] @= num[start_loc,!features:!], num*[end_loc] .
+
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+// DCO, 2011/07/18
+//
+// Agregação para COLLECTIVE ADMINISTRATION e INSTITUTION
+//
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
+
+//DCO, 2011/07/18
+1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hadministration=+] @= noun[start_collective,SEM-Hadministration], prep[lemma:de,cont_collective], (art[def]), (prep[lemma:de,cont_collective] ; art[def] ; ?[maj,end_collective])*.
+
+1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hinstitution=+,SEM-Huniversity=+] @= noun[start_collective,SEM-Huniversity], (art; ?[end_collective]; prep[lemma:de])*, ?[end_collective].
+
+//DCO, 2011/07/13
+//1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hinstitution=+,SEM-school=+] @= noun[start_collective,SEM-Hinstitution,SEM-school], (art; ?[end_collective]; prep[lemma:de])*, ?[end_collective].
+
+//DCO, 2011/07/18
+// Instituto Superior Bissaya Barreto
+1> NOUN[SEM-Hcollective=+,SEM-Hinstitution=+,school=+] @= noun[SEM-school,start_collective=+], (adj[maj,end_collective=+]), noun[SEM-Hpeople,SEM-Hindividual,end_collective=+].
+
+//DCO, 2011/07/13
+// Agregação de escolas / universidades / institutos politécnicos, etc.
+1> NOUN[SEM-Hcollective=+,SEM-Hinstitution=+,school=+] @= noun[start_collective,SEM-school], (adj[end_collective]), (prep[lemma:de,cont_collective], (art[def])), ?[maj,end_collective], (prep[lemma:de,cont_collective] ; art[def] ; conj[lemma:e,cont_collective] ; noun[location,end_collective] ; noun[SEM-Hcollective,SEM-Hinstitution,end_collective] ; noun[SEM-Hpeople,SEM-Hindividual,end_collective] ; ?[maj,end_collective])*.
+
+//DCO, 2011/07/15
+// Agregação de escolas / universidades / institutos politécnicos, etc.
+1> NOUN[SEM-Hcollective=+,SEM-Hinstitution=+,school=+] @= noun[SEM-school,start_collective], (adj[maj,end_collective]), (prep[lemma:de,cont_collective], (art[def])), noun[SEM-Hcollective,SEM-Hadministration,end_collective].
+
+//DCO, 2011/07/18
+1> NOUN[SEM-Hcollective=+,SEM-Hinstitution=+] @= noun[SEM-Hcollective,SEM-Hinstitution,start_collective], (adj[maj,end_collective]), (prep[lemma:de,cont_collective], (art[def])), ?[maj,end_collective], (prep[lemma:de,cont_collective] ; art[def] ; conj[lemma:e,cont_collective] ; noun[location,end_collective] ; noun[SEM-Hcollective,SEM-Hinstitution,end_collective] ; noun[SEM-Hpeople,SEM-Hindividual,end_collective] ; ?[maj,end_collective])*.
+
+1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hinstitution=+] @= noun[start_collective,SEM-Hinstitution], (prep), (art), noun[proper,mwe] .
+
+//DCO, 2011/07/18 regra comentada
+//1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hinstitution=+] @= noun[start_collective,SEM-Hinstitution], (art; ?[end_collective]; prep[lemma:de])*, ?[end_collective].
+
+//DCO, 2011/07/12
+// Regra corrigida
+1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hinstitution=+] @= noun[start_collective,SEM-school], (art; ?[end_collective]; prep[lemma:de])*, ?[end_collective].
+
+// Governo Socrates
+1> NOUN[proper=+,maj=+,mwe=+,SEM-Hcollective=+,SEM-Hadministration=+] @= noun[SEM-Hadministration], ?[maj] .
+
+//////////////////////////////////////////////////
+//DCO, 2011/06/21
+// Regras revistas
+// Adivinhar locais não inseridos no léxico
+// através de regras de contexto (LGLocation.xip)
+// LOCATIONS
+/////////////////////////////////////////////////
+
+//DCO, 2011/06/21
+//Regra corrigida
+1> noun[location=+,admin_area=+,city=+,proper=+,maj=+,mwe=+] @= noun[start_loc,city], (?[maj] ; prep[lemma:de] ; art)*, ?[maj,end_loc].
+
+//DCO, 2011/06/21
+//Regra corrigida
+1> noun[location=+,admin_area=+,country=+,proper=+,maj=+,mwe=+] @= noun[start_loc,country], (?[maj] ; prep[lemma:de] ; art)*, noun[maj,end_loc] .
+
+//DCO, 2011/06/21
+//Regra corrigida
+1> noun[location=+,admin_area=+,proper=+,maj=+,mwe=+] @= ?[start_loc,admin_area], (?[maj] ; prep[lemma:de] ; art)*, noun[maj,end_loc].
+
+////////////////////////////
+// EVENTS
+////////////////////////////
+1> NOUN[proper=+,maj=+,mwe=+] @= noun[start_event,!features:!], (art;prep;?[end_event])+.
+
+////////////////////////////
+// NUMBERS
+////////////////////////////
+
+//DCO, 2010/07/05
+// Não pode ser NOUN quando é advérbio (em 1º lugar) ou PP
+1> NOUN[quant=+, classific=+] @= ?[adv:~,pp:~,num:~,quant,classific].
+
+////////////////////////////
+// CULTURE
+////////////////////////////
+// to add when reformulate LGCulture.xip
+//DCO, 2011/02/14
+// Comentadas
+//1> NOUN[proper=+,maj=+,mwe=+,culture=+,inquote=+] @= ?[start_culture,inquote], ?*, ?[end_culture] .
+//1> NOUN[proper=+,maj=+,culture=+,inquote=+] @= ?[start_culture,inquote], ?[end_culture:~] .
+
+////////////////////////////
+// Names with initials in them
+// American style...
+////////////////////////////
+2> noun[proper=+,SEM-Hpeople=+,SEM-Hindividual=+,mwe=+] @= (noun[maj,SEM-Hpeople]), noun[initial], (noun[initial]), noun[maj,SEM-Hpeople] .
+
+////////////////////////////
+// Treating guessed nouns
+////////////////////////////
+
+// recognized first name preceeded by recognized combination of two lastnames (one of them can be unknown)
+// Saulo Ferreira Feitosa
+//NJM 2010/03/26 (rule expanded to avoid making a new node when there is a single first name noun (ex. Pedro)
+//DCO, 2011/02/23
+// Oliveira Ramos --> detectar Ramos como parte do nome
+//COMMENTED
+//2> noun[SEM-Hpeople=+,SEM-Hindividual=+] @= | ?[maj:~] | (noun[title]), ?[firstname,location:~,maj] ; ?[lastname,location:~,maj] ; noun[maj,abbr], ?*[maj], ((prep[lemma:de]), (art[def]), ?+[maj,SEM-fuzzy:~]), ?*[maj] | ?[maj:~] | .
+
+//DCO, 2011/02/16 - Comentada
+//2> noun[proper=+,SEM-Hpeople=+,SEM-Hindividual=+,mwe=+] @= ?[firstname, location:~,maj], ?*[maj], prep[lemma:de], (art[def]), ?[maj], ?*[maj] | ?[maj:~] | .
+
+//DCO, 2010/10/01
+// TODO: ver se se pode deixar comentada
+//2> noun[proper=+,SEM-Hpeople=+,SEM-Hindividual=+,mwe=+] @= ?[firstname, location:~,maj],  ?[maj], ((prep[lemma:de]), (art[def]),  ?[maj]), ?*[maj] | ?[maj:~] | .
+
+// guessed noun with upper case followed by lastname.
+//DCO, 2011/02/16
+// Added lemma:~"%*taça"
+3> noun[proper=+,SEM-Hpeople=+,SEM-Hindividual=+,mwe=+] @= noun+[maj,lemma:~"%*taça"], noun[maj,lastname], (prep[lemma:"de"], (art[def]), noun+[maj,proper])*.
+
+// recognized first name followed only by a noun in upper case.
+// Nelson Mandela
+//DCO, 2011/03/01
+// Added prep and art do allow first name recognition of more complex names
+3> noun[proper=+,SEM-Hpeople=+,SEM-Hindividual=+,mwe=+] @= noun[firstname, location:~], (?[maj]), ((prep[lemma:"de"], (art[def])), ?[maj])+ | ?[maj:~] | .
+
+// if cargo followed by de + unknown upper case letter then put all together
+// presidente da camara de Rouen
+//2> noun[SEM-Hpeople=+,postpeople=+,mwe=+,proper=+] @= noun[postpeople], prep[lemma:de], noun[proper,maj,src:~lex] .
+
+//DCO, 2010/09/28
+// tio João, Tia Maria José, ...
+3> noun[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[relative], ?[SEM-Hpeople,SEM-Hindividual].
+
+// Very general rules that catch proper nouns without typing them.
+// feature untyped is added when the rule is too much general and no type can be infered
+
+// Example: Lula da Silva
+// restriction added to avoid to take "Veio do Porto" as a proper noun....
+
+//DCO, 2011/02/05
+// Adicionada restrições discipline:~,sports-discipline:~ para evitar casos como "futebol de Lisboa"
+//DCO, 2011/02/06
+// Adicionadas restrições location:~ e discipline:~,sports-discipline:~ para evitar casos como:
+//"Casa do Benfica de Carregal do Sal" e "Campeonato Nacional de Futebol"
+
+4> NOUN[proper=+,maj=+,mwe=+,untyped=+] = noun[maj,start:~,first,verb:~,refl:~,SEM-Hcollective:~,location:~,SEM-Hpeople:~,discipline:~,sports-discipline:~], prep[lemma:de], (art[lemma:o]), adj*[maj], noun*[maj], noun[maj,last,location:~,discipline:~,sports-discipline:~].
+
+
+// Example: Manuel Maria Carrilho
+// Restriction to avoid to take as a firstname words that are starting the sentence with an upper case and which are not part of EN.
+// Example: Se Ferreira soubesse....
+
+//DCO, 2010/10/01
+// TODO: ver se se pode deixar comentada
+//3> NOUN[proper=+,maj=+,mwe=+,untyped=+] -> noun[maj,first,refl:~], adj*[maj], noun*[maj], noun[maj,last].
+
+//DCO, 2011/02/16 - Comentada
+//4> NOUN[proper=+,maj=+,mwe=+,untyped=+] -> noun[proper,first,verb:~], prep[lemma:de], (art[lemma:o]), adj*[maj], noun*[maj], adj[maj,last].
+
+//DCO, 2011/01/31
+// Adicionada restrição SEM-datum-bic:~
+// Não quero que esta regra corra em casos como "BIC BCOMPTPL"
+//DCO, 2011/02/05
+// Adicionada restrição SEM-sport-award:~ para evitar que a regra corra em casos como "Supertaça AFL"
+//DCO, 2011/02/07
+// Adicionada restrição SEM-Hinstitution:~ para resolver o problema do "Benfica"
+//DCO, 2011/02/14
+// EU ODEIO ESTA REGRA!!!!!!!!!!!!!!!!
+//4> NOUN[proper=+,maj=+,mwe=+,untyped] -> noun[proper,first,verb:~,SEM-sport-award:~,SEM-Hinstitution:~], adj[maj,last,SEM-datum-bic:~].
+
+// University of Florida
+4> NOUN[proper=+,maj=+,mwe=+,untyped] = ?[maj,first], noun*, ?[maj,last].
+
+
+// Complex untyped proper noun, followed by comma, followed by digit (one or two) followed by comma, is a person name.
+// e.g Maisdrz Yzers, 37, enviou seu pai.
+5> ? @= noun[proper,untyped,SEM-Hindividual=+,SEM-Hpeople=+], punct[comma], num[dig,lemma:"(%d)%d"], punct[comma] .
+
+// Complex untyped noun when the first element is acron, institution, then the whole is institution.
+5> ? @= noun[proper,untyped,SEM-Hcollective=+,SEM-Hinstitution=+, lemma:"ONG %+"] .
+
+// Complex untyped noun when the first element is "Instituto", then the whole is collective, institution.
+5> ? @= noun[proper,untyped,SEM-Hcollective=+,SEM-Hinstitution=+, lemma:"instituto %+"] .
+
+// Complex untyped proper noun when the fist element is "Frente"
+5> ? @= noun[proper,untyped,SEM-Hcollective=+,SEM-Hinstitution=+, lemma:"Frente %+"] .
+
+Reshuffling:
+// FLatens the proper nouns that were built in two steps
+//
+// Example: Tribunal Superior Eleitoral
+6> NOUN{NOUN[proper]{?-#1},adj#2[proper]} = NOUN[proper=+]{#1,#2}.
+
+
+// Apaguei as regras de alisamento. Ver porque no ficheiro notes.txt
+// ponto 1
+
+//CH, ??/11/2007. Problema acontece com estas regras
+// Perde-se alguns tracos
+// e.g O rio Ttoto - os tracos water e geographic que estao acrescentados em Toto atraves de LOLocation
+// sao perdidos pois sao acrescentados no noun[location] da LHS da regra.
+// Para poder recuperar os tracos todos convinha ou discriminar todas as possibilidades (water, etc.)
+// Ou entao fazer de outra forma.
+// Removes NOUN nodes that only contain a singleton noun node
+//
+6> noun[time,t-date] {noun#1[first,last,time=+,t-date=+]}     = #1.
+6> noun[t-date]      {noun#1[first,last,t-date=+]}            = #1.
+6> noun[time]      {noun#1[first,last,time=+]}                = #1.
+//6> noun[SEM-Hpeople]  {noun#1[first,last,SEM-Hpeople=+]}         = #1.
+//6> noun[SEM-Hpeople]  {adj#1[first,last,SEM-Hpeople=+]}          = #1. // O tio avô da Carolina ???passar a noun???
+//6> noun[SEM-Hcollective]       {noun#1[first,last,SEM-Hcollective=+]} = #1.
+6> noun[title]     {noun#1[first,last,title=+]}                 = #1.
+//6> noun[location]{noun#1[first,last,location=+]}              = #1.
+//6> noun[SEM-unitype]      {noun#1[first,last,SEM-unitype=+]}  = #1.   DIOGO -> descomentar esta regra
+//5> noun[relative]{noun#1[first,last,relative=+]}              = #1.
+
+// Rules for coordination of Named Entities
+// They have to be at the end because of methonymy
+// (e.g. ALL specific local grammars for entities have to apply before)
+
+Sequence:
+
+///////////////////////////////////////////// HIGHER LEVEL NE
+///////////////////////////////////////////// TO BE HAREM COMPLIANT (can be commented for other kinds of applications)
+//
+//
+
+// Presidente da Academia da Marinha
+// CARGO DE INSTITUTION GIVES CARGO
+7> noun[mwe=+,SEM-Hcargo=+,SEM-Hpeople=+,proper=+] @= noun[mwe,SEM-Hcargo], prep, (art[def]), noun[SEM-Hcollective] .
+
+
+//DCO, 2010/09/30
+// Traços corrigidos, postgroup já não existe
+// Example: ministro(s) dos Negocios Estrangeiros do Governo Socrates
+8> noun[SEM-Hpeople=+,SEM-Hcargo=+,proper=+,mwe=+] @= noun[mwe,SEM-Hcargo], prep, (art), noun[SEM-Hcollective].
+//8> noun[mwe=+,SEM-Hpeople=+,proper=+] @= noun[mwe,postgroup], prep, (art), noun[SEM-Hcollective] .
+
+//DCO, 2010/09/30
+// Traços corrigidos, postgroup já não existe
+// e.g Ministro(s) dos Negocios Estrangeiros de Portugal
+8> noun[SEM-Hpeople=+,SEM-Hcargo=+,proper=+,mwe=+] @= noun[mwe,SEM-Hcargo], prep, (art), noun[location] .
+//8> noun[mwe=+,postgroup=+,SEM-Hpeople=+,proper=+] @= noun[mwe,postgroup], prep, (art), noun[location] .
+
+//DCO, 2010/09/28
+// Os vocativos já não são para ser apanhados
+// Title+Cargo (with definite article inbetween)
+// Example: Sua Excelencia o Primeiro-Ministro
+//9> noun[mwe=+,SEM-Hcargo=+,SEM-Hpeople=+,proper=+] @= ?[title], art[def,sg], ?[SEM-Hcargo];?[postpeople] .
+
+// Title+Individual (preceeded by cargo)
+// Sua Santidade o Papa Bento XVI
+// Check that title contains "Sua *" in order to avoid side effects
+9> noun[mwe=+,SEM-Hpeople=+,proper=+] @= ?[title,mwe,surface:"Sua %+"], art[def,sg], noun[proper,SEM-Hpeople,mwe=+] .
+
+// any complex proper noun followed by on-line
+// CHECK if not problems
+9> noun[mwe=+,location=+,virtual=+,site=+,proper=+] @= noun[proper,mwe], ?[lemma:on-line] .
+
+// a t-date which is preceeded by a noun bearing feature introd_street:+ has not to be considered as t-date
+9> noun[mwe=+,location=+,admin_area=+,street=+] @= noun[introd_street], noun[t-date] .
+
+// combination of cargo+collective
+// e.g presidente da UE
+9> noun[mwe=+,SEM-Hpeople=+,SEM-Hcargo=+] = ?[SEM-Hcargo], prep[lemma:de], art[def], ?[SEM-Hcollective].
+
+// combination of cargo + maj word, marked previsouly
+// Conselheira da Atina
+9> noun[mwe=+,SEM-Hpeople=+,SEM-Hcargo=+] @= ?[SEM-Hcargo, start_people,maj], (prep[lemma:de];?[maj];art)*, ?[end_people,maj].
+
+// Combination EVENT, ORGANIZED + de + t-date gives EVENT ORGANIZED
+// a Exposicao Mundial de 2005
+9> noun[mwe=+,event=+,organized=+] @= ?[noun,event,organized], prep[lemma:de], num[lemma:"9%d%d"];num[lemma:"20%d%d"] .
+9> noun[mwe=+,event=+,organized=+] @= ?[noun,event,organized], num[lemma:"%d%d"] .
+
+// conjunção + disjunção
+
+// Acronyms following a named entity
+//CH changed
+// eg "Universidade de Tras-os-Montos e Alto Douro (UTAD) We want to type UTAD as an organization too
+//DCO, 2010/10/03
+// duas regras: uma para instituições, outra para administrações ...
+10> ? @= noun[SEM-Hcollective,SEM-Hinstitution], punct[paren,left], ?[toutmaj,SEM-Hcollective=+,SEM-Hinstitution=+,acron=+], punct[paren,right] .
+10> ? @= noun[SEM-Hcollective,SEM-Hadministration], punct[paren,left], ?[toutmaj,SEM-Hcollective=+,SEM-Hadministration=+,acron=+], punct[paren,right] .
+// same rule for companies
+10> ? @= noun[SEM-Hinstitution], punct[paren,left], ?[toutmaj,SEM-Hcollective=+,SEM-Hinstitution=+,acron=+], punct[paren,right] .
+
+
+// If an acronym is recognized but not the complex NP on its left, then the left NP is marked as the acronym
+// Example: International Business Machines (IBM)
+12> ? = noun[proper,mwe,untyped,SEM-Hinstitution=+,SEM-Hcollective=+], punct[paren,left], noun[SEM-Hinstitution,guess:~], punct[paren,right] .
+
+// Acronym comes first and then the organization name in parenthesis
+// Example: OMS (Organizacao Mundial da Saude)
+12> ? = noun[guess,maj,SEM-Hcollective=+,SEM-Hadministration=+], punct[paren,left], noun[SEM-Hinstitution];noun[SEM-Hadministration], punct[paren,right] .
+12> ? = noun[guess,maj,SEM-Hcollective=+,SEM-Hinstitution=+], punct[paren,left], noun[SEM-Hinstitution];noun[SEM-Hinstitution], punct[paren,right] .
+12> ? = noun[guess,maj,SEM-Hcollective=+,SEM-Hinstitution=+], punct[paren,left], noun[SEM-Hinstitution], punct[paren,right] .
+
+//CH added
+// Default rule for proper nouns that have not been typed before e.g. a atual Distrital.
+
+//DCO, 2011/02/25
+// No Benfica, Bailão foi substituído por Gatinho
+12> ? @= noun[SEM-Hpeople,SEM-Hindividual], verb[lemma:"ser"], ?[lemma:"substituir"], prep[lemma:"por"], ?[maj,SEM-Hpeople=+,SEM-Hindividual=+].
+
+Tagging:
+13>  adj[maj,lemma:~natal,noun:~] %= | ?[maj:~] |  noun[proper=+,maj=+] | ?[maj:~] | .

@@ -1,0 +1,115 @@
+//Main file for machine learning classification
+
+map megamModelsMap;
+
+function parseMegamModel(node n){
+     string lemma = n.lemma();
+
+     //only parse if the model does not exist
+     if(megamModelsMap.test(lemma)!=true){
+
+          // map that will have all the mapping for this verb's model
+          map dictionaryMap;
+
+          string filename = megamModelsDir+"/"+lemma+".txt";
+
+          //println("Opening: ",filename);
+
+          file model;
+          model.openread(filename);
+
+          // read the first line contains the named labels
+          string line = model.readln();
+          vector classes;
+          line.split("\t",classes);
+
+          //take the key before removing it from the vector
+          string key = classes[0];
+          classes.pop(0);
+
+          //println("Class Vector: ",classes);
+          dictionaryMap[key] = classes;
+
+          for(line in model){
+               if(model.eof()!=true){
+
+                    vector splitted;
+                    line.split("\t",splitted);
+
+                    vector values;
+                    splitted[1].split(" ",values);
+
+                    if(dictionaryMap.test(splitted[0])!=true){
+                         dictionaryMap[splitted[0]] = values;
+                    }
+               }
+          }
+          megamModelsMap[lemma] = dictionaryMap;
+     }
+
+     //println(megamModelsMap);
+}
+
+
+function predictMegam(node n, bool opt_bias){
+
+     string lemma = n.lemma();
+
+     map dictionaryMap = megamModelsMap[lemma];
+
+     list features=buildFeatureList(n);
+
+     vector megamClasses = dictionaryMap["***NAMEDLABELSIDS***"];
+     int numberOfClasses = megamClasses.size();
+
+     // vector with the scalar product coeficient * feature value (each position is one class)
+     vector v;
+
+     int cls;
+     for (cls = 0 ; cls < numberOfClasses ; cls++){
+          if (opt_bias && dictionaryMap.test("**BIAS**")) {
+               v[cls] = dictionaryMap["**BIAS**"][cls];
+          }
+          else {
+               v[cls] = 0.0;
+          }
+
+          int i;
+          for (i = 0 ; i < features.size() ; i += 1) {
+               float fW = 0.0;
+
+               if (dictionaryMap.test(features[i])){
+                    fW = dictionaryMap[features[i]][cls];
+               }
+
+               float value = 1.0; //all features have this value
+               v[cls] += (fW * value);
+          }
+     }
+
+     float dividendo;
+     for(cls = 0 ; cls < numberOfClasses ; cls++){
+          dividendo += exp(v[cls]);
+     }
+
+     float maxConf = 0;
+     int selectedClass = 0;
+     vector conf;
+
+     for (cls = 0 ; cls < numberOfClasses ; cls++){
+          conf[cls] = exp(v[cls]) / dividendo;
+
+          if (conf[cls] > maxConf) {
+               maxConf = conf[cls];
+               selectedClass = cls;
+          }
+     }
+
+     if(debugViper) {
+          println("  Node: ",n, " Surface: ",n.surface());
+          println("  Conf Vector: ",conf, " Classes: ",megamClasses);
+          println("  Selected Class Index: ",selectedClass," Viper: ",megamClasses[selectedClass]);
+     }
+
+     return(megamClasses[selectedClass]);
+}

@@ -1,0 +1,209 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+/************ adaptation de la grammaire ***************\
+marqueur:
+10>PP[form=fde]{prep[form:fde, first], ?*}.
+
+
+reconstructeur:
+/supprimer les SC\
+20> SC{?-#1} = #1.
+
+Déduction:
+/création des dépendances TETE\
+
+30> |NP#1{?*, noun#2[last]} |	TETE(#1, #2).
+30> |NP#1{?*, pron#2[last]} |	TETE(#1, #2).
+30> |NP#1{?*, num#2[last]} |	TETE(#1, #2).
+30> |#1[verb]{?*, verb#2[last]} |	TETE(#1, #2).
+//30> |IV#1{?*, verb#2[last]} |	TETE(#1, #2).
+30> |AP#1{?*, adj#2[last]} |	TETE(#1, #2).
+35> |FV#1{?*, IV#2[last]} | 	if(TETE(#2, #3))	TETE(#1, #3).
+35> |FV#1{?*, IV#2[last]} | 	if(TETE(#2, #3))	TETE(#1, #3).
+35> |PP#1{?*, NP#2[last]} |	if(TETE(#2, #3))	TETE(#1, #3).
+
+reconstructeur:
+/ré + initialiser\
+//40> PREFIX#1, VERB#2{?-#3} = #2{#1, #3}.
+40> PREFIX#1, IV#2{?-#3} = #2{#1, #3}.
+40> PREFIX#1, FV#2{?-#3} = #2{#1, #3}.
+
+
+/réunir les formes verbales finies et non finies: doit faire, a fait\
+40> FV#1, IV#2 = FV{#1, #2}.
+
+Déduction:
+45> |FV#1{?*, IV#2[last]} | 	if(TETE(#2, #3))	TETE(#1, #3).
+
+
+/************** construction des chunks de PEU initiaux **********************\
+
+reconstructeur:
+/ les AP, NP, PP et ?[verb] qui n'ont pas de noeud parent sont des PEU\
+60> AP#1[!fem:!, !masc:!, !sg:!, !pl:!] = PEU[adj=+]{#1}, where (~mother(#1, #2)).
+60> NP#1[!fem:!, !masc:!, !sg:!, !pl:!, !num:!]  = PEU[noun=+]{#1}, where (~mother(#1, #2)).
+60> PP#1[!fem:!, !masc:!, !sg:!, !pl:!, form:fde] = PEU[prep=+, form=fde]{#1}, where (~mother(#1, #2)).
+60> PP#1[!fem:!, !masc:!, !sg:!, !pl:!]  = PEU[prep=+]{#1}, where (~mother(#1, #2)).
+60> #1[verb, !partpas:!, !fem:!, !masc:!, !sg:!, !pl:!, !nega:!, !inf:!] = PEU[verb=+]{#1}, where (~mother(#1, #2)).
+
+
+Déduction:
+//pour enlever la percolation du trait noun aux PEU prépositionnels
+62> |PEU#1[prep:+, noun=~]|
+	~
+
+
+/attribution des dépendances TETE\
+65> |PEU#1{?#2}|	 if(TETE(#2, #3))	TETE(#1,#3).
+65> |PEU#1[partpas]{#2}|	TETE(#1,#2).
+
+/*************** regroupement et élargissement des chunks de PEU **************\
+reconstructeur:
+/les incises sont rattachées au chunk qui précède\
+70> PEU#1{?-#2}, INS#3 = #1{#2, #3}.
+
+/----------------- adverbes -------------\
+70> PEU#1[noun]{?-#2}, adv#3, PEU#4[verb] = #1{#2, #3}, #4.
+70> PEU#1[prep]{?-#2}, adv#3, PEU#4[verb] = #1{#2, #3}, #4.
+
+/les adverbes initiaux et finals\
+70> PEU#1{?-#2}, adv#3[last] = #1{#2,#3}.
+70> PEU#1{?-#2}, adv#3, SENT#4[last] = #1{#2,#3}.
+70> |adv#1[start], PEU#2{?-#3}| = #2{#1,#3}.
+
+
+/1. marquage des chunks à réunir par la dépendance COMBINER\
+Déduction:
+
+/---------------- locutions ------------\
+/mettre hors tension\
+90> |PEU#1[verb], PEU#2[prep]|	if(TETE(#1,#3) & (#3[lemme:mettre]) & TETE(#2,#4) & (#4[mettre]))	 COMBINER (#1,#2).
+/la mise en attente\
+90> |PEU#1[noun], PEU#2[prep]|	if(TETE(#1,#3) & (#3[lemme:mise]) & TETE(#2,#4) & (#4[mettre]))	 COMBINER (#1,#2).
+
+/----------------- adverbes -------------\
+95> |PEU#1[noun], adv#2, PEU#3[verb]|	COMBINER(#1,#2).
+95> |PEU#1[prep], adv#2, PEU#3[verb]|	COMBINER(#1,#2).
+
+95> |PEU#1, adv#2[last]|	COMBINER(#1,#2).
+95> |PEU#1, adv#2, sent|	COMBINER(#1,#2).
+
+
+/un adverbe modifieur de la négation\
+95> |adv#1, adv#2[psneg]|	COMBINER(#1,#2).
+
+/pronoms interrogatifs (quel est, etc.)\
+95> |PEU#1[pron], PEU#2| 	if((TETE(#1,#3)) & (#3[start, int]))	COMBINER(#1,#2).
+
+
+/----------------- noms -------------------\
+/le magasin 5\
+100> |PEU#1[noun], PEU#2[num]|	COMBINER(#1,#2).
+
+/impossible d'ouvrir\
+100> |PEU#1[adj], PEU#2[inf]|	if(TETE(#1,#3) & (#3[cinf]))	COMBINER(#1,#2).
+/continuer à utiliser\
+100> |PEU#1[verb], PEU#2[inf]|	if(TETE(#1,#3) & (#3[cinf]))	COMBINER(#1,#2).
+
+
+/provenir de\
+100> |PEU#1[verb], PEU#2[prep, form:fde]|	COMBINER(#1,#2).
+100> |PEU#1[verb], PEU#2[prep, form:fde]|	if(TETE(#1,#3) & (#3[cde]))	COMBINER(#1,#2).
+
+
+/un SN (NP, PP)  suivi d'un AP \
+
+100> |PEU#1[noun], PEU#2[adj]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	 COMBINER (#1,#2).
+100> |PEU#1[prep], PEU#2[adj]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	 COMBINER (#1,#2).
+
+110> |PEU#1[adj], PEU#2[adj]|	COMBINER (#1,#2).
+
+/deux NP successifs (les magasins papier)\
+100> |PEU#1[noun], PEU#2[noun, prep:~]| 	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+100> |PEU#1[prep], PEU#2[noun, prep:~]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+
+/un SN (NP, PP)  suivi d'un participe passé - Les copies effectuées\
+100> |PEU#1[noun], PEU#2[partpas]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+100> |PEU#1[prep], PEU#2[partpas]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+100> |PEU#1[noun], PEU#2[partpas], PEU#5[adj];PEU#5[partpas]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2), COMBINER(#2,#5).
+
+
+/un SN (NP, PP) suivi d'un PP en de\
+110> |PEU#1[noun], PEU#2[form:fde]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+110> |PEU#1[prep], PEU#2[form:fde]|	if(TETE(#1,#3) & TETE(#2,#4) &(#3[italic]:#4[italic]))	COMBINER (#1,#2).
+
+/NP AP NP ou NP AP PP en de\
+110> |PEU#1[noun];PEU#1[prep], PEU#2[adj], PEU#3[noun, pron:~];PEU#3[form:fde]| if(COMBINER(#1,#2))	COMBINER(#2, #3).
+
+/par défaut\
+110> |PEU#1[noun], PEU#2[prep]|	if(TETE(#2,#3) & (#3[lemme:"défaut"]))	COMBINER(#1, #2).
+
+110> |PEU#1[noun], #2, #3| 	if(COMBINER(#1,#2) & COMBINER(#1,#3))	COMBINER(#2,#3).
+
+/-------------------- verbe --------------------\
+/ négation\
+120> |PEU#1[verb, nega], adv#2[psneg]|	COMBINER(#1,#2).
+
+
+/un verbe et son objet\
+120> |PEU#1[verb], PEU#2[noun];PEU#2[adj];PEU#2[num]|	if((TETE(#1,#3)) & (TETE(#2, #4)) & (OBJ(#3, #4))) COMBINER (#1,#2).
+120> |PEU#1[verb], adv#2, PEU#3[noun]|	if((TETE(#1,#4)) & (TETE(#3, #5)) & (OBJ(#4, #5))) COMBINER (#1,#2), COMBINER(#2,#3).
+
+/être suivi de tout complément prép.\
+120> |PEU#1[verb], PEU#2[prep]|	if((TETE(#1,#3)) & (#3[lemme:être])) COMBINER (#1,#2).
+
+130> |PEU#1[verb], ADV#2, PEU#3[noun]|	if((TETE(#1,#4)) & (TETE(3,#5)) & (OBJ(#4,#5)) & (COMBINER(#1,#2)))	COMBINER(#2,#3).
+
+/certains verbes et leur sujet\
+	// il y a
+130> |PEU#1{FV{PRON[lemme:y], VERB#2[lemme:avoir]}}|	if(SUBJ(#2,#3) & (TETE(#4,#3)))	COMBINER(#4,#1).
+	// passif
+130> |PEU#1, PEU#2{#3[passive]}|	if((TETE(#1, #4)) & (TETE(#2, #5)) & (SUBJ(#5, #4)))	COMBINER(#1, #2).
+130> |PEU#1, PEU#6[adj];PEU#6[partpas], PEU#2{#3[passive]}|	if((TETE(#1, #4)) & (TETE(#2, #5)) & (SUBJ(#5, #4)) & (COMBINER(#1, #6)))	COMBINER(#6, #2).
+
+/ les mots séparés par | \
+130> |PEU#1, #2[lemme:"|"], PEU#3|	COMBINER(#1, #2, #3).
+
+
+/2. fusionner les chunks marqués\
+reconstructeur:
+/le Fiery X12 | XP12 | EX12\
+140> PEU#1{?-#2}, #3[lemme:"|"], PEU#4{?-#5}, #6[lemme:"|"], PEU#7{?-#8}, #9[lemme:"|"], PEU#10{?-#11} = #1{#2, #3, #5, #6, #8, #9, #11}.
+140> PEU#1{?-#2}, #3[lemme:"|"], PEU#4{?-#5}, #6[lemme:"|"], PEU#7{?-#8} = #1{#2, #3, #5, #6, #8}.
+140> PEU#1{?-#2}, #3[lemme:"|"], PEU#4{?-#5} = #1{#2, #3, #5}.
+
+140> ?#1{?-#2}, ?#3{?-#4}, ?#5{?-#6}, ?#7{?-#8}, ?#9{?-#10}, ?#11{?-#12}= #1{#2, #4, #6, #8, #10, #12}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7) & COMBINER(#7,#9) & COMBINER(#9,#11)).
+140> ?#1{?-#2}, ?#3{?-#4}, ?#5{?-#6}, ?#7{?-#8}, ?#9{?-#10}= #1{#2, #4, #6, #8, #10}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7) & COMBINER(#7,#9)).
+140> ?#1{?-#2}, ?#3{?-#4}, ?#5{?-#6}, ?#7{?-#8} = #1{#2, #4, #6, #8}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7)).
+140> ?#1{?-#2}, ?#3{?-#4}, ?#5{?-#6} = #1{#2, #4, #6}, where (COMBINER(#1, #3) & COMBINER(#3, #5)).
+
+
+140> PEU#1{?-#2}, ADV#3, PEU#4{?-#5}=#1{#2,#3, #5},	where(COMBINER(#1, #3) & COMBINER(#3, #4)).
+140> ADV#1, PEU#2{?-#3}=#2{#1,#3},	where (COMBINER(#1,#2)).
+140> PEU#1{?-#2}, ADV#3 =#1{#2,#3},	where (COMBINER(#1,#3)).
+
+150> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5{?-#6}, PEU#7{?-#8}, PEU#9{?-#10}, PEU#11{?-#12}= #1{#2, #4, #6, #8, #10, #12}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7) & COMBINER(#7,#9) & COMBINER(#9,#11)).
+150> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5{?-#6}, PEU#7{?-#8}, PEU#9{?-#10}= #1{#2, #4, #6, #8, #10}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7) & COMBINER(#7,#9)).
+150> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5{?-#6}, PEU#7{?-#8} = #1{#2, #4, #6, #8}, where (COMBINER(#1, #3) & COMBINER(#3, #5) & COMBINER(#5, #7)).
+150> PEU#1{?-#2}, PEU#3{?-#4}, PEU#5{?-#6} = #1{#2, #4, #6}, where (COMBINER(#1, #3) & COMBINER(#3, #5)).
+
+//150> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2,#4}, where (COMBINER(#1, #3)).
+160> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2,#4}, where (COMBINER(#3, #1)).
+//160> PEU#1[noun]{?-#2}, PEU#3[verb]{?-#4} = #1{#2,#4}, where (COMBINER(#1, #3)).
+160> PEU#1{?-#2}, PEU#3{?-#4} = #1{#2,#4}, where (COMBINER(#1, #3)).
+
+variables:
+string _norm;
+string _surf;
+
+déduction:
+//300> |PEU#1| PEUNIT(#1).
+
+300> |PEU#1| if(normalize(#1, _norm) & _surf=#1[surface])
+	PEUNIT(#1, ##PENORM[lemme=_norm],##PESURF[lemme=_surf]).

@@ -1,0 +1,262 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:	mapping of morph. categories onto HMM tags
+# ENCODING:	UTF8 [€àâáäã]
+#
+# LANGUAGE:	SPANISH
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	17-Feb-2006	
+#		- derived from older scripts by by C. Arnaudo, A. Schiller
+# 
+# ============================================================================
+# USAGE:	xfst -s LEX.fst -l ThisFile
+# ============================================================================
+
+define LEX
+
+
+define MARK	[ %+lex | %+guessed | %+open ];
+
+# ----------------------------------------------------------------------------
+# identify tags and characters
+read regex LEX ;
+
+single char sigma net
+define SIG
+
+# morphological features (starting with +)
+read regex SIG & [ %+ ?+ ];
+multi char sigma net
+define TAG
+
+# boundary symbols, diacritics (starting with ^)
+#read regex SIG & [ %^ ?+ ];
+#multi char sigma net
+#define DIAC
+
+#define CHAR	?  - [TAG];
+define CHAR SIG & ? ;
+
+# define stem classes
+
+define AnyStem	[CHAR]+ ;
+
+define ConjStem	AnyStem - [ {como} | {cuando} | {pués} | {que} ] ;
+
+define PrepStem	AnyStem - [ {como} ] ;
+
+define LetStem	AnyStem - CHAR ;	# more than one char 
+
+define HabStem	[ {haber} ];
+define AuxStem	[ {estar} | {ser} ];
+define VStem	AnyStem - [ HabSTem | AuxStem ];
+
+define AdjStem	AnyStem - {todo} ;
+
+define Adv1Stem	[ {muy} | {todo} | {algo} ] ;
+define AdvStem	AnyStem - [ Adv1Stem | {no} | {como} | (a) {donde} 
+			  | {cuando} | {cuanto}  ];
+
+define QuantStem 	[ {cualquier} | {quienquier}  ];
+define IndefStem	AnyStem - [ QuantStem | {tal} ] ;
+
+define PRelStem	AnyStem - [ {cuanto} | {como} | (a) {donde} | {quienquiera} | {que} ];
+
+define PuncStem	AnyStem - [ %. | %, | %! | %? | %; ];
+
+# ---------------------------------------------------------------------------------
+#  define sets
+
+define NUMSG	[ TAG* & $%+Sg ];
+define NUMPL	[ TAG* & $%+Pl ];
+define NUMSP	[ TAG* & $%+SP ];
+
+
+define VFIN	[ %+Cond | %+Fut | %+Pluperf | %+ISubj | %+IInd 
+		| %+FSubj | %+Perf | %+PSubj | %+PInd ] ;
+define VNONFIN	[ %+Imp | %+Imp | %+PresPart | %+PastPart  ];
+
+define NONV	TAG - [ VFIN | VNONFIN ] ; # semantic/syntactic features
+
+define VERB	%+Verb [NONV]* ;
+
+define DADJ	"+d_adj" ;
+
+# separator for clitics
+define SEP	[ "^|" | "^=" | "+TOK+" ] ;
+
+
+! -------------------------------------------------------------------
+! define TagMap
+! -------------------------------------------------------------------
+echo >>> add HMM tags
+
+read regex
+[
+# common nouns 
+  AnyStem %+Noun NUMSG			(MARK) "+hmm_NOUNSG":0
+| AnyStem %+Noun NUMPL			(MARK) "+hmm_NOUNPL":0
+| AnyStem %+Noun NUMSP			(MARK) "+hmm_NOUN":0
+| AnyStem %+Noun %+Abrev		(MARK) "+hmm_NOUN":0
+| LetStem %+Let  NUMSG			(MARK) "+hmm_NOUNSG":0
+| LetStem %+Let  NUMPL			(MARK) "+hmm_NOUNPL":0
+| LetStem %+Let  NUMSP			(MARK) "+hmm_NOUN":0
+| CHAR %+Let TAG*			(MARK) "+hmm_ITEM":0
+| AnyStem %+Item			(MARK) "+hmm_ITEM":0
+
+# proper names
+| AnyStem %+Prop TAG*			(MARK) "+hmm_PROP":0
+| AnyStem %+Titl TAG*			(MARK) "+hmm_PROP":0
+| AnyStem %+Cort			(MARK) "+hmm_PROP":0
+| AnyStem %+Init			(MARK) "+hmm_PROP":0
+
+# adjectives
+| AdjStem %+Adj  NUMSG			(MARK) "+hmm_ADJSG":0
+| AdjStem %+Adj  NUMPL			(MARK) "+hmm_ADJPL":0
+| AdjStem %+Adj  NUMSP			(MARK) "+hmm_ADJ":0
+
+| {todo} %+Adj TAG*			(MARK) "+hmm_PRON":0
+
+# adverbs
+| {no} %+Adv				(MARK) "+hmm_ADVNEG":0
+| {pués} %+Conj				(MARK) "+hmm_ADVINT":0
+
+| AnyStem %+Adv %+Interrog TAG*		(MARK) "+hmm_ADVINT":0
+
+| AdvStem %+Adv [TAG - %+Interrog]*	(MARK) "+hmm_ADV":0
+| Adv1Stem %+Adv TAG* 			(MARK) "+hmm_ADVADJ":0
+| AnyStem %+Adj TAG* SEP %+Adv TAG*	(MARK) "+hmm_ADV":0
+| AnyStem DADJ %+Adv TAG*		(MARK) "+hmm_ADV":0
+
+# verbs
+| AuxStem VERB %+Inf			(MARK) "+hmm_AUXINF":0
+| AuxStem VERB %+Inf SEP ?*		(MARK) "+hmm_AUXINFCL":0
+| AuxStem VERB VFIN TAG*		(MARK) "+hmm_AUX":0
+| HabStem VERB %+Inf TAG* 		(MARK) "+hmm_HABINF":0
+| HabStem VERB %+Inf SEP ?*		(MARK) "+hmm_HABINFCL":0
+| HabStem VERB VFIN TAG*		(MARK) "+hmm_HAB":0
+| VStem VERB %+Inf TAG*		(MARK) "+hmm_VERBINF":0
+| VStem VERB %+Inf SEP ?*		(MARK) "+hmm_VERBINFCL":0
+| VStem VERB VFIN TAG*		(MARK) "+hmm_VERBFIN":0
+| AnyStem VERB %+Imp TAG*		(MARK) "+hmm_VERBIMP":0
+| AnyStem VERB %+Imp TAG* SEP ?*	(MARK) "+hmm_VERBIMPCL":0
+| AnyStem VERB %+PresPart		(MARK) "+hmm_VERBPRP":0
+| AnyStem VERB %+PresPart SEP ?*	(MARK) "+hmm_VERBPRPCL":0
+| AnyStem VERB %+PastPart		(MARK) "+hmm_PAPSG":0		# VERBPAP ??
+| AnyStem VERB %+PastPart NUMSG	(MARK) "+hmm_PAPSG":0
+| AnyStem VERB %+PastPart NUMPL	(MARK) "+hmm_PAPPL":0
+
+# prepositions
+| PrepStem %+Prep			(MARK) "+hmm_PREP":0
+| PrepStem %+Prep SEP ?* 		(MARK) "+hmm_PREPDET":0
+
+# conjunctions
+| ConjStem %+Conj			(MARK) "+hmm_CONJ":0
+
+# determiners and pronouns	
+| AnyStem %+PreDet NUMSG		(MARK) "+hmm_PREDETSG":0
+| AnyStem %+PreDet NUMPL		(MARK) "+hmm_PREDETPL":0
+
+| AnyStem %+PostDet %+Indef NUMSG	(MARK) "+hmm_ADJSG":0
+| AnyStem %+PostDet %+Indef NUMPL	(MARK) "+hmm_ADJPL":0
+
+| AnyStem %+Quant 
+	[ NUMSG	& ~$[%+Neut] ]		(MARK) "+hmm_DETQUANTSG":0
+| {tanto} %+Quant %+Neut %+Sg		(MARK) "+hmm_ADV":0
+| AnyStem %+Quant NUMPL			(MARK) "+hmm_DETQUANTPL":0
+| AnyStem %+Quant NUMSP			(MARK) "+hmm_DETQUANT":0
+
+| AnyStem %+Art %+Indef NUMSG		(MARK) "+hmm_DETQUANTSG":0
+| AnyStem %+Art %+Indef NUMPL		(MARK) "+hmm_DETQUANTPL":0
+| QuantStem %+Det %+Indef NUMSG	(MARK) "+hmm_DETQUANTSG":0	
+| QuantStem %+Det %+Indef NUMPL		(MARK) "+hmm_DETQUANTPL":0
+
+| AnyStem %+Art %+Def NUMSG		(MARK) "+hmm_DETSG":0
+| AnyStem %+Art %+Def NUMPL		(MARK) "+hmm_DETPL":0
+
+| AnyStem %+Det %+Dem NUMSG		(MARK) "+hmm_DETSG":0
+| AnyStem %+Det %+Dem NUMPL		(MARK) "+hmm_DETPL":0
+| AnyStem %+Det %+Def NUMSG		(MARK) "+hmm_DETSG":0
+| AnyStem %+Det %+Def NUMPL		(MARK) "+hmm_DETPL":0
+
+| IndefStem %+Det %+Indef NUMSG		(MARK) "+hmm_DETSG":0
+| IndefStem %+Det %+Indef NUMPL		(MARK) "+hmm_DETPL":0
+
+| {tal} %+Det %+Indef NUMSG		(MARK) "+hmm_ADJSG":0
+| {tal} %+Det %+Indef NUMPL		(MARK) "+hmm_ADJPL":0
+
+
+| AnyStem %+Det %+Poss NUMSG            (MARK) "+hmm_DETSG":0   
+| AnyStem %+Det %+Poss NUMPL            (MARK) "+hmm_DETPL":0  
+
+
+| {se} %+Pron %+Ref %+3P %+MF %+SP	(MARK) "+hmm_SE":0
+| AnyStem %+Pron [%+Acc|%+Dat] TAG*	(MARK) "+hmm_PRONCLIT":0
+
+| AnyStem %+PP %+Pron TAG*		(MARK) "+hmm_PRON":0
+
+| AnyStem %+Pron %+Dem TAG*		(MARK) "+hmm_PRONDEM":0
+| AnyStem %+Pron %+Nom TAG*		(MARK) "+hmm_PRON":0
+| AnyStem %+Pron %+Com TAG*		(MARK) "+hmm_PRON":0
+| AnyStem %+Pron %+NP TAG*		(MARK) "+hmm_PRON":0	# lo que, nada..
+| AnyStem %+Pron %+Indef TAG*		(MARK) "+hmm_PRON":0
+| AnyStem %+Pron %+Def TAG*		(MARK) "+hmm_PRON":0
+| AnyStem %+Pron %+Poss TAG*		(MARK) "+hmm_PRONPOS":0
+| AnyStem %+Pron %+Interrog TAG*	(MARK) "+hmm_PRONINT":0
+
+| PRelStem %+Pron %+Rel TAG*		(MARK) "+hmm_PRONREL":0
+
+| {quienquiera} %+Pron %+Rel TAG*	(MARK) "+hmm_PRON":0
+
+# numerals
+| AnyStem %+Dig TAG*			(MARK) "+hmm_DIG":0
+	
+| AnyStem %+Num %+Card TAG*		(MARK) "+hmm_NUM":0
+
+# punctuations
+| AnyStem %+Punct %+Sent 		(MARK) "+SENT":0		# no prefix "hmm_" with SENT !!!
+| AnyStem %+Sgml %+Sent			(MARK) "+SENT":0
+
+| AnyStem %+Punct %+Comma		(MARK) "+hmm_CM":0
+| AnyStem %+Punct 
+	[TAG - [%+Sent|%+Comma]]*	(MARK) "+hmm_PUNCT":0
+
+| AnyStem %+Symbol TAG*			(MARK) "+hmm_SYM":0
+
+| AnyStem %+Sgml [TAG - %+Sent]*	(MARK) "+hmm_SYM":0
+
+| AnyStem %+Spec TAG*	 		(MARK) "+hmm_PROP":0
+
+
+# other
+| AnyStem %+Interj			(MARK) "+hmm_INTERJ":0
+| AnyStem %+Onom			(MARK) "+hmm_INTERJ":0
+
+
+# special words
+| {como} [ %+Adv 
+	| %+Prep 
+	| %+Conj
+	| %+Pron %+Rel %+MF %+SP ]	(MARK) "+hmm_COMO":0
+
+| (a) {donde} [ %+Adv (%+Apoc)
+	| %+Pron %+Rel %+MF %+SP ]	(MARK) "+hmm_CONADV":0
+
+| {cuando} [ %+Adv (%+Dim) 
+	| %+Conj ]			(MARK) "+hmm_CONADV":0
+
+| {cuanto} [ %+Adv (%+Dim)
+	| %+Pron %+Rel TAG* ]		(MARK) "+hmm_ADVREL":0
+
+| {que} [ %+Conj 
+	| %+Pron %+Rel %+MF %+SP ]	(MARK) "+hmm_QUE":0
+
+];
+
+define MAP
+
+# apply mapping
+
+read regex MAP .o. LEX ;

@@ -1,0 +1,658 @@
+///////////////////////////////////////////////////////////////////////////////
+// RE-CHUNKING selon EASY et PASSAGE
+// ajouté par Salah
+// Attention: le format (structure des chunks et des dépendances) est modifié!!
+///////////////////////////////////////////////////////////////////////////////
+
+dependencyrules:
+
+
+
+// Deplacer les dép avant de reshuffler
+
+
+// NOUN node is arg 1
+5> |NOUN#1[compound:~]{?*,#2[last]}|
+if ( $1(#1,#3) & ~(#2:#3) )
+$1(#2,#3), ~$1.
+
+// NOUN node is arg 2
+5> |NOUN#1[compound:~]{?*,#2[last]}|
+if ( $1(#3,#1) & ~(#2:#3) )
+$1(#3,#2), ~$1.
+
+// AP node is arg 1
+5> |NP{?*,AP#1[last]{?*,#2[last]}}|
+if ( $1(#1,#3) & ~(#2:#3) )
+$1(#2,#3), ~$1.
+
+// AP node is arg 2
+5> |NP{?*,AP#1[last]{?*,#2[last]}}|
+if ( $1(#3,#1) & ~(#2:#3) )
+$1(#3,#2), ~$1.
+
+reshuffling:
+
+11> adv#1[form:favec],?*#2[verb:~],NP#3 = prep#1,#2,#3.
+
+
+// Supprimer les niveaux SC
+11> SC{?*#1,FV#2[last]} = #1,#2.
+
+12> SC{?*#1,FV#2[last]} = #1,#2.
+
+13> SC{?*#1,FV#2[last]} = #1,#2.
+
+13> INS{?*#1,#2[last]} = #1,#2.
+
+
+// Fusionner les suites: NP{NOUN} NP{NOUN} (ex. "ingénieur maison")
+//13> NP#1{?*#2,NOUN#3[last]},NP{NOUN#4[last,maj:~]}} = NP#1{#2,#3,#4}.
+
+// Dans les NP, supprimer les niveaux NOUNs en plus
+14> NOUN[compound:~]{?*#1,#2[last]} = #1,#2.
+
+// Dans les NP, supprimer le niveau AP
+15> NP{?*#1,AP#2{?*#3,#4[last]},?*#5,#6[last]} = NP{#1,#3,#4,#5,#6}.
+15> NP{?*#1,AP#2[last]{?*#3,#4[last]}} = NP{#1,#3,#4}.
+//16> NP{?*#1,AP#2{?*#3,#4[last]},?*#5,#6[last]} = NP{#1,#3,#4,#5,#6}.
+
+// Dans les PP, supprimer le niveau NP
+16> PP#5{?*#1,NP#2{?*#3,#4[last]}} = PP#5{#1,#3,#4}.
+
+// Dans les PP, supprimer le niveau AP
+15> NP{?*#1,AP#2{?*#3,#4[last]},?*#5,#6[last]} = NP{#1,#3,#4,#5,#6}.
+15> NP{?*#1,AP#2[last]{?*#3,#4[last]}} = NP{#1,#3,#4}.
+
+// Restreindre le FV du cote droit pour exclure le PAP et eventu. le "pas" de négation
+
+17> FV#5{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = FV#5{#1,#2},#3,FV{#4}.
+
+18> FV#5{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = FV#5{#1,#2},#3,FV{#4}.
+
+// idem pour le IV
+17> IV{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = IV{#1,#2},#3,FV{#4}.
+18> IV{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = IV{#1,#2},#3,FV{#4}.
+
+// idem pour le GV
+17> GV{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = GV{#1,#2},#3,FV{#4}.
+18> GV{?*#1[verb:~],verb#2,?*#3,?#4[partpas,last]} = GV{#1,#2},#3,FV{#4}.
+
+
+// Etendre le FV a gauche pour inclure le clitique sujet
+
+19> NP{Pron#1[clit,hyph:~,last]},FV#4{?*#2,?#3[last]} = FV#4{#1,#2,#3}. 
+19> NP[nom]{Pron#1[dem,clit,last]},FV#4{?*#2,?#3[last]} = FV#4{#1,#2,#3}. 
+19> NP{Pron#1[p1,hyph:~];Pron#1[p2,hyph:~];Pron#1[dem,nom]},FV#4{?*#2,?#3[last]} = FV#4{#1,#2,#3}. 
+
+
+// ou à droite pour inclure le NP clitique sujet inversé (-il/-elle/t-il/...)
+19> FV#4{?*#1,?#2[last]},NP{Pron#3[hyph:+,last]} = FV#4{#1,#2,#3}. 
+
+
+// Etendre le FV a droite pour inclure les clitiques
+
+20> FV#4{?*#1,?#2[last]}, Pron#3[clit:+] = FV#4{#1,#2,#3}.
+
+21> FV#4{?*#1,?#2[last]}, Pron#3[clit:+] = FV#4{#1,#2,#3}.
+
+// Supprimer les BG
+
+22> BG{?*#1,#2[last]} = #1,#2.
+
+
+
+// Faire sortirseparer les advADJ coordonnee des AP (groupes adjectivaux)
+23> AP{?*#1,adj#2,?*#3[adj:~],adj#4[last]} = AP{#1,#2},#3,AP{#4}.
+
+24> AP{?*#1,adj#2,?*#3[adj:~],adj#4[last]} = AP{#1,#2},#3,AP{#4}.
+
+25> AP{?*#1,adj#2,?*#3[adj:~],adj#4[last]} = AP{#1,#2},#3,AP{#4}.
+
+// Faire sortir les adv des AP (groupes adjectivaux)
+26> AP{adv*#1,#2[last]} = #1,AP{#2}.
+
+
+
+// Changement des noms de groupes
+
+
+
+30> AP#1 = GA#1.
+31> NP#1 = GN#1.
+32> PP#1 = GP#1.
+33> FV#1 = NV#1.
+33> IV{prep#1,?*#2,#3[last]} = PV{#1,#2,#3}.
+33> GV{prep#1,?*#2,#3[last]} = PV{#1,#2,#3}.
+34> IV#1 = NV#1.
+34> GV#1 = NV#1.
+
+
+/////////////////////////////////
+// CHUNKS MANQUANTS
+/////////////////////////////////
+
+sequence:
+
+40> GP = prep,adv[coordadv:~].
+40> GR = adv[coordadv:~].
+41> GA = |GR| verb[partpas:+,adj:+].
+42> NV = verb[imp], GN[pron,dat];GN[pron,acc].
+42> NV = verb.
+42> GR = conjque[pron:~,neg:+].
+43> GR = pron[rel,int,loc] |nv,?*[sent:~,strongbreak:~,form:~fopar,form:~fcpar],sent[int]|.
+44> GP = pron[rel,dat];pron[rel,gen];pron[rel,loc].
+45> GN = pron;conjque[pron].
+
+
+
+// METTRE TEMPORAIREMENT LES INCISES/INSERTIONS MARQUEES (parentheses et hyph)
+46> INS = punct[form:fopar],?*[form:~fcpar],punct[form:fcpar].
+46> INS = punct[form:fhyph],?*[form:~fcpar,sent:~],punct[form:fhyph];sent.
+
+
+dependencyrules:
+
+
+
+
+// marquer les closed
+
+50> |GN#9{?*,#1[last]};GP#9{?*,#1[last]}|
+   if ( (DETERM(#1,?) | #1[proper] | PREPOBJ(#1,#2[det]) )
+         & #1[closed=+] & #9[closed=+]) ~
+
+
+
+
+
+/////////////////////////////////
+// RE-ETIQUETAGE et REORIENTATIONS de DEPENDANCES selon EASY
+/////////////////////////////////
+
+
+
+// si un PP est un OBJ alors ce n'est pas un NMOD
+100>
+if ( OBJ(?,#1) & ^NMOD(?,#1) ) ~
+
+// les sujets de VOICI et VOILA sont des obj
+100>
+if ( ^SUBJ(#1[voicila],#2) ) OBJ(#1,#2).
+
+
+// Destruction des relations vers l'exterieur (du)
+
+100>
+if ( ^SUBJCLIT(#1,#2) )  SUBJ(#1,#2)
+
+// changement de tetes/dependants
+
+// GN antecedent DEP d'une relative ---> pron rel est le DEP
+100>if ( ^$1[rel](#1,#2) & COREF[rel](#2,#3) & ~$1(#1,#3) )
+     $1(#1,#3)
+
+// DEP d'un aux -----> DEP du participe passe
+//100> if ( ^$1(#1[aux],#2) & AUXIL(#3,#1) )
+//  $1(#3, #2)
+
+
+// subj d'un participe passe --> sujet de l'aux
+100>
+if ( ^SUBJ(#1[partpas],#2) & AUXIL(#1,#3) )
+ SUBJ(#3, #2)
+
+100>
+if ( ^SUBJ(#1[partpas],#2) & AUXIL(#1,#3) )
+ SUBJ(#3, #2)
+
+
+// "quel était le chef?" SUBJ(etait,Quel) et ATT(etait,chef)
+// mais pour EASY c'est l'inverse : SUBJ(etait,chef) et ATT(etait,Quel)
+100>
+if ( SUBJ$1(#1[form:fetre],#2[pron,int]) & OBJ$2[spred](#1,#3) & (#1 < #3)
+      ~COREF(?,#2) ) 
+     SUBJ(#1,#3), OBJ[spred=+](#1,#2), ~$1, ~$2.
+
+
+
+// une relative est un MOD-N de l'antecedent
+
+100>if ( CONNECT[rel](#1,#2) & COREF[rel](#3,#2) )
+ NMOD[rel=+](#3,#1)
+
+// une relative de lieu: le "où" est le CPL-V du verbe de la relative
+100>if ( CONNECT[rel](#1,#2) & COREF[rel](#3,#2[loc]) )
+ VMOD(#1,#2) .
+
+
+
+//
+// ici: si on a des NMOD(x,y) et que x et y sont dans le meme NP ou GN,
+// alors les remplacer par un seul NMOD(GN,GN) (avec plus tard a-propager=vrai)
+// d'abord effacer les NMOD
+//100>|GN#3{?*,noun#1,?*,noun#2,?*}|
+//if ( ^NMOD(#1,#2) & #3[apropager=+] ) ~
+// ensuite en creer une seule
+//100>|GN#1[apropager]|
+//  NMOD[apropager=+](#1,#1)
+
+
+
+
+// GN|GA|GP queP ....   -> NMOD(,queP)
+100> |GN{?*,?#1[last]},CONJQUE,?*[fin:~],NV{?*,#2[last,fin]}|
+ if ( ~?(?,#2) & AUXIL(?,#2) ) 
+ NMOD[propque=+](#1,#2)
+
+// rattacher les PV seuls
+#VMOD-PV1
+100>|NV{?*,#1[last]},?*[verb:~,strongbreak:~],PV{?*,#2[last]}|
+ if ( ~?(?,#2) )
+ VMOD(#1,#2)
+
+
+// COMP: "[PP avec le chat] et [NP le chien]" ==> COMP(avec,chien)
+
+100> if ( COORDITEMS(#1,#2) & PREPOBJ(#1,#3) & ~PREPOBJ(#2,?) )
+ COMP[prep=+](#2,#3)
+
+100> if ( COORD(#9,#1,#2) & PREPOBJ(#1,#3) & ~PREPOBJ(#2,?) )
+ COMP[prep=+](#2,#3)
+
+
+
+
+/////////////////////////////////////////////////////////////////////////
+// TRaduction COORD dans EASY: le "et" porte les dependances des elements coordonees
+// COORD COORD COORD
+
+
+
+// COORDITEMS -> COORD
+100> |coord#1|
+  if ( ^COORDITEMS(#2,#3) & (#2 < #1) )
+  COORD(#1,#2,#3)
+
+// MARQUER TOUS les ELEMENTS AYANT UNE FONCTION (rattachés en dependances)
+100> if ( ?(?,#1) & #1[fonc:~] & #1[fonc=+] ) ~
+100> |?#1[fonc:~]{?*,?[last,fonc]}|
+     if ( #1[fonc=+] ) ~
+
+100> if ( COORD(#1,?,?) & #1[fonc:~] & #1[fonc=+] ) ~
+
+
+
+
+// COORD MANQUANTES
+////////
+
+// COORD entre verb nmod (partpas ou partpres)
+#CC-NV-NV
+100> |NV{?*,#1[last,partpas];#1[last,partpre]},?*[fonc],(punct[form:fcm]),
+      COORD#2,(adv*),NV{?*,#3[last,partpas];#3[last,partpre]}|
+   if ( ~COORD(#2,#1,#3) )
+   COORD(#2,#1,#3)
+
+// idem entre GA ou GP et 
+#CC-GPGA-NVGA1
+100> |GA{?*,#1[last]};GP{?*,#1[last]},(adv*),
+      COORD#2,(adv*),NV{?*,#3[last,partpas];#3[last,partpre]};GA{?*,#3[last]}|
+   if (  ~coord(?,#1,?) & ~coord(?,?,#3) & NMOD(?,#1) & ~?(?,#3)  )
+   COORD(#2,#1,#3)
+
+// idem entre GA ou GP sauf qu'on accepte firgule avant la COORD
+#CC-GPGA-NVGA2
+100> |GA{?*,#1[last]};GP{?*,#1[last]},GP+;NV+,punct[form:fcm],
+      COORD#2,(adv*),NV{?*,#3[last,partpas];#3[last,partpre]};GA{?*,#3[last]}|
+   if (  ~coord(?,#1,?) & ~coord(?,?,#3) & NMOD(?,#1) & ~?(?,#3)  )
+   COORD(#2,#1,#3)
+
+
+// COORD entre PV
+#CC-PV1
+100> |PV{?*,#1[last]},?*[verb:~,strongbreak:~,sent:~],COORD#9,PV{?*,#2[last]}|
+   if ( ~coord(?,#1,?) & ~coord(?,?,#2) & prepobj(#1,#3) & prepobj(#2,#4)
+        & #3[form]:#4[form] )
+   COORD(#9,#1,#2)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// Distribution des fonctions entre COORDonnés
+
+/ Jean regarde un chat et un chien \
+100> if ( COORD(#1,#2,#3) &
+        ( ($1[!traits:!](#4,#2) & (#4 < #2) )  | ( $1[!traits:!](#4,#3) & (#3 < #4) ) ) )
+        $1[!traits:!](#4,#1)
+
+
+100> if ( ( COORD(#1,#2,?) | COORD(#1,?,#2) ) & $1(#4,#1) & ^$1(#4,#2) ) ~
+
+
+100> if ( COORD(#1,#2,#3) & $1[!traits:!](#3,#4[noagr]) & (#3 < #4) )
+        $1[!traits:!](#1,#4), ~$1.
+
+
+
+//100> if ( COORD(#1,#2,#3) &
+//          ( ($1[!traits:!](#2,#4) & (#4 < #2) ) | ( $1[!traits:!](#3,#4) & (#3 < #4)  ) ) )
+//        $1[!traits:!](#1,#4)
+//
+//100> if ( ( COORD(#1,#2,?) | COORD(#1,?,#2) ) & $1(#1,#4) & ^$1(#2,#4) ) ~
+
+
+
+
+/////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+// changement de noms
+100>
+if ( ^SUBJ(#1,#2) )  SUJV(#2,#1)
+
+100>
+if ( ^AUXIL(#1,#2) )  AUXV(#2,#1)
+
+100>
+if ( ^ADJMOD(#1,#2) )  MODA(#2,#1)
+
+100> |GN{?*,ADJ#1[last]}|
+if ( ^NMOD(#1,#2) )  MODN(#2,#1)
+
+100>
+if ( ^ADVMOD(#1,#2) )  MODR(#2,#1)
+
+100>
+if ( ^PREPMOD(#1,#2) )  MODP(#2,#1)
+
+100>
+if ( ^OBJ[spred](#1,#2) )  ATBSO[spred=+](#2,#1)
+
+100>
+if ( ^OBJ(#1[form:fetre],#2) )  ATBSO[spred=+](#2,#1)
+
+100>
+if ( ^OBJ[opred](#1,#2) )  ATBSO[opred=+](#2,#1)
+
+100>
+if ( ^OBJ[spred:~](#1,#2) )  CODV(#2,#1)
+
+100>
+if ( ^VMOD[opred](#1,#2) )  ATBSO[opred=+](#2,#1)
+
+
+
+100>
+if ( ^VMOD(#1,#2) & PREPOBJ(#2[time:~],?) )  CPLV(#2,#1)
+
+100>
+if ( ^VMOD(#1,#2) & COORD(#2,#3,?) & PREPOBJ(#3[time:~],?) )  CPLV(#2,#1)
+
+100>
+if ( ^VMOD(#1,#2[pron]) )  CPLV(#2,#1)
+
+100>
+if ( ^DEEPSUBJ(#1,#2) & ~?(#2,#1) & PREPOBJ(#2,?[form:fpar]) )  CPLV(#2,#1)
+
+100>
+if ( ^VMOD(#1,#2) )  MODV(#2,#1)
+
+
+
+
+100>
+if ( ^NMOD(#1,#2) )  MODN(#2,#1)
+100>
+if ( ^DETERM[num](#1,#2) )  MODN[num=+](#2,#1)
+
+
+100>
+if ( ^CONNECT[rel:~](#1,#2) )
+  COMP(#2,#1)
+
+
+// effacer les dep inutiles
+//100> if ( ^DETERM(?,?) ) ~
+//100> if ( ^PREPOBJ(?,?) ) ~
+100> if ( ^DEEPOBJ(?,?) ) ~
+//100> if ( ^NEGAT(?) ) ~
+100> if ( ^COREF(?,?) ) ~
+100> if ( ^CONNECT(?,?) ) ~
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// BRICOLES pour la desambiguisiation entre GA et NV
+//
+// marquer comme partpas un ADJ qui est modifieur d'un nom qui est libre (pas relié)
+// l'idée ici est que selon EASY ces ADJ sont des verb PAP
+// ex: "Les enfant élevés, les parents 
+
+100> |GA{?*,?#1[partpas,last]}|
+    if ( MODN(#2,#1) & ~?(?,#2) & #1[verb=+] ) ~
+
+
+reshuffling:
+// de GA vers NV
+
+110> GA{?*#1,?#2[partpas,verb,last]} = NV{#1,#2}.
+
+
+
+
+
+dependencyrules:
+
+/////
+// APPOS
+// Le directeur Jean Tavernier
+#APPOS1
+150> |GN[closed]{?*,#1[noun,last]};GP[closed]{?*,#1[noun,last]},
+      GN[proper]{?*,#2[noun,subst:~,last,maj]}|
+     if (  #1[maj:~,sg]  )
+    APPOS(#1,#2)
+
+// Le directeur J. Tavernier
+#APPOS2
+150> |GN[closed]{?*,#1[noun,last]};GP[closed]{?*,#1[noun,last]},
+      GN{?[initial],?*,#2[noun,subst:~,last,maj]}|
+     if (  #1[maj:~] & ~APPOS(#1,#2)  )
+    APPOS(#1,#2)
+
+// Le systeme XIP
+#APPOS3
+150> |GN[closed]{?*,#1[noun,last]};GP[closed]{?*,#1[noun,last]},
+      (GP[closed:~]),
+      GN{?*,#2[noun,subst:~,last,maj,toutmaj]}|
+     if (  #1[maj:~,sg]  & ~APPOS(#1,#2) )
+    APPOS(#1,#2)
+
+
+// Le directeur, Jean Tavernier, ....
+#APPOS4
+150> |GN[closed]{?*,#1[noun,last]};GP[closed]{?*,#1[noun,last]},
+      punct[form:fcm],
+      GN{?*,#2[noun,subst:~,last,maj]},
+      punct[form:fcm]|
+     if (  #1[maj:~]  & ~APPOS(#1,#2) )
+    APPOS(#1,#2)
+
+// Jean Tavernier, le directeur du centre, a....
+#APPOS5
+150> |GN{?*,#1[noun,last]};GP[closed]{?*,#1[noun,last]},
+      punct[form:fcm],
+      GN{?*,#2[noun,time:~,last,maj:~]},(GA*;GP*;NV*[partpas]),
+      punct[form:fcm]|
+     if (  #1[maj,subst:~]  & ~APPOS(#1,#2) )
+    APPOS(#1,#2)
+
+// SI APPOS effacer le NMOD
+150> if ( APPOS(#1,#2) & ^MODN(#2,#1) ) ~
+
+// Les Pronoms REFLECHIS (REFLEXIVES)
+// Effacer REFLEX
+150> if ( ^REFLEX(?,?) ) ~
+// Effacer COD quand verbe marqué "se:+" mais ne se conjugue pas avec "avoir"
+150> if ( ^CODV( #2[pron,clit], #1[se,avoir:~] ) & (#2 < #1)  ) ~
+
+////////////////////////////////////////////////////////////////////
+// MODA et MODR manquants
+
+150> |GR{?*,#1[last]},GA{?*,#2[last]}|
+  if ( ~?(#1,?) )
+  MODA(#1,#2).
+
+150> |GR{?*,#1[last]},GR{?*,#2[last]}|
+  if ( ~?(#1,?) )
+  MODR(#1,#2).
+  
+/////// CODV: il y a 5 mois
+
+150>|NV[ily]{?*,#1[last]},GN{?*,#2[last]}|
+  if (~?(#2,?))
+  CODV(#2,#1).
+  
+
+  
+// MODN manquant
+
+// la fille la plus intelligente
+//150> |GN()|
+//   if (~?(,))
+//   MODN().
+  
+  
+/////////////////////////////////////////////////////////////////////
+// JUXT
+///
+
+
+
+// MARQUER TOUS les ELEMENTS AYANT UNE FONCTION (rattachés en dependances)
+
+150> if ( ?(?,#1) & #1[fonc:~] & #1[fonc=+] ) ~
+150> |?#1[fonc:~]{?*,?[last,fonc]}|
+     if ( #1[fonc=+] ) ~
+150> if ( COORD(#1,?,?) & #1[fonc:~] & #1[fonc=+] ) ~
+150> if ( COORD(#1,#2,?) & #2[fonc:~] & ?(?,#1) & #2[fonc=+] ) ~
+150> if ( COORD(#1,?,#2) & #2[fonc:~] & ?(?,#1) & #2[fonc=+] ) ~
+
+
+#JUXTGN1
+150> |GN{?*,#1[noun,last]};GP{?*,#1[noun,last]},
+      ?*[fin:~,coord:~,punct:~],PUNCT,GN{?*,#2[noun,last]}|
+   if ( #1[fonc:~] & (COORD(?,#2,?) |  JUXT(#2,?) ) & ~COORD(?,#1,#2) )
+     JUXT(#1,#2)
+
+150> |GN{?*,#1[noun,last]},PUNCT,GN{?*,#2[noun,last]}| 
+    //if ( ~?(?,#1) & ~?(?,#2) & ~COORD(?,#1,#2) )
+    if ( #1[fonc:~] | #2[fonc:~] )
+     JUXT(#1,#2)
+
+#JUXTNV1
+150> |GN#3,NV{?*,#1[last]},?*,PUNCT,?*,NV{?*,#2[last]}|
+    // if ( ~?(?,#2) & ~?(?,#3) & ~COORD(?,#1,#2) )
+    if ( (#1[partpre] | #1[partpas] ) &(#1[fonc:~] | #2[fonc:~]) & ~?(?,#3))
+     JUXT(#1,#2)
+
+#JUXTNV2
+150> |NV{?*,#1[last]},?*,PUNCT,?*,NV{?*,#2[last]}|
+    // if ( ~?(?,#1) & ~?(?,#2) ) 
+    if ( #1[fonc:~] & #2[fonc:~] & ~COORD(?,#1,#2)  )
+     JUXT(#1,#2)
+
+
+#JUXTINSNV1
+150> |INS{?*,NV{?*,#1[last]}},INS{?*,NV{?*,#2[last]}}|
+    if ( #2[fonc:~] & (#1[fonc] | #1[fonc=+]) )
+    JUXT(#1,#2)
+
+#JUXTINSGN1
+150> |INS{?*,GN{?*,#1[last]}},INS{?*,GN{?*,#2[last]}}|
+    if ( #2[fonc:~] & (#1[fonc] | #1[fonc=+]) )
+    JUXT(#1,#2)
+
+#JUXTSEQNP
+150> if ( ^SEQNP(#1[noun],#2[noun]) & ~JUXT(#1,#2) ) JUXT(#1,#2)
+#JUXTSEQNP2
+150> if ( ^SEQNP(#1[verb],#2[verb]) & ~JUXT(#1,#2) ) JUXT(#1,#2)
+#JUXTSEQNP3
+150> if ( ^SEQNP(#1[adj],#2[adj]) & ~JUXT(#1,#2) ) JUXT(#1,#2)
+
+150> if ( ^SEQNP(#1,#2) ) ~
+
+// JUXT
+/////////////////////////////////////////////////////////////////////
+
+
+reshuffling:
+
+200> INS{?*#1,#2[last,form:fcpar]} = #1,#2.
+200> INS{?*#1,#2[last,form:fhyph]} = #1,#2.
+200> INS{?*#1,#2[last,sent]} = #1,#2.
+
+// ex: le plus simple possible \
+250> GN#1{det#2[def],adv#3[lemme="plus"],adj#4,?#5[lemme="possible"]} = 
+       GR{#2,#3},GA{#4},GA{#5}.
+
+dependencyrules:
+// Déplacer les dep des noeuds intermédiaire quand il y a plusieurs niveaux
+300> |GR{?*,?#1[compound:~]{?*,#2[last]}}|
+      if ( $1(#1,#3) & ~(#2:#3) )
+	$1(#2,#3), ~$1.
+
+300> |GR[compound:~]{?*,?#1[compound:~]{?*,#2[last]}}|
+      if ( $1(#3,#1) & ~(#2:#3) )
+	$1(#3,#2), ~$1.
+
+
+
+// nettoyer DEEPSUBJ
+400> if ( ^DEEPSUBJ(#1,#2) & ?(#2,#1) ) ~ .
+
+// effacer les relations qui traversent le point
+400> |?{?*,#1[last]},?*,SENT,?*,?{?*,#2[last]}|
+    if ( ^?(#1,#2) ) ~ .
+400> |?{?*,#1[last]},?*,SENT,?*,?{?*,#2[last]}|
+    if ( ^?(#2,#1) ) ~ .
+
+// nettoyer MODN si dans une date
+420> |GN[date]{?*,#1,?*,#2}|
+     if (^MODN(#1,#2)) ~ .
+	 
+// nettoyer MODN si dans une heure
+430> |noun[measure]{?*,#1,?*,#2}|
+     if (^MODN(#1,#2)) ~ .
+	 
+//
+430> |#1[pl,sg]| if (#1[pl=~]) ~
+
+430> |GN{?*,noun#1,noun*,noun#2[last]}| nounphrase(#2,#1).
+430> if (nounphrase(#1,#2) & (^modn(#2,?) | ^modn(?,#1))  ) ~.
+
+430> |GN{det[lemme:de],?*,#1[last]}, (punct,gp)*,coord#2,GP{prep,#3[last]}| 
+         if (~coord(#2,#1,#3))
+	           coord(#2,#1,#3).
+
+430> |GP{prep,?*,#1[last]},(punct,gp)*,coord#2,GP{prep,#3[last]}| 
+         if (~coord(#2,#1,#3))
+	           coord(#2,#1,#3).
+
+430> if (^codv(#1,#4) & coord(#2,#1,#3)) codv(#2,#4).
+
+430> |GP{prep#1},GN{conjque#2}| prepconj(#1,#2).
+
+
+
+
+
+
+
+
+
+
+

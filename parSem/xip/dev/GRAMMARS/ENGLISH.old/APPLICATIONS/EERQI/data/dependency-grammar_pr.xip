@@ -1,0 +1,2271 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency_loc_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor, Cédric Tarsitano
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+//FV{was} NFV{undertaken} -> passive
+
+| fv{#1[form:fbe]}, nfv{#2[partpas]} |
+if ( ~NUCL(#1,#2) )
+   NUCL[vlink=+,passive=+,grpr=+](#1,#2).
+  
+
+if ( CONTENT(#1,#2) )
+	OBJ-N(#1,#2).
+
+// Azerbaijani customs seize 22 tons of steel alloy
+//OBJ_POST(#1seize,#2tons)
+//MOD_POST(#2tons,#3alloy)
+//PREPD(#3alloy,#4of)
+
+if ( OBJ(#1,#2[lemme:ton]) & MOD[post](#2,#3) & PREPD(#3,#4[lemme:of]) )
+   OBJ(#1,#3).
+
+// group of scientists
+//SUBJ_PRE(will,group)
+//SUBJ-N_PRE(go,group)
+//MOD_POST(group,scientists_KNOW:+)
+//PREPD(scientists_KNOW:+,of)
+
+
+if ( ^$1(#1,#2[lemme:group]) & MOD[post](#2,#3) & PREPD(#3,#4[lemme:of]) )
+    $1(#1,#3).
+
+
+
+//******************** HEAD2 *************************
+
+//on reprend parmi les relations HEAD celles qui n'associent pas un noeud à lui-même
+if (HEAD(#1,#2) & #1~:#2)
+	HEAD2(#1,#2)
+
+if (HEAD(#1,#2) & ~HEAD(#2,#1) & ~HEAD2(#1,#2))
+	HEAD2(#1,#2)
+
+// HEAD2 in verbal chunks 
+|FV#1{?*,#2[verb,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+
+|IV#1{?*,#2[verb,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+|GV#1{?*,#2[verb,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+|NFV#1{?*,#2[verb,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+
+|FV#1{?*,#2[aux,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+|IV#1{?*,#2[aux,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+|GV#1{?*,#2[aux,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+|NFV#1{?*,#2[aux,last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+
+|#1[verb]{?*,#2[last, verb]}|
+	if (HEAD2(#3,#2) & ~HEAD2(?,#1))
+	HEAD2(#3,#1)
+
+|#1[verb]{#4[verb, fin],?*,#2[last, verb:~, noun]}|
+	if (HEAD2(#3,#4) & ~HEAD2(?,#1))
+	HEAD2(#3,#1)
+
+// autres HEAD2 nominaux qui n'ont pas encore été calculés
+|NP#1{?+, #2[last]}|
+if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+
+|NP#1{noun#2[first, last]}|
+	if (~HEAD2(?,#1))
+	HEAD2(#2,#1)
+
+|PP#1{?+, #2[last]}|
+if (~HEAD2(?,#1) & HEAD2(#4,#2))
+	HEAD2(#4,#1)
+
+////////// This rule has to be revised /////////
+// features                                   //
+//|#1[form:ftake, sv=~]|                      //
+//if (NUCL[particle](#1,#2[p_over]))          //
+//	~                                     //
+////////////////////////////////////////////////
+
+// *****************SUBJ*************************
+
+// if in a sentence there are 2 SUBJ-N for the same verb, the one that has no SUBJ counterpart is mor probable
+
+if ( ^SUBJ-N(#1,#2) & SUBJ(#1,#2) & SUBJ-N(#1,#3) & ~SUBJ(#1,#3) )
+	~.
+
+if ( ^SUBJ(#1,#2) & SUBJ-N(#1,#3) & ~SUBJ(#1,#3) )
+	~.
+
+// ******************APPOS ***********************
+
+// PP{from NP{the company}} NP{Urenco}
+| ?{?*, np{?*, #1[lemme:company]}}, np{#2} |
+if ( ORGANISATION(#2) | LOCORG(#2) | LOCATION(#2) )
+	ATTRIB[appos=+](#1,#2).
+
+| ?{?*, #1[lemme:company]}, np{#2} |
+if ( ORGANISATION(#2) | LOCORG(#2) | LOCATION(#2) )
+	ATTRIB[appos=+](#1,#2).
+
+| #1[lemme:company], #2noun |
+if ( ORGANISATION(#2) | LOCORG(#2) | LOCATION(#2) )
+	ATTRIB[appos=+](#1,#2).
+
+//******************IOBJ**************************
+// IOBJ : Diplomats, speaking on condition of anonymity, say they want to give Russia more time to convince Tehran to move the nuclear enrichment stage to Russia.
+
+| np{?*,#1[last,Nentity]}, np{?*,#2[last]} |
+if ( ^OBJ[post](#3[sc_np_np],#1)  & ~IOBJ(#3,#1) & ~OBJ-N(#3,#2) )
+	IOBJ[grpr=+](#3,#1), OBJ[grpr=+](#3,#2), OBJ-N[grpr=+](#3,#2) .
+
+| np{?*,#1[last,Nentity]}, np{?*,#2[last]} |
+if ( OBJ[post](#3[sc_np_np],#2) & ~IOBJ[grpr](#3,#1))
+	IOBJ[grpr=+](#3,#1).
+
+|#1[noun],#2[comma],#3[noun]|
+if ((^IOBJ(#4,#11) | ^BNF(#4,#11)) & OBJ(#4,#13) & HEAD2(#11,#1) & HEAD2(#13,#3) & #4<#1)
+	OBJ[grpr=+](#4,#11), ATTRIB[grpr=+, appos=+](#11,#13)
+
+
+//************COORD***************************
+
+//NP{#1Iran} SC{#2and NP#3{the Russian Federation} FV#4{sign}} 
+
+| np{?*,#1[last,proper]}, sc{#2[lemme:and], np{?*,#3[last,proper]}, fv#4}} |
+  COORD[grpr=+](#2,#1), COORD[grpr=+](#2,#3), NCOORD(#1,#3).
+
+
+
+//*****************MOD***************************
+
+//agree to cooperate in nuclear research -> MOD(cooperate,research)
+//FV{agree}} IV{to cooperate} PP{in NP{AP{nuclear} research}} 
+//MOD_POST(agree,research)
+
+| iv{?*,#2[last]}, pp{?*,?{?*,#3[last]}} |
+if ( MOD(#1,#3) )
+	MOD[post=+,grpr=+](#2,#3).
+
+
+// We have to be very careful not to overstate the intelligence. MOD(careful,overstate)
+
+| AP{?*,#1[adj,last]}, IV{adv, prep[form:finfto], ?*, #2[verb,last]} |
+if ( ~MOD(#1,#2) )
+	MOD[post=+,grpr=+](#1,#2).
+
+//#1It #6is #2bad #3for #4him to #5go -> MOD_POST_INFINIT(bad,go), EMBED_INFINIT(go,is)
+
+//SUBJATTR(#1It,#2bad)
+//MOD_POST(#2bad,#4him)
+//PREPD(#4him,#3for)
+//NUCL_SUBJCOMPL(#6is,#2bad)
+//PP{#3for NP{#4him}} IV{to #5go} 
+
+| pp{#3, np{?*,#4[last]}}, iv{?[form:finfto],#5} |
+if (SUBJATTR(#1,#2) & MOD[post](#2,#4) & (PREPD(#4,#3[form:ffor]) | PREPD(#4,#3[form:fof])) & NUCL[subjcompl](#6,#2) & ~MOD[post,infinit](#2,#5) & ~EMBED[infinit](#5,#6) )
+	MOD[post=+,infinit=+,grpr=+](#2,#5), EMBED[infinit=+,grpr=+](#5,#6).
+
+// ... as one of the achievements Iran has gained from negotiations with Europe. -> MOD_POST_SENTENCE_RELATIV(achievements,gained)
+
+| PP{ ?, np{?*, #1[last]}}, np{?*,#2[last]} |
+if ( SUBJ-N[pre](#3[sv],#2) & ~OBJ(#3[sv],?) & ~OBJ-N(#3[sv],?) & ~MOD[post,appos](#2,?) & ~MOD[post,sentence,relativ](#1,#3) )
+	MOD[grpr=+,post=+,sentence=+,relativ=+](#1,#3).
+
+
+| np{?*, #1[last]}, np{?*,#2[last]} |
+if ( SUBJ-N[pre](#3[sv],#2) & ~OBJ(#3[sv],?) & ~OBJ-N(#3[sv],?) & ~MOD[post,appos](#2,?) & ~MOD[post,sentence,relativ](#1,#3) )
+	MOD[grpr=+,post=+,sentence=+,relativ=+](#1,#3).
+
+
+// The next round of negotiations between Iran and EU will be more intense and more realistic. -> MOD(negotiations,Iran) -> MOD(negotiations,EU)
+
+//PP{of NP{negotiations#1}} PP{between#2 NP{Iran#3}} and NP{the EU#4} 
+
+| pp{?,np{?*,#1[sc_pbetween]}}, pp{#2[sc_pbetween], np{?*,#3[last]}}, conj, np{?*,#4[last]} |
+if ( ~MOD(#1,#3) )
+	MOD[grpr=+](#1,#3).
+
+| pp{?,np{?*,#1[sc_pbetween]}}, pp{#2[sc_pbetween], np{?*,#3[last]}}, conj, np{?*,#4[last]} |
+if ( ~MOD(#1,#4) )
+	MOD[grpr=+](#1,#4).
+
+
+// negotiations are underway between Iran and Russia
+if ((MOD(#1[phase],#2) | MOD(#1[sv],#2)) & PREPD(#2,#3) & SUBJATTR(#4,#1) & ~MOD(#4,#2) )
+	MOD[grpr=+](#4,#2)
+
+//He adds that the country 's research centers are not active in regards to nuclear weapons. => MOD_POST(active,weapons)
+//MOD_XRX_EVNT_POST(#1are,#2weapons)
+//SUBJ-N_PRE(#1are,#3centers)
+//SUBJATTR_NEG(#3centers,#4active)
+
+
+if (MOD(#1,#2) & SUBJ-N(#1,#3) & SUBJATTR(#3,#4[sc_pin]) & PREPD(#2,?[sc_pin]))
+	MOD[grpr=+,subcat=+](#4,#2).
+
+
+// goes on to reveal
+//| #2adv, iv{?[form:finfto], #3[last]} |
+| #2, iv{?[form:finfto], #3[last]} |
+if ( NUCL[particle](#1,#2) )
+	MOD[grpr=+,subcat=+](#1,#3).
+
+
+
+
+
+// **********************  PREPD **********************
+//talks on training
+
+|#11,#12[prep],#13|
+if (HEAD2(#1,#11) & HEAD2(#3,#13) & MOD(#1,#3) & ~PREPD(#3,?))
+	PREPD[grpr=+](#3,#12)
+
+
+// **********************  les antécédents de where **********************
+
+|#1, (punct),?{?[first]{#2[first, form:fwhere]}};?[first]{#2[first, form:fwhere]}|
+	if(HEAD2(#3,#1))
+	ANTECEDENT(#3,#2)
+
+|#1[noun];#1[prep], (punct),?{?[first]{#2[first, wh, form:~fwhen]}};?[first]{#2[first, wh, form:~fwhen]}|
+	if(HEAD2(#3,#1))
+	ANTECEDENT(#3,#2)
+
+|#1[noun];#1[prep], (punct),?{?[first]{#2[first, form:fwhen]}};?[first]{#2[first, form:fwhen]}|
+	if(HEAD2(#3,#1[time]))
+	ANTECEDENT(#3,#2)
+
+// **********************  correction des relations EMBED et MAIN **********************
+
+
+
+// un verbe modifié par when n'est pas un verbe principal
+if (^MAIN(#1) & (MOD(#1,#2[form:fwhen]) | TEMP(#1,#2[form:fwhen])))
+	~
+
+
+// les relations EMBED qui dépendent d'interrogatifs wh-
+// que l'antécédent soit exprimé ou non
+
+if(^EMBED[relativ:~](#1,#2) & $1(#2,#3) & ANTECEDENT(#3,#4) & $2(#1,#4) )
+	EMBED[relativ=+, grpr=+](#1,#2)
+
+|#2[verb], ?*[verb:~], #5;?{?*,#5,?*};?{?*,?{?*,#5,?*},?*};?{?*,?{?*,?{?*,#5,?*},?*},?*}|
+if(MOD[pre](#1,#5[rel]) & ~EMBED(#1,?) & HEAD2(#4,#2))
+	EMBED[relativ=+, grpr=+](#1,#4)
+
+|#2[verb], ?*[verb:~], ?{?*,#5[wh],?*};?{?*,?{?*,#5[wh],?*},?*};?{?*,?{?*,?{?*,#5[wh],?*},?*},?*}, ?*[verb:~], #6[verb]|
+if(~MOD(?,#5) & ~EMBED(#7,?) & HEAD2(#4,#2) & HEAD2(#7,#6))
+	EMBED[wh=+, grpr=+](#7,#4)
+
+//The United States is also warning Moscow that the deal could jeopardize current negotiations
+if (CONNECTOR[complthat](#1,?) & ^EMBED[relativ](#1,#2[saythat]) & EMBED[relativ:~](#1,#2))
+	~
+
+// les phrases correspondant à ce schéma ne sont pas toujours bien analysées, à voir
+//if (EMBED(#1,#2) & MOD[pre,sentence](#3,#1) & #2<#3)
+//	TEEST(#2,#1,#3)
+
+//After a meeting with Iranian Minister of Mines and Metals Eshaq Jahangiri, Russian First Deputy Prime Minister Nikolai Aksyonenko tells journalists that ...
+|prep[after, start], det[indef], #1, (PP)*, conj*[coord], NP*, PP*, punct[comma] |
+	if(HEAD2(#2[prog],#1) & MAIN(#3) & SUBJ-N(#3,#4))
+	EMBED[grpr=+](#2,#3), POTSUBJ(#2,#4)
+
+//..., he adds.
+|punct[comma], sc#1[indspeech], punct[sent]|
+	if (HEAD2(#2,#1) & ^MAIN[grpr:~](#3) & #2~:#3)
+	~, EMBED[grpr=+](#3,#2), MAIN[grpr=+](#2)
+
+//**************** EMBED *************
+// and that
+
+//Mr. Aqamohammadi declares that Iran will never accept total suspension of uranium enrichment and that the negotiations are to define the guarantees
+// => EMBED(are,accept)
+|#1[form:fand], ?{BG[first]{#2[first,form:fthat]}}|
+	if (CONNECTOR[complthat](#3,#4) & CONNECTOR[complthat](#5,#2) & #3<#5 & EMBED(#3,#10))
+	EMBED[grpr=+](#5,#10)
+
+// the accusation that
+|#1[noun], #2;?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}}|
+	if (HEAD2(#4[say],#1) & CONNECTOR[complthat](#3,#2) & ~EMBED(#3,?) & ~EMBED(#3,?,?) )
+	EMBED[complthat=+, grpr=+](#3,#2,#4), OBJ-N[grpr=+](#4,#3)
+
+// complétives
+|#1[verb],(?[verb:~, say:~])*, #2;?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}}|
+	if(CONNECTOR[complthat](#3,#2) & HEAD2(#4,#1) & ~EMBED(#3,?) & ~EMBED(#3,?,?) )
+	EMBED[complthat=+, grpr=+](#3,#2,#4)
+
+//he is hopeful talks will soon resume.
+
+| np{?*,#1[adj,last]}, sc{np{?*,#2[last]}, ?+} |
+if ( SUBJ(#3,#2) & SUBJATTR(?,#1) )
+	EMBED[grpr=+](#1,#3), SUBJ(#3,#2).
+
+| np{?*,#1[adj,last]}, np{?*,#2[last]}, fv{?*,#3[last]} |
+if ( SUBJATTR(?,#1) )
+	EMBED[grpr=+](#1,#3), SUBJ[grpr=+](#3,#2).
+
+//  I'm not sure they should be discussed publicly.
+//MOD_PRE(discussed,sure)
+
+if ( ^MOD[pre](#1,#2[verb:~,sc_s]) & ( OBJ-N(#1,#3) | SUBJ-N(#1,#3) ) )
+	EMBED[grpr=+,pre=~](#2,#1).
+
+
+|conj[form:fand], #2;?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}}|
+	if (CONNECTOR[complthat](#3,#2) & ^EMBED(?,#2,?) & EMBED(#4,#5,#6) & #4<#2)
+	EMBED[grpr=+](#3,#2,#4)
+
+if(^EMBED(#1,#2,#3) & ~EMBED(#1,#3))
+	EMBED[grpr=+](#1,#3)
+
+if (^EMBED(#1,#2) & EMBED(#1,#3) & #2<#3 & #3<#1 & ~EMBED(#3,#2))
+	~, EMBED[grpr=+](#3,#2)
+
+// concurrence entre des relations EMBED 
+//and that : pas de relation EMBED(are, accept)
+|#1[form:fand], ?{BG[first]{#2[first,form:fthat]}}|
+	if (CONNECTOR[complthat](#3,#4) & CONNECTOR[complthat](#5,#2) & #3<#5 & ^EMBED(#5,#3))
+	~
+
+// ni MOD
+|#1[form:fand], ?{BG[first]{#2[first,form:fthat]}}|
+	if (CONNECTOR[complthat](#3,#4) & CONNECTOR[complthat](#5,#2) & #3<#5 & ^MOD[sentence](#3,#5))
+	~
+
+
+// sinon, lorsque deux relations de subordination sont en concurrence, choisir celle qui correspond à une dépendance CONNECTOR
+
+//|#1[verb], ?*, #4;?{#4[first]};?{?{#4[first]}}|
+//	if(HEAD2(#5,#1) & EMBED(#2,#5) & ^EMBED(#3,#5) & CONNECTOR(#2,?) & ~CONNECTOR(#3,?))
+//	~
+
+
+
+// un même événement a deux emboîtements : si les mots emboîtants sont tous les deux avant lui, on garde le plus proche
+// Iran must show it is prepared to live up to its obligations .
+//EMBED(live,show) et EMBED(live,is) => EMBED(live,is)
+if (^EMBED(#1,#2) & EMBED(#1,#3) & #2<#3 & #3<#1 & EMBED(#3,#2))
+	~
+
+// on choisit l'emboîtement qui précède si celui qui suit est introduit par une coordination
+//We have the power to negotiate because we keep our [nuclear] achievements in our hands, and we are negotiating to protect them.
+|?{?[first, coord], ?*, #4[last, verb]}|
+if (EMBED(#1,#2) & ^EMBED(#1,#3) & HEAD2(#5,#4) & VDOMAIN(#3,#5) & #2<#3)
+	~
+
+
+// *************** NUCL ***********************
+
+// is willing to continue NUCL(willing,continue)
+
+| nfv{#1[surface:willing]}, iv{#2[form:finfto],#3} |
+	NUCL[vlink=+,grpr=+](#1,#3).
+
+
+// ************** correction of complements *************************
+
+// correction of relative: he is hopeful that#1 Russia will begin#2 ....
+
+if ( ^OBJ[pre,relativ](#2,#1[complthat:~]) )
+	~.
+
+//if ( ^OBJ-N(#2,#1[complthat:~]) )
+//	~.
+
+if ( ^MOD[post,relativ,sentence](#1[sc_s],#2) )
+	~.
+
+//EMBED does not work for the CORE!!!!!!
+
+| ?{?*,#1nadj[sc_s,last,sg]}, sc{bg{#3[complthat]},?*,?{?*,#2[last]},?*} |
+if ( SUBJ(#2,?) & ~DETD(#1,?) & ~MOD(#1,#2) )
+	MOD[subcat=+,grpr=+](#1,#2).
+
+| ?{?*,#1adj[sc_s,last]}, sc{bg{#3[complthat]},?*,?{?*,#2[last]},?*} |
+if ( SUBJ(#2,?) & ~DETD(#1,?) & ~MOD(#1,#2) )
+	MOD[subcat=+,grpr=+](#1,#2).
+
+| ?{?*,#1[adj,sc_s,last]}, np{?*,#3[last]}, fv |
+if ( SUBJ(#2[vprog:~],#3) & ( ~$1(#1,#2) | ~$1(#2,#1) ) & ~PREPD(#2,?) & ~OBJ[post,sentence](#1,?) )
+	MOD[subcat=+,grpr=+](#1,#2).
+
+| ?{?*,#1nadj[sc_s,last,sg]}, bg{#3[complthat]},?*,#2,?* |
+if ( SUBJ(#2,?) & ~DETD(#1,?) & ~MOD(#1,#2) )
+	MOD[subcat=+,grpr=+](#1,#2).
+
+| ?{?*,#1adj[sc_s,last]}, bg{#3[complthat]},?*,#2,?* |
+if ( SUBJ(#2,?) & ~DETD(#1,?) & ~MOD(#1,#2) )
+	MOD[subcat=+,grpr=+](#1,#2).
+
+//it became clear that North Korea was unable
+
+if ( ^MOD[post,sentence,subcat:~](#1[sc_s],#2) & ~OBJ[sentence](#1,?) & ~OBJ[infinit](#1,?) )
+	MOD[subcat=+](#1,#2).
+
+
+//les compléments qui ont été interprétés à tort comme des compléments de temps (TEMP)
+// la règle n'est peut-être plus nécessaire après modification de la grammaire temporelle
+if (^TEMP(#1,#3) & HEAD2(#2[commonplace],#3))
+	MOD[grpr=+](#1,#2)
+
+
+// correction : 1 mot est attribut de deux sujets, un des deux sujets a été supprimé à raison dans la grammaire générale, mais la dépendance ATTRIB est restée 
+// s'applique à :
+// On the same subject, Qolamreza Aqazadeh, head of Iran's Atomic Energy Organization, states that if, for example, the Bushehr nuclear power plant were to be attacked by Israel or the United States, Iran is capable of restoring everything in the minimum time.
+if (ATTRIB(#1,#3) & ^ATTRIB(#2,#3) & SUBJATTR(#1,#3) & SUBJATTR(#2,#3) & NUCL[subjcompl](#4,#3) & SUBJ(#4,#1) & ~SUBJ(#4,#2))
+	~
+if (SUBJATTR(#1,#3) & ^SUBJATTR(#2,#3) & NUCL[subjcompl](#4,#3) & SUBJ(#4,#1) & ~SUBJ(#4,#2))
+	~
+
+//????
+// marquage des expressions prépositionnelles
+// is on standby to
+if (^PREPD(#1[lemme:standby],  #2[p_on]))
+	PREPD[expr_inf=+, grpr=+](#1,#2)
+
+// corrige l'indication post/pre des relations MOD
+if (^MOD[pre](#1,#2) & #1<#2)
+	MOD[post=+, pre=~, grpr=+](#1,#2)
+
+// reconnaissance du passif dans les formes progressives : beeing determined
+|#3GV{?*, verb#1[form:fbe,prog], verb#2[partpas]}|
+	VDOMAIN[passive=+, grpr=+](#2,#1), NUCL[passive=+, vlink=+, grpr=+](#1,#2)
+
+// le sujet normalisé de ces formes est en fait leur objet
+if (^SUBJ-N(#1,#2) & NUCL[grpr, passive](#3,#1) & ~OBJ-N(#1,?))
+	OBJ-N[grpr=+](#1,#2)
+
+// There are reports : reports est sujet et non attribut du sujet
+|#4[noun]{?+[det:~]}|
+if (^NUCL[subjcompl](#1[form:fbe],#2[noun]) & LOC(#1,#3[form:fthere]) & #3<#1 & HEAD2(#2,#4))
+	~, SUBJ-N[grpr=+](#1,#2)
+	
+
+//marquage des suites NP-prep, participe_passé-prep et adj-prep
+// permet de traiter, dans les règles de rattachement du sujet de l'infinitif et du progressif, les cas où il n'y a pas de dépendance entre le verbe fini et le verbe non fini à cause d'un adverbe qui s'intercale :
+// to accuse someone of illegally sending equipment / someone is accused of illegally sending equipment
+|#1[noun], prep#2;?[prep]{prep#2[first],?*};?[prep]{?[first],?{prep#2[first],?*},?*}|
+	if(HEAD2(#3,#1))
+	SUCC(#3,#2)
+
+
+|#1[verb], prep#2|
+	if(HEAD2(#3[partpas],#1))
+	SUCC(#3,#2)
+
+
+|#1[verb], #2[lemme:as] |
+	if(HEAD2(#3[partpas],#1))
+	SUCC(#3,#2)
+
+|#1[adj], prep#2;?[prep]{prep#2[first],?*};?[prep]{?[first],?{prep#2[first],?*},?*}|
+	if ( HEAD2(#3,#1))
+	SUCC(#3,#2)
+
+// les verbes de paroles qui se construisent avec une complétive
+|#1[verb], NP, ?{BG[first]{#1[form:fthat]}}|
+	if (HEAD2(#3[saythat],#1) & CONNECTOR(#4,#1) & ~OBJ(#3,#4))
+	OBJ[sentence=+, grpr=+](#3,#4)
+
+
+//************************** MOD of adjectifs ***************************
+
+//la rection des adjectifs
+/
+if(SUCC(#1[adj,sc_pagainst],#2[prep,sc_pagainst]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[adj,sc_pof],#2[prep,form:fof]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[adj,sc_pwith],#2[prep,sc_pwith]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[adj,sc_pfrom],#2[prep,sc_pfrom]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[adj,sc_pfor],#2[prep,sc_pfor]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[adj,sc_pon],#2[prep,sc_pon]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+if(SUCC(#1[adj,sc_pto],#2[prep,sc_pto]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+if(SUCC(#1[adj,sc_pabout],#2[prep,sc_pabout]) & ~MOD(?,#2) &  PREPD(#3,#2))
+	MOD[grpr=+,subcat=+](#1,#3).
+\
+
+
+/////////////////////////////
+
+
+if(SUCC(#1[sc_pagainst],#2[prep,sc_pagainst]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[sc_pof],#2[prep,form:fof]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[sc_pwith],#2[prep,sc_pwith]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[sc_pfrom],#2[prep,sc_pfrom]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[sc_pfor],#2[prep,sc_pfor]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3)
+
+if(SUCC(#1[sc_pon],#2[prep,sc_pon]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+if(SUCC(#1[sc_pto],#2[prep,sc_pto]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+if(SUCC(#1[sc_pabout],#2[prep,sc_pabout]) & ~MOD(?,#2) &  PREPD(#3,#2) & ~MOD(#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+////////////////////////
+
+// RESULT is like MOD here
+
+if ( RESULT[post](#1,#2) )
+	MOD[post=+,fromresult=+,grpr=+](#1,#2).
+
+// BNF is like MOD here
+
+if ( BNF[post](#1,#2) )
+	MOD[post=+,frombnf=+,grpr=+](#1,#2).
+
+// add the feature "subcat" to MOD whenever it is in the subcat
+//MOD_POST(talked,him)
+//PREPD(him,with)
+
+if ( ^MOD[post](#1[sc_pwith],#2) & PREPD(#2,#3[sc_pwith]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pto],#2) & PREPD(#2,#3[sc_pto]) )
+	MOD[subcat=+](#1,#2).
+
+///////////////// Cédric //////////////////////////
+if ( ^MOD[post](#1[sc_ptoward],#2) & PREPD(#2,#3[sc_ptoward]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_ptowards],#2) & PREPD(#2,#3[sc_ptowards]) )
+	MOD[subcat=+](#1,#2).
+//////////////////////////////////////////////////
+
+if ( ^MOD[post](#1[sc_pfrom],#2) & PREPD(#2,#3[sc_pfrom]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pby],#2) & PREPD(#2,#3[sc_pby]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pat],#2) & PREPD(#2,#3[sc_pat]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pbetween],#2) & PREPD(#2,#3[sc_pbetween]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pof],#2) & PREPD(#2,#3[sc_pof]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_poutof],#2) & PREPD(#2,#3[lemme:out_of]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pagainst],#2) & PREPD(#2,#3[sc_pagainst]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pfor],#2) & PREPD(#2,#3[sc_pfor]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pon],#2) & PREPD(#2,#3[sc_pon]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pupon],#2) & PREPD(#2,#3[sc_pupon]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pin],#2) & PREPD(#2,#3[sc_pin]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pabout],#2) & PREPD(#2,#3[sc_pabout]) )
+	MOD[subcat=+](#1,#2).
+
+if ( ^MOD[post](#1[sc_pinto],#2) & PREPD(#2,#3[sc_pinto]) )
+	MOD[subcat=+](#1,#2).
+
+////////////// Cédric ///////////////////////
+if ( ^MOD[post](#1[sc_pover],#2) & PREPD(#2,#3[sc_pover]) )
+	MOD[subcat=+](#1,#2).
+////////////////////////////////////////////
+
+if ( ^$1(#1[sc_poning],#2[sc_poning] ) )
+	$1[subcat=+](#1,#2).
+
+// with adjectives
+
+//AP{capable} of GV{restoring}
+
+| AP{?*,#1[last,sc_pof]}, #2[sc_pof], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pwith]}, #2[sc_pwith], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pto]}, #2[sc_pto], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_ptoward]}, #2[sc_ptoward], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pfrom]}, #2[sc_pfrom], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pby]}, #2[sc_pby], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pat]}, #2[sc_pat], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pbetween]}, #2[sc_pbetween], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pagainst]}, #2[sc_pagainst], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pfor]}, #2[sc_pfor], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pon]}, #2[sc_pon], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pupon]}, #2[sc_pupon], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pin]}, #2[sc_pin], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+| AP{?*,#1[last,sc_pabout]}, #2[sc_pabout], GV{#3} |
+	MOD[subcat=+](#1,#3).
+
+//////////////// Cédric ///////////////////
+| AP{?*,#1[last,sc_pover]}, #2[sc_pover], GV{#3} |
+	MOD[subcat=+](#1,#3).
+///////////////////////////////////////////
+
+// nouns
+
+if ( ^MOD[post](#1[ofobj],#2) & PREPD(#2,#3[sc_pof]) )
+	MOD[subcat=+](#1,#2).
+	
+//verbs with preposition and ing
+
+| #3[sc_pfrom], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pfrom],#2) )
+	MOD[subcat=+](#1,#2).
+	
+| #3[sc_pwith], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pwith],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pto], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pto],#2) )
+	MOD[subcat=+](#1,#2).
+
+///// Cédric /////
+| #3[lemme:toward], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_ptoward],#2) )
+	MOD[subcat=+](#1,#2).
+//////////////////
+
+| #3[sc_pby], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pby],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pat], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pat],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pbetween], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pbetween],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pof], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pof],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pagainst], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pagainst],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pfor], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pfor],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pon], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pon],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pupon], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pupon],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pin], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pin],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pabout], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pabout],#2) )
+	MOD[subcat=+](#1,#2).
+
+| #3[sc_pinto], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_pinto],#2) )
+	MOD[subcat=+](#1,#2).
+
+/////////////////////// Cedric /////////////////////
+
+| #3[sc_paround], gv{?*,#2[last]} |	
+if ( ^MOD[post,gerund](#1[sc_paround],#2) )
+	MOD[subcat=+](#1,#2).
+
+//Verbs : V+ing
+//However, uranium sufficient to make two nuclear bombs was reported missing from the original mass.
+
+//MOD_POST_GERUND(reported,missing)
+//[subcat=+]
+//NFV{report} GV{miss}
+//SC{BG{that} NP{Iran} FV{reported}} GV{receiving}
+
+|?{?*,#1[sc_ing,last]},GV{?*,#2[last]}|
+if ( ^MOD[post,gerund](#1[sc_ing],#2) )
+	MOD[subcat=+](#1,#2).
+
+|?{?*,?{?*,#1[sc_ing,last]}},GV{?*,#2[last]}|
+if ( ^MOD[post,gerund](#1[sc_ing],#2) )
+	MOD[subcat=+](#1,#2).
+
+|?{?*,#1[sc_ing,last]},GV{?*,#2[last]}|
+if ( ~MOD[subcat](#1,#2) & (~OBJ(#1,#2) | ~OBJ-N(#1,#2)))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+|?{?*,?{?*,#1[sc_ing,last]}},GV{?*,#2[last]}|
+if ( ~MOD[subcat](#1,#2) & (~OBJ(#1,#2) | ~OBJ-N(#1,#2)))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+////////////////////////////////////////////////////
+
+// verbs with an object and a preposition
+
+| #4[sc_pon], gv{?*,#3[last]} |
+if ( OBJ-N(#1[sc_np_pon],#2) & ^MOD[post,gerund](#1,#3) )
+	MOD[subcat=+](#1,#3), SUBJ-N[grpr=+](#3,#2).
+
+| #4[sc_pin], gv{?*,#3[last]} |
+if ( OBJ-N(#1[sc_np_pin],#2) & ^MOD[post,gerund](#1,#3) )
+	MOD[subcat=+](#1,#3), SUBJ-N[grpr=+](#3,#2).
+
+| #4[sc_pin], gv{?*,#3[last]} |
+if ( OBJ-N(#1[sc_np_pin],#2) & ^MOD[post](#2,#3) )
+	MOD[subcat=+](#2,#3), SUBJ-N[grpr=+](#3,#2).
+
+| #4[sc_pinto], gv{?*,#3[last]} |
+if ( OBJ-N(#1[sc_np_pinto],#2) & ^MOD[post,gerund](#1,#3) )
+	MOD[subcat=+](#1,#3), SUBJ-N[grpr=+](#3,#2).
+
+| #4[sc_pinto], gv{?*,#3[last]} |
+if ( OBJ-N(#1[sc_np_pinto],#2) & ^MOD[post](#2,#3) )
+	MOD[subcat=+](#2,#3), SUBJ-N[grpr=+](#3,#2).
+
+//MOD_POST_GERUND(held[sc_np_pfor],baking)
+//OBJ-N(held,Peter)
+
+//We use the report for writing the letters .
+//MOD_SUBCAT_POST_GERUND(#1use,#2writing)
+//SUBJ-N_PRE(#1use,#3We)
+
+if ( ^MOD[post,gerund](#1[sc_np_pfor,subj_cont],#2) & SUBJ-N(#1,#3) )
+	MOD[subcat=+](#1,#2), SUBJ-N[grpr=+](#2,#3).
+
+if ( ^MOD[post,gerund](#1[sc_np_pfor,subj_cont:~],#2) & OBJ-N(#1,#3) )
+	MOD[subcat=+](#1,#2), SUBJ-N[grpr=+](#2,#3).
+
+if ( ^MOD[post,gerund](#1[sc_np_pto_ing],#2) & OBJ-N(#1,#3) )
+	MOD[subcat=+](#1,#2), SUBJ-N[grpr=+](#2,#3).
+//MOD_POST_GERUND(persuade[sc_humnp_pfrom],baking)
+//OBJ-N(persuade,Peter)
+
+if ( ^MOD[post,gerund](#1[sc_humnp_pfrom],#2) & OBJ-N(#1,#3) )
+	MOD[subcat=+](#1,#2), SUBJ-N[grpr=+](#2,#3).
+
+if ( ^MOD[post,gerund](#1[sc_humnp_pagainst],#2) & OBJ-N(#1,#3) )
+	MOD[subcat=+](#1,#2), SUBJ-N[grpr=+](#2,#3).
+
+// verbs with object and preposition where no MOD is given by the general grammar
+
+// #1supply the #2Atomic Energy Organization #3with a micro-nuclear #4research reactor 
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pon],#2) & PREPD(#4,#3[lemme:on]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pto],#2) & PREPD(#4,#3[lemme:to]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pwith],#2) & PREPD(#4,#3[lemme:with]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pin],#2) & PREPD(#4[proper:~],#3[lemme:in]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pinto],#2) & PREPD(#4,#3[lemme:into]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pfor],#2) & PREPD(#4,#3[lemme:for]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pas],#2) & PREPD(#4,#3[lemme:as]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pto_ing],#2) & PREPD(#4,#3[lemme:to]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_humnp_pfrom],#2[human]) & PREPD(#4,#3[lemme:from]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_humnp_pin],#2[human]) & PREPD(#4,#3[lemme:in]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_np_pfrom],#2) & PREPD(#4,#3[lemme:from]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_humnp_pof],#2[human]) & PREPD(#4,#3[lemme:of]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+| np{?*, #2[noun,last]}, pp{#3, ?+} |
+if ( OBJ(#1[sc_humnp_pagainst],#2[human]) & PREPD(#4,#3[lemme:against]) )
+	MOD[grpr=+,subcat=+](#1,#4).
+
+
+
+
+// verbs with an indirect object + infinitive
+//MOD_SUBCAT_POST(appeal,Paul)
+//SUBJ-N_PRE(appeal,We)
+//MOD_POST_INFINIT_[1717]_[2283](Paul,write)
+
+if ( MOD[subcat](#1[sc_pto_toinf],#2) & SUBJ-N(#1,#3) & ^MOD[infinit](#2,#4) )
+	MOD[subcat=+](#1,#4), SUBJ-N[grpr=+](#4,#2).
+
+// verbs with to inf
+if ( ^MOD[infinit](#1[sc_toinf],#2) )
+	MOD[subcat=+](#1,#2).
+
+
+// verbs with np to inf
+|IV{?[form:finfto], ?*, #2} |
+if ( ^MOD[infinit](#1[sc_np_toinf],#2) )
+	MOD[subcat=+](#1,#2).
+
+//SC{and NP{Moldavian companies} FV{#1believed}} IV{to be assisting}
+
+|SC{?*,FV{?*,#1[sc_np_toinf,partpas,last]}} , IV{?*,#2[last]}|
+if (~$1(#1,#2))
+	MOD[subcat=+,grpr=+](#1,#2).
+
+// speed up building
+
+| #1[sc_puping,vprog] |
+if ( NUCL[particle](#3[sc_puping],#2[lemme:up]) )
+	MOD[subcat=+,grpr=+](#3,#1)
+
+| ?{?*,#1[sc_puping]}, ?[lemme:up], np{?*,#2[last]} |
+	MOD[subcat=+,grpr=+](#1,#2).
+
+// *************************** PROFESSION ***************************
+// la relation PROFEXT : les compléments nécessaires au nom complet de la profession
+
+
+
+// la relation PROFESSION entre un nom de personne et sa fonction
+
+|NP#1[start], punct[comma], NP#2|
+	if (HEAD2(#3[noun, prof],#2) & HEAD2(#4[noun, maj],#1))
+	PROFESSION[grpr=+](#4,#3)
+
+|NP#1[start], punct[comma], NP#2|
+	if (HEAD2(#3[noun, maj],#1) & HEAD2(#4[noun, prof],#2))
+	PROFESSION[grpr=+](#3,#4)
+
+
+//Iranian Minister of Mines and Metals Eshaq Jahangiri
+|#1, (PP#3), NP#2|
+	if ((HEAD2(#11[prof],#1) | HEAD2(#11[title],#1)) & HEAD2(#13,#3) & PREPD(#13,?[prep, form:fof]) & HEAD2(#12,#2))
+	PROFESSION[grpr=+](#12,#11,#13)
+
+
+|#1, PP#3, CONJ[form:fand], NP#4, NP#2;SC{NP#2,punct, ?*}|
+	if ((HEAD2(#11[prof],#1) | HEAD2(#11[title],#1)) & HEAD2(#13[maj],#3) & PREPD(#13,?[prep, form:fof]) & HEAD2(#12,#2) & HEAD2(#14[maj],#4))
+	PROFESSION[grpr=+](#12,#11,#13)
+
+
+//*****************NOUN PARTPAS BY*********************
+
+//loan made by Iran
+//SUBJ_PRDEP_POSI_HOST_MON_LINK_PROD_EVNT_PRE(made,discussions)
+//SUBJ-N(made,Iran)
+//SUBJ-N_PRDEP_LINK_PROD_PRE(made,discussions)
+//PREPD(Iran,by)
+//NP{a billion #1loan}} FV{#2made} PP{by NP{#3Iran}}
+
+| pp{ ?, np{?*,#1[last]}}, fv{#2[partpas]}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ^SUBJ(#2,#4) )
+	~,OBJ-N[grpr=+](#2,#1).
+
+| pp{ ?, np{?*,#1[last]}}, fv{#2[partpas]}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ^SUBJ-N(#2,#4) & #4~:#3 )
+	~.
+
+| np{?*,#1[last]}, fv{#2[partpas]}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ^SUBJ(#2,#4) )
+	~,OBJ-N[grpr=+](#2,#1).
+
+| np{?*,#1[last]}, fv{#2[partpas]}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ^SUBJ-N(#2,#4)  & #4~:#3 )
+	~.
+
+//np{a 5MW TRR light water reactor} FV{supplied}} PP{by NP{the United States}}
+//SUBJ_PRE(supplied,reactor)
+//SUBJ-N_PRE(supplied,reactor)
+
+| ?{?*, np{?*, #1[last]}, fv{#2[partpas]}}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ^SUBJ-N(#2,#1) )
+	~, OBJ-N[grpr=+](#2,#1),SUBJ-N[grpr=+](#2,#3)
+
+// availability of spare parts for civilian aircraft made by US manufacturers.
+// PP{for NP{civilian #1aircraft}} FV{#2made}} PP{by NP{US #3manufacturers}}
+//SUBJ_PRDEP_CONT-ACT_PROD_PRE(made,availability)
+//SUBJ-N_PRDEP_CONT-ACT_PROD_PRE(made,availability)
+
+| ?{?*, pp{?, np{?*,#1[last]}}, fv{#2[partpas]}}, pp{?[lemme:by], np{?*,#3[last]}} |
+if ( ( ^SUBJ(#2,#4) | ^SUBJ-N(#2,#4) ) & #3~:#4 & ~SUBJ-N(#2,#3) & ~OBJ-N(#2,#1) )
+	~,SUBJ-N[grpr=+](#2,#3),OBJ-N[grpr=+](#2,#1).
+ 
+
+
+//****************** SUBJ of ING ******************
+
+
+// les sujets ne sont pas reconnus par la grammaire générale lorsque le verbe dont dépend la forme progressive n'est pas une forme finie
+
+// les verbes à la forme progressive compléments d'un autre verbe
+
+// le sujet de l'infinitif est le sujet du verbe dont il dépend
+
+
+// ************************ BE ... ING *********************
+
+// experts are in Iran surveying 
+//SUBJ-N_PRE(are#3,experts#4)
+//COORDINATE_LOC-PR(are#3,Iran#1)
+// FV{are}} PP{in NP{Iran}} GV{surveying#2} 
+
+| gv{#2[vprog,forprog]} |
+if ( SUBJ-N(#3[forprog],#4) & ~NUCL[progress,vlink](#3,#2) )
+	NUCL[progress=+,vlink=+,grpr=+,temp=+](#3,#2).
+
+| gv{#2[vprog,forprog]} |
+if ( SUBJ-N(#3[forprog],#4) & NUCL[temp](#3,#2) )
+	POTSUBJ(#2,#4).
+
+if ( LOC[post](#3,#1) & ^SUBJ(#2,#1) & NUCL[temp](#3,#2) )
+	~.
+
+if ( ^NUCL[temp](#3,#2) )
+	NUCL[temp=~](#3,#2).
+
+//************************ BE PREP INF/ING *********************
+
+//are about to finish 
+
+//NUCL_VLINK(are,finish)
+//NUCL_PARTICLE(are,about)
+
+if ( NUCL(#1[form:fbe],#2) & NUCL[particle](#1[form:fbe],#3) )
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//Iran is after obtaining nuclear weapons
+//CONNECTOR_SUBORD(obtaining,after)
+//MOD(is,obtaining)
+
+
+if ( ^MOD(#1[form:fbe,sc_bewithpart],#2) & ( PREPD(#2,#3[sc_bewithpart]) | CONNECTOR(#2,#3[sc_bewithpart]) ) )
+	MOD[grpr=+,subcat=+](#1,#2).
+
+// would be better off gauging
+// #1off GV{#2gauging} 
+// NUCL_SUBJCOMPL(#3be,#4better)
+// MOD_POST_GERUND(#3be,#2gauging)
+// SUCC(#4better,#1off)
+
+| #1, ?{#2} |
+if ( NUCL[subjcompl](#3[form:fbe],#4[dig:~]) & MOD(#3,#2[dig:~]) & SUCC(#4,#1) & ~MOD(#4,#2) )
+	MOD[grpr=+,subcat=+](#4,#2).
+
+
+
+// ******************** VERB ING ********************
+
+
+//to avoid making some mistakes
+|#1[verb], #2[verb, prog]|
+	if(HEAD2(#3[sc_ing],#1) & HEAD2(#4,#2) & (SUBJ-N(#3,#5) | SUBJ(#3,#5)) & ~SUBJ-N(#4,#5) & ~POTSUBJ(#4,#5))
+	POTSUBJ(#4,#5), POTMOD(#3,#3,#4)
+
+// quand le sujet de avoid n'est pas encore connu
+|#1[verb], #2[verb, prog]|
+	if(HEAD2(#3[sc_ing],#1) & HEAD2(#4,#2) & ~SUBJ-N(#3,?) & SUBJ(#3,?) & ~SUBJ-N(#4,#5) & ~POTSUBJ(#4,#5))
+	COSUBJ(#4,#3), POTMOD(#3,#3,#4)
+
+// to abstain from making mistakes
+//MOD_SUBCAT_POST_GERUND(abstain,writing)
+//SUBJ_PRE(abstain,We)
+
+if ( SUBJ(#1,#2) & MOD[gerund,subcat](#1,#3) & ~OBJ-N(#1,?) )
+	POTSUBJ(#3,#2).
+
+// ***************** VERB NP ING *************************
+
+// le sujet de l'infinitif est l'objet du verbe dont il dépend
+
+// I see him coming
+// déjà bien analysé à l'actif, pb au passif : coming désambiguïsé comme nom
+|#1[verb], NP#2, (adv), GV#3[prog]|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_ing, cop:~],#1) & HEAD2(#6,#2) & (OBJ-N(#5,#6) | OBJ(#5,#6)) & ~SUBJ-N(#4,#6) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+
+// ***************** VERB NP PREP ing *********************
+
+
+//to accuse someone of sending equipment
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pof],#2)|OBJ(#1[sc_pof],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4)  & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD[prog=+](#1,#1,#3)
+
+//someone is accused of sending equipment
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pof],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD[prog=+](#1,#1,#3)
+
+//si l'objet-N de accused n'est pas encore connu
+|prep#7[form:fof], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pof],#3[verb, prog]) | SUCC(#1[sc_pof],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD[prog=+](#1,#1,#3)
+
+
+//to warn someone against doing
+|prep#7[sc_pagainst], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pagainst],#2)|OBJ(#1[sc_pagainst],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//? someone is warned against doing
+|prep#7[sc_pagainst], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pagainst],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet-N de warn n'est pas encore connu
+|prep#7[sc_pagainst], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pagainst],#3[verb, prog]) | SUCC(#1[sc_pagainst],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to charge someone with doing
+|prep#7[sc_pwith], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pwith],#2)|OBJ(#1[sc_pwith],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+// someone is charged with doing
+|prep#7[sc_pwith], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pwith],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+//si l'objet de charged n'est pas encore connu
+|prep[sc_pwith], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pwith],#3[verb, prog]) | SUCC(#1[sc_pwith],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to prevent someone from doing
+|prep#7[sc_pfrom], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pfrom],#2)|OBJ(#1[sc_pfrom],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//someone is prevented from doing
+|#7prep[sc_pfrom], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pfrom],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet de prevented n'est pas encore connu
+|prep#7[sc_pfrom], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pfrom],#3[verb, prog]) | SUCC(#1[sc_pfrom],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+/
+// to #1blame #2someone for #3doing
+|prep#7[sc_pfor], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pfor],#2)|OBJ(#1[sc_pfor],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+\
+
+/
+// someone is blamed for doing
+|prep#7[sc_pfor], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pfor],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+\
+//si l'objet de blamed n'est pas encore connu
+|prep#7[sc_pfor], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pfor],#3[verb, prog]) | SUCC(#1[sc_pfor],#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+
+// to congratulate someone on doing
+|prep#7[sc_pon], (adv), GV#4[prog]|
+	if ((OBJ-N(#1[sc_pon],#2)|OBJ(#1[sc_pon],#2)) & (MOD[post](#2,#3[verb]) | SUCC(#2,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+// someone is congratulated on doing
+|prep#7[sc_pon], (adv), GV#4[prog]|
+	if (OBJ-N(#1[sc_pon],#2) & (MOD[post](#1,#3[verb, prog]) | SUCC(#1,#7)) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	POTSUBJ(#3,#2), POTMOD(#1,#1,#3)
+
+//si l'objet de blamed n'est pas encore connu
+|prep#7[sc_pon], (adv), GV#4[prog]|
+	if ((MOD[post](#1[sc_pon],#3[verb, prog]) | SUCC(#1,#7)) & ~OBJ-N(#1,?) & HEAD2(#3,#4) & ~POTSUBJ(#3,#2))
+	SUBJOBJ(#3,#1), POTMOD(#1,#1,#3)
+
+// report sy as saying
+| np{?*,#2[last]} , #3[lemme:as], gv{?*,#4} |
+if ( OBJ(#1[say],#2) )
+	POTSUBJ(#4,#2).
+
+//******************** SUPPORT VERB NP OF ING *****************
+
+
+//has the intention of doing
+|#1prep[form:fof], #2[verb, prog]|
+	if((SUCC(#3[evnt],#1) | SUCC(#3[phrase_have],#1)) & HEAD2(#4,#2) & (OBJ-N(#5[form:fhave],#3) |OBJ(#5[form:fhave],#3)) & SUBJ(#5,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#4)
+
+//si le sujet de has n'est pas encore connu
+|#1prep[form:fof], #2[verb, prog]|
+	if((SUCC(#3[evnt],#1) | SUCC(#3[phrase_have],#1)) & HEAD2(#4,#2) & (OBJ-N(#5[form:fhave],#3) |OBJ(#5[form:fhave],#3)) & ~SUBJ(#5,?))
+	POTMOD(#5,#4), COSUBJ(#4,#5)
+
+
+
+// ********************** ADJ PREP ING ****************
+
+
+// Iran is capable of restoring everything
+|prep#6[form:fof], #5[verb, prog]|
+	if(ATTRIB(#1,#2[adj,sc_pof]) & ((NUCL[subjcompl](#3,#2) & MOD(#3,#4[prog])) | SUCC(#2,#6)) & HEAD2(#4,#5) & ~POTSUBJ(#4,#1) & ~SUBJ-N(#4,#1))
+	POTSUBJ(#4,#1), POTMOD(#2,#3,#4), COSUBJ(#4,#3)
+
+// quand le sujet de is n'est pas encore connu
+|prep#6[form:fof], #5[verb, prog]|
+	if(((NUCL[subjcompl](#3,#2[adj,sc_pof]) & MOD(#3,#4[prog])) | SUCC(#2[adj,sc_pof],#6)) & HEAD2(#4,#5) & ~POTSUBJ(#4,?) & ~SUBJ-N(#4,?))
+	POTMOD(#2,#3,#4), COSUBJ(#4,#3)
+
+
+//a reactor capable of producing plutonium
+|prep#6[form:fof], #5[verb, prog]|
+	if(MOD(#1,#2[adj,sc_pof]) & SUCC(#2,#6) & HEAD2(#4,#5) & ~POTSUBJ(#4,#1) & ~SUBJ-N(#4,#1))
+	POTSUBJ(#4,#1), POTMOD(#2,#4)
+
+
+//Iran is years away from building a bomb
+|adv#1[lemme:away], prep#2[sc_pfrom]|
+	if(MOD(#3,#1) & MOD(#3,#4[verb, prog]) & SUBJ-N(#3,#5))
+	POTSUBJ(#4,#5)
+
+// quand le sujet de be n'est aps encore connu
+|adv#1[lemme:away], prep#2[sc_pfrom]|
+	if(MOD(#3,#1) & MOD(#3,#4[verb, prog]) & ~SUBJ-N(#3,?))
+	COSUBJ(#4,#3)
+
+// ********************* ADJ/N PREP X ING
+
+// wary#3 of Iran acquiring nuclear technology
+//MOD_GRPR_SUBCAT(wary#3_ADJPRED:+,Iran#1)
+//PP{of NP{Iran#1}} GV{acquiring#2}
+
+| pp{?, ?{#1[last]}}, gv{#2} |
+if ( MOD[subcat](#3,#1) )
+	MOD[subcat=+](#3,#2), SUBJ-N[grpr=+](#2,#1).
+
+// ********************** (PREP) ING[start] ... VERB **************************
+
+//Appearing on a morning MSNBC program, U.S. Vice-President Dick Cheney notes ...
+//After meeting with the head of Iran's National Security Council Hassan Rohani, Russian President Vladimir Putin says
+
+
+//on rattache une forme progressive en début de phrase au premier verbe principal
+|#1[prog, start], ?*, #2[verb]|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & MAIN(#4) & (SUBJ-N(#4,#5[Nentity]) | SUBJ(#4,#5[Nentity])) & ~SUBJ-N(#4,#3) & ~ SUBJ(#4,#3) & ~POTSUBJ(#3,#5) & ~SUBJ-N(#3,#5) )
+	POTSUBJ(#3,#5)
+
+|#6[prep, start], #1[prog], ?*, #2[verb]|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & MAIN(#4) & (SUBJ-N(#4,#5[Nentity]) | SUBJ(#4,#5[Nentity])) & ~SUBJ-N(#4,#3) & ~ SUBJ(#4,#3) & ~POTSUBJ(#3,#5) & ~SUBJ-N(#3,#5) )
+	POTSUBJ(#3,#5)
+
+
+
+// *** création des relations SUBJ-N (ou OBJ-N) pour les progressifs
+// ils sont créés ici afin que la subordination à plusieurs degrés d'emboîtement soit traitée
+
+if (POTSUBJ(#1,#2) & ~SUBJ-N(#1,#2) & ~SUBJ(#1,#2) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#2)
+
+
+if (POTSUBJ(#1,#2) & ~OBJ-N(#1,#2) & ~OBJ(#1,#2) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#2)
+
+// ******************** OBJ if INF **************************
+
+// to rebuild the Bushehr nuclear power plant
+//IV{to rebuild#1} NP{the Bushehr AP{nuclear} NOUN{power plant#2}} 
+
+| iv{?*,#1[last,trans]}, np{?*,#2[last]} |
+if ( ~SUBJ(?,#2) & ~SUBJ-N(?,#2) & ~OBJ(#1,?) & ~OBJ-N(#1,?) & ~QUANTD(?,#2) )
+	OBJ[grpr=+](#1,#2).
+
+// become one of Ali Larijani's advisors
+| iv{?*,#1[last,trans]}, np{?*,#2[last]} |
+if ( ~SUBJ(?,#2) & ~SUBJ-N(?,#2) & ~OBJ(#1,#2) & ~OBJ-N(#1,#2) & QUANTD(#3,#2) )
+	OBJ[grpr=+](#1,#3).
+
+// ********************* SUBJ and OBJ of ING ******************
+
+//********************** short relative ing: NP (that is) ING ***************
+
+// the reports of U.S. commandos carrying out reconnaissance missions -> SUBJ-N(carrying,commandos)
+
+//{of NP{U.S. commandos}} GV{carrying} 
+
+| PP{?, np{?*,#1[c_person,last]}}, gv{?*,#2[last,say:~,saythat:~]} |
+if ( ~SUBJ-N(#2,?) )
+	SUBJ-N[grpr=+](#2,#1).
+
+| np{?*,#1[Nentity,last]}, gv{?*,#2[last,say:~,saythat:~]} |
+if ( ~SUBJ-N(#2,?) )
+	SUBJ-N[grpr=+](#2,#1).
+
+| np{?*,#1[Nentity,last]}, ?[lemme:as], gv{?*,#2[last,say:~,saythat:~]} |
+if ( ~SUBJ-N(#2,?) )
+	SUBJ-N[grpr=+](#2,#1).
+
+//*****************NP is ED ING***********************
+
+//two nuclear bombs was reported missing
+
+//NFV{#1reported} GV{#2missing}
+//OBJ-N(#1reported,#3bombs)
+
+| nfv{#1}, gv{#2} |
+if ( OBJ-N(#1,#3) )
+	SUBJ-N[grpr=+](#2,#3).
+
+//NFV{regarded} as GV{baking} 
+//CONTENT(regarded,report)
+
+| nfv{#1}, ?[lemme:as], gv{#2} |
+if ( OBJ-N(#1,#3) )
+	SUBJ-N[grpr=+](#2,#3).
+
+// the reports of U.S. commandos carrying out reconnaissance missions -> OBJ-N(carrying,missions)
+
+
+// GV{carrying} out NP{reconnaissance missions}
+
+| gv{?*,#1[last]}, (adv), np{?*,#2[nom:~,last]} |
+if ( SUBJ-N[grpr](#1,#3) & ~OBJ-N(#1,#2) )
+	OBJ-N[grpr=+](#1,#2).
+
+
+//signing <the Nuclear Non-Proliferation Treaty is not sufficient. -> OBJ-N(signing,Nuclear Non-Proliferation Treaty
+
+
+| ?{#1[vprog]},np{?*,#2[noun,tempexpr:~,last]} |
+if ( ~$1(#1,#2) & ~DETD(#2,#3[form:fthat]) )
+	OBJ-N[grpr=+](#1,#2)
+
+// ****************** short completive: NP (that) NP (is) ING ****************
+
+// the possibility of a fuel tank dropping from an Iranian airplane.
+// NP{the possibility#1} PP{of NP{a fuel tank#2}} GV{dropping#3} PP{from NP{an AP{Iranian} airplane#4}} 
+//MOD_POST(possibility#1,tank#2)
+
+| np{?*,#1[last]}, pp{?, np{?*,#2[last]}}, gv{?*,#3[last]} |
+if ( MOD[post](#1,#2) )
+	SUBJ-N[grpr=+](#3,#2).
+
+
+//******************* NP ... VERB ......., ING **********************
+
+//Baroness Elizabeth Symons, Middle East Minster in the British Cabinet, denies any U.S. military intentions against Iran, adding that  -> SUBJ-N(adding,Symons)
+//SUBJ_PRE(denies,Symons)
+
+| gv{#1[say]} |
+if ( SUBJ(#2[say,verb],#3) | SUBJ(#2[saythat,verb],#3) & ~SUBJ-N(#1,?) & #2 < #1 )
+	SUBJ-N[grpr=+](#1,#3).
+
+| gv{#1[saythat]} |
+if ( SUBJ(#2[say,verb],#3) | SUBJ(#2[saythat,verb],#3) & ~SUBJ-N(#1,?) & #2 < #1 )
+	SUBJ-N[grpr=+](#1,#3).
+
+
+//we will respond[base] by many ways, for example by holding[samesubj] back on oil sales.
+
+| #1[samesubj] |
+if ( SUBJ-N(#2[base],#3) & ~SUBJ-N(#1,?) )
+	SUBJ-N[grpr=+](#1,#3).
+
+
+//***************NP IS ED AS ING***********************
+
+//During a visit to an Iranian nuclear facility cited as having a fissile material production pilot program
+
+
+//*****************NP VERB TO ING****************
+
+//We commit Peter to baking the cakes .
+//MOD_SUBCAT_POST_GERUND(commit,baking)
+//MOD_POST(Peter,baking)
+//OBJ-N(commit,Peter)
+
+if ( MOD[subcat,gerund](#1,#2) & OBJ-N(#1,#3) & ~SUBJ-N(#2,?) & ~NUCL[passive](?,#2) )
+	SUBJ-N[grpr=+](#2,#3).
+
+
+
+//**************************************************************
+//**************************************************************
+//**************************************************************
+
+//****************** SUBJ of INF **************
+
+
+
+//*****************POSSESSOR NP BE INF*******************
+// Our goal is to build -> SUBJ-N(build,our)
+//MOD_POST_INFINIT(is,build)
+//DETD(goal,Our)
+//SUBJ_PRE(is,goal)
+
+if (MOD[infinit](#1,#2) & DETD(#3,#4[personal,pron,gen]) & SUBJ(#1,#3) & ~SUBJ-N(#2,#4) )
+	SUBJ-N[grpr=+](#2,#4).
+
+//*****************POSSESSOR NP INF*******************
+//the #1European #2offer to #3replace plans
+//MOD_XRX_EVNT_PRE_[1670]_[2251](offer,European)
+//PP{of NP{the AP{European} offer}} IV{to replace}
+
+| pp{?, np{?*, #2[last,sc_toinf]}}, iv{?[form:finfto],#3} |
+if ( MOD[pre](#2,#1) )
+	SUBJ-N[grpr=+](#3,#2).
+
+| np{?*, #2[last,sc_toinf]}, iv{?[form:finfto],#3} |
+if ( MOD[pre](#2,#1) )
+	SUBJ-N[grpr=+](#3,#2).
+
+
+//*****************SV NP INF********************
+
+// **** possible patterns
+// complément à la grammaire qui notamment ne traite pas les infinitifs régis par des verbes non finis
+
+//they#6 have the right#3 to do#4
+|NP#1, (adv), IV#2|
+	if ((HEAD2(#3[phrase_have],#1)| HEAD2(#3[evnt],#1)) & HEAD2(#4,#2) & OBJ-N(#5[form:fhave],#3) & (SUBJ(#5,#6) | SUBJ-N(#5,#6)))
+	NOSUBJ(#4,#3), POTSUBJ(#4,#6), POTMOD(#3,#5,#4)
+
+//si le sujet de have n'est pas encore connu
+|NP#1, (adv), IV#2|
+	if ((HEAD2(#3[phrase_have],#1)| HEAD2(#3[evnt],#1)) & HEAD2(#4,#2) & OBJ-N(#5[form:fhave],#3) & ~SUBJ(#5,?) & ~SUBJ-N(#5,?))
+	NOSUBJ(#4,#3), COSUBJ(#4,#5), POTMOD(#3,#5,#4)
+
+//*****************HAVE TEMP INF********************
+
+// They have 30 days to answer
+|NP#1, (adv), IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & TEMP(#5[form:fhave],#1) & SUBJ(#5,#6))
+	NOSUBJ(#4,#3), POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+//si le sujet de have n'est pas encore connu
+|NP#1, (adv), IV#2|
+	if (HEAD2(#3,#1) & HEAD2(#4,#2) & TEMP(#5[form:fhave],#1) & ~SUBJ(#5,?))
+	NOSUBJ(#4,#3), COSUBJ(#4,#5), POTMOD(#5,#5,#4)
+
+//**************NP for NP INF**************************
+// Condoleezza Rice puts forward a strengthened diplomatic hand for the European three to play.-> SUBJ-N(play,European three)
+
+//MOD_POST_INFINIT(European three,play)
+//PREPD(European three,for)
+//PP{for NP{the NOUN{European three}}} IV{to play} 
+
+
+| pp{#3, np{?*,noun#1[last,Nentity]}}}, iv{?*,#2} |
+if ( MOD[post,infinit](#1,#2) & PREPD(#1,#3[form:ffor]) & ~SUBJ-N(#2,#1) )
+	POTSUBJ(#2,#1).
+
+
+
+// *** suppression des relations erronées
+
+if(NOSUBJ(#1,#2) & ^SUBJ(#3,#2))
+	~
+if(NOSUBJ(#1,#2) & ^SUBJ-N(#3,#2))
+	~
+if(NOSUBJ(#1,#2) & ^POTSUBJ(#3,#2))
+	~
+
+//***************VERB NP INF****************<
+
+
+
+|#1[verb], NP#2, (adv), IV#3|
+	if (HEAD2(#4,#3) & (HEAD2(#5[sc_np_toinf,subj_cont:~,cop:~],#1) | HEAD2(#5[sc_np_toinf,subj_cont:~, cop:~],#1)) & HEAD2(#6[evnt:~, phrase_have:~],#2) & (OBJ-N(#5,#6) | OBJ(#5,#6)) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	POTSUBJ(#4,#6), POTMOD(#5,#5,#4)
+
+
+//si l'objet de want n'est pas encore connu
+|#1[verb], NP#2, (adv), IV#3|
+	if (HEAD2(#4,#3) & (HEAD2(#5[sc_np_toinf,subj_cont:~, sc_toinf:~, cop:~],#1) | HEAD2(#5[sc_np_toinf,subj_cont:~, cop:~],#1)) & HEAD2(#6[evnt:~, phrase_have:~],#2) & ~OBJ-N(#5,?) & ~OBJ(#5,?) & ~SUBJ-N(#4,#6) & ~POTSUBJ(#4,#6) & ~NOSUBJ(#4,#6))
+	SUBJOBJ(#4,#5), POTMOD(#5,#5,#4)
+
+// #1We #2promise[sc_np_toinf,subj_cont] #3Peter to #4write the letter
+//SUBJ-N_PRE(#2promise,#1We)
+//OBJ_POST(#2promise,#3Peter)
+//OBJ_POST_INFINIT(#2promise,#4write)
+//SUBJ_PRE_NFINIT(#4write,#3Peter)
+
+if ( SUBJ-N(#2[sc_np_toinf,subj_cont, obj_cont:~],#1) & OBJ[post](#2,#3) & OBJ[post,infinit](#2,#4) & ^SUBJ[pre,nfinit](#4,#3) )
+	SUBJ-N[grpr=+](#4,#1).
+
+
+if ( SUBJ-N(#2[sc_np_toinf,subj_cont],#1) & OBJ[post](#2,#3) & OBJ[post,infinit](#2,#4) & SUBJ-N[grpr](#4,#1) & ^SUBJ-N[grpr:~](#4,#3) )
+	~.
+
+
+
+
+//***************VERB HUMNP INF****************
+
+//he is established to be the "legal" father.
+
+//OBJ-N(established,He)
+//MOD_POST_INFINIT(established,be)
+
+if ( OBJ-N(#1[sc_humnp_toinf],#2[Nentity]) & MOD[post,infinit](#1,#3) & ~SUBJ-N(#3,?) )
+	SUBJ-N[grpr=+](#3,#2).
+
+//Kinski's movements and face and eyes and voice still express him to be on his mission forever.
+//OBJ-N(#1express,#2him)
+//NP{#2him} IV{to #3be}
+
+| np{?*, #2[last]}, iv{?[lemme:to],#3[last]} |
+if ( OBJ-N(#1[sc_humnp_toinf],#2[Nentity]) )
+	SUBJ-N[grpr=+](#3,#2).
+
+if ( OBJ-N(#1[sc_humnp_toinf],#2[Nentity]) & MOD[post,infinit](#2,#3) & ~SUBJ-N(#3,?) )
+	SUBJ-N[grpr=+](#3,#2).
+
+//***************** VERB for HUMNP INF *****************
+
+//calls for China to assist
+
+///// Cédric /////
+if ( MOD[subcat](#1[sc_pfor],#2[human]) & MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[form:ffor]) & ~OBJ(#1,#5) & ^MOD[subcat:~](#1,#3))
+	MOD[subcat=+](#1,#3).
+
+if ( MOD[subcat](#1[sc_pfor],#2[human]) & ^MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[form:ffor]) & ~OBJ(#1,#5) & ~MOD[subcat](#1,#3))
+	MOD[subcat=+](#1,#3).
+
+if ( MOD[subcat](#1[sc_pfor],#2[human]) & ^MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[form:ffor]) & ~OBJ(#1,#5) & MOD[subcat](#1,#3))
+	~.
+//////////////////
+
+if ( ^MOD[subcat](#1[sc_pfor],#2[human]) & MOD[infinit,subcat](#1[sc_pfor],#3) & PREPD(#2[human],#4[form:ffor]) & ~OBJ(#1,#5) )
+	MOD[subcat=~](#1,#2).
+
+
+///// Cédric /////
+if ( MOD[subcat](#1[sc_pon],#2[human]) & MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[p_on]) & ~OBJ(#1,#5) & ^MOD[subcat:~](#1,#3))
+	MOD[subcat=+](#1,#3).
+
+if ( MOD[subcat](#1[sc_pon],#2[human]) & ^MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[p_on]) & ~OBJ(#1,#5) & ~MOD[subcat:~](#1,#3))
+	MOD[subcat=+](#1,#3).
+
+if ( MOD[subcat](#1[sc_pon],#2[human]) & ^MOD[infinit](#2[human],#3) & PREPD(#2[human],#4[p_on]) & ~OBJ(#1,#5) & MOD[subcat](#1,#3))
+	~.
+//////////////////
+
+if ( ^MOD[subcat](#1[sc_pon],#2[human]) & MOD[infinit,subcat](#1[sc_pon],#3) & PREPD(#2[human],#4[p_on]) & ~OBJ(#1,#5) )
+	MOD[subcat=~](#1,#2).
+
+
+//***************VERB NP NP INF****************
+//They #1deny #2him the #3right to #4go
+//IOBJ_RCP_POST(#1deny,#2him)
+//MOD_POST_INFINIT(#3right,#4go)
+//OBJ_POST(#1deny,#3right)
+
+if ( IOBJ[post](#1,#2) & MOD[post,infinit](#3,#4) & OBJ[post](#1,#3) )
+	POTSUBJ(#4,#2),POTMOD(#3,#1,#4).	
+
+
+//|#1[verb], NP#2, NP#3, (adv), IV#4|
+//	if(HEAD2(#8[sc_right_to],#1) & HEAD2(#5,#2) & HEAD2(#6[phrase_have],#3) & HEAD2(#7,#4) & OBJ-N(#8,#6))
+//	POTSUBJ(#7,#5), POTMOD(#6,#8,#7)
+
+
+//**************NP BE ED INF*********************
+// He is allowed to go
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_toinf, cop:~],#1) & VDOMAIN[passive](#5,?) & (OBJ-N(#5,#2) | SUBJ(#5,#2)) & ~SUBJ-N(#4,?) & ~POTSUBJ(#4,#2))
+	POTSUBJ(#4,#2), POTMOD(#5,#5,#4)
+
+// si l'objet N de allowed n'est pas encore connu
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_np_toinf, cop:~],#1) & VDOMAIN[passive](#5,?) & ~OBJ-N(#5,?) & ~SUBJ(#5,?) & ~SUBJ-N(#4,?) & ~POTSUBJ(#4,#2))
+	SUBJOBJ(#4,#5), POTMOD(#5,#5,#4)
+
+
+// He wants to go
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_toinf, cop:~],#1) & (SUBJ-N(#5,#2) | SUBJ(#5,#2)) & ~SUBJ-N(#4,#2) & ~SUBJ-N(#4,#2) & ~POTSUBJ(#4,#2) & ~NOSUBJ(#4,#2) )
+	POTSUBJ(#4,#2), POTMOD(#5,#5,#4)
+
+//si le sujet de wants n'est pas encore connu
+|#1[verb], (adv), IV#3|
+	if (HEAD2(#4,#3) & HEAD2(#5[sc_toinf, cop:~],#1) & ~SUBJ-N(#5,?) & ~SUBJ(#5,?) & ~SUBJ-N(#4,#2) & ~SUBJ-N(#4,#2) & ~POTSUBJ(#4,#2) & ~NOSUBJ(#4,#2) )
+	COSUBJ(#4,#5), POTMOD(#5,#5,#4)
+
+//************* it BE ADJ for NP INF****************
+
+//#1It #5is #2necessary for #3him to #4go -> POTMOD(#2necessary,#5is,#4go), POTSUBJ(#4go,#3him)
+
+//MOD_POST_INFINIT(#2necessary,#4go)
+//SUBJATTR(#1It,#2necessary)
+//MOD_GRPR_SUBCAT(#2necessary,#3him)
+//EMBED_INFINIT(go,is)
+
+if ( MOD[post,infinit](#2,#4) & SUBJATTR(#1,#2) & MOD[infinit:~](#2,#3[Nentity]) & EMBED[infinit](#4,#5) )
+	POTMOD(#2,#5,#4), POTSUBJ(#4,#3).
+
+//#1Iran is #3very anxious to #4have the [nuclear] bomb.
+//POTSUBJ(#4have,#3very).
+//MOD[post,infinit](#2anxious,#4have)
+//SUBJATTR(#1Iran,#2anxious)
+//MOD(#2anxious,#3very)
+
+
+//if(SUBJ-N(#2,#3[form:fit]) & SUBJATTR(#3,#4) & MOD(#2,#5) & (PREPD(#5,?[form:ffor])|PREPD(#5,?[form:fof])) & ((MOD(#5,#1) & HEAD2(#1,?[inf]))|EMBED[infinit](#1,#2)  ) & ~SUBJ-N(#1,?))
+//	POTSUBJ(#1,#5), POTMOD(#4,#2,#1)
+
+//************* ADJ for NP INF****************
+
+//easier for North Korea to buy
+//MOD_SUBCAT_POST(easier_ADJPRED:+#3,North Korea#1)
+//PREPD(North Korea#1,for#4)
+//NP{North Korea#1} IV{to buy#2}
+//HEAD2(buy#5,to buy#2)
+
+| np{?*,#1[last]}, iv#2 |
+if ( MOD[subcat,post](#3[adj],#1) & PREPD(#1,#4[form:ffor]) & HEAD2(#5,#2) )
+	MOD[subcat=+](#3,#5), SUBJ[grpr=+](#5,#1).
+
+| np{?*,#1[last]}, iv#2 |
+if ( MOD[subcat,post](#3[nadj],#1) & PREPD(#1,#4[form:ffor]) & HEAD2(#5,#2) )
+	MOD[subcat=+](#3,#5), SUBJ[grpr=+](#5,#1).
+
+| pp{?, np{?*,#1[last]}}, iv#2 |
+if ( MOD[subcat,post](#3[adj],#1) & PREPD(#1,#4[form:ffor]) & HEAD2(#5,#2) )
+	MOD[subcat=+](#3,#5), SUBJ[grpr=+](#5,#1).
+
+| pp{?, np{?*,#1[last]}}, iv#2 |
+if ( MOD[subcat,post](#3[nadj],#1) & PREPD(#1,#4[form:ffor]) & HEAD2(#5,#2) )
+	MOD[subcat=+](#3,#5), SUBJ[grpr=+](#5,#1).
+
+| np{?*,#1[last]}, iv#2 |
+if ( MOD[subcat,post](#3[adj],#1) & PREPD(#1,#4) & HEAD2(#5,#2) & ~MOD[subcat](#3,#5) )
+	MOD[subcat=+](#3,#5).
+
+| np{?*,#1[last]}, iv#2 |
+if ( MOD[subcat,post](#3[nadj],#1) & PREPD(#1,#4) & HEAD2(#5,#2) & ~MOD[subcat](#3,#5) )
+	MOD[subcat=+](#3,#5).
+
+| pp{?, np{?*,#1[last]}}, iv#2 |
+if ( MOD[subcat,post](#3[adj],#1) & PREPD(#1,#4) & HEAD2(#5,#2) & ~MOD[subcat](#3,#5) )
+	MOD[subcat=+](#3,#5).
+
+| pp{?, np{?*,#1[last]}}, iv#2 |
+if ( MOD[subcat,post](#3[nadj],#1) & PREPD(#1,#4) & HEAD2(#5,#2) & ~MOD[subcat](#3,#5) )
+	MOD[subcat=+](#3,#5).
+
+| ap{?*,#3[last,verb:~]}, pp{#4, np{?*,#1[last,evnt:~]}}, iv#2 |
+if ( PREPD(#1,#4) & HEAD2(#5,#2) & ~MOD[subcat](#3,#5) )
+	MOD[subcat=+](#3,#5).
+
+| ap{?*,#3[last,verb:~]}, pp{#4[form:ffor], np{?*,#1[last,evnt:~]}}, iv#2 |
+if ( HEAD2(#5,#2) & ~SUBJ(#5,#1) )
+	SUBJ[grpr=+](#5,#1).
+
+//****************** ADJ for NP that *********************
+
+//clear#1 for Russia#2 that#3 the US is#4 seeking
+//MOD_GRPR_SUBCAT(clear_ADJPRED:+,Russia)
+//NP{clear_ADJPRED:+} PP{for NP{Russia}} SC{BG{that}
+
+| ?{#1[nadj]}, pp{?, np{?*,#2[last,evnt:~]}}, sc{bg{#3[form:fthat,complthat=+]},?*,?{?*,#4[last]},?*} |
+if ( MOD[subcat](#1,#2) & SUBJ(#4,?) & ~MOD[subcat](#1,#4) )
+	MOD[subcat=+](#1,#4).
+	
+
+//*******************NP BE ADJ INF*************************
+
+//Russia is likely to sign
+//his country is ready to resume negotiations 
+if(SUBJ-N(#2,#3) & ((NUCL[subjcompl](#2,#4[adj, modaladj:~]) & ~DETD(#4,?))|NUCL[subjcompl](#2,#4[adv])) & (MOD(#2,#1)|MOD(#4,#1)) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & ~POTSUBJ(#1,?))
+	POTSUBJ(#1,#3), POTMOD[infinit=+](#4,#2,#1)
+
+//si le sujet de is n'est pas encore connu
+/
+if(~SUBJ-N(#2,?) & ((NUCL[subjcompl](#2,#4[adj, modaladj:~]) & ~DETD(#4,?))|NUCL[subjcompl](#2,#4[adv])) & (MOD(#2,#1)|MOD(#4,#1)) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & (~POTSUBJ(#1,?)|POTSUBJ(#1,#6) & NOSUBJ(#1,#6)))
+	COSUBJ(#1,#2), POTMOD[infinit=+](#4,#2,#1)
+\
+
+if(NUCL[subjcompl](#2,#4[adj, modaladj:~]) & ~DETD(#4,?) & MOD(#2,#1) & HEAD2(#1,?[inf]) & PREPD(#1,?[form:finfto]) & ~SUBJ-N(#1,?) & ~SUBJ-N(#2,?))
+	COSUBJ(#1,#2), POTMOD[infinit=+](#4,#2,#1)
+
+//to be able to change
+if(NUCL[vlink](#1,#2[adj]) & NUCL [modal](#2,#3) & ~SUBJ-N(#3,?))
+	COSUBJ(#3,#1)
+
+
+//****************NP BE PP INF******************************
+//They are on standby to visit the plant
+if (PREPD[expr_inf](#1,#2) & MOD[infinit](#1,#3) & MOD(#4[form:fbe],#1) & SUBJ-N(#4,#5))
+	POTSUBJ(#3,#5), POTMOD[infinit=+](#1,#4,#3)
+
+//si le sujet de are n'est pas encore connu
+if (PREPD[expr_inf](#1,#2) & MOD[infinit](#1,#3) & MOD(#4[form:fbe],#1) & ~SUBJ-N(#4,?))
+	POTSUBJ(#3,#4), POTMOD[infinit=+](#1,#4,#3)
+
+
+//// traduire les relations POTMOD en EMBED
+if (POTMOD[infinit](#1,#2,#3) & ~EMBED(#3,#2))
+	EMBED[infinit=+, grpr=+](#3,#2)
+
+// ***************** NP to be PASS **************************
+
+// a contract to be signed
+//NUCL_POSI_VLINK_PASSIVE(be,signed)
+//PP{for NP{a contract}} IV{to be signed} 
+
+| ?{?*, np{?*,#1[last]}}, iv{?[form:finfto], #2[form:fbe], #3[last]} |
+if ( NUCL[passive](#2,#3) & ~OBJ-N(#3,#1) & ~MOD[post](#4,#1) )
+	OBJ-N[grpr=+](#3,#1).
+
+| np{?*,#1[last]}, iv{?[form:finfto], #2[form:fbe], #3[last]} |
+if ( NUCL[passive](#2,#3) & ~OBJ-N(#3,#1) & ~MOD[post](#4,#1) )
+	OBJ-N[grpr=+](#3,#1).
+
+
+
+//***************INF .........., NP VERB******************
+// In a gesture to demonstrate its nuclear program is for peaceful purposes only, Tehran delivered ...
+
+| TOP{PP{?, np{?*}}, IV{?, ?*, #1[last]}, ?*, sc{np{?*,#2[last]}, ?* },?*} |
+if ( SUBJ-N(?,#2) )
+	SUBJ-N[grpr=+](#1,#2).
+
+//***************to be to do sg*********************
+
+//MOD_SUBCAT_POST_INFINIT(#1are_SC_TOINF:+,#2write)
+//SUBJ-N_PRE(#1are,#3We)
+
+
+if ( MOD[subcat,infinit](#1[sc_toinf,form:~fbe],#2) & SUBJ-N(#1,#3) & ~SUBJ-N(#2,?) & ~OBJ(#1,?) )
+	SUBJ-N[grpr=+](#2,#3).
+
+if ( MOD[subcat,infinit](#1[sc_toinf,form:fbe],#2) & SUBJ-N(#1,#3[Nentity]) & ~SUBJ-N(#2,?) & ~OBJ(#1,?) )
+	SUBJ-N[grpr=+](#2,#3).
+
+
+// ****************INF of goal***********************
+
+// Hans Blix visits Iran to discuss -> COORDINATE[actor](discuss,Hans Blix)
+// exclude cases when the OBJ has an agent: the #4United States would #1rebuff European #2efforts to #3bring
+
+| ?{?*,#1[sc_np_toinf:~,sc_humnp_toinf:~]} |
+if ( OBJ-N(#1,#2[sc_toinf:~]) & EMBED[infinit](#3,#1) & SUBJ-N(#1,#4) & ~IOBJ(#1,?) &~SUBJ-N(#3,?) & ~POTSUBJ(#3,?) )
+	SUBJ-N[grpr=+](#3,#4).
+
+| ?{?*,#1[sc_humnp_toinf]} |
+if ( OBJ-N(#1,#2[sc_toinf:~,Nentity:~]) & EMBED[infinit](#3,#1) & SUBJ-N(#1,#4) & ~IOBJ(#1,?) &~SUBJ-N(#3,?) & ~POTSUBJ(#3,?) )
+	SUBJ-N[grpr=+](#3,#4).
+
+// intransitive verbs with 1 argument : We arrive to write letters.
+//SUBJ-N_PRE(arrive,We)
+//FV{arrive}} IV{to write}
+
+| ?{?+, FV{#1}}, IV{?[form:finfto], #2[last]} |
+if ( SUBJ-N(#1[sc_toinf:~,form:~fbe,trans:~],#3) & ~POTSUBJ(#2,?) )
+	SUBJ-N[grpr=+](#2,#3).
+
+//intransitive verbs with 2 arguments: We arrive in London to write letters.
+//LOC_POST(#1arrive_SC_TOINF:+,#2London)
+//SUBJ-N_PRE(#1arrive,#3We)
+//MOD_POST_INFINIT(#2London,#4write)
+
+
+if ( LOC[post](#1[sc_toinf:~],#2) & SUBJ-N(#1,#3) & ~OBJ-N(#1,?) & ^MOD[post,infinit](#2,#4[trans:~]) & ~POTSUBJ(#4,?) )
+	~, SUBJ-N[grpr=+](#4,#3).
+
+
+
+//intransitive verbs with 2 arguments: The reporters call on Paul to write the letters .
+
+if ( MOD[post,subcat](#1,#2) & PREPD(#2,?) & SUBJ-N(#1,#3) & ~OBJ-N(#1,?) & ^MOD[post,infinit](#2,#4[trans:~]) & ~POTSUBJ(#4,?) )
+	~, SUBJ-N[grpr=+](#4,#3).
+
+
+/
+
+| iv{?*,#1[sc_np_toinf:~]} |
+if ( OBJ-N(#1,#2[sc_np_toinf:~]) & EMBED[infinit](#3,#1) & SUBJ-N(#1,#4) & ~(MOD[pre](#2,#5[Nentity]) | IOBJ(#1,?) | DETD(#2,#6[Nentity]) ) )
+	SUBJ-N[grpr=+](#3,#4).
+
+// add cases when the OBJ has an agent: the #4United States would #1rebuff European #2efforts to #3bring -> SUBJ(bring,European)
+
+| iv{?*,#1[sc_np_toinf:~]} |
+if ( OBJ-N(#1,#2) & EMBED[infinit](#3,#1) & SUBJ-N(#1,#4) & MOD[pre](#2,#5[Nentity] )
+)
+	SUBJ-N[grpr=+](#3,#5).
+
+| iv{?*,#1[sc_np_toinf:~]} |
+if ( OBJ-N(#1,#2) & EMBED[infinit](#3,#1) & SUBJ-N(#1,#4) & DETD(#2,#5[Nentity] )
+)
+	SUBJ-N[grpr=+](#3,#5).
+\
+
+//************************ED***********************
+
+
+//**********************NP do not SV ED***************
+// you do not get stuck  -> SUBJ-N(get,you), SUBJ-N(stuck,you)
+
+if ( SUBJ[pre](#1,#2) & NUCL[vlink,insist](#1,#3) & ( ~SUBJ(#3,#2) | ~SUBJ-N(#3,#2) ) )
+	SUBJ-N[grpr=+](#3,#2).
+
+//So Iran would have #2no #1need to #3do 
+//SUBJ-N_GRPR_[2768](#3do,#2no)
+//SUBJ[pre](#1need,#2no)
+//NUCL[vlink,insist](#1,#3)
+
+
+/
+if ( SUBJ[pre](#1,#2) & NUCL[vlink,modal](#1,#3) & ( ~SUBJ(#3,#2) | ~SUBJ-N(#3,#2) ) )
+	SUBJ-N[grpr=+](#3,#2).
+
+if ( SUBJ[pre](#1,#2) & NUCL[vlink](#1,#3) &  NUCL[vlink](#3,#4) & SUBJ-N[grpr](#3,#2) & ( ~SUBJ(#4,#2) | ~SUBJ-N(#4,#2) ) )
+	SUBJ-N[grpr=+](#4,#2).
+\
+
+// *** création des relations SUBJ-N (ou OBJ-N) pour les infinitifs et les progressifs
+if (POTSUBJ(#1,#2) & ~SUBJ-N(#1,#2) & ~SUBJ(#1,?) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#2)
+
+
+if (POTSUBJ(#1,#2) & ~OBJ-N(#1,#2) & ~OBJ(#1,#2) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#2)
+
+// cas des noms composés (noeud noun construit par règles) : quand une relation SUBJ existe à plusieurs degrés de profondeur, choisir celle qui concerne le noeud le plus bas dans l'arbre (la feuille)
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#2))
+	~
+
+|#2{?*, #3}|
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#4) & HEAD2(#2,#4))
+	~
+
+|#2{?*, ?{?*, #3}}|
+if (^SUBJ-N(#1,#2) & SUBJ-N(#1,#3) & HEAD2(#3,#4) & HEAD2(#2,#4))
+	~
+
+// 2e création des relations SUBJ-N (ou OBJ-N) pour les infinitifs et les progressifs
+// concerne les cas d'emboîtements successifs : le sujet (ou l'objet) du verbe emboîtant a été trouvé entre-temps
+if (COSUBJ(#1,#2) & ~SUBJ-N(#1,?) & ~SUBJ(#1,?) & SUBJ-N(#2,#3) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#3)
+
+if (COSUBJ(#1,#2) & ~OBJ-N(#1,?) & ~OBJ(#1,?) & SUBJ-N(#2,#3) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#3)
+
+if(SUBJOBJ(#1,#2) & ~SUBJ-N(#1,?) & ~SUBJ(#1,?) & OBJ-N(#2,#3) & ~VDOMAIN[passive](#1,?))
+	SUBJ-N[grpr=+](#1,#3)
+
+if (SUBJOBJ(#1,#2) & ~OBJ-N(#1,?) & ~OBJ(#1,?) & OBJ-N(#2,#3) & VDOMAIN[passive](#1,?))
+	OBJ-N[grpr=+](#1,#3)
+
+//cette règle provisoire sert à établir une dépendance entre les verbes non finis et les verbes dont ils dépendent afin qu'un CORE-VERB[drive] soit créé 
+//if(POTMOD(#1[adj],#2,#3))
+//	POTMOD(#1,#3)
+
+if(POTMOD(#1,#2,#3) & ~$1(#2,#3))
+	POTMOD(#2,#3)
+
+
+if(^EMBED(#1,#2,#3))
+	~
+
+// le problèmes des compléments circonstanciels est à traiter : pour le moment ils donnent lieu à des CORE-DRIVE
+|#5[prep, after, start], det[indef], #1, ?*[verb:~], #4[verb] |
+	if(HEAD2(#2[prog],#1) & MAIN(#3) & HEAD2(#3,#4) & SUBJ-N(#3,#6))
+//	MOD[grpr=+](#3,#2), PREPD[grpr=+](#2,#5), CORE-ANNEX(#3,#2), SUBJ-N[grpr=+](#2,#6)
+	MOD[grpr=+](#3,#2), PREPD[grpr=+](#2,#5), SUBJ-N[grpr=+](#2,#6)
+
+
+//*********************objects of non-finite forms*********************
+
+//*********************NP (that) NP ed********************
+
+// ... as one of the achievements Iran has gained from negotiations with Europe. -> OBJ-N(gained,achievements)
+
+//as one PP{of NP{the achievements#1}} NP{Iran#2} FV{has}} NFV{gained#3[sv]} 
+//SUBJ-N_PRE(gained#3,Iran#2)
+
+| PP{ ?, np{?*, #1[last]}}, np{?*,#2[last]} |
+if ( SUBJ-N[pre](#3[sv],#2) & ~OBJ(#3[sv],?) & ~OBJ-N(#3[sv],?) & ~MOD[post,appos](#2,?) )
+	OBJ-N[grpr=+](#3,#1).
+
+
+| np{?*, #1[last]}, np{?*,#2[last]} |
+if ( SUBJ-N[pre](#3[sv],#2) & ~OBJ(#3[sv],?) & ~OBJ-N(#3[sv],?) & ~MOD[post,appos](#2,?) )
+	OBJ-N[grpr=+](#3,#1).
+
+
+//*********************NP (that) ED********************
+
+// A previous explanation delivered on state television suggested the possibility ..
+
+if ( MOD[post,pastpart](#2,#3) )
+	OBJ-N[grpr=+](#3,#2).
+
+//********************NP being ED***********************
+// on account of uranium being removed -> OBJ-N(removed,uranium)
+
+//NUCL_GRPR_VLINK_PASSIVE(being#1,removed#2)
+//PP{on account of NP{uranium#3}} GV{being#1 removed#2} 
+
+
+| pp{?, np{?*,#3[last]}}, gv{#1,#2} |
+if ( NUCL[vlink,passive](#1,#2) & ~OBJ-N(#2,#3) )
+	OBJ-N[grpr=+](#2,#3)
+
+
+| np{?*,#3[last]}, gv{#1,#2} |
+if ( NUCL[vlink,passive](#1,#2) & ~OBJ-N(#2,#3) )
+	OBJ-N[grpr=+](#2,#3)
+
+//********************VS ED************************
+// his country will not be obliged to remain committed ... -> OBJ-N[committed,country)
+
+//IV{to remain} FV{committed} IN
+//SUBJ-N(remain,country)
+
+| ?{?*, #1verb[last,form:~fhave,form:~fbe]}, ?{#2[partpas]} |
+if ( SUBJ-N(#1,#3) & ~OBJ-N(#2,?) )
+	OBJ-N[grpr=+](#2,#3).
+
+
+if ( ^$1[grpr](#1,#2) & $1[grpr:~](#1,#2) )
+	~.
+
+//***************************************
+// ajout de traits
+//Federal searches : federal est assimilable à un adjectif de pays
+|#2[lemme:federal, country=+]|
+if (MOD[pre](#1[evnt],#2))
+	  ~
+
+
+// whether/if/when
+
+//it is questionable whether the transaction will actually take place,
+//CONNECTOR_XRX_EVNT_SUBORD(take,whether)
+//SUBJATTR(it,questionable_ADJPRED:+)
+
+| ?{#1}, SC{BG{#2}, ?+} |
+if ( CONNECTOR[subord](#3,#2[wh,form:~fif]) & SUBJATTR(?,#1) & ~MOD[subcat](#1,#3) )
+	MOD[grpr=+,subcat=+](#1,#3).
+
+| ?{#1}, SC{BG{#2}, ?+} |
+if ( CONNECTOR[subord](#3,#2[wh,form:~fif]) & SUBJATTR(?,#1) & ~MOD[subcat](#1,#3))
+	MOD[grpr=+,subcat=+](#1,#3).
+
+| ?{#1}, SC{BG{#2}, ?+} |
+if ( CONNECTOR[subord](#3,#2) & SUBJATTR(?,#1[sc_whs]) & ~MOD[subcat](#1,#3) )
+	MOD[grpr=+,subcat=+](#1,#3).
+
+| ?{#1}, SC{BG{#2}, ?+} |
+if ( CONNECTOR[subord](#3,#2) & SUBJATTR(?,#1[sc_whs]) & ~MOD[subcat](#1,#3) )
+	MOD[grpr=+,subcat=+](#1,#3).
+
+// coordination
+
+if ( NCOORD(#1,#2) & SUBJ(#3,#1) & ~SUBJ(#3,#2) )
+   SUBJ-N[grpr=+](#3,#2).
+
+if ( NCOORD(#1,#2) & SUBJ-N(#3,#2) & ~SUBJ-N(#3,#1) )
+   SUBJ-N[grpr=+](#3,#1).
+
+
+if ( NCOORD(#1,#2) & SUBJ-N(#3[vprog:~],#1) & ~SUBJ-N(#3,#2) )
+   SUBJ-N[grpr=+](#3,#2).
+
+if ( NCOORD(#1,#2) & SUBJ-N(#3[vprog:~],#2) & ~SUBJ-N(#3,#1) )
+   SUBJ-N[grpr=+](#3,#1).
+
+// It depends on how Iran is planning 
+//on SC{BG{how} NP{Iran} 
+//NUCL_PARTICLE(depends,on)
+//SUBJ-N_PRE(planning,Iran)
+
+| #1, sc{bg{?[lemme:~because]}, np{?*,#2[last]}, ?*} |
+if ( NUCL[particle](#3,#1) & SUBJ-N(#4,#2) )
+	MOD[grpr=+,subcat=+](#3,#4).
+
+
+//***************** FIN
+
+//  if both the auxiliary and the main verb are SUBCAT, only the main verb will remain
+//clear that Russia has already provided 
+
+if ( ^MOD[subcat](#1,#2) & MOD[subcat](#1,#3) & NUCL[vlink](#2,#3) )
+	~.
+	
+
+
+
+//Si un mot apparait dans 2 dependances MOD avec 2 fois le trait souscat on conserve uniquement le premier.
+
+//Mikhailov , however , is uncertain about a time frame for the signing of contracts for the additional units .
+//MOD_SUBCAT_POST(#1uncertain,#3contracts)
+//MOD_GRPR_SUBCAT(#1uncertain,#2frame)
+
+if (MOD[subcat](#1[2subcat:~],#2) & ^MOD[subcat](#1[2subcat:~],#3) & ( ~COORD(?,#2) & & ~COORD(?,#3) ) & #2 < #3)
+	MOD[subcat=~](#1,#3).
+
+if (OBJ[infinit](#1[2subcat:~],#2) & ^MOD[subcat](#1[2subcat:~],#3) & ( ~COORD(?,#2) & & ~COORD(?,#3) ) #2 < #3)
+	MOD[subcat=~](#1,#3).
+
+if (OBJ[sentence](#1[2subcat:~],#2) & ^MOD[subcat](#1[2subcat:~],#3) & ( ~COORD(?,#2) & & ~COORD(?,#3) ) #2 < #3)
+	MOD[subcat=~](#1,#3).
+
+// If a verb has both an OBJ_INFINIT and a MOD_SUBCAT, we delete MOD_SUBCAT
+
+//China agrees to sell a nuclear research reactor to Iran, according to the US Senate Committee on Government Affairs.
+
+//MOD_SUBCAT_EVNT_POST(agrees,Government Affairs)
+//OBJ_PRDEP_POSI_MON_POST_INFINIT(agrees,sell)
+
+if ( OBJ[infinit](#1,#2) & ^MOD[subcat](#1,#3) & #2 < #3 )
+	~.
+
+
+//comes after a visit to Tehran
+//MOD_POST(#1comes,#2visit)
+//MOD_SUBCAT_EVNT_POST(#2visit,#3Tehran)
+//MOD_SUBCAT_EVNT_POST(#1comes,#3Tehran)
+
+if ( MOD[subcat:~](#1,#2) & MOD[subcat](#2,#3) & ^MOD[subcat](#1,#3) )
+	~.
+	
+
+
+if ( ^$1(#1[proba],#2[sv,igm]) | ^$1(#1[sv,igm],#2[proba]) )
+	$1[sv=+](#1,#2).
+
+
+//The Soviet Union will also complete the two 1293MW pressurized water reactors at Bushehr that Siemens-Kraftwerk Union of West Germany has refused to finish 
+//MOD_POST_SENTENCE(complete,refused)
+//EMBED(refused,complete) -> 0
+
+if ( MOD[post,sentence](#1,#2) & ^EMBED(#2,#1) )
+	~.
+
+//********************
+
+/////////////////// Cédric ////////////////////
+
+/////////////// (Support Verb) N prep Ving /////////////////
+
+//According to a senior US official, Adamov allegedly has Prime Minister Primakov's support for putting forward the proposals.
+//MOD_POST_GERUND(#3has_SV:+,#2putting_SV:+)
+//MOD_XRX_EVNT_POST(#1support_PROBA:+,#2putting_SV:+) -> [subcat=+]
+
+//ing1
+if (^MOD[post,gerund,subcat:~](#1[sc_nsv,noun],#2[verb]))
+	MOD[subcat=+](#1,#2).
+
+//ing2
+if ((^MOD[subcat:~](#1[sc_nsv,noun],#2[vprog,noun:~]) | ^MOD[subcat:~](#1[sc_nsv,noun],#2[prog,noun:~])) & PREPD(#2,?[p_by:~]))
+	MOD[subcat=+](#1,#2).
+
+//ing4
+|[?{?*,?[last]{?*,#1[sc_nsv,noun]}};?{?*,#1[sc_nsv,noun]};#1[sc_nsv,noun]], (PP), #3PREP, GV{?*,#2[verb]}|
+if (PREPD(#2[verb],#3[p_by:~]) & HEAD(#1[sc_nsv,noun],?) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+/////////////// (Support Verb) N to Vinf /////////////////
+
+//US News and World Report reports that North Korea and Iran have an #1agreement to #2develop nuclear weapons.
+// -> MOD[subcat=+](#1,#2)
+
+//r1
+if(^MOD[post,infinit,subcat:~](#1[sc_nsv,noun],#2[verb]) & PREPD(#2[verb],?[form:finfto]) & ~MOD[subcat](#1,#2) & ~QUANTD(#1[pl,lemme:way],?) & ~DETD(#1[pl,lemme:way],?))
+	MOD[subcat=+](#1,#2).
+
+//r2
+|?{?*,#1[sc_nsv,noun]}, (PP), IV{?*,#2[verb]}|
+if (^MOD[subcat:~](#1[sc_nsv,noun],#2[verb]) & PREPD(#2[verb],?[form:finfto]) & HEAD(#1,?) & ~MOD[subcat](?[sc_nsv,noun],#2) & ~OBJ(?,#2))
+	MOD[subcat=+](#1,#2).
+
+//r3
+|[?{?*,?[last]{?*,#1[sc_nsv,noun]}};?{?*,#1[sc_nsv,noun]};#1[sc_nsv,noun]], (PP), IV{?*,#2[verb]}|
+if (PREPD(#2[verb],?[form:finfto]) & HEAD(#1[sc_nsv,noun],?) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//We erase the wrong dependencies created by r2 and r3
+if(^MOD[subcat](#1[sc_nsv,noun],#3[verb]) & MOD[subcat](#2[sc_nsv,noun],#3[verb]) & #1 < #2 & #2 < #3)
+	~.
+
+|[?{?*,?[last]{?*,#1[sc_nsv,noun]}};?{?*,#1[sc_nsv,noun]};#1[sc_nsv,noun]], PP{?[lemme:in],?[lemme:order]}, IV{?*,#2[verb]}|
+if (^MOD[grpr,subcat](#1,#2) & PREPD(#2[verb],?[form:finfto]) & HEAD(#1[sc_nsv,noun],?))
+	~.
+
+/////////////// (Support Verb) N S /////////////////
+// sc_MetaEmbed = complthat | infinit | grpr
+
+//According to a US official China has provided very firm, clear, and explicit assurances that it will not allow the transfer of nuclear technology to Iran.
+//MOD_POST_SENTENCE(assurances_PROBA:+_IGM:+,allow) -> [subcat=+]
+
+if (^MOD[post,sentence,subcat:~](#1[sc_nsv,noun],#2))
+	MOD[subcat=+](#1,#2).
+
+|#1[noun], #2;(PP,(NP{?*,?[noun,proper],?*}),#2);(PP,(NP{?*,?[noun,proper],?*}),?{#2[first, conj], ?*});?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}};(PP,(NP{?*,?[noun,proper],?*}),?{?{#2[first, conj], ?*}})|
+if (HEAD2(#4[sc_nsv,noun],#1) & CONNECTOR[complthat](#3[verb],#2) & ~MOD(#4,#3) & #4 < #3)
+	MOD[grpr=+,subcat=+](#4,#3).
+
+|?{?[verb],?*,#1[noun]}, #2;(PP,#2);(PP,?{#2[first, conj], ?*});?{#2[first, conj], ?*};?{?{#2[first, conj], ?*}};(PP,?{?{#2[first, conj], ?*}})|
+if (HEAD2(#4[sc_nsv,noun],#1) & CONNECTOR[complthat](#3[verb],#2) & ~MOD(#4,#3))
+	MOD[grpr=+,subcat=+](#4,#3).
+
+if (^MOD[subcat,relativ](#1[sc_nsv,noun],#2[verb]))
+	MOD[subcat=~](#1,#2).
+
+
+/////////////// Compound verbs ////////////////
+
+//be about to Vinf
+if(NUCL[particle](#1[lemme:be],#3[lemme:about]) & ^MOD[subcat:~](#1,#2) & PREPD(#2[verb],?[form:finfto]))
+	MOD[subcat=+](#1,#2).
+
+if(NUCL[particle](#1[lemme:be],#3[lemme:about]) & PREPD(#2[verb],?[form:finfto]) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//be after Ving
+if((^MOD[post,subcat:~](#1[lemme:be],#2[prog]) | ^MOD[post,subcat:~](#1[lemme:be],#2[vprog])) & (PREPD(#2,?[lemme:after]) | CONNECTOR[subord](#2,?[lemme:after])))
+	MOD[subcat=+](#1,#2).
+
+//if((PREPD(#2,#3) | CONNECTOR[subord](#2,#3)) & ~MOD(#1,#2))
+//	MOD[grpr=+,subcat=+](#1,#2).
+
+// be better off Ving
+|(verb#1[lemme:be];?{?*,verb#1[lemme:be]}), ?{?#3[surface:better]}, (?{#4[lemme:off]};#4[lemme:off]), GV{#2[verb,first],?*}|
+if(^MOD[subcat:~](#1,#2) & SUCC(#3,#4))
+	MOD[subcat=+](#1,#2).
+
+|(verb#1[lemme:be];?{?*,verb#1[lemme:be]}), ?{?#3[surface:better]}, (?{#4[lemme:off]};#4[lemme:off]), GV{#2[verb,first],?*}|
+if(SUCC(#3,#4) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//call for N1 to Vinf
+if (MOD[post,subcat](#1[lemme:call],#3) & MOD[post,infinit](#3,#2[verb]) & PREPD(#2,?[form:finfto]) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//call on Ving
+|(PP{?[lemme:on],?*,#3,?*};PP{?[lemme:on],?*,?{?*,#3,?*},?*}), IV{?*,#2[verb]}|
+if (MOD[post,subcat](#1[lemme:call],#3) & PREPD(#3,?[lemme:on]) & PREPD(#2,?[form:finfto]) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//call upon N1 to Vinf
+if (^MOD[post,infinit,subcat:~](#1[lemme:call],#2[verb]) & MOD[post](#1,#3) & SUCC(#1,?[lemme:upon]) & PREPD(#2,?[form:finfto]) & PREPD(#3,?[lemme:upon]))
+	MOD[subcat=+](#1,#2).
+
+if (MOD[post](#1[lemme:call],#3) & SUCC(#1,?[lemme:upon]) & PREPD(#2[verb],?[form:finfto]) & PREPD(#3,?[lemme:upon]) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//come after S
+if(^MOD[post,sentence,subcat:~](#1[lemme:come],#2[verb]) & (PREPD(#2,#3[lemme:after]) | CONNECTOR[subord](#2,#3[lemme:after])))
+	MOD[subcat=+](#1,#2).
+
+if(EMBED[sc_MetaEmbed](#2[adj:~],#1[lemme:come]) & (PREPD(#2[verb],#3[lemme:after]) | CONNECTOR[subord](#2[verb],#3[lemme:after])) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//find out that S
+if(^MOD[post,sentence,subcat:~](#1[lemme:find],#2[verb]) & NUCL[particle](#1[lemme:find],?[lemme:out]) & (OBJ(#1,#2[verb]) | OBJ-N(#1,#2[verb]) | EMBED[sc_MetaEmbed](#2,#1)))
+	MOD[subcat=+](#1,#2).
+
+if(NUCL[particle](#1[lemme:find],?[lemme:out]) & (OBJ(#1,#2[verb]) | OBJ-N(#1,#2[verb]) | EMBED[sc_MetaEmbed](#2,#1)) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//follow through with Ving
+if(^MOD[post,gerund,subcat:~](#1[lemme:follow],#2[verb]) & NUCL[particle](#1,?[lemme:through]))
+	MOD[subcat=+](#1,#2).
+
+if(NUCL[particle](#1[lemme:follow],?[lemme:through]) & (OBJ(#1,#2[verb]) | OBJ-N(#1,#2[verb])) & ~MOD(#1,#2[verb]))
+	MOD[subcat=+](#1,#2).
+
+//look as if S
+if (^MOD[subcat:~](#1[lemme:look],#2[verb]) & CONNECTOR[subord](#2[verb],?[lemme:as_if]))
+	MOD[subcat=+](#1,#2).
+
+if ((EMBED[sc_MetaEmbed](#2[verb],#1[lemme:look]) | OBJ(#1[lemme:look],#2[verb]) | OBJ-N(#1[lemme:look],#2[verb])) & ~MOD(#1,#2) & CONNECTOR[subord](#2[verb],?[lemme:as_if]))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//look to Vinf
+if (^MOD[subcat:~](#1[lemme:look],#2[verb]) & PREPD(#2[verb],?[form:finfto]))
+	MOD[subcat=+](#1,#2).
+
+if ((EMBED[infinit](#2[verb],#1[lemme:look]) | OBJ(#1[lemme:look],#2[verb]) | OBJ-N(#1[lemme:look],#2[verb])) & ~MOD(#1,#2) & PREPD(#2[verb],?[form:finfto]))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+//point out S
+if(^MOD[post,sentence,subcat:~](#1[lemme:point],#2[verb]) & NUCL[particle](#1[lemme:point],?[lemme:out]) & EMBED[sc_MetaEmbed](#2,#1))
+	MOD[subcat=+](#1,#2).
+
+if(NUCL[particle](#1[lemme:point],?[lemme:out]) & EMBED[sc_MetaEmbed](#2,#1) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+
+//////////////// Suppl Verbs //////////////////
+
+//set to Vinf
+|?{#1[verb,noun:~]},IV{?*,#2[verb,last]}|
+if (POTMOD(#1,#1,#2) & PREPD(#2,?[form:finfto]) & ~MOD(#1,#2))
+	MOD[grpr=+,subcat=+](#1,#2).
+
+///////////////////////////////////////////////
+
+//recruiting atomic scientists from the former Soviet Union.
+//MOD_POST(recruiting,Soviet Union)
+//MOD_POST(scientists,Soviet Union)
+//FRM(scientists,Soviet Union)
+
+if (^MOD[subcat:~](#1[objfrm],#2) & PREPD(#2,?[form:ffrom]))
+	MOD[subcat=+](#1,#2).
+
+if ( FRM(#1,#2) & ^MOD[subcat:~](#1,#2) & ~MOD[subcat](#3[objfrm],#2))
+	MOD[subcat=+](#1,#2).
+
+
+///////////////////// Cleaning up ///////////////////////
+// We erase the MOD[subcat] dependencies we don't want anymore.
+
+if (^MOD[subcat](#1,#2) & (OBJ(#1,#2) | OBJ-N(#1,#2)) )
+	~.
+
+///////////////////////// END ///////////////////////////
+
+
+//delete noise
+
+//have been released from jail to work 
+//MOD_SUBCAT_POST(released,jail)
+//MOD_PRDEP_JUR_PROD_POST_INFINIT(jail,work)
+
+
+if ( MOD[subcat](#1,#2) & ^MOD[post,infinit,subcat:~](#2,#3) ~NUCL[passive](?,#3))
+   ~.
+
+////////////////////////////////////////////////////////////////
+// For EERQI
+
+if ( ^POTSUBJ(#1,#2) )
+   ~.
+
+if ( ^POTMOD(#1,#2) )
+   ~.
+
+if ( ^HEAD2(#1,#2) )
+   ~.
+
+if ( ^SUCC(#1,#2) )
+   ~.
+
+if ( ^COSUBJ(#1,#2) )
+   ~.
+
+if ( ^NOSUBJ(#1,#2) )
+   ~.
+
+if ( ^SUBJOBJ(#1,#2) )
+   ~.

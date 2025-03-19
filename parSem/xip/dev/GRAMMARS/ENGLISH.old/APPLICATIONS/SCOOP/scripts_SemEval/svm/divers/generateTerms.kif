@@ -1,0 +1,126 @@
+use("kifltk");
+
+map termreference;
+map sentences;
+
+string lastid;
+function readXml(xml n,self term) {
+     if (n.name()=="sentence") {
+          lastid=n.properties()["id"];
+          term[lastid]=[];
+          sentences[lastid]=n;
+     }
+     if (n.name()=="aspectTerm")
+          term[lastid].push(n.properties()["term"]);
+}
+
+
+xmldoc docref(termreference) with readXml;
+docref.load("../Corpus/ABSA_TestData_PhaseB/Restaurants_Test_Data_phaseB.xml");
+
+parser p('/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm');
+
+string jetrouve;
+function affichedep(dependency d) {
+     jetrouve=d.name();
+}
+
+
+string rule=@"
+script:
+
+if (FOOD$1(#1)) {
+     affichedep($1);
+}
+
+if(SERVICE$1(#1)){
+     affichedep($1);
+}
+
+if(AMBIENCE$1(#1)){
+     affichedep($1);
+}
+
+if(PRICE$1(#1)){
+     affichedep($1);
+}
+
+"@;
+p.addendum(rule,true);
+
+
+map terms;
+map modifiedterms;
+string m;
+int i,nb;
+svector ids=termreference.keys();
+vector emptied;
+
+for (i in <0,ids.size(),i++>) {
+     lastid=ids[i];
+     if (termreference[lastid].size()!=0) {
+          terms[lastid]=[];
+          for (m in termreference[lastid]) {
+               jetrouve="EMPTY";
+               p.parse(m);
+               vector sub=[m,jetrouve,lastid];
+               terms[lastid].push(sub);
+               if (jetrouve=="EMPTY") {
+                    emptied.push(sub);
+                    nb++;
+               }
+          }
+     }
+}
+
+function sauvegarde() {
+     file fsauve("truc.kif","w");
+     fsauve.writeln("map termsforsentences="+terms+";\n");
+     fsauve.close();
+}
+
+int position;
+window w;
+editor wsentence;
+woutput wterm;
+winput wcat;
+woutput nbs;
+int decompte=emptied.size();
+
+function Suivant(button b,self x) {
+     if (wcat.value().lower() not in ["food","ambience","service","price"]) {
+          wcat.value("ERREUR");
+          return;
+     }
+     emptied[position][1]=wcat.value().upper();
+     //wcat.value("");
+     position++;
+     if (position>=emptied.size()) {
+          sauvegarde();
+          wsentence.value("Fin");
+          return;
+     }
+     decompte--;
+     nbs.value(decompte);
+     lastid=emptied[position][2];
+     wsentence.value(sentences[lastid].content().trim());
+     wterm.value(emptied[position][0]);
+}
+
+
+button suivant with Suivant;
+
+w.begin(40,40,840,300,"Modification");
+wsentence.create(60,20,700,100,"Phrase:");
+nbs.create(800,20,40,30,false,"Nb:");
+wsentence.wrap(true);
+wterm.create(60,200,200,30,false,"Terme:");
+wcat.create(400,200,100,30,false,"Categorie");
+suivant.create(600,200,90,30,"Suivant");
+w.end();
+lastid=emptied[0][2];
+wsentence.value(sentences[lastid].content().trim());
+wterm.value(emptied[0][0]);
+nbs.value(decompte);
+w.run();
+

@@ -1,0 +1,105 @@
+If you are going to make any changes to MySQL++, this file has some
+hints and commentary you may find helpful.
+
+
+SUBVERSION ACCESS
+
+	To check out the current development version from the Gna!
+	Subversion repository, say:
+
+		$ svn co svn://svn.gna.org/svn/mysqlpp/trunk mysqlpp
+
+	If you're a MySQL++ committer, use svn over ssh instead:
+	
+		$ svn co svn+ssh://LOGIN@svn.gna.org/svn/mysqlpp/trunk mysqlpp
+
+	where LOGIN is your Gna! login name.  You will have to have your
+	ssh public key registered with Gna! for this to work.
+
+
+SUBMITTING PATCHES
+
+	If you wish to submit a patch to the library, please send it to
+	the MySQL++ mailing list.  We want it in unified diff format.
+
+	The easiest way to do this is to check out a copy of the current
+	MySQL++ tree as described in the previous section.  Then make
+	your change, cd to the root directory of the project, and ask
+	Subversion to generate the diff for you:
+
+		$ svn diff > mychange.patch
+
+	If your patch adds new files to the distribution, you can say
+	"svn add newfile" before you do the diff, which will include
+	the contents of that file in the patch.  (You can do this even
+	when you've checked out the tree anonymously.)	Then say "svn
+	revert newfile" to make Subversion forget about the new file.
+
+	If you're making a patch against a MySQL++ distribution tarball,
+	then you can generate the diff this way:
+
+		$ diff -ruN mysql++-olddir mysql++-newdir > mychange.patch
+
+	The diff command is part of every Unix and Linux system, and
+	should be installed by default.  If you're on a Windows machine,
+	GNU diff is part of Cygwin (http://cygwin.com/).  Subversion is
+	also available for all of these systems.  There are no excuses
+	for not being able to make unified diffs.  :)
+
+
+MAINTAINING A PRIVATE CVS REPOSITORY
+
+	You may find it helpful to maintain your own CVS repository.
+	Whenever there is a new MySQL++ release, import it on the vendor
+	branch like this:
+
+		$ cvs import -m "Version 1.7.35" software/mysql++ mysql++ mysql++-1_7_35
+
+	(This assumes that you have your CVSROOT environment variable
+	set properly.)
+
+	Update the HEAD branch like this:
+
+		$ cd mysql++
+		$ cvs update -PdA
+		$ cvs update -j HEAD -j mysql++-1_7_35 -Pd
+		$ cvs ci -m "merged 1.7.35 into HEAD"
+		$ cvs tag mysql++-1_7_35-merged
+
+	Then any changes you make can easily be tracked, and diffs can
+	be produced with rdiff:
+
+		$ cvs rdiff -ru mysql++-1_7_35 -r mysql++-1_7_35_equal_list \
+			$(cat CVS/Repository) > equal_list.patch
+
+
+ON MANIPULATING THE AUTOTOOLS INPUT FILES
+
+	If you are going to hack on the autotools files (*.am, *.in and
+	everything in the config subdir), run the command:
+
+		$ ./bootstrap [pedantic] [options]
+
+	The primary purpose of this command is to rebuild all the
+	autotools output files, and to enable "maintainer mode".
+	In maintainer mode, the build system is set up such that if you
+	change any of these autotools input files in the future, their
+	dependents will be re-generated automatically.	Occasionally
+	automake/autoconf gets confused and you have to run it again,
+	but this is rare.
+
+	If the first argument to the bootstrap script is 'pedantic'
+	(without the quotes) it will turn on a bunch of GCC-specific
+	flags which make the compiler much pickier about the source
+	code it will accept without warnings.  It is useful to enable
+	this mode whenever you are making large changes to the library,
+	to ensure that you haven't done something silly.  We strive to
+	keep MySQL++ in a state where it never gives compiler warnings
+	in pedantic mode.  We're not 100% there yet with all compilers,
+	but we're trying...
+
+	Anything after the optional pedantic argument is passed as
+	arguments to the configure script.  See the README file in
+	this directory for more information about the flags that the
+	script accepts.
+

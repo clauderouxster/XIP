@@ -1,0 +1,190 @@
+string path = '/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+parser p(path);
+sitreemap allthewords;
+ivector words;
+vector sentences;
+vector allcatsdeps; 
+
+
+function storewords(node n){
+     string s=n.lemma().lower();
+     if (allthewords.test(s)==false)
+          allthewords[s]=allthewords.size()+1;
+
+     words.push(allthewords[s]);
+     println(allthewords[s] + " " + s);
+}
+
+function storemultiwords(node n, dependency d){
+     	string depname = d.name().lower();
+	string s  = n.lemma().lower() + " " + depname.lower();
+     	svector sv = s.tokenize();
+     	for(s in sv){
+          	if(allthewords.test(s)==false)
+          		allthewords[s]=allthewords.size()+1;
+          	words.push(allthewords[s]);
+          	println(allthewords[s]+ "---" + s);
+	}
+     	
+}
+
+function storemultiwords(node n){
+	string s  = n.lemma().lower();
+     	svector sv = s.tokenize();
+     	for(s in sv){
+          	if(allthewords.test(s)==false)
+          		allthewords[s]=allthewords.size()+1;
+          	words.push(allthewords[s]);
+          	println(allthewords[s]+ "---" + s);
+	}
+     	
+}
+
+function selectsentence(xml n, self data){
+     if(n.name()=='sentence')
+          sentences.push(n);
+}
+
+function getdeps(dependency d){
+	if(d.name()=="FOOD" || d.name()=="SERVICE" || d.name()=="AMBIENCE" || d.name()=="PRICE"){
+		vector v1 = d.parameters();
+          	string depname = d.name();
+		node n1 = v1[0];
+		string s1 = n1.surface();
+		allcatsdeps.push(n1);
+          	println(s1 + " ---- ");
+          //	storemultiwords(n1,d);
+          	storemultiwords(n1);
+	} else if  (d.name()=="OPINION-ON-ASPECT-CATEGORY" || d.name()=="OPINION-ON-ASPECT-TERM"){
+          	vector v1 = d.parameters();
+          	node n1 = v1[0];
+          	string s1 = n1.surface();
+          	allcatsdeps.push(n1);
+          	println(s1 + " ---- ");
+          	storemultiwords(n1);
+	}     
+}
+
+
+string rule=@"
+
+script:
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+
+if(FOOD$2(#1)){
+     getdeps($2);
+}
+
+if(SERVICE$3(#1)){
+     getdeps($3);
+}
+
+if(AMBIENCE$4(#1)){
+     getdeps($4);
+}
+
+if(PRICE$5(#1)){
+     getdeps($5);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$6(#1)){
+    getdeps($6);
+}
+
+if(OPINION-ON-ASPECT-TERM$7(#1)){
+    getdeps($7);
+}
+
+"@;
+p.addendum(rule,true);
+
+
+
+xmldoc inputxml with selectsentence;
+inputxml.load('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/Corpus/Restaurants_Train_v2.xml');
+///SemEval/Restaurants/Restaurants/Restaurants_Train.xml'
+
+
+sitreemap categories={"food":0,"price":1,"service":2,"ambience":3,"anecdotes/miscellaneous":4};
+xml n, cats, categ;
+string catsname,sent,c;
+ssmap props;
+vector categoriesfinal;
+
+
+
+for(n in sentences){
+     	cats = n.child();
+     	while(cats!=null){
+          	catsname = cats.name().trim();
+          	if(catsname=="aspectCategories"){
+               		categ=cats.child();
+	               	while(categ!=null){
+                    		if (categ.name()=="aspectCategory") {
+                         		allcatsdeps.clear();
+                         		props=categ.properties();
+                         		words.clear();
+                         		p.parse(sent);
+					c=props["category"];
+                        		categoriesfinal.push([categories[props["category"]],words]);
+                         		println(words + " " + sent);
+                       		}
+                                categ=categ.next();
+			}
+               		break;
+		}
+          	else {
+               		catsname=cats.content().trim();
+              		if (catsname!="")
+                    		sent=catsname;
+          	}
+          	cats = cats.next();
+	}
+        printerr(".");
+}
+
+
+function savethemodel(string filename) {
+     file modelfile(filename,"w");
+
+     int i;
+     string line;
+     ivector iv;
+     vector cat, keys;
+     iitreemap uniques;
+
+     for(cat in categoriesfinal){
+     	line=cat[0]+" ";
+     	iv=cat[1];
+     	iv.sortint(false);
+     	for (i in iv){
+               	uniques[i]++;
+	}
+        keys = uniques.keys();
+ 	for (i in keys){
+               	line+=i+":"+uniques[i]+" ";
+	}          
+    	modelfile.writeln(line);
+        	uniques.clear();
+     }
+
+     modelfile.close();
+}
+
+
+savethemodel("modelCategories.dat");
+
+file dico("dictionaries2.kif","w");
+
+dico.writeln("sitreemap allthewords="+allthewords+";");
+
+dico.close();
+
+
+
+
+
+

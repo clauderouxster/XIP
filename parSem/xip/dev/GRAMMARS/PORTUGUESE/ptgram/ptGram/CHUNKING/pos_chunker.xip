@@ -1,0 +1,82 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : pos_chunker.xip                                             !
+//!   Date       : 2010/January                                                !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   POS-CHUNKING for joining items to chunks.                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+
+////////////////////////////////////////////////////////////////////////////////
+// A chunk between quotations
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM, 2011/01/27
+1> NP[inquote=+]    = punct[bracket,left];punct[quote];?[lemma:"'"],    NP[inquote=+],  punct[bracket,right];punct[quote];?[lemma:"'"].
+1> AP[inquote=+]    = punct[bracket,left];punct[quote];?[lemma:"'"],    AP[inquote=+],  punct[bracket,right];punct[quote];?[lemma:"'"].
+1> PP[inquote=+]    = punct[bracket,left];punct[quote];?[lemma:"'"],    PP[inquote=+],  punct[bracket,right];punct[quote];?[lemma:"'"].
+//1> VP[inquote=+]  = punct[bracket,left];punct[quote];?[lemma:"'"],    VP[inquote=+],  punct[bracket,right];punct[quote];?[lemma:"'"].
+1> ADVP[inquote=+]  = punct[bracket,left];punct[quote];?[lemma:"'"],  ADVP[inquote=+],  punct[bracket,right];punct[quote];?[lemma:"'"].
+
+
+Reshuffling:
+
+//NJM, 2011/01/27
+2>   NP[inquote]{?#1[first],NP#2{?-#4},?#3[last]}   = #2{#1,#4,#3} .
+2>   AP[inquote]{?#1[first],AP#2{?-#4},?#3[last]}   = #2{#1,#4,#3} .
+2>   PP[inquote]{?#1[first],PP#2{?-#4},?#3[last]}   = #2{#1,#4,#3} .
+2> ADVP[inquote]{?#1[first],ADVP#2{?-#4},?#3[last]} = #2{#1,#4,#3} .
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Repairing AP -> VCPART
+////////////////////////////////////////////////////////////////////////////////
+
+// NJM+JB, 2013/02/08
+//
+//In reduced participal subclauses, the participle may select an argument (eventually prepositional) subclause.
+//The past participle must be chunked as a VCPART in order to be tagged with the ViPEr lexical information.
+//This rule reshuffles the incorrectly determined AP but captures only infinitive subclauses.
+//
+// A estratégia passa por usar a sequência:
+// 1º marcar os AP que têm de ser convertidos com o traço destroy (dependency rules)
+// 2º fazer a conversão dos nós marcados no passo anterior        (reshuffling rules)
+//
+// Example: Acusado de ter feito isso, o Pedro confessou tudo.  <------------ NÃO FUNCIONA (cadeia verbal)
+// Example: Acusados de serem inimigos do estado,  
+// Example: Confrontado pelos jornalistas sobre uma possível assinatura que está ao lado ...
+// Example: Confrontado com a proposta do Manuel de que o Pedro tratara, o João disparou
+//
+DependencyRules:
+|AP[start,destroy=+]{pastpart[last]}, (NP;PP)+,   VF{?*,verb[vinfin,last]};
+                                                VINF{?*,verb[vinfin,last]};
+                                                  SC{?*,VINF{?*,verb[vinfin,last]};VF{?*,verb[vinfin,last]}}
+| ~
+
+|AP[start,destroy=+]{pastpart[last]}, (NP;PP)+,  prep*, SC{rel,?*,VF[fin]{?*,verb[last]}} | ~
+
+Reshuffling:
+3> AP[start,destroy]{#1[last]}  = VCPART{#1}.
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Repairing NADA
+////////////////////////////////////////////////////////////////////////////////
+
+//DependencyRules:
+//| ?[lemma:nem];?[lemma:não], ?[lemma:ser,verb];?[lemma:estar,verb], AP[destroy=+]{?[lemma:nada], ?*, adj} | ~
+//Reshuffling:
+//10> AP[destroy]{#1[lemma:nada], ?-#2} = ADVP{#1}, AP{?-#2}.
+//Sequence:

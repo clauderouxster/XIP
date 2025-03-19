@@ -1,0 +1,111 @@
+<project name="" default="dev" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}taskExt.xml" />
+<!--
+<import file="${common.dir}${fs}testInclude.xml" />
+-->
+
+<property name="java_debug"    		value="off" />
+<property name="java_optimize" 		value="on" />
+<property name="java_deprecation"  	value="on" />
+<property name="log.level"		value="verbose" />
+<property name="output"			location="${basedir}${fs}output" />
+<property name="outputRef"		location="${basedir}${fs}outputRef" />
+<property name="httpUnit.dir" 		location="/home/grondeau/tools/httpunit-1.6.2" />
+<property name="antJar" 		location="/home/grondeau/tools/ant-1.6.5/lib/ant.jar" />
+<property name="httpUnitJar" 		location="${httpUnit.dir}/lib/httpunit.jar" />
+
+
+<target name="dev" depends="init_dev, run"  />
+<target name="init_dev" depends=""  >
+	<property name="webRoot" 	location="/home/grondeau/tools/apache/jakarta-tomcat-5.0.25" />
+	<property name="serverName" 	value="dev" />
+</target>
+
+<target name="int" depends="init_int, run"  />
+<target name="init_int" depends=""  >
+	<property name="webRoot" 	location="/opt/W3/tools/tomcat-8003" />
+	<property name="serverName" 	value="int" />
+</target>
+
+<target name="pub" depends="init_pub, run"  />
+<target name="init_pub" depends=""  >
+	<property name="webRoot" 	location="/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14" />
+	<property name="serverName" 	value="pub" />
+</target>
+
+<target name="ext" depends="init_ext, run"  />
+<target name="init_ext" depends=""  >
+	<echo message="Note: we use the jar and grammar from the public server" />
+	<property name="webRoot" 	location="/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14" />
+	<property name="serverName" 	value="ext" />
+</target>
+
+<target name="run" depends="compile"  >
+	<echo message="-------------------- run -------------------------" /> 
+	<echo file="${basedir}${fs}run" message="
+	#!/bin/sh ${line.separator}
+        set -x${line.separator}
+	echo usage: $0 [serverName loopCount] ${line.separator}
+	if [ $# -ne 0 ]; then ${line.separator}
+		serverName=$1 ${line.separator}
+		loopCnt=$2 ${line.separator}
+		startStop=$3 ${line.separator}
+	else ${line.separator}
+		serverName=${serverName} ${line.separator}
+		loopCnt=3 ${line.separator}
+		startStop= ${line.separator}
+	fi ${line.separator}
+	classPath=${basedir}${fs}build:${xipJar}:${httpUnitJar}:${antJar}:${httpUnit.dir}/jars/Tidy.jar:/home/grondeau/tools/ant-1.6.5/lib/ant-launcher.jar::/home/grondeau/tools/ant-1.6.5/lib/ant-jsch.jar:/home/grondeau/tools/ant-1.6.5/lib/jsch-0.1.29.jar ${line.separator}
+	rootXip=${root_xip.dir} ${line.separator}
+	java -cp $classPath Test $serverName $rootXip $loopCnt $startStop ${line.separator}" />
+        <chmod perm="+x" file="${basedir}${fs}run" />
+	<delete file="webOutput" />
+	<delete file="xipOutput" />
+	<java classname="Test" fork="true" failonerror="true" maxmemory="128m">
+		<classpath>
+			<pathelement path="${basedir}${fs}build"/>
+			<pathelement path="${xipJar}"/>
+			<pathelement path="${httpUnitJar}"/>
+			<fileset dir="${httpUnit.dir}/jars">
+        			<include name="**/*.jar"/>
+      			</fileset>
+		</classpath>
+		<arg value="${serverName}"/>
+		<arg value="${root_xip.dir}"/>
+		<arg value="3"/>
+	</java>
+</target>
+
+<!-- compile java source file -->
+<target name="compile" depends="init">
+	<echo message=" -------------------- java: Compiling Java files -------------------------" />
+	<javac srcdir="${basedir}" 
+		destdir="${basedir}${fs}build" 
+		debug="${java_debug}" 
+		deprecation="${java_deprecation}"
+		optimize="${java_optimize}"
+		classpath="${xipJar}:${httpUnitJar}" >
+	</javac>
+</target>
+
+<target name="init" depends="clean">
+	<mkdir dir="build" />
+	<property name="root_xip.dir" 	location="${webRoot}/webapps/xip/grammar" />
+	<property name="xipJar" 	location="${webRoot}/webapps/xip/WEB-INF/lib/jxip.jar" />
+	<echo message="${root_xip.dir}" />
+	<echo message="${xipJar}" />
+</target>
+
+<target name="clean" depends="" >
+	<delete dir="build" />
+</target>
+
+</project>
+

@@ -1,0 +1,329 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb.xip
+//! Content:	rules for POS disambiguation
+//!
+//! Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//! Author:	Elena Lopez Garcia - C. Hagege
+//!
+//! Date: 	07-Feb-2006	:: initial version
+//! Update:	29-May-2008	:: changed to UTF-8
+//! Update:	14-Oct-2008	:: changed to ISO-LATIN-1
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging:
+
+
+// -----------------------------------------------------------------------------
+
+
+// For proper nous
+// if ambiguity between a proper noun coded in lexicon and another POS.
+// if the word is maj:+, toutmaj:~ and followed by a word maj:~ then it is a proper noun.
+// e.g Alcantarilla is a city name and corresponds also to two forms of verb "alcatarillar"
+5> noun<prop:+,maj:+,toutmaj:~> = noun[prop:+] | ?[maj:~] | .
+
+5> noun<prop:+,maj:+,toutmaj:~> = | ?[maj:~] | noun[prop:+] . 
+
+
+// a word that ends by -ismo is always a noun
+//e.g. catalanismo
+5> noun, adj = noun[lemma:"?+ismo"].
+
+// upper case words (other than at the beginning of a sentence) must be
+// a  proper name
+//10> ?<maj:+,start:~> = ?<prop:+> .
+
+
+
+//Numeral and noun ambiguity: only when the numeral is preceded by an article (in singular and masc) will be the noun.
+10> num, noun = |art[masc:+,pl:+]| num.
+10> num, noun = |art[fem:+,pl:+]| num.
+10> num, noun = |art[fem:+,sg:+]| num.
+
+// CH add restriction eg. El río Piedra
+10> adj, noun = adj |noun[conj:~,adj:~,verb:~,maj:~]|.
+
+
+
+
+10> adj, noun<masc:+, sg:+> = |adj[masc:+,sg:+], conj[lemma:y]| adj.
+10> adj, noun<masc:+, pl:+> = |adj[masc:+,pl:+], conj[lemma:y]| adj.
+10> adj, noun<fem:+, sg:+> = |adj[fem:+,sg:+], conj[lemma:y]| adj.
+10> adj, noun<fem:+, pl:+> = |adj[fem:+,pl:+], conj[lemma:y]| adj.
+
+//los más ricos y poblados
+10> adj, noun = |art, adv[lemma:"[más, menos]"]|adj.
+10> noun, verb<pastpart:+> %= |adj, conj| adj[categorie=a].
+
+//opinion publica europea or la sociedad civil serbia
+10> adj, noun<masc:+, sg:+> = |noun[masc:+, sg:+], adj[masc:+, sg:+]| adj.
+10> adj, noun<fem:+, sg:+> = |noun[fem:+, sg:+], adj[fem:+, sg:+]| adj.
+10> adj, noun<masc:+, pl:+> = |noun[masc:+, pl:+], adj[masc:+, pl:+]| adj.
+10> adj, noun<fem:+, pl:+> = |noun[fem:+, pl:+], adj[fem:+, pl:+]| adj.
+
+//la creciente "espectacularizacion
+10> adj, noun<masc:+, sg:+> = |art[masc:+, sg:+]| adj |punct[quote], noun[masc:+, sg:+, adj:~], punct[quote]| .
+10> adj, noun<fem:+, sg:+> = |art[fem:+, sg:+]| adj |punct[quote], noun[fem:+, sg:+, adj:~], punct[quote]| .
+10> adj, noun<masc:+, pl:+> = |art[masc:+, pl:+]| adj |punct[quote], noun[masc:+, pl:+, adj:~], punct[quote]| .
+10> adj, noun<fem:+, pl:+> = |art[fem:+, pl:+]| adj |punct[quote], noun[fem:+, pl:+, adj:~], punct[quote]| .
+
+
+//Ambiguous pron and art "el", without an accent it is always an article.
+10> art,pron<lemma:el,masc:+,sg:+> = art.
+
+//Ambiguous pron[acc:+], art "lo" is always a pron if it is not followed by an adj or ap.
+10> art, pron<surface:lo, acc:+> = pron |?[adj:~,pastpart:~,adv:~,pron:~]|.
+10> art, pron<surface:lo, acc:+> = art |?[adv:+]|.
+
+
+///// NOUN - VERB
+
+
+// After a numeral in plural, if ambiguous verb (2nd person of singular indicativo presente) or noun or adj. We discard the verb reading
+// e.g "cinco amigas
+10> noun, verb<pres:+,ind:+,2p:+> = ?[verb:~] .
+
+//Ambiguous verb and noun is a verb if it is preceded by an accusative pronoun.
+10> noun<fem:+, sg:+>, verb = |pron[surface:lo]| verb.
+10> noun<fem:+, sg:+>, verb = |pron[surface:los]| verb.
+10> noun<fem:+, pl:+>, verb = |pron[surface:lo]| verb.
+10> noun<fem:+, pl:+>, verb = |pron[surface:los]| verb.
+10> noun<fem:+, pl:+>, verb = |pron[surface:la]| verb.
+10> noun<fem:+, sg:+>, verb = |pron[surface:las]| verb.
+10> noun<masc:+, sg:+>, verb = |pron[surface:la]| verb.
+10> noun<masc:+, sg:+>, verb = |pron[surface:las]| verb.
+10> noun<masc:+, pl:+>, verb = |pron[surface:la]| verb.
+10> noun<masc:+, pl:+>, verb = |pron[surface:las]| verb.
+10> noun<masc:+, pl:+>, verb = |pron[surface:lo]| verb.
+10> noun<masc:+, sg:+>, verb = |pron[surface:los]| verb.
+
+//la baja renta
+10> noun<sg:+, fem:+>, verb<3p:+, ind:+, sg:+> = |art, adj#1| noun,where(#1[fem:+]).
+//número de larga distancia
+10> noun<sg:+, fem:+>, verb<3p:+, ind:+, sg:+> = |prep, adj#1| noun, where (#1[fem:+]).
+
+//Ambiguous noun and verb (present indic 3p sg) must be verbs if they are not preceded by any det or art.. 
+10> noun<sg:+>, verb<3p:+, pres:+, ind:+, sg:+> = || verb | ?[maj:~] | . 
+10> noun<sg:+>, verb<3p:+, pres:+, ind:+, sg:+>, ~adj = |?[art:~,det:~, quant:~, prep:~]| verb.
+
+//la baja renta
+//10> noun<sg:+, fem:+>, verb<3p:+, ind:+, sg:+> = |art, adj#1| noun,where(#1[fem:+]).
+
+//se hacen copias
+10> verb<pres:+, ind:+, 2p:+, sg:+>, noun = |verb| noun.
+
+//manchas negras
+10>noun<pl:+, fem:+>, verb<2p:+, pres:+, ind:+, sg:+> = noun |adj[pl:+, fem:+]|.
+10>noun<pl:+, masc:+>, verb<2p:+, pres:+, ind:+, sg:+> = noun |adj[pl:+, masc:+]|.
+
+
+//The same rule but with noun in plural and the second person
+10> noun<pl:+>, verb<2p:+, pres:+, ind:+, sg:+> = || verb.
+10> noun<pl:+>, verb<2p:+, pres:+, ind:+, sg:+> = |adj[lemma:otro]| noun.
+//10> noun<pl:+>, verb<2p:+, pres:+, ind:+, sg:+> = |adj[]| noun#2, where ((#1[gender]:#2[gender]) & (#1[number]:#2[number])).
+10> noun<pl:+>, verb<2p:+, pres:+, ind:+, sg:+> = |?[art:~,det:~, quant:~, prep:~, predet:~]| verb.
+
+
+
+//Ambiguous noun and verb "el haber" "el comer"...
+//10> verb<inf:+> %= |art[surface:el]| noun.
+
+//Ambiguous adj and verb, if preceded by a possessive determiner then adj.
+10> adj, verb = |det[poss]| adj.
+10> adj, verb = |verb[cop:+], (adv)| adj.
+
+//Ambiguous adj and verb, if preceded by a pronoun in nominative case, then verbs.
+10> adj, verb = |pron[nom:+]| verb.
+
+//Ambiguous adv and nouns are noun if they are preceded by an art, det, ...
+10> adv, noun = |art;det| noun.
+
+
+// The past participles will be treated as adjectives or nouns depending on the contexts.
+//e.g. 60 muertos
+10> verb<pastpart:+>, noun = |?<dig:+>;num| noun.
+
+
+//e.g. sus bebidas, en estado
+//poner en vigor medidas
+10> verb<pastpart:+>, noun = |art;det;quant;num;prep;pron[interrog:+];conj| noun. 
+
+10>verb<pastpart:+, fem:+, sg:+>, noun = |noun[fem:~; sg:~;verb:~]| noun. 
+10>verb<pastpart:+, fem:+, pl:+>, noun = |noun[fem:~; pl:~;verb:~]| noun. 
+10>verb<pastpart:+, masc:+, sg:+>, noun = |noun[masc:~; sg:~;verb:~]| noun. 
+10>verb<pastpart:+, masc:+, pl:+>, noun = |noun[masc:~; pl:~;verb:~]| noun. 
+
+//ambiguous noun and verb (past participle) will be a noun if preceded by an det, article...and a verb if preceded by another verb with aspectpot feature.
+10> verb<pastpart:+>, noun = |art;det;num;prep;adj;ap;adv[lemma:mÃ¡s]| noun.
+10> verb<pastpart:+, sg:+, masc:+>, noun = |verb[lemma:ser, pastpart:+]| verb.
+10> verb<pastpart:+, sg:+, masc:+>, noun = |verb[aspectpot:+]| verb.
+10> verb<pastpart:+, sg:+, masc:+>, noun = |verb[lemma:haber, nonper:~]| verb.
+
+10> verb, adj = |art;pron[gen:+];pron[poss:+];quant;num| adj |noun|.
+
+15> verb<pastpart:+, fem:+, pl:+> %= |verb[lemma:estar]| adj[fem=+, pl=+, !participio=+].
+20> verb<pastpart:+, fem:+, sg:+> %= |verb[lemma:estar]| adj[fem=+, sg=+, !participio=+].
+20> verb<pastpart:+, masc:+, pl:+> %= |verb[lemma:estar]| adj[masc=+, pl=+, !participio=+].
+20> verb<pastpart:+, masc:+, sg:+> %= |verb[lemma:estar]| adj[masc=+, sg=+, !participio=+].
+
+
+20> verb<pastpart:+, masc:+, sg:+> %= |?[lemma:un];noun[hmm_papsg:~,hmm_auxinf:~];art| adj[masc=+, sg=+, !pastpart=+].
+20> verb<pastpart:+, fem:+, pl:+> %= |?[lemma:un];noun[hmm_papsg:~,hmm_auxinf:~];art| adj[fem=+, pl=+, !pastpart=+].
+20> verb<pastpart:+, fem:+, sg:+> %= |?[lemma:un];noun[hmm_papsg:~,hmm_auxinf:~];art| adj[fem=+, sg=+, !pastpart=+].
+20> verb<pastpart:+, masc:+, pl:+> %= |?[lemma:un];noun[hmm_papsg:~,hmm_auxinf:~];art| adj[masc=+, pl=+, !pastpart=+].
+
+20> verb<pastpart:+, masc:+, sg:+> %= |verb[aux:~, cop:~], (adv)| adj[masc=+, sg=+, !pastpart=+].
+20> verb<pastpart:+, fem:+, pl:+> %= |verb[aux:~, cop:~], (adv)| adj[fem=+, pl=+, !pastpart=+].
+20> verb<pastpart:+, fem:+, sg:+> %= |verb[aux:~, cop:~], (adv)| adj[fem=+, sg=+, !pastpart=+].
+20> verb<pastpart:+, masc:+, pl:+> %= |verb[aux:~, cop:~], (adv)| adj[masc=+, pl=+, !pastpart=+].
+
+//They are also adjectives if they are in between comparative particules as "más-que"
+20> verb<pastpart:+, masc:+, sg:+> %= |adv[compar]| adj[masc=+, sg=+, !pastpart=+] |?[surface:que]|.
+20> verb<pastpart:+, fem:+, pl:+> %= |adv[compar]| adj[fem=+, pl=+, !pastpart=+] |?[surface:que]|.
+20> verb<pastpart:+, fem:+, sg:+> %= |adv[compar]| adj[fem=+, sg=+, !pastpart=+] |?[surface:que]|.
+20> verb<pastpart:+, masc:+, pl:+> %= |adv[compar]| adj[masc=+, pl=+, !pastpart=+] |?[surface:que]|.
+
+
+
+//When those are preceded by a numeral, they might be nouns.
+25> Adj<pastpart:+> %= |num; noun[dig:+]| noun |?[noun:~]|.
+25> Adj<pastpart:+> %= |?[lemma:otro]| noun |?[noun:~]|.
+
+
+//Un is a num as "dos" "tres" if it is followed by a numeral: un millón de pesetas
+
+20> art<indef:+>, num<lemma:uno> = num |num|.
+
+//Ambiguous articles and pronouns will be article if they are followed by a noun or an adjectif.
+//Ambiguoug articles and pronouns will be article if they follow a verb or a enclitic pronoun.
+
+20> art<lemma:el,sg:+>,pron<lemma:Ã©l,acc:+> = art[masc=+] |adj[masc:+,sg:+]|.
+20> art<lemma:el,pl:+>,pron<lemma:ellos,acc:+> = art[masc=+] |noun[masc:+,pl:+]|.
+20> art<lemma:el,sg:+,fem:+>,pron<lemma:Ã©l,acc:+,fem:+> = |?[pron:~,dat:~]| art[fem=+] |noun[fem:+]|.
+20> art<lemma:el,pl:+,fem:+>,pron<lemma:Ã©l,acc:+,fem:+,pl:+> = |?[pron:~,dat:~]|art[fem=+,pl=+] |noun[fem:+,pl:+]|.
+20> art<lemma:el>, pron<lemma:Ã©l> = |verb;?[enclit:+]| art.
+20> art<lemma:el>, pron<lemma:ellos> = |verb;?[enclit:+]| art.
+
+// Noun verb ambiguity
+// if a definite article fem is followed by an ambiguous verb/noun masc then it is a verb and not a noun
+// e.g. la cambio
+30> noun<masc:+,fem:~>, verb = | art[fem];pron[fem, interrog:~] | verb . 
+
+
+// la espera es eterna
+// if ambiguous art;pron followed by ambiguous noun;verb followed by verb
+// then art noun verb
+30> noun, verb = | art |  noun | verb[hmm_nounsg:~] | .
+
+//una investigación de este calibre
+30> noun, verb = |det;art| noun.
+
+//rezo para que vengas
+30> noun, verb<start> = verb |conj|.
+
+35> art, pron = |?[prep:~]| pron |verb[adj:~,noun:~]|.
+
+//el señor Pérez era malo
+35> noun, verb<maj:~> = |noun[prop:+]| verb.
+
+// Peces Barba (Barba tagged as verb)
+35> noun[maj,adj:~], verb = |?[punct:~]| noun[maj:+].
+
+//ya vale
+35> verb, noun = |?[lemma:ya]| verb.
+
+
+
+//if a non ambiguous verb is followed by an ambiguous art/pron and a verb/noun, it will be art, noun.
+// the verb can have a clitic pronoun
+
+// se lo espera
+40> pron<acc:+>, art = |pron| pron |verb|.
+40> noun, verb = |pron, pron| verb.
+
+//qué diferencia hay
+40> noun, verb<pastpart:+> = |verb[lemma:haber]| verb.
+40> noun, verb<inf:~> = |?[aux:~, lemma:~ser, reflex:~]| noun |verb[hmm_nounsg:~,hmm_pron:~,prespart:~, pastpart:~,inf:~]|.
+
+//torno a mirar
+//40>noun,verb = verb |prep[lemma:a], verb[inf:+]|.
+
+
+//trabaja duro
+40> adv, adj<lemma:~medio> = |verb[hmm_detquantsg:~]| adv.
+
+//está baja
+40> verb<pres:+>, adj = |verb[cop:+]| adj.
+
+//Desambiguation between verbal times: subj and imperative
+40> verb<pres:+, subj:+, sg:+, 3p:+>, verb<imp:+, 3p:+, sg:+> = |prep[lemma:por], noun[lemma:favor], (punct[comma])| verb[imp:+, 3p:+, sg:+].
+
+
+Terms:
+//Verbs
+//poner en marcha, poner en práctica, en vigor
+50> poner : verb[trans=+, double=+] = verb, prep[lemma:en], ?[noun:+].
+
+//hacer frente
+50> hacer : verb = verb,prep[lemma:frente].
+
+//hacer falta
+50> hacer : verb = verb,?[surface:falta].
+
+//llevar a cabo
+50> llevar : verb = verb, adv[lemma:a].
+
+//estar a punto
+50> estar : verb = verb, adv[surface:"a punto"].
+
+
+
+
+Marker:
+
+60> verb[pastpart:+, nonper=+].
+60> verb[prespart:+, nonper=+].
+60> verb[inf:+, nonper=+].
+
+60> verb[modalpot:+, !modal=+], (prep[lemma:de];conj[lemma:que]), verb[inf:+]. 
+
+
+// verb + a + inf
+60> verb[aspectpot:+, !aspectprep=+], prep[lemma:a], verb[inf:+]. 
+
+//verb + de + inf
+60> verb[aspectpot:+, !aspectprep=+], prep[lemma:de], verb[inf:+].
+
+//verb + por + inf
+60> verb[aspectpot:+, !aspectprep=+], prep[lemma:por], verb[inf:+].
+
+//verb + en + inf
+60> verb[aspectpot:+, !aspectprep=+], prep[lemma:en], verb[inf:+].
+ 
+//verb + ger 
+60> verb[aspectpot:+, !aspectger=+], verb[prespart:+].
+
+//verb + part
+60> verb[aspectpot:+, !aspectpart=+], verb[pastpart:+].
+
+//verb + inf
+60> verb[aspectpot:+, !aspectinf=+], verb[inf:+].
+
+
+//animated
+//60> noun[prop:+, !anim=+].
+
+60> pron[acc:+, !anim=+].
+
+// -----------------------------------------------------------------------------
+// for the rest: take preferred readings from HMM tagger
+
+Tagging:
+100> ? = ?[hmmselection].

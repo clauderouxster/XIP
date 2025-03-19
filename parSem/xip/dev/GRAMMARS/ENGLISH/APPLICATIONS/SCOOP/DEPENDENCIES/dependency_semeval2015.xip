@@ -1,0 +1,533 @@
+DependencyRules:
+
+// Shifter 
+//if (MOD(#1[adj,sentiments],#2[adv]))
+ //  SHIFTER(#2,#1) 
+
+//if (MOD(#1[noun,aspect:~],#2[adj, sentiments]))
+ //  SHIFTER(#2,#1) 
+
+if (SUBJ-N(#1[sentiments],#2[aspect]) & OBJ-N(#1,#3))
+    SHIFTER(#2,#1,#3) 
+
+// some correction modifications
+
+if (SENTIMENT[negative](#1[lemme:"worth"],#2[price]) & SENTIMENT(#3,#1) )
+        SENTIMENT[negative=+](#3,#2)
+
+if (SENTIMENT[positive](#1[lemme:"worth"],#2[price]) & SENTIMENT(#3,#1) )
+        SENTIMENT[positive=+](#3,#2)
+
+if (MOD(#1[cop],#2[lemme:"line"])  & PREPD(#2,#3[lemme:"in"]) & SUBJ(#1,#4[price])) 
+   SENTIMENT[positive=+](#4,#2)
+
+
+if (ATTRIB(#1[food],#2[lemme:"companion"]))
+   SENTIMENT[neutral=+](#1,#2)
+
+if (^SENTIMENT[!sentiments:!](#1[style],#2) & MOD[post](#1,#3[food]))
+   SENTIMENT(#3,#1)
+
+
+|NFV#{?*,#2[last]}|
+    if ( ( SUBJ-N(#2,#1) | OBJ-N(#2,#1)) &  ^SENTIMENT[sentiments:!](#2,#3[adv]) )
+    SENTIMENT(#1,#2)
+
+
+|#1[mwe]{?*,#2,?*}|
+        if (^SENTIMENT(#2))
+        ~
+
+//|#1[food,not-term=+]|
+  //  if (OBJ-N(#2[service],#1) )
+ //   ~
+
+//|#1[food,not-term=+]|
+//    if (MOD[post](#2[service],#1))
+//    ~
+
+|NOUN#1[resto=+]{NOUN[resto],?*}|
+        ~
+
+///*********** FINAL EXTRACT HOTEL ***********************
+|#1[punct:~,url:~,terminal,conj:~,det:~]|
+       TERMINALWORD(#1)
+
+
+|NOUN#1[room]|
+        ROOM(#1)
+
+|NOUN#1[cleanliness]|
+        CLEAN(#1)
+
+        
+///*********** FINAL EXTRACTIONS***********************
+|NOUN#1{?*,?[locat]}|
+       LOCATNP(#1)
+
+|#3[locat]|
+      if ( MOTHER(#3,#4) & ~LOCATNP(#4) ) 
+        LOCATION(#3)
+
+|NOUN#1{?*,?[food]}|
+       FOODNP(#1)
+
+|#3[food]|
+      if ( MOTHER(#3,#4) & ~FOODNP(#4) ) 
+        FOOD(#3)
+
+|NOUN#1{?*,?[price]}|
+       PRICENP(#1)
+
+|#3[price]|
+       if ( MOTHER(#3,#4)  & ~PRICENP(#4) ) 
+        PRICE(#3)
+
+
+|NOUN#1{?*,?[style]}|
+       STYLENP(#1)
+
+|NOUN#3[style]|
+       if ( MOTHER(#3,#4)  & ~STYLENP(#4) ) 
+        STYLE(#3)
+
+
+|NOUN#1{?*,?[service]}|
+       SERVICENP(#1)
+
+|#3[service]|
+  if ( MOTHER(#3,#4)  & ~SERVICENP(#4) ) 
+        SERVICE(#3)
+
+|NOUN#1{?*,?[ambience]}|
+       AMBIENCENP(#1)
+
+|#3[ambience]|
+        if ( MOTHER(#3,#4)  & ~AMBIENCENP(#4) ) 
+        AMBIENCE(#3)
+
+// LOCATION
+
+|#1[locat=+]{?*,#2[locat,last]}|
+        if (^AMBIENCE(#1))
+        LOCATION(#1)
+
+|#1[locat=+]{#2[locat,first],?*[ambience:~]}|
+        if (^AMBIENCE(#1))
+        LOCATION(#1)
+
+|#1[locat]|
+        if (^AMBIENCE(#1) & ~LOCATION(#1))
+        LOCATION(#1)
+
+// DRINKS : 
+|#1[drink=+]{?*,#2[drink,last]}|
+        if (FOOD(#1))
+        DRINK(#1)
+
+|#1[drink=+]{#2[drink,first],?*[food:~]}|
+        if (FOOD(#1))
+        DRINK(#1)
+
+|#1[drink]|
+        if (FOOD(#1) & ~DRINK(#1))
+        DRINK(#1)
+
+if (^FOOD(#1) & DRINK(#1))   ~
+
+|NOUN#1{?*,?[resto]}|
+       RESTONP(#1)
+
+
+|#3[resto]|
+        if ( MOTHER(#3,#4) & ~RESTONP(#4) ) 
+        RESTO(#3)
+
+//|NOUN#1[not-term:~,target=+]|
+ //   if (FOOD(#1) & ~DRINK(#1) & ~PREPD(#1,#2[lemme:"for"]) )
+ //   ASPECTTERM[food=+](#1)
+
+//|NOUN#1[not-term:~,target=+]|
+ //   if (DRINK(#1) & ~PREPD(#1,#2[lemme:"for"])  )
+ //   ASPECTTERM[drink=+](#1)
+
+|NOUN#1[target=+]|
+        if (PRICE(#1))
+        ~
+
+|NOUN#1[not-term:~,target=+]|
+    if (FOOD(#1) & ~DRINK(#1)  )
+    ASPECTTERM[food=+](#1)
+
+|NOUN#1[not-term:~,target=+]|
+    if (DRINK(#1)   )
+    ASPECTTERM[drink=+](#1)
+
+
+|NOUN#1[not-term:~,target=+]|
+    if (AMBIENCE(#1) )
+    ASPECTTERM[ambience=+](#1)
+
+|NOUN#1[not-term:~,target=+]|
+    if (SERVICE(#1) )
+    ASPECTTERM[service=+](#1)
+
+
+|NOUN#1[not-term:~,target=+]|
+    if (RESTO(#1) )
+    ASPECTTERM[resto=+](#1)
+
+|NOUN#1[not-term:~,target=+]|
+    if (LOCATION(#1) )
+    ASPECTTERM[locat=+](#1)
+
+//the target percolates on the SC
+
+|AP[positive=+]{?*,#1[positive],?*}|
+    ~
+|AP[negative=+]{?*,#1[negative],?*}|
+    ~
+
+|NP[target=+]{?*,?[target],?*}|
+    ~
+|PP[target=+]{?*,?[target],?*}|
+    ~
+
+|SC[target=+]{?*,NP[target=+]{?*,#1[target],?*},?*}|
+    ~
+
+
+|?#1{?*[prep:~],#2[last]}|
+    if ( ASPECTTERM(#1) & ~TERMHEAD(#2,#1))
+    TERMHEAD(#2,#1)
+
+|?#1{#2[first],?*,?[prep]}|
+    if ( ASPECTTERM(#1) & ~TERMHEAD(#2,#1))
+    TERMHEAD(#2,#1)
+
+
+if (PRICE(#1[noun]) )
+    PSEUDOTERM[price=+](#1)
+
+if (STYLE(#1[noun]) & ~DRINK(#1) & ~FOOD(#1) )
+    PSEUDOTERM[style=+](#1)
+
+if ( ASPECTTERM[!aspect:!](#1)  )
+    PSEUDOTERM(#1)
+
+|TOP#2[punct:~]| 
+if (~FOOD(?) &  ~AMBIENCE(?) &  ~SERVICE(?) &  ~LOCATION(?) & ~HEAD(?[resto],?) & HEAD(?,?))
+   NOTERM(#2)
+
+
+//****DEPENDENCY PROPAGATION FOR SENTIMENTS********
+
+if ( COREFLINK(#5,#3) & ASPECTTERM(#3) & SENTIMENT[!sentiments:!](#2,#5) )
+   SENTIMENT(#2,#3)
+
+if ( COREFLINK(#5,#3) & ASPECTTERM(#3) & SENTIMENT[!sentiments:!](#5,#2) )
+   SENTIMENT(#3,#2)
+
+
+//************LINKS POSTS AND PRE *********************
+
+|SC{?*,NP#1},?*[target:~,condclause:~],#3[target:~,attribs,!attribs:!,!sentiments:!],?*|
+    if ( HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+|SC{?*,PP{?*,NP#1}},?*[target:~,condclause:~],#3[target:~,attribs,!attribs:!,!sentiments:!],?*|
+    if ( HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+|?*,NP#1,?*[target:~,condclause:~],#3[target:~,attribs,!attribs:!,!sentiments:!],?*|
+    if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+|?*,PP{?*,NP#1},?*[target:~,condclause:~],#3[target:~,attribs,!attribs:!,!sentiments:!],?*|
+    if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+//verb on sentiments  ?
+|SC{?*,NP#1},?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*|
+    if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3) ) 
+    LINKPOST(#2,#3)
+
+
+|SC{?*,PP{?*,NP#1}},?+[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*|
+    if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3) ) 
+    LINKPOST(#2,#3)
+
+|?*,NP#1,?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*|
+    if (  HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+|?*,PP{?*,NP#1},?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*|
+    if (  HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+
+ |SC{?*,NP#1},?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*[target:~]|
+     if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3) ) 
+     LINKPOST(#2,#3)
+
+// |SC{?*,PP{?*,NP#1}},?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*[target:~]|
+//     if (   HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3) ) 
+//     LINKPOST(#2,#3)
+
+|?*,NP#1,?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*[target:~]|
+    if (  HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+|?*,PP{?*,NP#1},?*[target:~,condclause:~],#3[target:~,sentiments,!sentiments:!,!attribs:!],?*[target:~]|
+    if (  HEAD(#2,#1) & PSEUDOTERM[!aspect:!](#2[!attribs:!]) & ~LINKPOST(#2,#3)  ) 
+    LINKPOST(#2,#3)
+
+
+
+ |SC{?*,FV[!attribs:!]{?*,#1[last]}},NP#2[target],?*[sentiments:~,aspect:~,target:~,attribs:~],NP#4[!attribs:!,!aspect:!,target],?*[sentiments:~]|
+     if ( MAIN(#1) & HEAD(#3,#2) & HEAD(#5,#4) & SENTIMENT[!sentiments:!](#3,#1) & ~SENTIMENT(#5,?) )
+      LINKPRE(#1,#4)
+
+ |SC{?*,FV[!attribs:!]{?*,#1[last]}},NP#2[target],?*[sentiments:~,aspect:~,target:~,attribs:~],NP#4[!attribs:!,!aspect:!,target],?*[sentiments:~,aspect:~,target:~,attribs:~],NP#6[target,!attribs:!,!aspect:!],?*[sentiments:~,aspect:~,target:~,attribs:~]|
+     if ( MAIN(#1) & HEAD(#3,#2) & HEAD(#5,#4) & SENTIMENT[!sentiments:!](#3,#1) & ~SENTIMENT(#5,?) & HEAD(#7,#4) & ~SENTIMENT(#7,?) )
+      LINKPRE(#1,#4),LINKPRE(#1,#7)
+
+if (SENTIMENT[!sentiments:!](#1) & ASPECTTERM[!aspect:!,!attribs:!](#2)  & ~SENTIMENT(#2,#3) & #1 < #2 & ~LINKPOST(#1,?) )
+    LINKPRE(#1,#2) 
+
+//** negations 
+
+if ( ^LINKPOST[positive,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~]) | ATTRIB[neg](#1,#2))  & HEAD(#2,#3) )
+     LINKPOST[negative=+,positive=~,modified=+](#1,#3)
+
+if ( ^LINKPOST[negative,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~])| ATTRIB[neg](#1,#2)) & HEAD(#2,#3) )
+     LINKPOST[positive=+,negative=~,modified=+](#1,#3)
+
+|#3{?*,#2[last,verb]}|
+if ( ^LINKPOST[positive,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~]) | ATTRIB[neg](#1,#2))   )
+     LINKPOST[negative=+,positive=~,modified=+](#1,#3)
+
+|#3{?*,#2[last,verb]}|
+if ( ^LINKPOST[negative,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~])| ATTRIB[neg](#1,#2))  )
+     LINKPOST[positive=+,negative=~,modified=+](#1,#3)
+    
+if ( ^LINKPRE[positive,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~]) | ATTRIB[neg](#1,#2)) & HEAD(#2,#3) )
+     LINKPRE[negative=+,positive=~,modified=+](#1,#3)
+
+if ( ^LINKPRE[negative,!aspect:!,attribs:!,modified:~](#1,#3) & ( NEGAT(#2[modified:~]) | ATTRIB[neg](#1,#2)) & HEAD(#2,#3) )
+     LINKPRE[negative=~,positive=+,modified=+](#1,#3)
+
+if ( ^LINKPOST[positive,!aspect:!,attribs:!,modified:~](#1,#3) & HEAD(#2,#3) & OBJ[post](#4[lexneg],#2))
+    LINKPOST[negative=+,positive=~,modified=+](#1,#3)
+
+
+//*****************************************************
+
+
+// extractions on terms : either the term is modified by a simple polar predicate
+// or by a polar predicate carrying a semantic category : the food is expensive 
+// term is food, categ is price, pola is neg.
+
+|#1[resto,sentiments:~,not-term:~]|
+   if (SENTIMENT[sentiments,!sentiments:!](#1,#2[aspect:~,attribs:~]))
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+|#1[resto,sentiments:~,not-term:~]|
+   if (SENTIMENT[sentiments,!sentiments:!](#1,#2[aspect:~,price:+]))
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+|#1[resto,sentiments:~,not-term:~]|
+   if (SENTIMENT[sentiments,!sentiments:!](#1,#2[ambience]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="AMBIENCE",ambience=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+|#1[resto,aspect:~,sentiments:~,not-term:~]|
+   if (SENTIMENT[sentiments,!sentiments:!](#1,#2[aspect:~,price:+]))
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+// for food and drink, quality attrib is default
+|#1[food,drink:~,sentiments:~,style:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[aspect:~,attribs:~]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+|#1[drink,sentiments:~,style:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[aspect:~,attribs:~]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+|#1[food,drink:~,sentiments:~,style:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[food]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+|#1[food,drink,sentiments:~,style:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[food]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+|#1[food,drink:~,sentiments:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[price:+]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+|#1[food,drink:~,sentiments:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[style:+]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+|#1[drink,sentiments:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[price:+]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+|#1[drink,sentiments:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[style:+]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+|#1[food,drink:~,style,sentiments:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2) & ~TERM-CAT-OPINION(#1,?[food],?[style]) )
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+
+|#1[drink,style,sentiments:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2) & ~TERM-CAT-OPINION(#1,?[drink],?[style]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+// for service and ambience and location general attrib is the default
+|#1[service,sentiments:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[attribs:~]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="service",service=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+|#2[service,lemme:"wait",not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2))
+       TERM-CAT-OPINION(#2,##OPINION-TARGET[lemme="service",service=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+|#1[ambience,sentiments:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[attribs:~]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="ambience",ambience=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+|#1[locat,sentiments:~,not-term:~]|
+        if (SENTIMENT[sentiments,!sentiments:!](#1,#2[attribs:~]))
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="location",locat=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+
+
+//**** corrections
+
+// Saul is the best restaurant : target=Saul
+
+if (^TERM-CAT-OPINION[!sentiments:!](#1[resto,proper:~],#2,#3) & SUBJ-N(#4[cop],#5) & NUCL[subjcompl](#4,#1) )
+    TERM-CAT-OPINION(#5,#2,#3), ASPECTTERM[resto=+](#5) 
+
+// the design of the sapce : term=design
+
+if (MOD[post](#1[lemme:"design"],#2[lemme:"space"]) & ^TERM-CAT-OPINION[!sentiments:!](#1,#3,#4))
+    TERM-CAT-OPINION(#2,#3,#4)
+
+
+//*** LONG DISTANCE
+
+//if (LINKPOST[!sentiments:!,food,style:~,price:~](#1,#2)  )
+//    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPOST[positive,food,style:~,price:~](#1,#2)  & ~TERM-CAT-OPINION[positive](#1,?[food],?[quality]))
+    TERM-CAT-OPINION[positive=+](#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPOST[negative,food,style:~,price:~](#1,#2)  & ~TERM-CAT-OPINION[negative](#1,?[food],?[quality]) )
+    TERM-CAT-OPINION[negative=+](#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPOST[!sentiments:!,food,price](#1,#2) & ~TERM-CAT-OPINION(#1,?[food],?[price]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPOST[!sentiments:!,food,style](#1,#2) & ~TERM-CAT-OPINION(#1,?[food],?[style]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+if (LINKPOST[!sentiments:!,drink,style:~,price:~](#1,#2) & ~TERM-CAT-OPINION(#1,?[drink],?[quality]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPOST[!sentiments:!,drink,price](#1,#2) & ~TERM-CAT-OPINION(#1,?[drink],?[price]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPOST[!sentiments:!,drink,style](#1,#2) & ~TERM-CAT-OPINION(#1,?[drink],?[style]) )
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+if (LINKPOST[!sentiments:!,resto,price:~](#1,#2) & ~TERM-CAT-OPINION(#1,?[resto],?[general]) )
+ TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPOST[!sentiments:!,resto,price](#1,#2) & ~TERM-CAT-OPINION(#1,?[resto],?[price]) )
+ TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPOST[!sentiments:!,ambience](#1,#2) & ~TERM-CAT-OPINION(#1,?[ambience],?[general]) ) 
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="ambience",ambience=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPOST[!sentiments:!,service](#1,#2) & ~TERM-CAT-OPINION(#1,?[service],?[general]) ) 
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="service",service=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPOST[!sentiments:!,locat](#1,#2) & ~TERM-CAT-OPINION(#1,?[locat],?[general]) ) 
+       TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="location",locat=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+
+if (LINKPRE[!sentiments:!,food,style:~,price:~](#2,#1) & ~TERM-CAT-OPINION(#1,?[food],?[quality])  & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPRE[!sentiments:!,food,price](#2,#1) & ~TERM-CAT-OPINION(#1,?[food],?[price]) & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPRE[!sentiments:!,food,style](#2,#1) & ~TERM-CAT-OPINION(#1,?[food],?[style]) & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+if (LINKPRE[!sentiments:!,drink,style:~,price:~](#2,#1) & ~TERM-CAT-OPINION(#1,?[drink],?[quality]) & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+if (LINKPRE[!sentiments:!,drink,price](#2,#1) & ~TERM-CAT-OPINION(#1,?[drink],?[price]) & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPRE[!sentiments:!,drink,style](#2,#1) & ~TERM-CAT-OPINION(#1,?[drink],?[style]) & HEAD(#3,#1) )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="drink",drink=+],##OPINION-ATTRIB[lemme:"STYLE",style=+])
+
+if (LINKPRE[!sentiments:!,resto,price:~](#2,#1) & ~TERM-CAT-OPINION(#1,?[resto],?[general]) & HEAD(#3,#1) )
+ TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPRE[!sentiments:!,resto,price](#2,#1) & ~TERM-CAT-OPINION(#1,?[resto],?[price]) & HEAD(#3,#1) )
+ TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="RESTAURANT",resto=+],##OPINION-ATTRIB[lemme:"PRICE",price=+])
+
+if (LINKPRE[!sentiments:!,ambience](#2,#1) & ~TERM-CAT-OPINION(#1,?[ambience],?[general]) & HEAD(#3,#1) ) 
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="ambience",ambience=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPRE[!sentiments:!,ambience](#2,#1[terminal])   ) 
+    TERM-CAT-OPINION(#1,##OPINION-TARGET[lemme="ambience",ambience=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+
+if (LINKPRE[!sentiments:!,service](#2,#1) & ~TERM-CAT-OPINION(#1,?[service],?[general]) & HEAD(#3,#1) ) 
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="service",service=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+if (LINKPRE[!sentiments:!,locat](#2,#1) & ~TERM-CAT-OPINION(#1,?[locat],?[general]) & HEAD(#3,#1) ) 
+       TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="location",locat=+],##OPINION-ATTRIB[lemme:"GENERAL",general=+])
+
+// headed links
+if (LINKPRE[!sentiments:!,food,style:~,price:~](#2,#3) & ~TERM-CAT-OPINION(#1,?[food],?[quality])  )
+    TERM-CAT-OPINION(#3,##OPINION-TARGET[lemme="food",food=+],##OPINION-ATTRIB[lemme:"QUALITY",quality=+])
+
+
+// NEUTRAL 
+
+if ( SENTIMENT[positive](#1,#2[price]) &  SENTIMENT[negative](#1,#3[price]) & ^TERM-CAT-OPINION[positive](#1,#4,#5))
+   TERM-CAT-OPINION[neutral=+,positive=~](#1,#4,#5)
+
+if ( SENTIMENT[positive](#1,#2[price]) &  SENTIMENT[negative](#1,#3[price]) &  ^TERM-CAT-OPINION[negative](#1,#4,#5) & ~TERM-CAT-OPINION[neutral](#1,#4,#5)) 
+   TERM-CAT-OPINION[neutral=+,negative=~](#1,#4,#5)
+
+if ( SENTIMENT[positive](#1,#2[style]) &  SENTIMENT[negative](#1,#3[style]) & ^TERM-CAT-OPINION[positive](#1,#4,#5))
+   TERM-CAT-OPINION[neutral=+,positive=~](#1,#4,#5)
+
+if ( SENTIMENT[positive](#1,#2[style]) &  SENTIMENT[negative](#1,#3[style]) &  ^TERM-CAT-OPINION[negative](#1,#4,#5) & ~TERM-CAT-OPINION[neutral](#1,#4,#5)) 
+   TERM-CAT-OPINION[neutral=+,negative=~](#1,#4,#5)
+
+if ( SENTIMENT[positive](#1,#2[attribs:~]) &  SENTIMENT[negative](#1,#3[attribs:~]) & ^TERM-CAT-OPINION[positive](#1,#4,#5))
+   TERM-CAT-OPINION[neutral=+,positive=~](#1,#4,#5)
+
+if ( SENTIMENT[positive](#1,#2[attribs:~]) &  SENTIMENT[negative](#1,#3[attribs:~]) &  ^TERM-CAT-OPINION[negative](#1,#4,#5) & ~TERM-CAT-OPINION[neutral](#1,#4,#5)) 
+   TERM-CAT-OPINION[neutral=+,negative=~](#1,#4,#5)
+
+
+//erase
+
+|SC#1|
+        if (^FOOD(#1) | ^SERVICE(#1) | ^AMBIENCE(#1) | ^RESTO(#1) | ^DRINK(#1) | ^LOCATION(#1)  )
+        ~
+|NP#1|
+        if (^FOOD(#1)| ^SERVICE(#1) | ^AMBIENCE(#1) | ^RESTO(#1) | ^DRINK(#1)  | ^LOCATION(#1) )
+        ~

@@ -1,0 +1,137 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyTime.xip                                          !
+//!   Date       : 2008/February                                               !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Normalizes time expressions                                              !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//       CHANGES FEATURES TO ENABLE A CORRECT NORMALIZATION                 //
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+DependencyRules:
+
+// Example: à 1 e 30[t-minute=+,t-hour=~] da manhã
+| noun[t-hora,time]{num[t-hour=~]{num[t-hour=+],
+                        conj[lemma:e],
+                        num[lemma:10,t-minute=+,t-hour=~];num[lemma:15,t-minute=+,t-hour=~];num[lemma:20,t-minute=+,t-hour=~];num[lemma:30,t-minute=+,t-hour=~];num[lemma:40,t-minute=+,t-hour=~];num[lemma:45,t-minute=+,t-hour=~];num[lemma:50,t-minute=+,t-hour=~]},
+                    prep, art} | ~
+
+// Example: no dia 22
+| PP[t-monthday=~]{?*, noun[t-monthday,t-date,time]{noun[lemma:dia],num}} | ~
+
+// Example: quinze minutos depois de as duas de a manhã
+| noun[t-hora,time]{?*, ?[t-minute], ?*, conj[lemma:e];?[lemma:"depois de"], ?*, num[t-hour=+], prep[lemma:de]} | ~
+
+
+// Example: no dia seguinte
+| PP[t-date,time,t-hora-string2=+]{PP{prep, art[def], ?[t-meas];?[t-as-a-meas]},
+                               AP{?[lemma:seguinte];?[lemma:próximo];?[lemma:anterior];pastpart[lemma:passar]}} | ~
+
+// Example: no próximo dia
+| PP[time,t-hora-string2=+]{prep, art[def], ?[lemma:seguinte];?[lemma:próximo];?[lemma:anterior];pastpart[lemma:passar],
+                          ?[t-meas];?[t-as-a-meas]} | ~
+
+// Example: na semana que vem
+| PP[time,t-hora-string2=+]{prep, art[def], noun{?[t-meas];?[t-as-a-meas], ?[lemma:que], ?[surface:passou];?[surface:vem]}} | ~
+| PP[time,t-hora-string2=+]{prep, art[def], noun{?[t-meas];?[t-as-a-meas], ?[lemma:que], ?[surface:"há de"], ?[surface:de], ?[surface:vir]}} | ~.
+| PP[time,t-no-normalization=+]{prep, noun{noun[time,quant], ?[lemma:que], ?[surface:"há de"], ?[surface:de], ?[surface:vir]}} | ~.
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//                NORMALIZATION OF TIME EXPRESSIONS                         //
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+// Some Examples that are correctly parsed by the grammar and that have to be normalized.
+// Chegou a 5 de Janeiro de 2003. -> normalize_date
+// Chegou ontem. -> normalize_tdelta
+// Chegou dois dias depois do Natal. -> normalize t_delta
+// Chegou as 2 horas e 30 minutes -> normalize_hour
+// Comeu durante duas horas -> normalize_duration
+
+
+Variables:
+
+//string feat;
+//string val;
+int    _count = 0;
+string _mais  = "+";
+string _menos = "-";
+
+Script:
+
+// Para limpar o dicionário antes de processar a primeira frase
+Iftest(_count < 1)
+{
+   clean_dictionary();
+}
+
+
+// Normaliza datas fixas: quarta feira, 2 de Outubro de 1991
+//
+// Datas absolutas
+// e.g a 3 de Janeiro de 2003, em Janeiro de 2003, em 2003, em Janeiro,
+// depois de Fevereiro de 2003, na Primavera de 2003.
+if ( NE[tempo,t-date,t-absolut,t-no-normalization:~](#1) )
+{
+   normalize_date(#1, @sentencenumber);
+   _count = _count+1;
+}
+
+
+
+// Normaliza períodos de tempo: (durante) 2 dias
+// durante quatro anos.
+if ( NE[tempo,t-duration,t-no-normalization:~](#1) )
+{
+   normalize_duration(#1, @sentencenumber);
+   _count = _count+1;
+}
+
+// Normaliza horas: As duas horas e 30 minutos etc.
+// Different cases:
+// 1) hora_complex 23:10:32
+// 2) horas to compute bearing feature h_to_compute
+// 3) "easy hours" where everything is specified in the expression
+if ( NE[tempo,t-hora,t-no-normalization:~](#1) )
+{
+   normalize_hour(#1, @sentencenumber);
+   _count = _count+1;
+}
+
+
+// Normaliza VAL_DELTA (see HAREM proposal) for referential dates
+// ha dois dias, quatro dias antes/depois/a seguir ao Natal.
+// Note: I do not make distinction here between referential dates with textual or with enunciation reference
+// Do distinguish if useful...
+if ( NE[tempo,t-date,t-ref-after,t-no-normalization:~](#1) )
+{
+   normalize_tdelta(#1, @sentencenumber);
+   _count = _count+1;
+}
+
+if ( NE[tempo,t-date,t-ref-before,t-no-normalization:~](#1) )
+{
+   normalize_tdelta(#1, @sentencenumber);
+   _count = _count+1;
+}
+
+|ADVP#1{adv[lemma:hoje]}|
+if ( NE[tempo,t-date,t-ref-simult,t-no-normalization:~](#1) )
+{
+   normalize_tdelta(#1, @sentencenumber);
+   _count = _count+1;
+}

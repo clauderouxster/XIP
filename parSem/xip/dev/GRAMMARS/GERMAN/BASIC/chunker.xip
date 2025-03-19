@@ -1,0 +1,319 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	chunker.xip
+//! Content:	chunking rules for the german XIP grammar
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//!
+//! Created: 	09-Feb-2009
+//! Updated:	30-Oct-2009
+//!
+//! ENCODING : UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// to do : classify adverbs that can modify adjectives
+
+Sequence:
+//:: viel zu kleine Schuhe
+1> ptcl[mod_adj=+] = adv[lemma:viel], ptcl[mod_adj,lemma:zu].
+
+// --------------------------------------------------------------------------------------
+// Infinitives or participles with zu
+
+1> verb[infzu=+] = ptcl[infzu:+], verb[inf:+,with_zu,!vtype:!,!vsub:!].
+
+1> adv = ptcl[mod_adj,lemma:zu], adv.
+1> adj[afunc:!,nagr:!,pprzu] = ptcl[mod_adj,lemma:zu], adj[!afunc:!,with_zu,!nagr:!].
+1> adj[afunc:!,nagr:!,invar:!] = |det| ptcl[mod_adj,lemma:zu], adj[!afunc:!,!nagr:!,!invar:!].
+
+
+// adjective modifiers
+2> ?[mod_adj=+] = adj[pred];negat;adv[sadv:~,prep:~];?[skip].
+//:: er ist noch besser; er kommt noch heute
+2> ?[mod_adj=+] = adv[lemma:noch];adv[lemma:viel] | ?[comp] |.
+
+
+// --------------------------------------------------------------------------------------
+// symbols
+1> noun[neut=+, sg=+,sg3=+] = | det#1<neut,sg> | symbol,
+where ( #0[nagr] = { #1 } ).
+
+1> noun[invar=+, sg3=+] = symbol.
+
+
+
+Sequence:
+
+// CHECK !!!
+//:: der 5 kg schwere Stein
+//:: der 15 Jahre alte Junge
+5> ap = num, noun[unit], adj#1[nagr,verb:~,noun:~], 
+	where (#0[nagr] = {#1} ).
+
+//:: ein nettes kleines Haus		-> AP[nettes], AP[kleines]
+//:: die schönsten lila Kleider	-> AP[schönsten], AP[lila]
+//:: ein bunt gemustertes Kleid	-> AP[bunt gemustert]
+//:: lila mailänder Kleider		-> AP[lila], AP[mailänder]
+
+5> ap @= ?*[mod_adj], adj#1[nagr,verb:~,noun:~], 
+	where (#0[nagr] = {#1} ).
+//5> ap @= ?*[mod_adj], adj#1[nagr] | ?*[not_verb], noun#2 |, 
+5> ap @= ?*[mod_adj], adj#1[nagr] | ?*[verb:~,subord:~], noun#2 |, 
+	where (TestAgree(#1,#2) & #0[nagr] = {#1} ).
+
+// das ist das gleiche.
+5> ap @= | det#1 | ?*[mod_adj], adj#2[nagr,noun:~] , 
+	where (TestAgree(#1,#2) & #0[nagr] = {#2} ).
+5> ap[mod_adj=+] @= ?*[mod_adj,negat:~], adj[pred,verb:~].
+
+6> ap[invar=+] @= ?*[mod_adj], adj[invar,verb:~,noun:~].
+6> ap[invar=+] @= ?*[mod_adj], adj[invar] | ?*[not_verb], noun |.
+
+Marker:
+10> ap#1[attr=+]{?*, ^adj#2[last,attr]}, where ( #1[deverbal]={#2} ).
+10> ap#1[pred=+]{?*, ^adj#2[last,pred]}, where ( #1[deverbal]={#2} ).
+
+
+Sequence:
+
+//11> pp[card=+,is_date:!] = prep[lemma:von], num[card,is_date,!is_date:!] |?[lemma:bis], num[card,is_date] |.
+//12> pp[card=+,is_date:!] = | pp[is_date] | ?[lemma:bis], num[card,is_date,!is_date:!,!temporal:!] .
+
+13> num[card=+,is_date:!] @= ?*[prenum], num[card], ?[coord,coord_num=+], ?*[prenum], num[card,!is_date:!,!temporal:!].
+13> num[card=+,is_date:!] @= ?*[prenum], num[card,!is_date:!].
+
+
+//:: Er war 2007  Minister in BW.
+14> ?[no_mod=+] = |verb[lemma:sein,finite,sg] | num[card,year]	| noun[sg] |.
+
+Sequence:
+16> ?[coord_ap=+] = | ap#1[attr] | (punct[comma];conj[coord]), (num), ap#2[attr],
+	where ( TestAgree(#1,#2) ).
+
+16> ?[coord_ap=+] = | ap[pred] | punct[comma];conj[coord], ap[pred] .
+
+
+// --------------------------------------------------------------------------
+// nouns with adjectives
+20> npa[unit:!,marked_gen:!] @= (num), ap#1[attr], ?*[coord_ap], (num), noun#2[!unit:!,!marked_gen:!],
+	where ( UnifyAgree(#1,#2,#0) & #0[deverbal]={#1} ).
+
+20> npa[unit:!,marked_gen:!] @= (num[no_mod:~]), noun#1[!unit:!,!marked_gen:!],
+	where  ( #0[nvagree]={#1} ).
+
+
+20> npa[invar=+,is_date:!] = num[!is_date:!].
+
+20> npa[invar=+,is_date:!] = ap[is_date,!is_date:!].
+
+
+// disambiguate articles/pronouns
+Tagging:
+30> det = det | (negat;adv;?[skip])*, npa#1[unit:~] |
+	where ( TestAgree(#0,#1) ).
+
+Sequence:
+35> np @= (?[predet]), det#1, (negat;adv;?[skip])*, npa#2, // npa#2[unit:~],
+	where (UnifyAgree(#1,#2,#0) ). 
+
+//: Peters
+35> np[marked_gen=+] =  npa#1[marked_gen],
+	where ( #0[nvagree] = {#1} & #0[deverbal]={#1} ). 
+
+
+//: (Peters) kleine Tasche
+36> np @= (np[marked_gen]), npa#1,
+	where ( #0[nvagree] = {#1} & #0[deverbal]={#1} ). 
+
+
+//:: (etwas) neues
+36> np[nnoms=+,sg3=+] = | ?[qpron] | adj<neut,sg>;ap[is_neut].
+
+36> np[vagr:!,case:!,invar:!] = pron[det:~,!vagr:!,!invar:!,!case:!].
+
+
+// ---------------------------------------------------------------------------------------
+Sequence:
+
+44> pp = prep#1, np#2, #3[postp,req_prep],
+	where ((#1[req_prep]:#3[req_prep]) & (#2[case:~] | #1[case]:#2[case] ) & #0[case]= {#1&#2} ).
+
+45> pp = prep#1[det], np#2,		
+	where (UnifyAgree(#1,#2,#0) & #0[case]= {#1&#2} & #0[v_prep]={#1} ).
+
+45> pp = prep#1[det:~], np#2,	
+	where ((#2[case:~] | #1[case] : #2[case] ) & #0[case]= {#1&#2} & FilterCase(#1,#2) 
+	& #0[v_prep]={#1} ).
+
+46> pp = np#2, postp#1,	
+	where ((#2[case:~] | #1[case] : #2[case] ) & #0[case]= {#1&#2} ).
+
+
+//:: bis morgen; seit damals
+//47> pp = prep[lemma:bis], adv[temporal].
+47> pp = prep, adv[temporal].
+
+// -------------------------------------------------------------------
+Sequence:
+
+// coordinated PPs or NPs
+
+50> pp[list=+] = |det#3, (adv;negat)*| pp#1, (punct[comma,coord_pp=+],np)*, conj[coord,coord_pp=+], np#2 |np#4|,
+	where ( TESTAGREE(#3,#4) & #1[case]:#2[case] ).
+50> np[list=+] = |det#3, (adv;negat)*| np#1, (punct[comma,coord_np=+],np)*, conj[coord,coord_np=+], np#2 |np#4|,
+	where ( TESTAGREE(#3,#4) & #1[case]:#2[case] ).
+
+
+
+Tagging:
+52> det = det | (adv;negat)*, np;pp, np#1 |
+	where ( TESTAGREE(#0,#1) ).
+
+
+Sequence:
+
+// NPs with participles
+//:: die Fußball spielenden Kinder
+//:: der mit Zucker überzogene Kuchen
+55> np[strong=+] @= (?[predet]), det#1, (adv;negat)*, np;pp, np#2,	//[deverbal],
+	where ( UnifyAgree(#1,#2,#0) ).
+
+
+//:: die Fahrrad fahrenden, Fußball spielenden und sportlich tätigen Schüler
+55> np @= (?[predet]), det#1, (adv;negat)*, np#2, ap#3[attr], (punct[comma,coord_np=+],np)+, np#4,
+	where ( TESTAGREE(#1,#4) & TESTAGREE(#1,#3) & TESTAGREE(#3,#4) ).
+
+55> np = np;pp, np#1[deverbal,not_gen],
+	where ( #1[is_strong] & #0[nvagree]= {#1} ).
+
+
+60> pp[np_type:!] @= prep#1, np#2[!np_type:!],
+	where ((#2[case:~] | #1[case] : #2[case]) ).
+
+
+
+
+Reshuffling:
+//:: die Räuber spielenden Kinder
+70> np#1{ ?*#6, np#2, np{npa{ap#3{?-#4},?-#5}} }= #1{#6,npa{ap#3{#2,#4},#5}}.
+
+//:: die am Fließband gefertigten Autos
+70> np#1{ ?*#6, pp#2, np{npa{ap#3{?-#4},?-#5}} }= #1{#6,npa{ap#3{#2,#4},#5}}.
+
+
+// CHECK !!!!!!
+Tagging:
+//:: die anderen sagen das gleiche
+75> det,pron = det | ap#1[attr] |
+	where ( TESTAGREE(#0,#1) ).
+
+//:: Er ist interessiert. Er ist gegangen.
+80> verb<ppast>,adj<pred> = | verb[lemma:sein], (np;pp;adv)* | verb<ppast,v_move>.
+80> verb<ppast,v_move:~>,adj<pred> = | verb[lemma:sein], (np;pp;adv)* | adj<pred>.
+
+//:: Er wurde gewählt.
+80> verb<ppast>,adj<pred> = | verb[lemma:werden], (np;pp;adv)* | verb<ppast>.
+80> verb<inf>,adj<pred> = | verb[sub_inf], (np;pp;adv)* | verb<inf>.
+
+Sequence:
+//:: die anderen sagen das gleiche
+85> np @= (?[predet]), det#1, ap#2[attr],
+	where ( UnifyAgree(#1,#2,#0) ).
+
+
+
+
+// pronouns
+85> np[vagr:!,case:!,np_type:!] = pron[!vagr:!,!case:!,!np_type:!].
+
+// adjectives/pronouns
+//:: er hat viele gesehen
+85> np[vagr:!,np_type:!] = ap#1[pred:~, !vagr:!,!np_type:! ],
+	where (#0[is_strong] = {#1} ).
+
+//:: für Annas Hund
+86> pp[np_type:!] @= prep#1, (np*[gen]), np#2[!np_type:!],
+	where ((#2[case:~] | #1[case] : #2[case]) ).
+
+
+//:: Es schmeckt wie Zucker
+//:: Er ist größer als Peter
+87> pp[np_type:!] = conj[comp], np#2[!np_type:!],
+	where (#0[case] = {#2} ). 
+
+// predicative adjectives
+//:: Peter ist sehr groß
+90> ap[pred=+,deverbal=+] @= (negat;adv[sadv:~];adj[pred];adj[invar];ptcl[mod_adj])*, adj[pred, deverbal].
+90> ap[pred=+] @= (negat;adv[sadv:~];adj[pred];ptcl[mod_adj])*, adj[pred].
+
+
+//:: es gilt als sicher
+95> pp[nom=+,pp_als=+] = prep[lemma:als], ap[pred].
+
+
+
+Marker:
+100> np#1{?*, npa{?*, noun#2}}, where (CleanupAgr(#1,#2)).
+
+105> np[quant=+]{?*, npa{?*, noun[num];noun[quant]}}.
+106> pp[quant=+]{?*, np[quant]}.
+
+// clean up subcat markers of PPs that do not correpond to actual case.
+107> pp[acc:~,v_prep_acc=~].
+108> pp[dat:~,v_prep_dat=~].
+108> pp[nom:~,v_prep_nom=~].
+
+Tagging:
+// unbound prepositions
+120> prep = ?[prep:~].
+
+
+Sequence:
+//AS@29/09/2010
+//:: Angaben wie beispielweise Namen
+130> pp[pp_wie=+] = | np;pp | ?[lemma:wie], adv*, np.
+
+Sequence:
+// treat (some) coordinations
+
+139> conj[coord=+] = |negat, ?*[verb:~,punct:~]| punct[comma], conj[contrast] | ?[punct:~] | .
+
+140> ?[coord_ap=+] = | ap#1[attr] | (punct[comma];conj[coord]), (num), ap#2[attr],
+	where ( TestAgree(#1,#2) ).
+
+140> ?[coord_ap=+] = | ap[pred] | punct[comma];conj[coord], ap[pred] .
+
+
+//:: Er kommt mit Pauken und Trompeten.
+150> ?[coord_pp=+] = | pp#1 | conj[coord] | np#2 |,
+	where ( #1[case] : #2[case]).
+
+//:: Er kommt mit seinen Kindern, seiner Frau und seinem Hund
+151> ?[coord_pp=+] = | pp#1 | punct[comma] | np#2, (punct[comma], np)*, conj[coord], np#3 |,
+	where ( #1[case] : #2[case] &  #1[case] : #3[case] ).
+
+152> ?[coord_pp=+] = | ?[coord_pp], np#1 | conj[coord,coord_np:~] | np#2 |,
+	where ( #1[case] : #2[case]).
+
+152> ?[coord_pp=+] = | ?[coord_pp], np#1 | punct[comma] | np#2, (punct[comma], np)*, conj[coord], np#3 |,
+	where ( #1[case] : #2[case] &  #1[case] : #3[case] ).
+
+
+//:: Er sieht die Frau und die Kinder
+153> ?[coord_np=+] = | np#1 | conj[coord,coord_pp:~] | np#2 |,
+	where ( #1[case] : #2[case]).
+
+154> ?[coord_np=+] = | np#1 | punct[comma,coord_pp:~]|  np#2, (punct[comma], np)*, conj[coord], np#3 |,
+	where ( #1[case] : #2[case] &  #1[case] : #3[case] ).
+
+
+//:! Er sieht die Frau und die Kinder sehen den Hund.
+155> ?[coord_np=~,coord_pp=~] = | verb[finite], (np;pp;adv)*, np | ?[coord_np];?[coord_pp] | np[nom], (pp), verb[finite] |.
+
+
+//160> conj[coord_np=+,coord=+] = |negat, ?*[verb:~,punct:~]| punct[comma], conj[contrast] | np | .
+//160> conj[coord_ap=+,coord=+] = |negat, ?*[verb:~,punct:~]| punct[comma], conj[contrast] | ap;adv | .

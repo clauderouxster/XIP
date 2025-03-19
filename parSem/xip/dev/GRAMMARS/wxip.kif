@@ -1,0 +1,731 @@
+use('kifltk');
+
+
+int largeurmax=1500;
+int hauteurmax=900;
+
+const string endl="\n";
+
+int i;
+for (i=0;i<_args;i++) {
+     if (_args[i]=="-sz") {
+          largeurmax=_args[i+1];
+          hauteurmax=_args[i+2];
+          _args.pop(i,3);
+          break;
+     }
+}
+
+string chemingrm=_args[0];
+if (chemingrm=="") {
+     if (_sep=='\')
+          chemingrm='w:\users\Roux\xip\parSem\xip\dev\GRAMMARS\FRENCH\BASIC\french.grm';
+     else
+          chemingrm='/opt/ParSem_db/users/Roux/xip/parSem/xip/dev/GRAMMARS/FRENCH/BASIC/french.grm';
+}
+
+parser genere(chemingrm);
+
+svector categories;
+svector dependances;
+
+string commentaires=@"
+
+commentaires := _commentaire+.
+_commentaire := com;comments;?_.
+
+comments := '/',?+,'\'.
+
+com := '/','/',?*,rc_.
+
+rc_ := 10;13.
+
+"@;
+
+string lestraits=@"
+ 
+traits := _trait+.
+_trait := feats;sfeats;?_.
+feats := "[",?+,"]".
+sfeats := "<",~%r+,">".
+"@;
+
+string lesvars=@"
+
+vars := _lvar+.
+
+_lvar := var;?_.
+
+var := "#";"^",_label+.
+_label := %a;%d;"-";"_".
+
+"@;
+
+grammar g_coms(commentaires);
+grammar g_feats(lestraits);
+grammar g_vars(lesvars);
+
+svector l=genere.dependencies();
+for (i=0;i<l;i+=2)
+     dependances.push(l[i]);
+l=<x+"(" | x <- dependances>;
+svector l2=<x+"[" | x <- dependances>;
+svector l3=<x+"$" | x <- dependances>;
+dependances=l &&& l2 &&& l3;
+
+svector instructions=["words(","initlookdown(","setword(","script:","sequence:","idrules:","tagging:",
+     "extraction:","dependencyrules:","semantic:","marker:","terms:","reshuffling:","split:","doublereduction:",
+     "fragment:","vocabulary:","lprules:","functions:","multiwords:","multilemmas:","tokenselection:","lexicals:","generation:","order"];
+
+svector champs=['séquence:','dirègles:','extraction:','désambiguïsation:','sémantique:','marqueur:','vocabulaires:','déduction:',
+     'reconstructeur:','termes:','découpeséquence:','doubleréduction:','fragmenter:','ordre:','plrègles:','fonctions:','multimots:','multilemmes:',
+     'tokenselection:','lexicales:','génération:','séquencesurcontexte:'];
+
+svector lchamps=<x.latin() | x <- champs>;
+
+l=genere.categories();
+for (i=0;i<l;i+=2) {
+     categories.push(l[i]);
+}
+
+
+genere.setoption(XIP_ENABLE_DEPENDENCY,XIP_CHECK_INPUT_UTF8,XIP_FULL,XIP_CHUNK_TREE);
+
+primemap infos;
+imap structs;
+
+function parcours(node n) {
+     ssmap feats=n.features();
+     feats["POS"]=n.pos();
+     string key=feats;
+     if (structs.test(key)==false) {
+          structs[key]=1;
+          key=n.number();
+          infos[key]=feats;
+     }
+
+     if (n.child()!=null)
+          parcours(n.child());
+     if (n.next()!=null)
+          parcours(n.next());
+}
+
+function recuperenoeuds(node n) {
+     infos.clear();
+     structs.clear();
+     parcours(n);
+}
+
+string test=categories[1];
+string regleappel="tail:\n|"+test+"#1|\n { recuperenoeuds(#1); }";
+genere.addendum(regleappel,true);
+
+map lesfichiers=genere.grammarfiles();
+
+frame fcherche {
+     self fenetre;
+     self zone;
+     self editeur;
+
+     function _initial(window f,winput z,editor e) {
+          fenetre=f;
+          zone=z;
+          editeur=e;
+     }
+}
+
+frame block {
+     window w;
+     wtabs onglets;
+     wgroup principal;
+     vector van;
+     editor entree;
+     editor sortie;
+     map styles;
+     int ipos,iposmax;
+     string laphrase;
+     string fichier;
+     int nb;
+     string reglecourante;
+     map fenetres;
+     map nomsfichiers;
+     map editeurs;
+     map modifications;
+     vector lesregles;
+     string rulebody;
+     int baseh;
+     int basel;
+     int maxlargeur;
+     int maxhauteur;
+     string recherchecourante;
+
+     woutput corpsregle;
+     woutput numero;
+     woutput fichierregle;
+
+     wchoice mesfichiers;
+
+     function jusqua(slider s,self b);
+     slider regles with jusqua;
+
+
+     function brillecat(editor e) {
+          string s;
+          e.setstyle(0,e.size()-1,"#");
+          e.annotate(categories,"categorie");
+
+          string txt=e.value();
+          vector vcom;
+          svector vres;
+
+          vcom=g_vars.apply(txt);
+          vres=<x[1] | x <- vcom[1:]>;
+
+          vres=vres.unique();
+          e.annotate(vres,"categorie");
+
+          e.annotate(dependances,"dependance");
+          e.annotate(champs,"courante");
+          e.annotate(lchamps,"courante");
+          e.annotate(instructions,"courante");
+
+          vcom=g_feats.apply(txt);
+          vres=<x[1] | x <- vcom[1:],x[1].size()>0>;
+          vres=vres.unique();
+          e.annotate(vres,"trait");
+
+          vcom=g_coms.apply(txt);
+          vres=<x[1] | x <- vcom[1:]>;
+          vres=vres.unique();
+          e.annotate(vres,"surface");
+     }
+
+     function parsecat(editor e) {
+          e.annotateregexip("[%C,_,%d]+","categorie");
+          e.annotateregexip("[%C,_,%d]+%(","dependance");
+          e.annotateregexip('surface":"?+"',"surface");
+          e.annotateregexip('lemme:"?+"',"lemme");
+          e.annotateregexip('lemme":"?+"',"lemme");
+          e.annotateregexip("#%C+","Pron");
+     }
+
+     function parseinfo(editor e) {
+          e.annotateregexip("'[%C,_]+'","trait");
+          e.annotateregexip("'lemme':'?+'","lemme");
+          e.annotateregexip(":%C+%=","categorie");
+          e.annotateregexip("=[%C,%c, ,%p]+%{","surface");
+     }
+
+     wgroup ginfos;
+     editor einfos;
+
+     function infoediteur() {
+          string v;
+          if (einfos!=null) {
+               string s;
+               for (s in infos) {
+                    map loc=infos[s];
+                    v+=s+":"+loc["POS"]+"="+loc["surface"];
+                    loc.pop("POS");
+                    loc.pop("surface");
+                    v+=loc+"\n";
+               }
+               einfos.value(v);
+               parseinfo(einfos);
+          }
+     }
+
+     function afficheinfos(button b,self n) {
+          if (ginfos==null) {
+               ginfos.begin(basel-50,baseh-10,maxlargeur,maxhauteur-25,"Infos");
+               einfos.create(basel,baseh+50,maxlargeur-100,maxhauteur-90,"Nodes");
+               einfos.addstyle(styles);
+               infoediteur();
+               ginfos.end();
+               onglets.add(ginfos);
+          }
+          else {
+               ginfos.activate();
+               infoediteur();
+          }
+     }
+
+     function extraitchemin(string r) {
+          r=r.replace("\r\n","\n");
+          r=r.replace("\r","\n");
+          r=r.replace("\n\n\n","\n");
+          r=r.replace("\n\n","\n");
+
+          int pchemin=r.find(') :');
+          int finchemin=r.find("\n",pchemin);
+          fichier=r[pchemin+3:finchemin];
+          string vreg=r[finchemin+1:];
+          corpsregle.value(vreg);
+          fichier=fichier.trim();
+          reglecourante=r[finchemin+1:"\n"];
+          reglecourante=reglecourante.trim();
+          fichierregle.value(fichier);
+     }
+
+     function jusqua(slider sld,self b) {
+          genere.upto(lesregles[sld.value()]);
+          numero.value(lesregles[sld.value()]);
+
+          string e=entree.value();
+          string s=genere.parse(e);
+          rulebody=genere.getrulebody(lesregles[sld.value()]);
+          extraitchemin(rulebody);
+          infoediteur();
+
+          sortie.value(s);
+          parsecat(sortie);
+
+
+     }
+
+     function regenere() {
+          genere.upto(-1);
+          string e=entree.value();
+          string s=genere.parse(e);
+          lesregles=genere.applied();
+          rulebody=genere.getrulebody(lesregles[-1]);
+          extraitchemin(rulebody);
+          s=s.replace("\r\n","\n");
+          s=s.replace("\r","\n");
+          sortie.value(s);
+
+          regles.bounds(0,lesregles.size()-1);
+          regles.value(lesregles.size()-1);
+          infoediteur();
+          parsecat(sortie);
+     }
+
+     function recharge(button b,block bb) {
+          string s;
+          try {
+               genere.reload();
+               genere.setoption(XIP_ENABLE_DEPENDENCY,XIP_CHECK_INPUT_UTF8,XIP_FULL,XIP_CHUNK_TREE);
+               genere.addendum(regleappel,true);
+               regenere();
+          }
+          catch(s) {
+               s=s.replace("\r\n","\n");
+               w.alert(s);
+          }
+     }
+
+     function reanalyse(button b,block bb) {
+          regenere();
+     }
+
+     function sauvefichier(editor e) {
+          string fname=e;
+          println("Sauvegarde",fname);
+          e.save(fname);
+          modifications[fname]=false;
+          brillecat(e);
+          nb=0;
+     }
+
+     function sauve(button b,editor e) {
+          sauvefichier(e);
+     }
+
+     function chercheencore(editor e) {
+          if (recherchecourante!="" && ipos!=-1) {
+               ipos=e.find(recherchecourante,iposmax);
+               if (ipos!=-1) {
+                    iposmax=ipos+recherchecourante.size();
+                    if (ipos!=iposmax)
+                         e.highlight(ipos,iposmax);
+               }
+          }
+     }
+
+     function chercheok(button e,fcherche f) {
+          recherchecourante=f.zone.value();
+          printlnerr(recherchecourante,ipos);
+
+          ipos=f.editeur.find(recherchecourante);
+          if (ipos!=-1) {
+               iposmax=ipos+recherchecourante.size();
+               if (ipos!=iposmax)
+                    f.editeur.highlight(ipos,iposmax);
+          }
+          f.fenetre.close();
+     }
+
+     function cherchenon(button e,window f) {
+          f.close();
+     }
+
+     function cherche(editor e) {
+          window de;
+          winput zone;
+          fcherche bloc(de,zone,e);
+
+          button bok(bloc) with chercheok;
+          button bnon(de) with cherchenon;
+
+          de.begin(200,200,800,100,"Cherche");
+          de.sizerange(10,20,0,0);
+
+          zone.create(60,20,700,20,false,"Chaine");
+          zone.value(recherchecourante);
+          bok.create(300,60,70,35,FL_Return,FL_NORMAL_BUTTON,"Ok");
+          bnon.create(420,60,70,35,FL_Regular,FL_NORMAL_BUTTON,"Annuler");
+          de.end();
+     }
+
+
+     function ligneok(button e,fcherche f) {
+          f.editeur.gotoline(f.zone.value(),true);
+          f.fenetre.close();
+     }
+
+
+     function ligne(editor e) {
+          window de;
+          winput zone;
+          fcherche bloc(de,zone,e);
+
+          button bok(bloc) with ligneok;
+          button bnon(de) with cherchenon;
+
+          de.begin(200,200,200,100,"Ligne");
+          de.sizerange(10,20,0,0);
+
+          zone.create(60,20,100,20,false,"Numéro");
+          bok.create(30,60,70,35,FL_Return,FL_NORMAL_BUTTON,"Ok");
+          bnon.create(125,60,70,35,FL_Regular,FL_NORMAL_BUTTON,"Annuler");
+          de.end();
+     }
+
+     function bcherche(button b, editor e) {
+          cherche(e);
+     }
+
+     function aller(button b,editor e) {
+          ligne(e);
+     }
+
+     function callback_key(window w, string skey,int ikey, int cb,self  t) {
+          string s=t.current().label();
+
+          self e=editeurs[s];
+          if (e==null)
+               return;
+          int i=skey.ord();
+          //crtl-s
+          if (i==19 && ikey==115)
+               sauvefichier(e);
+          //crtl-u
+          if (i==21 && ikey==117) {
+               if (e.highlight()==1)
+                    e.unhighlight();
+               else
+                    e.highlight(ipos,iposmax);
+          }
+          //ctrl-f
+          if (i==6 && ikey==102)
+               cherche(e);
+          //F3
+          if (ikey==65472 && i==0)
+               chercheencore(e);
+          if (i==7 && ikey==103)
+               ligne(e);
+          //println(i,ikey);
+     }
+
+     window wmessage;
+
+     function infostyle(int x,int y,map sz,string style) {
+          if (wmessage!=null)
+               return;
+
+          wmessage.begin(x,y,sz["w"]+20,sz["h"]+20,style);
+          wmessage.border(false);
+          box b;
+          b.create(5,5,sz["w"]+5,sz["h"]+5,style);
+          wmessage.backgroundcolor(FL_YELLOW);
+          wmessage.end();
+
+     }
+
+
+     function afficheligne(editor e,int pos, int ninserted,int ndeleted,int restyled,string del,woutput num) {
+          int i=e.line();
+          num.value(i);
+     }
+
+     function vscroll(editor e,woutput num) {
+          int i=e.line();
+          num.value(i);
+     }
+
+     function vmouse(editor e,map infos,woutput num) {
+          int i=e.line();
+          num.value(i);
+          return(true);
+     }
+
+     function clef(editor e, string k, int i,int cp,self num) {
+          int n=e.line();
+          num.value(n);
+     }
+
+     function testutf8(button b,editor e) {
+          string contenu;
+          if (b.value()==false) {
+               contenu=e.value();
+               contenu=contenu.utf8();
+               e.value(contenu);
+               b.value(true);
+          }
+          else {
+               contenu=e.value();
+               contenu=contenu.latin();
+               e.value(contenu);
+               b.value(false);
+          }
+     }
+
+     function creediteur(string fich,bool select) {
+          ipos=-1;
+          string court=fich;
+          if (_sep in fich)
+               court=court[fich.rfind(_sep)+1:];
+
+          if (fenetres.test(court)) {
+               fenetres[court].activate();
+               if (select) {
+                    ipos=editeurs[court].find(reglecourante);
+                    iposmax=ipos+reglecourante.size();
+                    if (ipos!=iposmax)
+                         editeurs[court].highlight(ipos,iposmax);
+               }
+               return;
+          }
+
+
+          wgroup fen;
+          woutput num;
+          editor e(num) with afficheligne;
+
+          button allera(e) with aller;
+          button bx(e) with sauve;
+          button cherche(e) with bcherche;
+          button reload(this) with recharge;
+          button utf(e) with testutf8;
+          fenetres[court]=fen;
+          fen.begin(basel-50,baseh-10,maxlargeur,maxhauteur-25,court);
+          fen.hide();
+          nb=0;
+
+          utf.create(basel+30,baseh,20,20,FL_Check,FL_NORMAL_BUTTON,"UTF8");
+          utf.tooltip("Permet de changer l'encodage courant");
+          utf.align(FL_ALIGN_LEFT);
+
+          num.create(basel+30,baseh+20,45,20,true,"Ligne");
+          num.value(0);
+          allera.create(basel+maxlargeur-450,baseh+10,67,35,FL_Regular,FL_NORMAL_BUTTON,"Ligne");
+          reload.create(basel+maxlargeur-380,baseh+10,67,35,FL_Regular,FL_NORMAL_BUTTON,"Recharge");
+          reload.tooltip("Recharge la grammaire");
+          bx.create(basel+maxlargeur-310,baseh+10,67,35,FL_Regular,FL_NORMAL_BUTTON,"&Sauver");
+          bx.tooltip("Sauvegarde le fichier courant (CTRL-S)");
+          cherche.create(basel+maxlargeur-240,baseh+10,67,35,FL_Regular,FL_NORMAL_BUTTON,"Cherche");
+          cherche.tooltip("Cherche une chaine dans le fichier (CTRL-F). Pressez F3 pour continuer la recherche");
+
+
+          e.create(basel,baseh+50,maxlargeur-90,maxhauteur-90,fich);
+
+          e.onvscroll(vscroll,num);
+          e.onmouse(FL_RELEASE,vmouse,num);
+          e.onkey(FL_KEYUP,clef,num);
+
+          e.addstyle(styles);
+          //e.load(fichier);
+          file f(fich,"r");
+          string bbf,s;
+          for (s in f) {
+               s=s.replace("\r\n","\n");
+               s=s.replace("\r","\n");
+               bbf+=s;
+          }
+
+          e.value(bbf);
+          utf.value(bbf.isutf8());
+
+          if (select) {
+               brillecat(e);
+               ipos=e.find(reglecourante);
+               iposmax=ipos+reglecourante.size();
+               if (ipos!=iposmax)
+                    e.highlight(ipos,iposmax);
+
+               e.cursor(iposmax);
+          }
+
+          editeurs[court]=e;
+          e.cursorstyle(FL_LINE_CURSOR);
+          modifications[fich]=false;
+          nomsfichiers[court]=fich;
+          w.resizable(e);
+
+          fen.end();
+          onglets.add(fen);
+     }
+
+     function menuchoix(wchoice m,string fich) {
+          creediteur(fich,false);
+     }
+
+     function edition(button b,string fich) {
+          if (fich=="")
+               return;
+          creediteur(fich,true);
+     }
+
+
+     function fermeture(window w,self n) {
+          return(false);
+     }
+
+     function refermer(button b,window w) {
+          w.close();
+     }
+
+     function lance(string deps,string srt,string r) {
+          rulebody=r;
+
+          maxlargeur=largeurmax;
+          maxhauteur=hauteurmax;
+          baseh=45;
+          basel=100;
+
+          w.begin(10,40,maxlargeur+10,maxhauteur+10,"Modification");
+          w.onclose(fermeture,null);
+          srt=srt.replace("\r\n","\n");
+          int macouleur=w.rgbcolor(127,127,127);
+          int autrecouleur=w.rgbcolor(50,100,250);
+
+          styles={'#':[FL_BLACK,FL_HELVETICA,FL_NORMAL_SIZE ],
+               'variable':[ FL_DARK_RED,FL_HELVETICA,FL_NORMAL_SIZE ],
+               "Pron":[ FL_DARK_GREEN,FL_HELVETICA,FL_NORMAL_SIZE ],
+               "categorie":[ FL_RED,FL_HELVETICA,FL_NORMAL_SIZE ],
+               "surface":[FL_DARK_GREEN,FL_HELVETICA_ITALIC,FL_NORMAL_SIZE ],
+               "phrase":[ FL_DARK_BLUE,FL_TIMES_BOLD_ITALIC,20 ],
+               "lemme":[FL_DARK_RED,FL_HELVETICA_BOLD,FL_NORMAL_SIZE ],
+               "dependance":[ FL_BLUE,FL_HELVETICA_BOLD,FL_NORMAL_SIZE,"Dépendance",FL_YELLOW ],
+               "courante":[FL_RED,FL_HELVETICA_BOLD,FL_NORMAL_SIZE ],
+               "trait":[autrecouleur,FL_HELVETICA,FL_NORMAL_SIZE]
+          };
+
+          w.sizerange(10,20,0,0);
+
+          button b(this) with reanalyse;
+          button edt(fichier) with edition;
+          button rld(this) with recharge;
+          button fermer(w) with refermer;
+          button binfos with afficheinfos;
+
+
+          onglets.begin(basel-50,baseh-30,maxlargeur,maxhauteur,"");
+          principal.begin(basel-50,baseh-10,maxlargeur,maxhauteur-25,"Principal");
+
+          fichierregle.create(basel+100,baseh,700,25,false,"Fichier");
+
+          int suivant=baseh+45;
+
+          binfos.create(maxlargeur-364,suivant,70,30,FL_Regular,FL_NORMAL_BUTTON,"Infos");
+          edt.create(maxlargeur-292,suivant,70,30,FL_Regular,FL_NORMAL_BUTTON,"Edite");
+          b.create(maxlargeur-220,suivant,70,30,FL_Regular,FL_NORMAL_BUTTON,"Analyse");
+          rld.create(maxlargeur-148,suivant,70,30,FL_Regular,FL_NORMAL_BUTTON,"Recharge");
+          fermer.create(maxlargeur-76,suivant,70,30,FL_Regular,FL_NORMAL_BUTTON,"Fermer");
+
+          numero.create(basel,baseh,50,25,false,"Règle");
+          suivant+=30;
+          entree.create(basel,suivant,maxlargeur-100,maxhauteur/5,"Entrée");
+          suivant+=20+maxhauteur/5;
+          sortie.create(basel,suivant,maxlargeur-100,maxhauteur/4,"Sortie");
+          suivant+=20+maxhauteur/4;
+          corpsregle.create(basel,suivant,maxlargeur-100,maxhauteur/6,true,"Règle");
+          suivant+=20+maxhauteur/6;
+          regles.create(basel,suivant,maxlargeur-100,20,FL_ALIGN_TOP,true,"Pas à pas");
+
+          mesfichiers.create(basel+860,baseh,400,25,"fichiers");
+          mesfichiers.fontsize(FL_NORMAL_SIZE);
+
+          numero.tooltip("Numéro de la règle courante");
+          fichierregle.tooltip("Fichier courant contenant la règle en cours");
+          sortie.tooltip("Analyse des phrases");
+          b.tooltip("Lance l'analyse des phrases en entrée");
+          edt.tooltip("Edite le fichier courant en se positionant sur la règle courante");
+          rld.tooltip("Recharge la grammaire");
+          regles.tooltip("Analyse la phrase pas à pas");
+          corpsregle.tooltip("Affiche le corps de la règle en cours");
+          entree.tooltip("Phrase en entrée");
+          mesfichiers.tooltip("Traits, catégories et lexiques");
+
+          entree.addstyle(styles);
+          entree.value(deps);
+
+
+          vector vmenu;
+          string clef,court;
+
+          for (clef in lesfichiers["features"]) {
+               if (_sep in clef)
+                    court=clef[clef.rfind(_sep)+1:];
+               vmenu.push([court,menuchoix,clef]);
+          }
+          for (clef in lesfichiers["lexicons"]) {
+               if (_sep in clef)
+                    court=clef[clef.rfind(_sep)+1:];
+               vmenu.push([court,menuchoix,clef]);
+          }
+
+          clef=lesfichiers["grammar"];
+          if (_sep in clef)
+               court=clef[clef.rfind(_sep)+1:];
+          vmenu.push([court,menuchoix,clef]);
+          mesfichiers.menu(vmenu);
+
+          sortie.addstyle(styles);
+          sortie.value(srt);
+          parsecat(sortie);
+
+          lesregles=genere.applied();
+          regles.bounds(0,lesregles.size()-1);
+          regles.value(lesregles.size()-1);
+          numero.value(lesregles[-1]);
+          extraitchemin(rulebody);
+
+          principal.end();
+          onglets.end();
+
+          w.onkey(FL_KEYUP,callback_key,onglets);
+          w.end();
+
+          w.resizable(entree);
+          w.resizable(sortie);
+          w.resizable(corpsregle);
+          w.resizable(mesfichiers);
+
+          w.run();
+     }
+}
+
+
+string ph;
+if (_args.size()>1)
+     ph=_args[1:].join(" ");
+
+string s,r;
+if (ph!="") {
+     s=genere.parse(ph);
+     vector v=genere.applied();
+     r=genere.getrulebody(v[-1]);
+}
+block b;
+b.lance(ph,s,r);

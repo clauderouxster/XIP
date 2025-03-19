@@ -1,0 +1,89 @@
+# ============================================================================
+# CONTENT:	(x)fst script for morphological guesser
+#
+# LANGUAGE:	ENGLISH (ISO-8859-1)
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	16-Aug-1999
+#
+# ============================================================================
+# USAGE:	xfst -l [ThisFile]
+# ============================================================================
+
+
+define LowChar	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|å|ä|ö];
+define UppChar	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|Å|Ä|Ö];
+define Char	[ LowChar | UppChar ];
+
+define Digit    [ %0|1|2|3|4|5|6|7|8|9 ];
+define Op       [ %+|%-|%*|%/|%=|%& ];
+define Curr	[ (M | U S | C a n ) "$" | "£" | "¥" | "¢" | "\u20AC"
+		| D M | F F | W o n | Y e n ];
+define CurrDig	[ m | M | b n ];
+
+echo >>> define stems
+define LowStem	[ LowChar ]+;		# all characters lower case
+define UpStem   [ UppChar ]+;		# all characters upper case
+define MixStem	[ Char | %-  ]+;
+
+define CapStem	UppChar LowStem;		
+define PropStem UppChar MixStem;
+
+define Trunc	Char [ Char | Digit | Op]* %- ;
+ 
+define Card	Digit+ [Op Digit+]*;
+
+echo >>> define special strings
+define StemIng		LowStem {ing} ;
+define StemIon		LowStem {ion} ;
+define StemEd		LowStem {ed} ;
+
+define StemOther	LowStem - [ ?* [ {ing} | {ed} | {ion} ] ];
+
+define NADJ	[ %+Noun:0 [%+Sg:0|%+Pl:s] | %+Adj:0 ] %+NAdj:0 ;
+
+# =============================================================
+read regex
+[
+# numerals
+  Card ("%"|"$")			%+Dig:0 %+Card:0
+| Curr Digit+ [["."|","] Digit+]* (CurrDig)	%+Dig:0 %+DlrAmt:0	# currency + amount
+| Digit+ (%-) [Char - s]		%+Dig:0 %+Card:0	# 10a
+| Digit+ (%') s			        %+Noun:0 %+Pl:0		# the 1960s
+
+# adverbs
+| LowStem l y				%+Adv:0
+
+# some nouns
+| (Trunc) StemIon			%+Noun:0 %+Sg:0
+| (Trunc) StemIon 0:s			%+Noun:0 %+Pl:0
+
+# -ing forms
+| StemIng				[ %+Verb:0 %+PPres:0 ]
+| StemIng				NADJ %+PPres:0
+
+# adjectives in -ed
+| StemEd				[ %+Verb:0 %+Past:0 |  [ %+Verb | %+Adj:0 ] %+PPast:0 ]
+
+# adjectives loke "10-years-old"
+| Card %- (Trunc) LowStem		NADJ			# 10-years-old
+
+# compounds
+| (Trunc) StemOther			NADJ
+| Trunc StemIng				NADJ
+| Trunc StemEd				NADJ
+
+# Capitalized words => proper nouns
+| (Trunc) PropStem (%.)			%+Prop:0
+| [ UppChar %. ]+			%+Prop:0
+| UppChar+ [ Op UppChar+]*		%+Prop:0
+
+# words ending in %.
+|  LowStem %.				%+Adv:0 %+Abbr:0
+
+# interjections
+| LowChar+ [a|e|i|o|u]+ h+		%+Interj:0
+
+];
+

@@ -1,0 +1,441 @@
+Variables:
+string lemmes[];
+int i;
+int ii;
+string categ;
+string lacat;
+string lereflexif;
+string sub[];
+string lelemme;
+dictionary reflexifs;
+
+Initial:
+reflexifs["p1"]="me";
+reflexifs["p2"]="te";
+reflexifs["p1+"]="nous";
+reflexifs["p2+"]="vous";
+
+
+dependencyrules:
+//Imparfait
+1> if (past(#1) & postlocation(#1,#2[lemme:"en train"]) & #1[tense=~] & #1[tense=imp] ) ~.
+
+//Cas de ifthen, le "alors" doit recevoir le trait uniquepron pour ne pas generer de "que"
+1> if (ifthen(#1,#2) & #2[uniquepron=+]) ~.
+
+//Cas d'un objet sans sujet, mais avec un sujet quelque part
+1> if (obj(#1,#2) & ~subj[mineur:~](#1,#3)  & ~pvmod(#1,#4[prep])) 
+     subj[mineur=+](#1,pron[case=nom,pers=3,sg=+,lemme="on",pronsubj=+]).
+
+//Cas d'un sujet unique
+1> if (subj(#1) &~RMOD(#1,#3[uniquepron:~]) & ~obj(#1,#2)) subj[mineur=+](#1,pron[case=nom,pers=3,sg=+,lemme="on",pronsubj=+]).
+
+generation:
+
+//Si deux verbes coordonnees partagent le meme sujet
+//5> if (coord(#1,#2) & subj$1(#1,#3) & subj$2(#2,#3) ) P(#1){GN(#3){noun(#3)}, GV(#1){verb(#1),conj(conj[lemme:et]),verb(#2)}}
+//Si deux verbes partagent un meme objet coordonnes.
+//5> if (coord(#1,#2) & obj$1(#3,#1) & obj$2(#3,#2) & ^GV(#3) ) ~$1,~$2,GN(#1){noun(#1),conj(conj[lemme:et]), GN(#2){noun(#2)}}
+//----------------------------------------------------------------------------------------
+//Coordination de GV
+//On construit d'abord les GV
+5> if (coord(#1,#2) & subj(#1,#3)  & ~GV(#1)) GV(#1){Verb(#1)}
+5> if (coord(#1,#2[conjcoord:and]) & subj(#2,#3)  & ~GV(#2) & #2[conjcoord=~]) GV(#2){conj(conj[lemme:et]), Verb(#2)}
+5> if (coord(#1,#2[conjcoord:or]) & subj(#2,#3)  & ~GV(#2) & #2[conjcoord=~]) GV(#2){conj(conj[lemme:ou]), Verb(#2)}
+//On cree notre noeud Phrase, une seule fois
+5> if (coord(#1,#2) & subj(#2,#3) & ~P(#2)) P(#2).
+
+//Puis on place tout sous ce noeud P, les GV
+5> if (coord(#1,#2) & subj(#1,#3) & GV$#1(#1) & ^P(#2)) $#1.
+5> if (coord(#1,#2) & subj(#2,#3) & GV$#1(#2) & ^P(#2)) $#1.
+
+//----------------------------------------------------------------------------------------
+//Coordination de GNs
+//Si plusieurs sujets partagent un meme verbe
+//On construit d'abord les premiers elements coordonnes
+5> if (coord(#1,#2) & subj(#3,#1)  & ~GN(#1)) 
+    GN(#1) {noun(#1)}.
+
+//Il n'existe qu'un seul element qui soit a cette position, tous les autres sont coordonnes a lui
+//On lui rajoute la coordination
+5> if (coord(#1,#2[conjcoord:and]) & subj(#3,#2)  & ~GN(#2) & #2[conjcoord=~]) 
+      GN(#2) {conj(conj[lemme:et]), noun(#2)}.
+
+5> if (coord(#1,#2[conjcoord:or]) & subj(#3,#2)  & ~GN(#2) & #2[conjcoord=~]) 
+      GN(#2) {conj(conj[lemme:ou]), noun(#2)}.
+
+
+//On cree notre noeud Phrase, une seule fois, pour les NPs
+5> if (coord(#1,#2) & subj(#3,#2) & ~P(#3)) P(#3).
+
+//Les GN s'il y en a
+5> if (coord(#1,#2) & subj(#3,#1) & GN$#1(#1) & ^P(#3)) $#1.
+5> if (coord(#1,#2) & subj(#3,#2) & GN$#1(#2) & ^P(#3)) $#1.
+
+//Enfin on rajoute le verbe avec les valeurs appropriees, il est forcement pluriel desormais 
+5> if (coord(#1,#2) & subj(#3,#2) & ^P(#3) & & #3[pl=+,pers=3]) GV(#3){verb(#3)}.
+//------------------------------------------------------------------------------------------------
+//Dans ce cas-la, on rajoute notre nom sujet
+5> if (subj(#1,#2) & ^P(#1) & ~gn(#2)) GN(#2){noun(#2)}.
+
+
+//------------------------------------------------------------------------------------------------
+dependencyrules:
+
+
+6> if (subj(#1,#2[case:nom]) ) accord(#1,#2).
+//dans le cas d'un antecedent associe a un pronom sujet, ca marche aussi
+6> if (subj(#1,#2[case:~nom]) & antecedent(#3[case:nom],#2) ) accord(#1,#2).
+
+6> if (subj(#1,#2[case:~nom]) & #1[number]={#2} & #1[pers=3] ) ~.
+6> if (subj(#1,#2[case:~nom]) ) ~.
+6> if (coord$3(#1,#2) & subj$1(#1,#3) & subj$2(#2,#3)) ~$1,~$2,~$3.
+
+6> if (ifthen(#1,#2) & rmod(#3,#1) & #3[position=avant])~.
+6> if (ifthen(#1,#2) & rmod(#3,#2) & #3[position=apres])~.
+
+//On vire les dependances associees a une coordination
+6> if (coord(#1,#2) & (^subj(#3,#1) | ^subj(#3,#2)) ) ~.
+6> if (coord(#1,#2) & (^subj(#1,#3) | ^subj(#2,#3)) ) ~.
+
+
+generation:
+
+
+10> if (subj(#1,#2[case:nom])) P(#1) {GN(#2){noun(#2)},GV(#1){verb(#1)}}
+
+10> if (subj(#1,#2[case:~nom])) P(#1) {GV(#1){verb(#1){token(#1)}}}
+
+15> if (obj(#1,#2) & ~Gv(#1)) GV(#1){verb(#1)}
+
+15> if (obj(#1,#2[pronsubj]) & GV$#1(#1)) $#1{pron(#2)}
+//15> if (obj(#1,#2[pronsubj:~,adj:~,verb:~]) & ^GV(#1) & ~GN(#2)  & ~antecedent(#5[lemme:que],#2) )  GN(#2){noun(#2)}
+
+15> if (obj(#1,#2[adj:+]) & ^GV(#1) & ~GN(#2))  GN(#2){adj(#2)}
+15> if (obj(#1,#2[noun:+]) & ^GV(#1) & ~GN(#2))  GN(#2){noun(#2)}
+15> if (obj(#1,#2[verb:+]) & ^GV(#1) & ~GN(#2))  GV(#2){verb(#2)}
+
+//Cas complique: pmod et pvmod partageant la meme preposition
+15> if (pmod(#1,#2) & pvmod(#3,#2) & ~GV(#3) & ~GN(#1) ) PP(#2) {prep(#2), GV(#3){Verb(#3)}, GN(#1){Noun(#1)}}
+
+
+15> if (pmod(#1[noun],#2[adv]) & ^GN(#1)) ADV(#2).
+15> if (PMOD(#1[noun],#2[adv:~]) & ~GN(#1)) PP(#2){Prep(#2),GN(#1){noun(#1)}}
+
+15> if (PMOD(#1[adj],#2[adv:~])) PP(#2){Prep(#2),GN(#1){adj(#1)}}
+15> if (PMOD(#1[adj],#2[adv]) & ~adj(#1)) GN(#1){adv(#2),adj(#1)}
+15> if (PMOD(#1[adj],#2[adv]) & ^adj(#1)) adv(#2).
+
+
+
+//Traitement d'un adverbe avec un verbe (attention au "se" qui ne peut etre traite ici)
+15> if (PVMOD(#1,#2[lemme:~"se",adv:~])  & ~GV(#1) & ~prep(#2)) PP(#2){Prep(#2),GV(#1){verb(#1)}}
+15> if (PVMOD(#1,#2[lemme:~"se",adv:~])  & GV$#1(#1) & ~prep(#2)) PP(#2){Prep(#2),$#1}
+15> if (PVMOD(#1,#2[lemme:~"se"])  & ~GV(#1) & prep$#1(#2) & nodemother($#1,$#2) ) $#2{GV(#1){verb(#1)}}
+
+//Dans le cas d'un adjectif pour lequel le GN existe, on le rajoute
+15> if (amod(#1,#2) & ^GN(#1)) adj(#2).
+
+//Traitement du complement du nom
+16> if (nmod(#1,#2) & ^GN(#1) & pmod(#2,#3)  & PP$#1(#3)  & #2[det=+] ) $#1.
+//Si nous avons un determinant, alors un petit calcul est necessaire
+16> if (nmod(#1,#2) & ^GN(#1) & ~pmod(#2,#3) & ~determ(#2,#4) & #2[det=+]) prep(prep[lemme="de"],#2),GN(#2){noun(#2)}.
+
+16> if (nmod(#1,#2) & ^GN(#1) & ~pmod(#2,#3) & determ(#2,#4) & #2[det=+] ) prep(prep[lemme="de"],#2),GN(#2){det(#2,#4),noun(#2)}.
+
+//Traitement du modificateur d'adjectif
+16> if (amod(#1,#2) & ~GN(#1)) GN(#1){noun(#1),adj(#2)}
+16> if (amod(#1,#2) & ^GN(#1) & ~adj(#2)) adj(#2).
+
+16> if (nmod(#1,#2[det:~]) & ^GN(#1) & #2[det=+]) prep(prep[lemme="de"],#2),GN(#2){noun(#2)}.
+
+16> if (coord(#1,#2[conjcoord:and]) & ^adj(#2) & #2[conjcoord=~]) conj(conj[lemme:et]).
+16> if (coord(#1,#2[conjcoord:or]) & ^adj(#2) & #2[conjcoord=~]) conj(conj[lemme:ou]).
+
+//traitement de la preposition "par" sans article ensuite
+16> if (pmod(#1,#2[lemme:par]) & ~determ(#1,?) & #1[det=+])~.
+
+
+//Traitement de la negation
+17> if (neg(#1) & ^verb[mineur:~](#1 ) & ~negavant(?,#1) ) negavant(neg[lemme:"ne"]),verb[mineur=+](#1),negfin(neg[lemme:"pas"]).
+
+
+script:
+//Traitement de la comparaison, on remplace "plus" par "que"
+18> if (compare(#1,#2) & (pmod(#2,#3)  | pvmod(#2,#3))) {
+   #3[lemme="que"];
+}
+
+18> lereflexif="";
+//Traitement reflexif
+18> if ((pmod(#1,#2[lemme:"se"]) | pvmod(#1,#2[lemme:"se"]) | advmod(#1,#2[lemme:"se"])) & subj(#1,#3)) {
+   lacat="p"+#3[pers]+#3[pl];
+  if (#3[gender:~neutral,pers:3]) {
+      lacat=lacat+#3[gender];
+  }
+ lereflexif=reflexifs[lacat];
+  if (lereflexif:"") {
+     lereflexif="se";
+   }
+}
+
+18> if (pmod(#1,#2[lemme:"se"]) | pvmod(#1[tense:inf],#2[lemme:"se"]) | advmod(#1,#2[lemme:"se"])) {
+    lereflexif="se";
+    if (#1[lemme:"[h,a,e,i,o,u,é,è,ê,â]?+"]) {
+	     lereflexif="s'";
+    }
+}
+
+dependencyrules:
+//Traitement de "tout", il est lui-meme porteur de traits, on rajoute un determ avec "les"
+19> if (determ(#1,#2[lemme:tout]) & ~determ(#1,#3[lemme:~tout]) ) determ(#1,##det[lemme="le",nvnode=+]).
+
+19> if (determ(#1,#2[lemme:tout])  & determ(#1,#3[nvnode]) & #3[accordgen]={#2}) ~.
+
+
+generation:
+//Rajout de la preposition "de" dans le cas d'une comparaison entre deux verbes
+20> if (compare(#1,#2) & ^verb(#1) & verb(#2)) prep(prep[lemme="de"]).
+20> if (compare(#1,#2) & ^verb(#2) & verb(#1)) prep(prep[lemme="de"]).
+
+//Rajout du reflexif
+20> if (pvmod(#1,#2[lemme:"se"]) & ^GV(#1) & lereflexif ~:""  )  pron(pron[lemme=lereflexif],#1). 
+20> if (pmod(#1,#2[lemme:"se"]) & ^GV(#1) & lereflexif ~:""  )  pron(pron[lemme=lereflexif],#1). 
+20> if (advmod(#1,#2[lemme:"se"]) & ^GV(#1) & lereflexif ~:""  )  pron(pron[lemme=lereflexif],#1). 
+
+//Positionnement du complement sous le verbe
+20> if (VMOD(#1,#2) & PMOD(#2,#3) & PP$#1(#3) & ^GV(#1) ) $#1.
+
+//Traitement du determinant
+//Si nous avons "mu", alors pluriel et nous le retirons
+21> if (^determ(#1,#2[lemme:"plusieurs",def:~])) ~.
+
+//Si nous avons "mu" avec le trait def, dans ce cas, nous ne le retirons pas, mais nous changeons son sens
+21> if (determ(#1,#2[lemme:"plusieurs",def:+]) & #2[ lemme="les"] ) ~.
+
+//////////////////////////////////
+//Traitement de l'article indefini, par defaut inexistant en mekalingata
+21> if (^GN(#1[proper:~,pronsubj:~,adj:~,det:~,case:~nom]) & ~determ(#1,#3) & #1[det=+])  det(#1,det[lemme=un]).
+21> if (^GN(#1[proper:~,pronsubj:~,adj:~,det:~,case:nom]) & ~determ(#1,#3) & #1[det=+])  det(#1,det[lemme=le]).
+
+
+
+//On rajoute ici le determinant deja present par ailleurs
+21> if (determ(#1,#2) & ^GN(#1[proper:~,pronsubj:~,adj:~,det:~])   )  det(#1,#2).
+
+
+script:
+
+23> if (GN(#1[pl:~,proper:~,pronsubj:~,adj:~,lemme:"[h,a,e,i,o,u,é,è,ê,â]?+"]) & det(#1,#3[lemme:"le"])  ){
+     #3[lemme="l'"];
+}
+
+23> if (GN(#1[pl:~,proper:~,pronsubj:~,adj:~,lemme:"[h,a,e,i,o,u,é,è,ê,â]?+"]) & prep(#3[lemme:"de"],#1)  ){
+     #3[lemme="d'"];
+}
+
+23> if (Verb(#1[lemme:"[h,a,e,i,o,u,é,è,ê,â]?+"]) & pron(#2[lemme:"[m,t,s]e"],#1)) {
+        lacat=#2[lemme];
+        lacat[1]="'";
+        #2[lemme=lacat];
+}
+
+23> |Noun#1[gender:neutral]| {
+   #1[gender=~] ;
+}
+
+generation:
+ 
+//Traitement de la relative, on place la relative sous le noeud GN correspondant au deuxieme argument de l'antecedent
+25> if (RMOD$1(#1,#2[uniquepron:~])  & ANTECEDENT(#2,#4) & GN$#5(#4)  & P$#7(#1) &  ~nodedescendant($#5,$#7)  ) ~$1,$#5{conj(#2),PS$#7}
+
+//Nous avons un sujet et un RMOD
+25> if (RMOD(#1,#2[uniquepron:~]) & ^P(#1) & subj(#1,#3) ) conj(#2){prep(#2),conj(conj[lemme=que])}.
+
+25> if (RMOD$1(#1,#2) & ANTECEDENT(#2,#4) & ^P(#1) &  GV$#1(#1))  ~$1,PS(#2){conj(#2),$#1}
+
+
+//Nous n'avons pas d'antecedent ni de sujet
+25> if (RMOD(#1,#2) & ~P(#1)  & ~GV(#1) & #2[conjprep=+]) P(#1){conj(#2),GV(#1){verb(#1)}}
+
+//S'il y a des complements
+25> if (RMOD(#1,#2) & ^P(#1) & VMOD(#1,#3) & PMOD(#3,#5) & PP$#1(#5)) $#1.
+
+//Traitement de l'infinitive (Si le GV a deja ete cree pour le deuxieme argument, on fait rien
+25> if (vinf(#1,#2) & ^Verb(#1)  & ~Verb(#2) ) verbinf(#2).
+
+//Traitement du reflexif pour l'infinitive
+25> if (pvmod(#1,#2[lemme:"se"]) & ^verbinf(#1) & lereflexif ~:""  )  pron(pron[lemme=lereflexif],#1),stoken(#1).
+25> if (advmod(#1,#2[lemme:"se"]) & ^verbinf(#1) & lereflexif ~:""  )  pron(pron[lemme=lereflexif],#1),stoken(#1).
+
+//Traitement de la ponctuation
+25> if (^P(#1) & punctuation$1(#2,#1)) ~$1,punct(#2).
+25> if (^GV(#1) & punctuation$1(#2,#1)) ~$1,punct(#2).
+25> if (^Verb(#1) & punctuation$1(#2,#1)) ~$1,punct(#2).
+25> if ($#1(#1) & punctuation$2(#2,#1)) ~$2,$#1{punct(#2)}
+
+//Traitement de lien par preposition: PREPMOD
+25> if (prepmod(#1,#2) & ^GN(#1) & pmod(#2,#3) & pp$#1(#3)) $#1.
+25> if (^verb(#1[tense:past,auxiliaire:~]) & ~PMOD(#1,#2[lemme:durant]) & #1[adj=+,tense=~] ) aux(verb[aux=+,lemme:avoir],#1).
+25> if (^verb(#1[tense:past,auxiliaire:etre]) & ~PMOD(#1,#2[lemme:durant]) & #1[adj=+,tense=~] ) aux(verb[aux=+,lemme:être],#1).
+25> if (verb(#1[tense:past]) & PMOD(#1,#2[lemme:durant]) & #1[tense=~] & #1[tense=imp] )~.
+
+
+//Rajout de la conjonction
+26> if (rmod(#1,#2) & ~conj(#2) & ^P(#1)) conj(#2).
+
+dependencyrules:
+//#2 est le determinant et #1 le nom
+27> if (gn$#1(#1) & det$#2(#1,#2) ) accordet(#1,#2).
+
+27> if (accordet(#1,#2)  &  initlookdown(#1) )  ~.
+
+27> if (accord(#1,#2) & aux(#3,#1))  accord(#3,#2).
+
+//Traitement du verbe ppe avec le nom, on recopie les traits d'accord du nom sur le verbe
+27> if (AMOD(#7,#6) & #6[accordgen]={#7}  & #6[adj=+]) ~.
+
+//Traitement equivalent, si le verbe est etre et l'objet un verbe
+27> if (SUBJ(#1[lemme:être],#2) & obj(#1,#3[verb,tense:ppe]) & #3[accordgen]={#2} & #3[adj=+])~.
+
+generation:
+
+
+28> if (compmod(#1,#2) & conj$#1(#2) & P$#2(#3) & nodemother($#1,$#2) & ^GV(#1)) $#2.
+
+28> if (VMOD(#1,#2) & P$#2(#2) & ^P(#1) & conjmod(#2,#3) & ~conj(#3)) PS(#2){conj(#3),$#2}.
+
+28> if (PPE(#1,#2) & Verb[mineur:~](#1) & ^Verbinf(#2) ) token(#2).
+
+28> if (PPE(#1,#2) & Verbinf$#1(#1) & ^Verbinf(#2)) $#1,token(#2).
+28> if (PPE(#1,#2) & Verbinf(#2) & #2[adj=+]) ~.
+28> if (PPE(#1,#2) & subj(#1,#3) & #2[accordgen]={#3}) ~.
+
+30> if (accordet(#1,#2)  & #2[accordgen]={#1}  & ^det(#1,#2) )    token(#2).
+
+
+
+//Verbes
+30> if (accord(#1,#2[pronsubj:~]) & #1[pers=3] & ^verb[mineur:+](#1)) token(#1).
+
+30> if (accord(#1,#2[pronsubj:~]) & #1[pers=3] & ^verb(#1) & ~token(#1)) token(#1).
+
+
+//Accord avec l'auxiliaire etre
+30> if (accord(#1[lemme:"être"],#2[pronsubj:~]) & obj(#1,#3) & ^adj(#3)  & #3[accordgen]={#2}  )  token(#3).
+30> if (accord(#1[lemme:"être"],#2[pronsubj:~]) & VMOD(#1,#3) & ^adj(#3)  & #3[accordgen]={#2}  )  token(#3).
+
+30> if (noun$#1(#1) &  adj$#2(#2)  & nodemother($#1,$#3) &  nodemother($#2,$#3)  & #2[accordgen]={#1}  ) $#2{token(#2)}
+30> if (accord(#1,#2[pronsubj]) & ^verb(#1) & #1[pers]={#2}) token(#1).
+30> if (^Noun(#1) ) token(#1).
+30> if (accord(#1,#2) & #1[pl]={#2}) ~.
+
+30> if (accordadj(#1,#2) & ^adj(#2)  & #2[accordgen]={#1} ) token(#2).
+30> if (accordadj(#1,#2) &  #2[accordgen]={#1} ) ~.
+
+31> if (POSTLOCATION(#1,#2) & token$#7(#1) & ~anchor(#1) )  anchor$#7{token(#1)}.
+
+
+generation:
+
+32> if (POSTLOCATION(#1,#2) & ~token(#2) & token$#1(#1) &  nodemother($#1,$#2) )  $#2{token(#2)}.
+
+32> if (token$#1(#1[lemme:de]) & ~prep(#1) ) prep$#1[cree=+]{token(#1)}.
+
+//Prelocation, le mot doit etre place au debut
+33> if (prelocation(#1,#2) &  token$#1(#2)  & ~token(#1) & nodemother($#1,$#3) & #1[first=+] & #2[first=~] ) $#3{token(#1)}.
+
+
+//Gestion du "son" pour le feminin
+33> if (GN(#1[pl:~,gender:fem,lemme:"[h,a,e,i,o,u,é,è,ê,â]?+"])  & det(#1,#3[lemme:"son"]) & #3[gender=~] & #3[gender=masc]  )~.
+
+33> if (^verb(#1) & ~ token(#1))  token(#1).
+
+33> if (POSTLOCATION(#1,#2) & token$#1(#1) & nodemother($#1,$#2) & ~token(#2))  $#2{token(#2)}.
+
+33> if (^aux(#1,#2) & accord(#1,#3) & #1[pers=3,tense=pres] ) token(#1).
+
+//Traitement de POSTLOCATION, des mots places apres notre mode vedette
+33> if (coord(#1,#2[conjcoord:and]) & ~subj(#1,#3) & ~subj(#2,#4) & gv$#1(#2)  &#2[conjcoord=~]) $#1{conj(conj[lemme:et])}
+33> if (coord(#1,#2[conjcoord:or]) & ~subj(#1,#3) & ~subj(#2,#4) & gv$#1(#2) & #2[conjcoord=~] ) $#1{conj(conj[lemme:ou])}
+33> if (coord(#1,#2[conjcoord:or]) & ^GN(#2) & #2[conjcoord=~]) conj(conj[lemme=ou]).
+33> if (coord(#1,#2[conjcoord:and]) & ^GN(#2) & #2[conjcoord=~]) conj(conj[lemme=ou]).
+
+//Dans ce cas, on veut garder le verbe a l'infinitif.
+33> if (subj(#1,#2) & PS(#1) & antecedent(#3[uniquepron:~],#2) & ^token(#1) ) ~.
+
+
+34> if (words("que","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"qu'")) ~.
+
+34> if (words("me","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"m'")) ~.
+34> if (words("te","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"t'")) ~.
+34> if (words("se","[h,a,e,i,o,u,é,è,ê,â]?+") &setword(0,"s'")) ~.
+34> if (words("ne","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"n'")) ~.
+34> if (words("de","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"d'")) ~.
+
+34> if (words("de","les") & setword(0,"des") & cleanword(1)) ~.
+34> if (words("de","des") & setword(0,"des") & cleanword(1)) ~.
+34> if (words("de","le") & setword(0,"du") & cleanword(1)) ~.
+
+34> if (determ(#1,#2[lemme:"ce",gender:masc,pl:~]) & words("ce","[h,a,e,i,o,u,é,è,ê,â]?+") & setword(0,"cet")) ~.
+
+//Rajout de l'adverbe devant un adjectif ou un verbe.
+40> if (advmod(#1,#2[lemme:~"se"]) & token(#1) & (^Verb(#1) |^Verbinf(#1) | ^adj(#1)))  adv(#2).
+40> if (advmod(#1,#2[lemme:~"se"]) & ~token(#1) & (^Verb(#1) |^Verbinf(#1) | ^adj(#1)))  adv(#2),token(#1).
+
+45> if (HEAD(#1,#2) & P$#1(#1)) $#1{adv(#2)}
+
+//Dans le cas d'un antecedent, on rapproche sa subordonnee de celui-ci
+45> if (antecedent(#1,#2) & conj$#1(#1) & nodemother($#1,$#2) & GN$#3(#2) & ~nodedescendant($#3,$#2) ) $#3{$#2}.
+
+
+100> if (GN$#1(#1) & Noun$#2(#2) & {$$#1{$$#2,Adj$#3(#3)}} ) ~.
+
+order:
+5> gn < GV.
+10> P(#1[position:avant])<P(#2[position:apres]).
+15> pron < verb.
+15> verb < gn.
+15> adv<adj.
+15> adv<noun.
+20> pron<verb.
+21> det<noun.
+25> conj<gv.
+25> conj<gn.
+25> aux<?.
+
+26> conj < ?.
+30> token < verbinf.
+30> token(#1[verb]) < token(#2[noun]).
+30> token(#1[noun]) < ?(#2[prep]).
+30> token(#1[verb]) < ?(#2[prep]).
+
+33> token(#1[first]) < ?(#2).
+
+33> conj < verb.
+33> conj < ?.
+
+33> token(#1[verb,lemme:"être"]) < ?(#2[verb]).
+
+40> adv < token.
+45> adv < ?.
+
+
+Script:
+50> addsentences(@generated,python_exchange_data);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

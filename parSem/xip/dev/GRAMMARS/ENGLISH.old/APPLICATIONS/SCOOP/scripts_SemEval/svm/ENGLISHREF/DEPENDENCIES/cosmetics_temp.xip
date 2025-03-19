@@ -1,0 +1,891 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 -2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : cosmetics_temp.xip
+//!   Date       : January 2005
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+// Expressions temporelles. 3 types
+// Point in time
+// Duration
+// Frequency (i.e. set of time points)
+
+
+DependencyRules: 
+
+
+// AB 2012.01.04 if there is no MAIN and an embedding already exists, then the governing verb in the EMBED is the main verb.
+if ( ~MAIN(?) & EMBED(#1,#2) )
+   MAIN(#2)
+
+// missing MAIN predicates in case of NP sentences or sentences fragments
+// e.g. As he had eaten, John slept. MAIN(slept)
+// AB 2011.12.20 also, first verb not introduced by a sentence-initial subordinating conjunction (added & ~CONNECTOR(#1,#3[start]))
+// e.g. But he had eaten, so John came. MAIN(eaten) should be already detected.
+// AB 2012.01.04 verb cannot be modifier of a noun
+// e.g. John's repeated efforts... *MAIN(repeated)
+if ( ~MAIN(?) & VDOMAIN(#1,#2) & ~CONNECTOR(#1,#3[start]) & ~MOD(?,#1) )
+	MAIN(#1)
+
+// Supression of second MAIN 
+if ( MAIN(#1) & ^MAIN(#2) & #1 < #2 )
+	~
+
+
+
+// ADDING INCOMPLETE THINGS FROM GEN GRAMMAR
+// start_action verbs and end_action verbs
+| SC{?*,FV{?*,#1[start_action,last]}};SC{?*,FV{?*,#1[end_action,last]}}; FV{?*,#1[start_action,last]}; FV{?*,#1[end_action,last]}, adv*, GV{#2[vprog,first,last]} |
+if ( ~OBJ-N(#1,#2) )
+   OBJ-N[gerund=+,post=+](#1,#2)
+
+
+// Rule 1940
+// Possibile MOD[dur:+,temp:+] are going to be changed in DUR[temp:+]
+if ( ^MOD[dur:+](#1,#2) | ^MOD[dur:+](#1,#2, ?))
+	TEMP[dur=~,t_dur=+](#1,#2)
+// Rule 1678
+if ( ^MOD[temp:+](#1,#2) | ^MOD[temp:+](#1,#2, ?))
+	TEMP[temp=~](#1,#2)
+
+
+
+
+// Rule XXXX
+// Absolute Times or durations. 
+// It means that we do not need any external data to calculate the point in time or the interval in time
+// e.g. October 1998
+if ( ^TEMP(#1,#3[dig:+,card:+]) )
+	$1[t_absolut=+](#1,#3)
+
+
+// 
+if ( ^OBJ-N(#1[verb],#2[date:+]) & ~MOD(#2,?) & ~MAIN[passive](#1) & ~VDOMAIN[passive](#1,?))
+	TEMP[t_absolut=+](#1,#2)	
+
+// Rule 825
+if ( ^MOD(#1,#2[date:+]) & ~MOD(#2,?) )
+	TEMP[t_absolut=+](#1,#2) 
+
+// at eight o'clock
+if ( ^MOD(#1,#2[hour]) & PREPD(#2,?[lemme:at])  )
+	TEMP[t_absolut=+](#1,#2)
+
+if ( ^MOD[t_absolut:~](#1,#2[c_absolut:+]) )
+	TEMP[t_absolut=+](#1,#2)
+
+
+if ( ^MOD[t_dur:~](#1,#2[c_dur:+]) )
+     TEMP[t_dur=+](#1,#2)
+
+
+// Relative time. It means that we need an external reference to be able to calculate the temporal value.
+// e.g. Three weeks ago
+// Rule 2017
+| ADV#1[tempexpr:+] | 
+	if ( ^$1[t_relat:~,t_absolut:~](#2,#1[c_set:~]) )
+	TEMP[t_relat=+](#2,#1),
+	TIMEX3[features=~,t_relat=+](#1).
+
+// Rule XXXXX
+// earlier, later - TEMP relations with feature t_relat already calculated
+| ADV#1[time,compar] |
+	if ( TEMP(#2,#1) )
+	TIMEX3[t_relat=+](#1)
+
+// Rule XXXXXX
+// For c_freq adverbs
+| ADV#1[tempexpr:+,c_set:+] |
+  if ( $1(#2,#1) & ~TIMEX3(#1) )
+  TIMEX3[t_freq=+](#1)
+
+
+// Rule 20019
+// a weekly review
+if (^MOD[t_freq:~,pre:+](#1,#2[c_set:+]) & ~TIMEX3[t_freq:+](#2) )
+	TEMP[t_freq=+](#1,#2),
+	TIMEX3[features=~,t_freq=+](#2).
+
+
+// Rule 2020
+// COMPLETER POUR march shipment
+if (TEMP[t_relat:~,pre:+](#1,#2[period,noun:+,c_set:~]) )
+	TIMEX3[features=~,t_relat=+](#2).
+
+// Rule 2021
+if ( ^MOD[t_relat:~,t_absolut:~](#1,#2[c_relat:+,adj:~]) )
+	TEMP[t_relat=+](#1,#2)
+
+// Rule 2022
+// Arranging TMF temporal relations (TMF initial time and TMT final time)
+// e.g. since 1997 or from Monday to Wednesday.
+//if ( TMF[temp:+](#1,#2) & TMT(#1,#3) )
+// VOIR COMMENT ON VEUT LES REPRESENTER
+// Durations in this case. The TIMEX3 would be the whole temporal expression.
+if ( TMF(#1,#20) & ~TMT(#1,?) )
+	TEMP(#1,#20)
+
+
+// Rule 2025
+// Attaching DUR relations to nouns in case of <temporal expression> of <noun>
+// e.g. ten years of war
+| PP{?*,NP{?*,#1[tempexpr,last]}};NP{?*,#1[last,tempexpr]}, PP{prep#10[lemme:of]} |
+if ( MOD[post](#1,#2) & PREPD(#2,#10) & ~TEMP(#2,?)  )
+  TEMP[t_dur=+,pre=+](#2,#1)
+
+	
+
+// Rule 2023
+// Changing the link TEMP|DUR(Verb,nominal_head) to the link TEMP|DUR(Verb,whole_temporal_np)
+// e.g. TEMP(arrived,week) to TEMP(arrived,last week) in he arrived last week.
+| ?[prep:~], NP#20[tempexpr] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20)
+//	TIMEX3(#20).
+// for the beginning of the sentence
+| NP#20[tempexpr,startbis] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20),
+	TIMEX3(#20).
+// to complete the above rule when a PP is preceeding a NP
+| PP, NP#20[tempexpr] |
+if ( HEAD(#2,#20) &  ( ^TEMP[!features:!](#1,#2) | ^TEMP[!features:!](#1,#20) )  )
+	TEMP(#1,#20),
+	TIMEX3(#20).
+
+
+//| PP#20[tempexpr] |
+//	if ( HEAD(#2,#20) & ^DUR[!features:!](#1,#2) )
+//	DUR(#1,#20),
+//	TIMEX3(#20).
+
+//| NP#20[tempexpr] |
+//	if ( HEAD(#2,#20) & ^DUR[!features:!](#1,#2) )
+//	DUR(#1,#20),
+//	TIMEX3(#20).
+
+
+// Rule XXXX
+//| ?[prep:~], NP#2 |
+//if ( TEMP(#1,#2)  & ~TIMEX3(#2) )
+//	TIMEX3(#2)
+// Rule XXXX
+// to complete the preceeding rule.
+| PP, NP#2 |
+if ( TEMP(#1,#2)  & ~TIMEX3(#2) )
+	TIMEX3(#2)
+
+//| PP#1 |
+//	if ( HEAD(#10,#1) & ~TIMEX3(#1) & TEMP(#2,#10) )
+//	TIMEX3(#1)
+
+
+| ADVP#1 |
+	if ( TEMP(#2,#1) & ~TIMEX3(#1) )
+	TIMEX3(#1)
+
+
+
+// Non headed temporal expressions
+| PP#2[tempexpr:~];NP#2[tempexpr:~] |
+if ( HEAD(#20,#2) & TEMP[pre](#20,#3) & ~TIMEX3(#3) )
+	TIMEX3(#3)
+
+
+
+
+// Rule 2041
+// eliminating TIMEX on daughters when a mother node is also TIMEX
+if ( TIMEX3(#1) & ^TIMEX3(#2) &  HEAD(#2,#1) )
+	~
+
+if ( TEMP(#1,#2) & TIMEX3(#2) & ^TEMP(?,#3) & DAUGHTER(#2,#3) )
+	~
+
+// In January this year
+| PP#10{prep,NP{?*,#1}} |
+	if ( TIMEX3(#10) & ^TIMEX3(#1) )
+	~
+
+
+
+if ( ^TIMEX3[t_freq:~](#1[c_set:+]) )
+   TIMEX3[t_freq=+](#1)
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Analysing verbal tenses
+
+// VTENSE (with attributes t_pres, t_past and t_fut
+// VASPECT (with attributes a_simple, a_progress, a_perfect
+// VMODAL 
+
+// AND VERBAL TENSES FUTURE, PRESENT, PAST, NEAR-FUTURE, PRES-OR-PAST, PRES-OR-FUT that are combinations or tense and aspect
+
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// VTENSE_T_ PRES
+// Corresponds to simple present to present progressive and to present perfect and DO forms with DO in present and passive form
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if ( VDOMAIN(#1,#1[pres:+]) & ~VTENSE(#1) ) 
+	VTENSE[t_pres=+](#1),
+	VASPECT[a_simple=+](#1).
+
+/// DO-FORMS
+/// add modality later...
+if ( NUCL[vlink,insist:+](#1[pres:+],#2) & VDOMAIN(#2,#1) & ~VTENSE(#2) )
+        VTENSE[t_pres=+](#2),
+	VASPECT[a_simple=+](#2).
+
+
+
+// With modal "can/could/would
+// he can/could come
+// he must play; he has to play  -> present
+// With modal may - He may come (may is only present)
+// He might come
+if ( ( VDOMAIN(#1,#2[lemme:can]) | VDOMAIN(#1,#2[lemme:could,auxnot:~]) | 
+       VDOMAIN(#1,#2[lemme:would]) | VDOMAIN(#1,#2[lemme:must]) | 
+       VDOMAIN(#1,#2[lemme:"have to",pres:+]) | VDOMAIN(#1,#2[lemme:may]) | VDOMAIN(#1,#2[lemme:might]) )  
+       & NUCL[vlink](#2,#1) & ~VTENSE(#1) )
+     VTENSE[t_pres=+](#1),
+     VASPECT[a_simple=+](#1),
+     VMODAL(#1).
+
+
+// the navel barricade might be extended.
+// same as precedent but in passive voice
+if ( ( VDOMAIN(#1,#2[lemme:can]) | VDOMAIN(#1,#2[lemme:could,auxnot:~]) | 
+       VDOMAIN(#1,#2[lemme:would]) | VDOMAIN(#1,#2[lemme:must]) | 
+       VDOMAIN(#1,#2[lemme:"have to",pres:+]) | VDOMAIN(#1,#2[lemme:may]) | VDOMAIN(#1,#2[lemme:might]) )  
+       & NUCL[vlink](#2,#3_BE) & NUCL[vlink,passive](#3_BE, #1) & ~VTENSE(#1) )
+     VTENSE[t_pres=+](#1),
+     VASPECT[a_simple=+](#1),
+     VMODAL(#1).
+
+// With modal "can/could/would" + ing
+// he can/could be traveling
+// He might be coming
+if ( ( VDOMAIN(#1,#2[lemme:can]) | VDOMAIN(#1,#2[lemme:could,auxnot:~]) | 
+       VDOMAIN(#1,#2[lemme:would]) | VDOMAIN(#1,#2[lemme:must]) | 
+       VDOMAIN(#1,#2[lemme:"have to",pres:+]) | VDOMAIN(#1,#2[lemme:may]) | VDOMAIN(#1,#2[lemme:might]) )  
+       & NUCL[vlink,progress](#3_BE,#1) & NUCL[vlink](#2, #3_BE) & ~VTENSE(#1) )
+     VTENSE[t_pres=+](#1),
+     VASPECT[a_progress=+](#1),
+     VMODAL(#1).
+
+// With modal "couldn't"
+// he could come
+if ( VDOMAIN[perfect:~](#1,#2[lemme:could,auxnot:+]) & ~VTENSE(#1) )
+     VTENSE[t_past=+](#1),
+     VASPECT[a_simple=+](#1),
+     VMODAL(#1).
+
+
+// With modal dare (he is taken as a finite verb by the analyzer) in the present form
+// but the NUCL[vlink,modal] is calculated
+if ( VDOMAIN(#1,#2[lemme:dare,pres:+]) & NUCL[vlink](#2,#1) & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1),
+   VASPECT[a_simple=+](#1),
+   VMODAL[m_dare=+](#1).
+
+// Progressive forms
+if ( NUCL[vlink:+,progress:+](#1[pres:+],#2) & VDOMAIN(#2,#1) & ~VTENSE(#2) )
+	VTENSE[t_pres=+](#2),
+	VASPECT[a_progress=+](#2).
+
+
+
+// Present perfect
+if ( VDOMAIN(#1[partpas],#2[lemme:have,pres:+]) & ~VTENSE(#1) )
+	VTENSE[t_pres=+](#1),
+	VASPECT[a_perfect=+](#1).
+
+
+// Passive form in present
+
+// VERIFIER
+// only 2 verbs in the chain e.g. is eaten
+if ( VDOMAIN[passive:+](#1,#2[pres]) & NUCL[vlink:+](#2,#1) & ~VTENSE(#1) )
+	VTENSE[t_pres=+](#1),
+	VASPECT[a_simple=+](#1).
+
+// modality and passivization
+if (  ( VDOMAIN[passive:+,modal:+](#1,#2[lemme:can]) | VDOMAIN[passive:+,modal:+](#1,#2[lemme:may]) | VDOMAIN[passive:+,modal:+](#1,#2[lemme:must]) )  
+   & ~VTENSE(#1) )
+   VTENSE[t_pres=+](#1),
+   VASPECT[a_simple=+](#1),
+   VMODAL(#1).  
+// we do not specify the modality at this stage, do it later
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DEDUCTIONS with VTENSE[t_pres]
+// simple present I think
+if ( VTENSE[t_pres](#1) & VASPECT[a_simple](#1) & ~VMODAL(#1) & ~PRESENT(#1) & ~PRES-OR-PAST(#1) & ~PRES-OR-FUT(#1)  )
+     PRESENT(#1)
+
+
+
+// MODALS
+// No one dare predict the bad news.
+// construction with surface "dare" can be either present or past (cf English Grammar)
+// can be used for present or past
+//if ( VTENSE[t_pres](#1) & VMODAL[m_dare](#1) )
+//    PRES-OR-PAST(#1)
+
+// with any modal which is not negated, we have PRES-OR-FUT
+// Same occurs with construction envolving "may" I think he may retire next March where retire has a future value
+// e.g. He may pay next march; He can/could come tomorrow
+//if ( VTENSE[t_pres](#1) & VMODAL[m_dare:~](#1) )
+//     PRES-OR-FUT(#1)
+
+
+// He is  coming
+if ( VTENSE[t_pres](#1) & VASPECT[a_progress](#1) & ~PRESENT(#1) & ~PRES-OR-PAST(#1) & ~PRES-OR-FUT(#1) )
+     PRES-OR-FUT(#1)
+
+// He has done
+//if ( VTENSE[t_pres](#1) & VASPECT[a_perfect](#1) & ~PRESENT(#1) & ~PRES-OR-PAST(#1) & ~PRES-OR-FUT(#1)  & ~VDOMAIN[passive](#1, ?))
+//     PRES-OR-PAST(#1)
+//
+// He is done
+//if ( VTENSE[t_pres](#1) & ~PRESENT(#1) & ~PRES-OR-PAST(#1) & ~PRES-OR-FUT(#1)  & VDOMAIN[passive](#1, ?))
+//     PRESENT(#1)
+
+if ( VTENSE[t_pres](#1) & VASPECT[a_perfect](#1) & ~PRESENT(#1) & ~PRES-OR-PAST(#1) & ~PRES-OR-FUT(#1))
+     PRES-OR-PAST(#1)
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+// V_TENSE[t_past]
+//////////////////////////////////////////////////////////////////////////////////
+// he wrote
+if ( VDOMAIN(#1,#1[past:+]) & ~VTENSE(#1) )
+     VTENSE[t_past=+](#1),
+     VASPECT[a_simple=+](#1).
+
+// he was writing
+if ( VDOMAIN(#1[vprog],#2[past]) & ~VTENSE(#1) )
+     VTENSE[t_past=+](#1),
+     VASPECT[a_progress=+](#1).
+
+
+// he had written
+if ( VDOMAIN(#1[partpas:+],#2) & NUCL[vlink:+,perfect:+](#2,#1) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_perfect=+](#1).
+
+
+// Passive form in the past
+// was eaten
+
+if ( VDOMAIN[passive:+](#1,#2) & NUCL[vlink:+,passive:+](#2[past],#1)  & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_simple=+](#1).
+
+
+// has been eaten
+// had been eaten
+// should have been 
+if ( VDOMAIN[passive:+,perfect:+](#1,?) & ~VTENSE(#1) )
+    VTENSE[t_past=+](#1),
+    VASPECT[a_perfect=+](#1).
+
+
+// did play
+if ( NUCL[vlink,insist:+](#1[past],#2) & VDOMAIN(#2,#1) & ~VTENSE(#2) )
+   VTENSE[t_past=+](#2),
+   VASPECT[a_simple=+](#2). 
+
+// did have played
+if ( NUCL[vlink,insist:+](#1[past],?) & VDOMAIN[perfect:+](#2,#1) & ~VTENSE(#2) )
+   VTENSE[t_past=+](#2),
+   VASPECT[a_perfect=+](#2).
+
+
+
+// With modal "had to"
+// he had to play  -> present
+if ( VDOMAIN(#1,#2[lemme:"have to",past:+]) & NUCL[vlink](#2,#1) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_simple=+](#1),
+   VMODAL[m_obligation=+](#1).
+
+
+// Any modal associated to perfective gives a past
+// should have played, could have come etc...
+if ( VDOMAIN[perfect:+,modal:+](#1,?) & ~VTENSE(#1) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_perfect=+](#1),
+   VMODAL(#1). 
+
+// should + verb
+| #2[lemme:should];#2[lemme:would] |
+if ( MAIN[modal](#1) & NUCL(#2,#1) )
+   VMODAL(#1)
+
+
+// was going to play
+// a revoir
+| NFV{?*,#2[vprog]}, IV{prep[lemme:to], ?*,#1[last]} |
+if (  NUCL[vlink:+,progress:+](?[past:+],#2) )
+   VTENSE[t_past=+](#1),
+   VASPECT[a_progress=+](#1).
+
+// was about to play
+// completer a revoir.
+if ( NUCL[vlink,prospective:+](#1[past:+],#2) )
+   VTENSE[t_past=+](#2).
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+   
+/// Deductions with V_TENSE:T_PAST -> Any V_TENSE:V_PAST gives a PAST idependently of the aspectual form
+if ( VTENSE[t_past](#1) )
+        PAST(#1)
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+// VTENSE[t_fut]
+///////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+//if ( VDOMAIN(#1,#2[lemme:will])
+if ( VDOMAIN[perfect:~](#1,?[lemme:will]) )
+	VTENSE[t_fut=+](#1),
+	VASPECT[a_simple=+](#1).
+
+
+if ( VDOMAIN[perfect:~](#1,?[lemme:shall]) )
+	VTENSE[t_fut=+](#1),
+	VASPECT[a_simple=+](#1).
+
+
+
+
+
+
+if ( VTENSE[t_fut](#1) & VASPECT[a_simple](#1) )
+        FUTURE(#1)
+
+
+
+
+
+// Periphrases indicating near future
+// He is going to play,
+// He is about to play
+
+// progressive form+infinitive -> infinitive is NEAR_FUTURE
+| NFV{?*,#2[vprog,form:fgo]}, IV{prep[lemme:to], ?*,#1[last]} |
+if (  NUCL[vlink:+,progress:+](#4[pres:+],#2) & VDOMAIN(#3,#4)  )
+   NEAR-FUTURE(#3)
+
+// is about to play
+if ( NUCL[vlink,prospective:+](#1[pres:+],#2) & VDOMAIN(#1,?) )
+   NEAR-FUTURE(#2).
+
+
+
+
+
+
+
+
+//if ( VDOMAIN(#1,#1[partpas]) )
+//	PAST(#1)
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Characterization of temporal expressions
+// Analyzing TIMEX3 expressions
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+// hour + date
+// at 12 o'clock January 3, 1992 
+| PP#1[tempexpr]{prep,NP{noun[hour],(punct[comma]),NP{?[first,last,date]}} } | 
+if ( ^TIMEX3[t_absolut:~,t_relat:~](#1) )
+	TIMEX3[t_absolut=+](#1)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// The whole TIMEX expression is to attach to the predicate it's modifying
+///////////////////////////////////////////////////////////////////////////////
+
+| NP#1 |
+if ( TIMEX3(#1) & HEAD(#10,#1) & ^TEMP(#3,#10) )
+   TEMP(#3,#1)
+
+
+| PP#1{prep,NP#2} | 
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1)
+
+| PP#1{prep,dig#2} | 
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1)
+
+| PP#1{prep,noun#2[mwe]} |
+if ( TIMEX3(#1) & ^TEMP(#10,#2) )
+   TEMP(#10,#1) 
+
+
+// Same as above for named entities LOC, ORGANISATION or LOCORG
+| PP{prep, NP{noun#2[mwe]{?*, #3}}} |
+  if ( ^MOD(#20,#3) & ~MOD(#20,#2) )
+  MOD(#20,#2)
+| PP{prep, NP#2{noun[mwe],part,noun#3[mwe]}} |
+  if ( ^MOD(#20,#3) & ~MOD(#20,#2) )
+  MOD(#20,#2)
+
+// DURATIONS
+| #2{?*,?[card],?*,noun[period,last]} |
+if ( ^TEMP[t_dur:~](#1[stay_v],#2) & TIMEX3[t_dur=+](#2) )
+   TEMP[t_dur=+](#1,#2)
+
+
+///////////////////////////////////////
+/// REFERENTIAL TEMPORAL EXPRESSIONS
+/// TIMREF DEPENDENCY
+//////////////////////////////////////
+| PP#1[reftime] |
+if ( HEAD(#10,#1) & ( ^MOD(#3[verb],#10) | ~MOD(#3,#10) )  )
+  TIMREF(#1),
+  TEMP(#3,#1).
+
+
+
+if ( ^TIMEX3(#1) & TIMREF(#1) )
+   ~
+
+
+//////////////// CLEANING
+if ( TEMP(#1,#2) & TEMP(#1,#2) )
+   ~
+
+
+// Passing features from TEMP to TIMEX
+if ( TEMP[t_absolut](#1,#2) & ^TIMEX3[t_absolut:~](#2) )
+      TIMEX3[t_absolut=+](#2)
+
+
+if ( TEMP[t_freq](#1,#2) & ^TIMEX3[t_freq:~](#2) )
+     TIMEX3[t_freq=+](#2)
+
+if ( TEMP[t_dur](#1,#2) & ^TIMEX3[t_dur:~](#2) )
+      TIMEX3[t_dur=+](#2)
+
+if ( TEMP[t_relat](#1,#2) & ^TIMEX3[t_relat:~](#2) )
+      TIMEX3[t_relat=+](#2)
+
+// default
+if ( TEMP(#1,#2) & ~TIMEX3(#2) )
+	TIMEX3(#2)
+
+
+// Rule XXXXX
+// Adding t_freq feature on TIMEX3 when expression with throughout
+// e.g. throughout the week
+| PP#1{prep[lemme:throughout]} |
+  if ( ^TIMEX3[t_freq:~](#1) )
+  TIMEX3[t_freq=+](#1)
+
+
+
+// adding twice has a temporal modifier
+if ( ^MOD(#1[verb], #2[form:ftwice,adv]) )
+	TEMP(#1,#2),
+	TIMEX3(#2).
+
+
+
+
+
+
+// CLEANING RULES
+
+if ( ^TIMEX3[post](#1) )
+	TIMEX3[post=~](#1)
+
+if ( ^TIMEX3[pre](#1) )
+	TIMEX3[pre=~](#1)
+
+
+
+
+///////////////////// TEMPORAL COMPLEMENT ATTACHMENT
+
+// in a sequence NP[startbis], TEMPEXPR, verb 
+// if TEMPEXPR is NP or introduced by a prep which is not "of"
+// if NP is a person name
+// then TEMPEXPR is attached to the verb
+// e.g. Bush on Monday said that ....
+
+| NP[startbis]{noun[person:+,first,last]}, #5[tempexpr], FV{?*,verb#3[last]} |
+	if ( VDOMAIN(#4,#3) & ~TEMP(#4,?) & ^TEMP[post](#1[noun],#5)  & SUBJ-N(#4,#1) )
+	TEMP[post=~,pre=+](#4,#5) 
+
+
+
+/////////////////////////  From old cosmetic_spec_temp
+//////////////////////////
+//////////////////////////
+// PREPOSITION "IN"
+//  XT
+// special: "in 2 days", because 'in' is different 
+//  whether followed by a date (= during) or a duration (= during OR after OR just_before)
+//   default is 'during'
+//   must be changed into 'after' if duration AND if the verb is future.
+//   date:~ added to avoid "in the morning" (both duration and date)
+//  2 rules because we can't remove temp_rel:during and add temp_rel=after in the same rule
+
+// "in two days" with a future verb (2 rules) 
+//  TEMP between an event and this PP's head.
+// indef:~ to make the difference with "in decades" (next rule)
+| PP#1[tempexpr,temp_rel=~]{prep[form:fin, temp_rel=~], ?*, ?[c_dur,indef:~,c_anchor:~,date:~]} |
+	if (~TEMP(?, #1) | (TEMP(#3_V, #1) & ~(PAST(#3_V) | PRES-OR-PAST(#3_V))))
+		~
+| PP#1[tempexpr,temp_rel=after,temp_ref=s]{prep[form:fin, temp_ref=s, temp_rel=after], ?*, ?[c_dur,c_anchor:~,date:~]} |
+	if (~TEMP(?, #1) | (TEMP(#3_V, #1) & ~(PAST(#3_V) | PRES-OR-PAST(#3_V))))
+		~.
+
+
+// "in decades" (the best chance in decades) = during the last decades
+// indef
+| PP#1[tempexpr,temp_rel=~]{prep[form:fin, temp_rel=~], ?*, ?[c_dur,indef,c_anchor:~,date:~]} |
+	if (~TEMP(?, #1) | (TEMP(#3_V, #1) & ~(PAST(#3_V) | PRES-OR-PAST(#3_V))))
+		~
+| PP#1[tempexpr,temp_rel=just_before,temp_ref=s]{prep[form:fin, temp_ref=s, temp_rel=just_before], ?*, ?[c_dur,c_anchor:~,date:~]} |
+	if (~TEMP(?, #1) | (TEMP(#3_V, #1) & ~(PAST(#3_V) | PRES-OR-PAST(#3_V))))
+		~.
+
+
+
+
+
+//////////////////////////
+//////////////////////////
+// PREPOSITION "FROM"
+//  XT
+// special: "2 days from ...", because 'from' has then the meaning 'after' rather than 'starts_with'
+//  2 rules because we can't remove temp_rel:starts_with and add temp_rel=after in the same rule
+| ?[noun, c_dur], PP[tempexpr,temp_rel=~]{prep[form:ffrom, temp_rel=~]} |
+	~.
+
+| ?[noun, c_dur], PP[tempexpr,temp_rel=after]{prep#1[form:ffrom, temp_rel=after]} |
+	~.
+
+
+
+//////////////////////////
+//////////////////////////
+// PREPOSITION "WITHIN"
+//  XT
+// within + duration => in less than   (within 2 weeks)
+// within + anchor   => during  (within the next 2 weeks)
+// within + duration + of  => before_after   (within weeks of his capture)
+//
+// within + duration (feat after is default)
+//   will be treated in 
+//| PP[tempexpr,temp_rel=~]{prep[form:fwithin, temp_rel:after], ?*, #1[c_dur,c_anchor:~]} |
+//        if (add_mod_explicit(#1, #1, "less_than", "DURATION"))
+//		~.
+
+// within + anchor:
+| PP[tempexpr,temp_rel=~]{prep#2[form:fwithin, temp_rel=~], ?*, ?[c_dur:~,c_anchor]} |
+        ~.
+| PP[tempexpr,temp_rel=during]{prep#2[form:fwithin, temp_rel=during], ?*, ?[c_dur:~,c_anchor]} |
+        ~.
+
+// within + duration + of:
+| PP[tempexpr,temp_rel=~]{prep#2[form:fwithin, temp_rel=~], ?*, ?[c_dur]}, PP#1 |
+        if (HEAD(#3_H1[time_span_n], #1) & PREPD(#3_H1, #4[form:fof]))
+		~.
+| PP[tempexpr,temp_rel=before_after]{prep#2[form:fwithin, temp_rel=before_after], ?*, ?[c_dur]}, PP#1 |
+        if (HEAD(#3_H1[time_span_n], #1) & PREPD(#3_H1, #4[form:fof]))
+		~.
+
+
+//////////////////////////
+//////////////////////////
+// PREPOSITION "OVER"
+//  XT
+// over + anchor => during   (over the past years)
+// and not t_mod=more_than any more
+| PP[tempexpr,temp_rel=during]{prep#2[p_over, t_mod=~, temp_rel=during], ?*, ?[c_dur:~,c_anchor]} |
+        ~.
+
+
+//////////////////////////
+//////////////////////////
+// PREPOSITION "TO"
+
+//  if a tempexpr after the 'to' 
+//   and not a verb or sc_pto before (to avoid "compared to..." or "equal to")
+//  => temp_rel = ends_with
+| PP#1[tempexpr=+,temp_rel=ends_with]{prep#2[p_to, temp_rel=ends_with], ?*, ?[tempexpr, c_dur:~]} |
+	if (~MOD(#3[sc_pto], #1))
+		~.
+
+
+
+///////////////////////// From old dependency_link_temp.xip
+
+// Deletion of this rule... this make SC be considered as TEMPEXPR....Check if no side effect
+// CH Feb. 07 "4 days after the hold up of the bank, she was in London."
+// TIMEX
+//| #2[tempexpr]{?*, #1} |
+//	if (^TIMEX3(#1))
+//		TIMEX3(#2).
+
+
+//////////////////////////
+//////////////////////////
+// LOCAL APPLICATION
+
+// "ACL'92"
+| noun#1[proper=+,mwe=+]{noun[proper], punct[quote], noun#2[tempexpr,date,temp_level:y]} |
+	TEMP(#1, #2)
+
+
+// a recent war
+// preperiod:~ to avoid "last" to be tempexpred
+| #2[adj,tempexpr:~,temp_rel,tempexpr=+,c_anchor=+,preperiod:~] |
+	if (QUALIF(#1[noun,tempexpr:~], #2))
+		TEMP(#1, #2).
+
+
+
+
+
+// "5 years shorter": for the moment remove any TEMP with this expression
+| #1[c_dur], AP{?*, adj[compar:+, temp_rel:~]} |
+	if (^TEMP(#2_MAIN, #1))
+		~.
+
+
+
+//////////////////////////
+//////////////////////////
+// CORRECTIONS
+
+//  the 4 days after September 11 were difficult
+//  a tempexpr subject of a verb.
+// => were is linked to a duration of 4 days.
+| #1[tempexpr,c_dur] |
+	if (HEAD(#3_H1, #1) & SUBJ(#2, #3_H1))
+		TEMP(#2, #1).
+
+
+// the 4 days after September 11 were difficult
+// if TEMP between a duration and another tempexpr, 
+// this TEMP must be reported to the event linked to the duration
+if (^TEMP(#1[tempexpr,c_dur], #2[prep,terminal:~,tempexpr,c_anchor]) & TEMP(#3, #1))
+	TEMP(#3, #2).
+
+// Case of ages 
+// under + num period or over + num period is always age and never timex
+// e.g under 18 years
+| PP[tempexpr=~,e_age=+]{prep[lemme:under];prep[lemme:over], NP[period]{dig;num, noun}} |
+~
+
+
+
+
+
+////////////////////
+// DURING + DURATION
+// PP{prep{for} NP{four days}}   NOT A SET
+| PP#1[tempexpr,c_anchor, c_dur, date:~, temp_rel:during]{?*[noun:~], NP#2[c_dur]} |
+	if (HEAD(#4_H1, #1) & ^TEMP(#5_MAIN, #4_H1) & HEAD(#6_H2, #2)) 
+		TEMP(#5_MAIN, #6_H2).
+
+
+
+
+/////////////////////////
+/////////////////////////
+
+
+
+
+
+// C_ANCHOR as a noun modifier
+//   it is (also) a duration !
+// last 2 year war...
+// new TEMP to express the duration
+| NP#3{?*, #1[noun, c_anchor, tempexpr]{?*, #4[tempexpr, c_dur]}, ?*, #2[noun]} |
+	if (HEAD(#2, #3) & TEMP(#2, #1))
+		TEMP(#2, #4).
+
+
+
+
+// CORRECTION XT
+// no TEMP between two TEMPEXPR
+if (^TEMP(?[tempexpr], ?[tempexpr]))
+	~.
+
+////////////////////////////////////
+// Complex C_ANCHORs
+
+
+
+
+// NP{Four days} of campaign adv{later}, the general came
+//   relation between came and campaign
+| NP#7[c_dur], PP#3[form:fof], ?*, ADV#4[temp_rel:after, terminal] |
+	if (HEAD(#6_H3, #3) & TEMP$1(#5_MAIN[verb], #7) & TEMP$2(?, #4))
+		~$1, ~$2,
+		ORDER[temp_rel:after](#5_MAIN, #6_H3).
+
+
+
+
+
+
+
+
+
+
+
+
+

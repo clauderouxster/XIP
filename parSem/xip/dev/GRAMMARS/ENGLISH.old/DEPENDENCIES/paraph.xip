@@ -1,0 +1,762 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP normalization grammar
+//!   filename   : paraph.xip
+//!   Date       : 09/2003
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+
+//////////////////////////////////
+// Adding a feature c_person:+ to proper nouns of persons
+//////////////////////////////////
+
+// Rule 638
+| noun[c_person=+]{ ?*, noun[proper,fam], ?*, noun[proper]} |
+	~
+
+// Rule 639
+| noun[c_person=+]{?*, noun[proper,fam]} |
+	~
+
+// Rule 640
+| noun[c_person=+,proper,fam] |
+	~
+
+
+//////////////////////////////////
+// Recuperation of the preposition in the NMOD dependencies
+// Creation of a syntactic relation NMODPREP that contains the prepostion in the last argument
+//////////////////////////////////
+
+
+// Rule 641
+// e.g The friend of my sister NMODPREP(friend,sister,of)
+| NP#1;PP#1, ?*, PP#2{prep#5} |
+	if ( HEAD(#3,#1) & HEAD(#4,#2) & ^MOD(#3[noun],#4) )
+	NMODPREP(#3,#4,#5)
+
+
+//////////////////////////////////
+// NMODGEN links a nominal premodifier with its head when the premodifier has a possessive particle
+// Also links two nouns when the second is introduced by "whose". e.g. The process, whose inventor ....
+//////////////////////////////////
+
+// Rule 642
+// e.g. The painting's creator
+| ?{#1[last]};#1, part, #2 |
+	if ( MOD[pre](#2[noun],#1) )
+	NMODGEN(#2,#1)
+
+// Rule 643
+// When the premodifier is a noun, the particle is not always present
+| ?{#1[last,noun,adj:~]};#1[noun,pl,adj:~], #2 |
+	if ( MOD[pre](#2[noun],#1) )
+	NMODGEN(#2,#1)
+
+// Rule 644
+// Relatives introduced by "whose"
+// e.g. The process, whose inventor is John --> NMODGEN(inventor,process)
+	if ( DETD(#2,#3[form:fwho,gen]) & MOD[relativ,post](#1[noun],?) )
+	NMODGEN(#2,#1)
+
+// Rule 645
+| NP#10, (punct[comma]), SC{ BG{pron#1[first,rel,gen,pron]}, NP{?*, #2[noun,last]} } |
+	if ( HEAD(#20,#10) & ~NMODGEN(#2,#20) )
+	NMODGEN(#2,#20)
+
+
+
+//////////////////////////////////
+// Recuperation of the preposition in the VMOD dependencies
+// Creation of a syntactic relation VMODPREP that contains the prepostion in the last argument
+//////////////////////////////////
+
+// Rule 646
+// He died in 1976 --> VMODPREP(died,1976,in)
+
+| SC{?*,FV{?*,#1[last]}};?[verb]{?*,#1[last]};verb#1[partpas], ?*, PP#2{prep#5} |
+	if ( HEAD(#4,#2) & ^MOD[post](#1,#4) & ~VMODPREP(#1,#4,#5) )
+	VMODPREP(#1,#4,#5)
+
+// AB 2011.12.14 TESTING for Instruct...in order to resolve...
+| SC{?*,FV{?*,#1[last]}}, ?*, PP#2{prep#5,?*} |
+	if ( HEAD(#4_order,#2_in_order) & ^MOD[post](#1_instruct,#4_order) & ~VMODPREP(#1,#4,#5) )
+	VMODPREP(#1,#4,#5)
+
+// Rule 647
+// For coordinated nouns that depends on the same preposition
+if ( VMODPREP(#1,#2,#3) & COORD(#10,#2) & COORD(#10,#4) )
+	VMODPREP(#1,#4,#3)
+
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// 
+// 
+// 
+// Trying to delimitate clauses in a sentence
+// 
+// 
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// He said that she loves Peter who is my friend
+//  MAIN(said)
+// EMBED relation wich hierarchize the propositions that are present in a sentence
+// EMBED(loves,said)
+// EMBED(is,loves)
+
+
+
+// Rule 1969
+// For sentences that are governed by the main element
+// link to sentential object and sentential modifiers
+// Disjunction here in order to deal with coordinated verbs in the highest level
+if ( ( MAIN(#1) | MAIN2(#1) | ( COORD(#5,#1) & MAIN(#5) ) ) &  OBJ[sentence](#1,#3)  )
+	EMBED[complthat=+](#3,#1)
+
+// AB 2011.12.20 added ~OBJ(?,#3) to avoid EMBED on a subordinated progressive or infinitive instead of its governor
+// e.g. As he went shopping, John sang. EMBED(went,sang) *EMBED(shopping,sang)
+if ( ( MAIN(#1) | MAIN2(#1) | ( COORD(#5,#1) & MAIN(#5) ) ) & MOD[sentence:+](#1,#3) & ~OBJ(?,#3) ) 
+       EMBED(#3,#1)
+
+// Rule 649
+// Same as above but the dependent is an infinitive clause (infinitive object or modifier)
+if ( ( MAIN(#1) | MAIN2(#1) ) & ( OBJ[infinit](#1,#2) | MOD[infinit](#1,#2) ) )
+	EMBED[infinit=+](#2,#1)
+
+// Rule 650
+// The infinitive modifies one of the argument of the main verb
+if ( ( MAIN(#1) | MAIN2(#1) ) & ( OBJ(#1,#3) | MOD(#1,#3[verb:~]) | NUCL[subjcompl](#1,#3[verb:~]) ) & MOD[infinit](#3,#4[verb:~]) )
+	EMBED[infinit=+](#4,#1)
+
+
+// Rule XXX
+// More generally if a verb has an object infinitive then this object infinitive is embedded
+// AB 2012.01.05 too many constraints here that stop the rule applying - simplified
+//if ( OBJ[infinit](#1[sc_toinf],#2) & ~EMBED[infinit](#2,#1) )
+if ( OBJ[infinit](#1,#2) & ~EMBED(#2,?) )
+   EMBED[infinit=+](#2,#1) 
+
+
+
+// Rule 651
+// For relative clauses whose antecedant is in the main clause
+// 2 possibilites: 
+// 1) the antecedant is directly related to the main verb
+// AB 2011.09.05 added ~EMBED(#10,?) to avoid duplicate embeddings
+if (   ( MAIN(#1) | MAIN2(#1) ) & VDOMAIN(#1,#2)  & ( ?[sentence:~](#1,#9) | ?[sentence:~](#2,#9) | ?[sentence:~](#1,#9,?) | ?[sentence:~](#2,#9,?) ) & MOD[sentence,relativ](#9,#10) & ~EMBED(#10,?) )
+	EMBED[relativ=+](#10,#1)
+
+
+// Rule 652
+// For relative clauses only. The antecedant is in the main clause and is linked to a dependant of the main verb
+// Second possibility
+// 2) the antecedant is a noun modifier of an element directly related to the main verb (see next rule)
+// AB 2011.09.05 added ~EMBED(#10,?) to avoid duplicate embeddings
+if ( ( MAIN(#1) | MAIN2(#1) ) & VDOMAIN(#1,#2) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#2,#8) ) & ( NMODPREP[post](#8,#9,?) | ( NMODPREP[post](#8,#11,?) & NMODPREP[post](#11,#9,?) ) ) & MOD[sentence,relativ](#9,#10) & ~EMBED(#10,?) )
+	EMBED[relativ=+](#10,#1)
+
+
+// in case of ambiguity between relative or completive
+// neither mod[post,relativ], nor obj[sentence] are calculated.
+// still an embedment exists (attached to the verb)
+// he expressed the opinion that she is stupid
+// ATTENTION if a verb is between the last verb#10 and the first verb#1, then we will possibly calculate a bad embedment
+// e.g He tried to greet the lady who lives next door. *EMBED(lives,tried)
+if ( ( MAIN(#1) | MAIN2(#1) ) & VDOMAIN(#1,#2) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#2,#8) ) &  MOD[post,sentence](#9,#10) 
+     & ~EMBED(#11,#1) & #11 < #10 
+     & ~EMBED(#10,#1) 
+   )
+	EMBED(#10,#1)
+
+
+
+// The main verb can be a [indspeech:+] verb. In this case we have to apply the previous rules in the "second-main" verb.
+
+// Rule 653
+// For verbs that are just under the TOP node (past particple forms)
+// e.g. Acetone is a chemical USED to make fibers
+// In this case we want an EMBED(USED,is)
+| NP, verb#10[partpas] |
+	if ( ( MAIN(#1) | MAIN2(#1) ) & VDOMAIN(#1,#2) 
+		& VDOMAIN[passive](#10,#10)
+		& ~MOD(?,#10) 
+		& ~EMBED(#10,?) 
+		)
+	EMBED[relativ=+](#10,#1) 
+
+
+// EMBED when the MAIN is indspeech on the right of the embedded sentence
+// take the first SC that appears at the beginning of the sentence as embedded verb
+// AB 2011.02.22 Added constraint ~EMBED[complthat=+](#3,#2) to avoid adding multiple identical embeddings
+// Maybe generalize this constraint to ~EMBED(#3,#2) ?
+| ?*[verb:~],SC{?*,FV{?*,#1[last]}}, ?*, SC[indspeech]{?*,FV{?*,#2[last]}} | 
+  if ( MAIN(#2) & VDOMAIN(#3,#1) & ~EMBED(#1,?) & ~EMBED(#3,#2) )
+  EMBED[complthat=+](#3,#2)
+
+
+// completive EMBED which has another clause embedded.
+//e.g John said the man who lives next door greeted Mary.
+// In this case, because of the verb of the relative clause, embedment between greeted and said 
+// has not been calculated (verb of the relative clause)
+| SC{?*,FV{?*,#1[last,indspeech]}};?{#1[verb,indspeech]}, NP#2, SC#5 |
+if ( MAIN(#1) & HEAD(#3,#2) & SUBJ(#4,#3) & #5 < #4 )
+   EMBED[complthat=+](#4,#1)
+
+
+// GV which is alone, just after a comma, when a main verb has been found.
+// e.g. King Hussein arrived in Washington, SEEKING to mediate the crisis.
+// seeking is isolated here
+| SC{?*,FV{?*,#2[last]}}; ?[verb]{?*,#2[last:+]} ,?*[verb:~], punct[comma], GV{?*,#1[last,vprog]} |
+  if ( ( MAIN(#2) | EMBED(#2,#3) ) & SUBJ-N(#2,#4) & ~OBJ-N(#2,?) & ~EMBED(#1,?))
+   EMBED[prog=+](#1,#2),
+   SUBJ-N(#1,#4).
+
+
+// GV alone but with a direct object on the right of the main verb. In this case no addition of normalized subject.
+// eg a pro-government paper later discounted the story, reporting he was "in a severe psychological condition
+| SC{?*,FV{?*,#2[last]}}; ?[verb]{?*,#2[last:+]} ,?*[verb:~], punct[comma], (adv+), GV{?*,#1[last,vprog]} |
+  if ( ( MAIN(#2) | EMBED(#2,#3) ) & ~EMBED(#1,?) )
+   EMBED[prog=+](#1,#2)
+
+// AB 2012.01.03 similar to above rule, but embed the vprog beneath first finite verb to its left if it is the main verb.
+// WARNING: ?* in rule may be dangerous...check
+// John asked Jane to stop talking, saying she was too loud. EMBED(saying,asked)
+| SC{?*,FV{?*,#2[last]}}, ?*, punct[comma], (adv+), GV{?*,#1[last,vprog]} |
+if ( ~EMBED(#1,?) & MAIN(#2) )
+   EMBED[prog=+](#1,#2), LIXO(#1,#2)
+
+// indspeech verb or lemma:know in passive form followed by clause introduced by as + gerund
+// eg Confidence is reported as being high 
+// eg He is known as being...
+| NFV{?*,#3[last]}, conj[lemme:as], GV{?*, #1[last,verb]} |
+if ( ~EMBED(#1,?) & VDOMAIN[passive](#3,?) ) 
+   EMBED[gerund=+](#1,#3)
+
+
+///////////////////////
+// Embedded sentences of another embedded sentence (independent of the level of embedding)
+////////////////////////
+
+// Rule 654
+// Sentential objects or modifiers
+if ( EMBED(#1,?) &  OBJ[sentence](#1,#3)  & ~EMBED(#3,#1) )
+	EMBED[complthat=+](#3,#1)
+
+// AB 2011.02.22 Added condition ~EMBED(#3,#1) to stop creating the same embedding twice
+if ( EMBED(#1_eat,#2) & MOD[sentence](#1_eat,#3_loves) & ~EMBED(#3_loves,#1_eat) & ~EMBED(#1,#3) )
+     EMBED(#3,#1)
+
+
+// Rule 655
+// Same as above but the dependent is an infinitive clause (infinitive object)
+if ( EMBED(#1,?) & ( OBJ[infinit](#1,#2) | MOD[infinit](#1,#2) ) & ~EMBED[infinit](#2,?) )
+	EMBED[infinit=+](#2,#1)
+
+// Rule 656
+// Infinitive clause depending from one of the arguments of the main verb
+if ( EMBED(#1,?) & ( OBJ(#1,#3) | MOD(#1,#3) | NUCL[subjcompl](#1,#3) ) & MOD[infinit](#3,#4) & ~EMBED(#4,?) )
+	EMBED[infinit=+](#4,#1)
+
+
+// Rule 657
+// Relatives first case
+if (   EMBED(#1,?) & VDOMAIN(#1,#2) & ( ?[sentence:~](#1,#9) | ?[sentence:~](#2,#9) | ?[sentence:~](#1,#9,?) | ?[sentence:~](#2,#9,?) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+// Rule 658
+// Same as above it the embedded st is an infinitive (no VDOMAIN in this case)
+if ( EMBED[infinit](#1,?) & ( ?[sentence:~](#1,#9) | ?[sentence:~](#1,#9,?)  ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+// Rule 659
+// Relatives second case
+if ( EMBED(#1,?) & VDOMAIN(#1,#2) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#1,#8,?) | ?[sentence:~](#2,#8,?) | ?[sentence:~](#2,#8) ) & ( NMODPREP[post](#8,#9,?) | ( NMODPREP[post](#8,#11,?) & NMODPREP[post](#11,#9,?) ) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+// Rule 660
+// Same as above it the embedded st is an infinitive (no VDOMAIN in this case)
+if ( EMBED[infinit](#1,?) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#1,#8,?) ) & ( NMODPREP[post](#8,#9,?) | ( NMODPREP[post](#8,#11,?) & NMODPREP[post](#11,#9,?) ) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+// Repetitions of the previous rules in order to take into account all levels of embedment
+// constraint in order to avoid to calculate the same EMBED relation more than once
+
+// Rule 661
+if ( EMBED(#1,?) & ~EMBED(#2,#1) & OBJ[sentence](#1,#2)  & ~EMBED(#1,#2)  )
+	EMBED[complthat=+](#2,#1)
+
+if ( EMBED(#1,?) & ~EMBED(#2,#1) & MOD[sentence](#1,#2)  & ~EMBED(#1,#2)  )
+     EMBED(#2,#1)
+
+// Rule 662
+if ( EMBED(#1,?) & ~EMBED(#2,#1) & OBJ[infinit](#1,#2) )
+	EMBED[infinit=+](#2,#1)
+
+// Rule 663
+if (   EMBED(#1,?) & VDOMAIN(#1,#2) & ~EMBED(#10,#1) & ( ?[sentence:~](#1,#9) | ?[sentence:~](#1,#9,?) | ?[sentence:~](#2,#9,?) | ?[sentence:~](#2,#9) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+
+
+// Rule 664
+// Relatives second case
+if ( EMBED(#1,?) & VDOMAIN(#1,#2) & ~EMBED(#10,#1) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#2,#8) ) & ( NMODPREP[post](#8,#9,?) | ( NMODPREP[post](#8,#11,?) & NMODPREP[post](#11,#9,?) ) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+
+// Last loop of repetition of the previous rules in order to take into account all levels of embedment (4th level)
+// constraint in order to avoid to calculate the same EMBED relation more than once
+
+// Rule 665
+if ( EMBED(#1,?) & ~EMBED(#2,#1) &  OBJ[sentence](#1,#2)  & ~EMBED(#1,#2)  )
+	EMBED[complthat](#2,#1)
+
+if ( EMBED(#1,?) & ~EMBED(#2,#1) & MOD[sentence](#1,#2)  & ~EMBED(#1,#2)  )
+        EMBED(#2,#1).
+
+// Rule 666
+if ( EMBED(#1,?) & ~EMBED(#2,#1) & OBJ[infinit](#1,#2) & ~EMBED(#1,#2) )
+	EMBED[infinit=+](#2,#1)
+
+// Rule 667
+if (   EMBED(#1,?) & VDOMAIN(#1,#2) & ~EMBED(#10,#1) & ~EMBED(#1,#10) & ( ?[sentence:~](#1,#9) | ?[sentence:~](#2,#9) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+
+
+// Rule 668
+// Relatives second case
+if ( EMBED(#1,?) & VDOMAIN(#1,#2) & ~EMBED(#10,#1) & ( ?[sentence:~](#1,#8) | ?[sentence:~](#2,#8) ) & ( NMODPREP[post](#8,#9,?) | ( NMODPREP[post](#8,#11,?) & NMODPREP[post](#11,#9,?) ) ) & MOD[sentence,relativ](#9,#10) )
+	EMBED[relativ=+](#10,#1)
+
+
+
+// Rule XXXX
+// coordination of two embedded sentences
+// if pred2 is embed in pred1 and pred3 is coordinated to pred2 and pred2 is not embedded to anythning
+// then we embed pred3 to pred1
+// e.g. The company said it expects to obtain regulatory approval and complete the transaction
+if ( EMBED[!features:!](#2,#1) & COORD(#5,#2) & COORD(#5,#3) & ~EMBED(#3,?) & ~(#1::#3))
+   EMBED(#3,#1)
+
+if ( ^EMBED(#1,#2) & CONNECTOR[subord](#1,?[lemme:if]) )
+   EMBED[condition=+](#1,#2)
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// 
+// SUBJ-N (semantic subject)
+//  eg. John is playing SUBJ-N(playing,John)
+// 
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+// Rule 669
+/Semantic subject between the subject and the nucleus of the verb \
+// Restriction on COMPOUNDS i.e. we don't want to have *SUBJSEM(got,you) in "you have got"
+if ( SUBJ[!features:!,relativ:~](#1,#2[wh:~,rel:~])  & VDOMAIN[passive:~](#3,#1) & ~COMPOUND(#1,#3)  )
+	SUBJ-N(#3,#2)
+
+
+// Rule 670
+// Semantic subject between the subject and the verb in case of a compound verb
+// e.g. you have got
+if ( SUBJ[wh:~](#1,#2) & COMPOUND(#1,#3) & VDOMAIN[passive:~](#3,#1) )
+	SUBJ-N(#1,#2)
+
+
+// Rule 671
+// For passive forms, the SUBJ-N is the AGENT calculated before....
+if ( ^AGENT(#1,#2) )
+	SUBJ-N(#1,#2)
+
+if ( SUBJ[passive](#2,#1) & EMBED[infinit](#2,#3) )// & VDOMAIN(#4,#2)  )
+	OBJ-N(#2,#1)
+
+
+
+// Rule 672
+// When the SUBJ of a verb is a numeral alone followed by a PP we have SUBJ(<verb>,<numeral>)
+// But we want a SUBJ-N(<verb>,<PP-head>)
+// EG. Three of the boys were missing. SUBJ(were, three) SUBJSEM(missing,boys)
+| NP{num#1[last]}, PP#2{?[form:fof]} |
+	if ( HEAD(#3,#2) & QUANTD(#3,#1) & SUBJ(#4,#1) & VDOMAIN(#5,#4) & ^SUBJ-N(#5,#1) )
+	SUBJ-N(#5,#3)
+
+
+// Rule 673
+// ING-forms  modifying a NP-head 
+// e.g. Recessive host mutation affecting virus multiplication....
+if ( MOD[post,gerund](#1[noun],#2) )
+	SUBJ-N(#2,#1)
+
+
+// Rule 674
+// When the subject of the verb is a relative pronoun the subj-sem of the verb of the relative clause is the antecedant of this pronoun
+if ( SUBJ[pre,relativ](#3,#1) & VDOMAIN[passive:~](#2,#3) & MOD[post,sentence,relativ](#4,#2) )
+	SUBJ-N(#2,#4)
+
+
+
+
+
+// Rule 675
+// Case of subject of infinitive forms. They have not been calculated yet because VDOMAIN relation does not exist for them
+// These kind of subjects bear the feature nfinit:+
+if ( SUBJ[nfinit:+,relativ:~](#1,#2) & ~VDOMAIN[passive](?,#1) )
+	SUBJ-N(#1,#2)
+
+if ( SUBJ[nfinit:+,relativ:+](#3,#1) & ~VDOMAIN(?,#3) & OBJ[post,infinit](#4,#3) & SUBJ-N(#4,#5) )
+   SUBJ-N(#3,#5)
+
+
+ 
+// Rule
+// Complex verbal forms with deduced subjects
+//if ( SUBJ[deduced](#1[cop:~,cop2:~,aux:~],#2) & ~AGENT(#1,#2) )
+//	AGENT(#1,#2)
+
+
+// Rule 676
+// for pastparticiple that are modifying a noun within a NP
+// e.g. Mutation affected by virus modification ...
+// e.g  Measures taken so far ....
+| #1[partpas], PP#3{prep[form:fby]} |
+if ( HEAD(#4,#3) &  ( MOD[post,pastpart](#2[noun],#1) | VDOMAIN[passive](#1,#1) )  )
+	SUBJ-N(#1,#4)
+
+
+// continuation of previous rule if there is a normalized object
+// it came in response to a petition filed by Timex Inc. -> OBJ-N(filed,petition)
+if ( SUBJ-N(#1[partpas],#4) & MOD[post,pastpart](#2[noun],#1) & ~OBJ-N(#2,#1) )
+   OBJ-N(#1,#2) 
+
+
+// Rule 677
+// For ing-forms that are tagged as adjectives and modify a noun
+// e.g. The sleeping lady SUBJ-N(sleeping,lady)
+// PROBLEMS : Developing countries where "countries" is not the semantic subject of "developing"
+if ( MOD[pre](#1[noun],#2[adj,vprog]) & DETD(#1,?) )
+	SUBJ-N(#2,#1)
+
+
+// Rule 678
+// Passing feature NEG
+if ( ( ?[neg](#1,#2) | ?[neg](#2,#1) ) & ^SUBJ-N[neg:~](#1,#2) )
+	SUBJ-N[neg=+](#1,#2)
+
+
+// Main predicate is negated
+if ( MAIN(#1) & MOD[neg](#1,?) )
+   NEGAT(#1)
+
+
+// Case of contracted negation
+if ( VDOMAIN(#1,?[contr_neg]) )
+   NEGAT(#1)
+
+// Case of auxiliaries without verbal form
+// eg I have not, I will not
+| SC{?*,?[verb]{#1}}, adv[lemme:not] |
+if ( MAIN(#1) & VDOMAIN(#1,#1) & ~NEGAT(#1) )
+   NEGAT(#1)
+
+////////////////////////////////
+// Obj-sem subsumes Patients and (partly) Result
+////////////////////////////////
+
+
+// Rule 679
+// e.g. The house is getting rebuilt, The story got translated into English
+// A previous subj-sem has been (wrongly) calculated between the NP on the left and the verb
+| SC{FV{?*,#1[form:fget]}}; ?[verb]{?*,#1[form:fget]}, NFV{?*,#2[partpas]} |
+	if ( VDOMAIN(#2,?) & ^SUBJ-N(#2,#3) & #3 < #2 ) 
+	OBJ-N(#2,#3)
+
+
+
+
+// Rule 680
+// Adding restriction in order to avoid to take as OBJ-N sentences, infinitives or relative pronouns which are in an OBJ dependency with the main verb
+if ( OBJ[infinit:~,sentence:~,relativ:~](#1[cop:~],#2) )
+	OBJ-N(#1,#2)
+
+
+// Rule 2006
+// OBJ-N in case of relative clauses.
+// If a relative prounoun is the object of a clause AND if we have the antecedent of this relative pronoun
+// Then there is an OBJ-N dep. betwee the verb of the relative clause and the antecedent.
+if ( OBJ[relativ,infinit:~](#1[cop:~],#2) & MOD[relativ,sentence](#3,#1) )
+	OBJ-N(#1,#3)
+
+// Rule 682
+// for passive forms
+// constraint added on ~OBJ[infinit,post] in order to avoid to have OBJ-N(expect,John) in "John is expected to do..."
+//if ( SUBJ[relativ:~](#1,#2) & ( (VDOMAIN[passive](#3,#1) &  #1 < #3) | VDOMAIN[passive](#3,#1) ) & ~OBJ[infinit,post](#3,?) )
+//	OBJ-N(#3,#2)
+// AB 2012.01.04 rewriting above rule. Instead of blocking on OBJ, the constraint applies only to verb that can take an impersonal construction (sc_s:+)
+// Also disjunction on VDOMAIN in above rule is redundant
+// e.g. John is expected to eat == It is expected that John will eat.
+if ( SUBJ[relativ:~](#1,#2) & VDOMAIN[passive](#3[sc_s:~],#1) )
+	OBJ-N(#3,#2)
+
+
+
+// Rule 683
+// Passive forms in embedded relatives
+if ( SUBJ[relativ](#1,#2) & VDOMAIN[passive](#3,#1) & #1 < #3 & ~OBJ[infinit,post](#3,?) & MOD[relativ,sentence](#4,#3) )
+	OBJ-N(#3,#4)
+
+
+
+
+// Rule 685
+// Correction of badly calculated SUBJ-N - OBJ-N result of tagging error of past-particple forms (taken as FV)
+// Arsenic is an element that is widely distributed in France
+if ( ^SUBJ-N(#3[partpas],#2) & OBJ-N(#3,#2) )
+	~
+
+
+
+// Rule 686
+// Negation
+if (  ( ?[neg](#1,#2) | ?[neg](#2,#1) ) & ^OBJ-N[neg:~](#1,#2) )
+	OBJ-N[neg=+](#1,#2) 
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// 
+// EXTRAPOSITION OF CLAUSAL SUBJECTS
+// 
+// 
+// 
+/////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////
+// 
+// Result : subcategorized complements introduced by "into" and "to" when the verb is not a motion verb and ch_of_state verb
+// and the complement is not a proper name
+///////////////////////////////
+
+// Rule 687
+if ( ^VMODPREP[post](#1[vmotion:~,a_ch_st],#2,#3[sc_pinto]) & PREPD(#2[proper:~,c_person:~],?[sc_pinto]) )
+	RESULT(#1,#2)
+
+// Rule 688
+// Restriction in order to avoid RESULT in expressions like FROM X TO Y
+// XT added tempexpr restriction 
+if ( ^VMODPREP[post](#1[vmotion:~,sc_np_nppred:~],#2,#3[sc_pto]) & ~VMODPREP(#1,#20,#30[sc_pfrom]) & PREPD(#2[proper:~,c_person:~,tempexpr:~],?[sc_pto]) )
+	RESULT(#1,#2)
+
+
+
+
+
+
+//////////////////////////////////
+// Generalization of SUBJATTR dependency
+// in case of controled subjects
+// e.g. John is expected to be a painter
+// Note that SUBJATTR dependency for the simpler cases have been calculated in the general grammar (even though they do not
+// appear in the output
+//////////////////////////////////
+
+// Rule 
+// SUBJATTR that are adjectives are linked as attrib
+//if ( SUBJATTR(#1[form:~fit,form:~fthere],#2[adj]) )
+//	ATTRIB(#1,#2)
+
+
+// Rule 690
+if ( SUBJ[nfinit](#1[cop],#2[form:~fit, form:~fthere]) & NUCL[subjcompl](#1,#3) )
+	ATTRIB(#2,#3)
+
+// Rule 691
+if ( SUBJ(#1[cop],#2[form:fit]) & NUCL[subjcompl](#1,#3[adj,first,last]) & ~DETD(#3,?) )
+	ATTRIB(#2,#3)
+
+
+
+///////////////////////////////
+// Attrib - links a nominal head to an attribute (subjattr, or nominal apposition)
+/////////////////////////////
+
+// Rule 692
+// EN COURS - distinguer les definis des indefinis
+if ( SUBJATTR[neg:~](#1,#2) & DETD(#2,?[indef:~,pron:~]) )
+	ATTRIB[def=+](#1,#2)
+
+// Rule 693
+if ( SUBJATTR[neg:~](#1,#2) & ( DETD(#2,?[indef]) | ( ~DETD(#2,?) & ~QUANTD(#2,?) )) )
+	ATTRIB[indef=+](#1,#2)
+
+// Rule 694
+if ( SUBJATTR[neg:~](#1,#2[noun, adj:~, proper:~,first,last]) & ~DETD(#2,?) & ~ATTRIB(#1,#2) )
+	ATTRIB[indef=+](#1,#2)
+
+// Rule 695
+if ( SUBJATTR[neg:~](#1,#2[proper,first,last]) )
+	ATTRIB(#1,#2)
+
+// Rule 696
+// Calculating attrib that comes from SUBJ-N
+if ( SUBJ-N[neg:~](#1[form:fbe],#2) & NUCL[subjcompl](#1,#3[noun]) & DETD(#3,?[pron:~]) )
+	ATTRIB(#2,#3)
+
+
+// Rule 697
+// Post noun modifier (apposition)
+// John the butcher is nice....
+| NP, NP#1 |
+	if ( HEAD(#2,#1) & DETD(#2,?[indef:~]) & MOD[post,appos](#3[noun],#2) )
+	ATTRIB[def=+,appos=+](#3,#2)
+
+
+
+// Rule 698
+	if ( HEAD(#2,#1) & DETD(#2,?[indef]) & MOD[post,appos](#3[noun],#2) )
+	ATTRIB[indef=+,appos=+](#3,#2)
+
+
+// Rule 699
+// e.g. John, the inventor of this process.... 
+// e.g. John as the inventor...
+//| NP#1, punct[comma], NP#2 |
+	if ( ( MOD[post,appos](#3[noun],#4) | NMODPREP(#3,#4,?[form:fas])) & ~MOD[pre](?,#3) & ~ATTRIB[appos](#3,?) )
+	ATTRIB[appos=+](#3,#4)
+
+
+
+
+// Rule 700
+// When there is a negation on the copula
+// In this case another relation is created (NOT dependency)
+if ( SUBJATTR[neg](#1,#2) )
+//	NOT(#1,#2)
+	ATTRIB[neg=+](#1,#2)
+
+
+
+// Rule 701
+// For the OBJCOMPL relation (e.g They considered him a fool) we have also an ATTRIB relation between the OBJ-N complement and the OBJCOMPL
+// e.g. They considered him a fool -> ATTRIB(him,fool)
+if ( OBJ-N(#1,#2) & OBJCOMPL(#1,#3) )
+	ATTRIB(#2,#3)
+
+
+// Rule XXXX
+// X is considered as Y ATTRIB(X,Y)
+if ( OBJ-N(#1[lemme:consider],#2) & ~SUBJ-N(#1,?) & VMODPREP(#1,#3,?[lemme:as]) )
+	ATTRIB(#2,#3)
+
+
+// Rule 702
+// Coordination
+// Coordination of dependents
+if ( ATTRIB[!features:!](#1,#2) & COORD(#3,#2) & COORD(#3,#4) & ~ATTRIB(#1,#4) )
+	ATTRIB(#1,#4) 
+
+
+// coordiaated attributes
+if ( ATTRIB(#2,#3) & COORD(#4,#2) & COORD(#4,#5) )
+   ATTRIB(#5,#3)
+
+// Rule 703
+// Coordination of verbs and distribution of OBJ-N dependency
+if ( OBJ-N[!features:!](#1,#2) & COORD(#3,#1) & COORD(#3,#4[trans:+]) & ~OBJ-N(#4,?) )
+	OBJ-N(#4,#2)
+
+// Rule 704
+// Coordination of verbs and distribution of SUBJ-N dependency
+if ( SUBJ-N[!features:!](#1,#2) & COORD(#3,#1) & COORD(#3,#4) & ~SUBJ-N(#4,?) )
+	SUBJ-N(#4,#2)
+
+
+// Rule XXXXX
+// When main verbs are coordinated and these verbs are in passive form and the subject of the first verb has been distributed to the second verb which is followed by "by NP" then, we correct the error
+// e.g. The report was requested by the commission and compiled by independent experts
+// *SUBJ-N(compiled,comission) but SUBJ-N(compiled,experts)
+| ?[verb]{?*,#1[partpas]}; SC{?*, ?[verb]{?*,#1[partpas]}} , PP#10{prep[lemme:by]} |
+if ( SUBJ-N(#5,#2) & ^SUBJ-N(#1,#2)  & COORD(#3,#5)  & COORD(#3,#1) & #5 < #1  & HEAD(#20,#10) )
+   SUBJ-N(#1,#20)
+
+// Rule 705
+if ( ATTRIB(#1,#2) & ^ATTRIB(#1,#2) )
+	~
+
+
+// Rule 706
+// QUALIF relation.
+// A qualificative adjective with the noun it qualifies
+if ( NUCL[subjcompl](#1,#2[adj]) & SUBJ-N(#1,#3) & ~ATTRIB(#2,#3) )
+	QUALIF(#3,#2)
+
+// Rule 707
+if ( MOD[pre](#1,#2[adj]) )
+	QUALIF(#1,#2)
+
+
+
+
+//////////////// Continuation of SUBJ-N 
+/// needs to have calculte OBJ-N before
+
+// Rule XXXX
+// Normalized object of "quote" just before "as Ving", is the subject of Ving
+
+| ?[lemme:as], GV{?*,#11[vprog,indspeech]} |
+if ( OBJ-N(#10[lemme:quote],#1) & MOD[post](#10,#11) & ~SUBJ-N(#11,?) )
+	SUBJ-N(#11,#1)
+
+
+
+
+/// EMBED when it is a pastparticiple alone (passive form). We want to be treated as a relative
+// Embedment from this past participle to the higher level verb of the proposition containing 
+// the noun to which the particple is attached
+// e.g. The action came in response to a petition filed by Timex Inc.
+// EMBED(filed, came)
+if ( MOD[post,pastpart](#1[noun],#2[partpas]) & ( VMODPREP[post,pastpart:~](#3[verb],#1,?) | OBJ-N(#3,#1) ) & #3 < #2  )
+   EMBED[pastpart=+](#2,#3)
+
+ 
+
+
+// Embedment of vprog - continaution
+if (MOD[gerund](#1[verb],#2[vprog]) & ~EMBED(#2,#1) )
+   EMBED[prog=+](#2,#1).
+
+
+// Changing attachment of complements to the first verb when complements are attached to the second verb wich is an infinitive, object of the 
+// first one
+// e.g. He started to play in Paris in 1993 -> complements "in Paris" and "in 1993" are attached to "started" and not to "play"
+if ( EMBED[infinit](#1,#2[sc_toinf,lemme:~want]) & ^VMODPREP[!features:!](#1,#3,#4) )
+   VMODPREP(#2,#3,#4)
+ 
+if ( EMBED[infinit](#1,#2[sc_toinf]) & ^MOD[!features:!](#1,#3) )
+   MOD(#2,#3)
+
+
+
+// Verifier is c'est general....
+// He began asking the question 30 years ago
+//   the date must be linked to begin rather than asking
+if (OBJ-N(#1_MAIN[v_temp_rel], #2[vprog:+]) & ^MOD[!features:!](#2, #3) )
+	MOD(#1_MAIN, #3).
+ 
+
+if (OBJ(#1_MAIN[v_temp_rel], #2[vprog:+]) & ^VMODPREP[!features:!](#2, #3, #4))
+	MOD(#1_MAIN, #3,#4).
+

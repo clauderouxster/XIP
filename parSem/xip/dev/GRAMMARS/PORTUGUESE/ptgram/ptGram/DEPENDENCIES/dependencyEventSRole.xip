@@ -1,0 +1,1371 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyEventSRole.xip                                    !
+//!   Date       : 2013/February                                               !
+//!   Author     : Nuno Mamede & Jorge Baptista & Rui Talhadas                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency make some reorganization of dependencies                      !
+//!                                                                            !
+//!   Dependencies handled in this file:  AGENT                                !
+//!                                       PATIENT                              !
+//!                                       ATTRIB (enlarged)                    !
+//!                                       MAIN                                 !
+//!                                       PP attachment heuristics             !
+//!                                       Missing SUBJ handled                 !
+//!                                                                            !
+//!                                       SUBJ (Anaphora 0)                    !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+DependencyRules:
+
+//******************************************************************************
+//******************************************************************************
+//***                                                                       ****
+//***                               FIST PART                               ****
+//***                        (transformations: passive)                     ****
+//***                                                                       ****
+//******************************************************************************
+//******************************************************************************
+
+
+//Coordination seems that is not handled here
+
+
+//========================================================
+// Identification of Passive
+// Takes into account the distributional features of canonical N1 (assigned by ViPER)
+//========================================================
+
+//Passiva com se
+// O Pedro partiu a janela -> A janela partiu-se
+|verb#1[SR-pass-pron,pass-pron=+]|
+if ( CLITIC(#1,#2[pron,ref,3p:~]) & #1[person]:#2[person] & #1[number]:#2[number] &
+     ( SUBJ(#1[SR-N1-hum],#2[UMB-Human]) | SUBJ(#1[SR-N1-nhum],#2[UMB-Human:~]) )
+   )
+~
+
+|verb#1[SR-pass-pron,pass-pron:~,pass-pron=+]|
+if ( CLITIC(#1[3p],#2[pron,ref,3p]) &
+     ( (#1[pl] & #2[sg:~]) | (#1[sg] & #2[pl:~]) ) &
+     ( SUBJ(#1[SR-N1-hum],#2[UMB-Human]) | SUBJ(#1[SR-N1-nhum],#2[UMB-Human:~]) )
+   )
+~
+
+//(Passiva) neutra
+// o lixo entupiu os canos -> os canos entupiram
+|verb#1[SR-pass-neutra,pass-neutra=+]|
+if ( CLITIC(#1,#2[pron,3p:~]) & #1[person]:#2[person] & #1[number]:#2[number] &
+     ( SUBJ(#1[SR-N1-hum],#2[UMB-Human]) | SUBJ(#1[SR-N1-nhum],#2[UMB-Human:~]) )
+   )
+~
+
+|verb#1[SR-pass-neutra,pass-neutra:~,pass-neutra=+]|
+if ( CLITIC(#1[3p],#2[pron,3p]) &
+     ( (#1[pl] & #2[sg:~]) | (#1[sg] & #2[pl:~]) ) &
+     ( SUBJ(#1[SR-N1-hum],#2[UMB-Human]) | SUBJ(#1[SR-N1-nhum],#2[UMB-Human:~]) )
+   )
+~
+
+
+//========================================================
+// Change Semantic Roles when in presence of a passive
+//========================================================
+// Quando um verbo está na forma passiva são removidas as restrições ao N0 ser 
+// ou não ser humano
+|#1[transf-passiva, SR-N1-object-gen, SR-N0-agent-gen, SR-N0-object-gen=+, SR-N1-agent-gen=+, SR-N1-object-gen=~, SR-N0-agent-gen=~ ]| 
+  if(#1[SR-transf-passiva]) ~
+
+//FALTA GERAR AS REGRAS IGUAIS PARA OS OUTROS PARES DE SRs
+// Estas REGRAS VÃO SER geradas POR UM PROGRAMA
+
+|#1[pass-ser, SR-N1-CDIR=~, SR-N1-por=+]| ~
+
+
+
+//******************************************************************************
+//******************************************************************************
+//***                                                                       ****
+//***                               SECOND PART                             ****
+//***                    (apply rules associated with ViPEr)                ****
+//******************************************************************************
+//******************************************************************************
+
+
+
+//==============================================================================
+//==============================================================================
+// Converting N0 Syntactic dependencies into Semantic Roles
+//==============================================================================
+//==============================================================================
+
+if (subj(#1[SR-N0-agent-creator],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-creator=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-gen],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-generic=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-giver],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-giver=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-speaker],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-speaker=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-taker],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-taker=+](#1,#2).
+
+if (subj(#1[SR-N0-cause],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[cause=+](#1,#2).
+
+if (subj(#1[SR-N0-experiencer-gen],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[experiencer-generic=+](#1,#2).
+
+if (subj(#1[SR-N0-experiencer-vol],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[experiencer-vol=+](#1,#2).
+
+if (subj(#1[SR-N0-locative-place],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-place=+](#1,#2).
+
+if (subj(#1[SR-N0-object-cl],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-cl=+](#1,#2).
+
+if (subj(#1[SR-N0-object-f],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+if (subj(#1[SR-N0-object-gen],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+if (subj(#1[SR-N0-occurrence],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+if (subj(#1[SR-N0-recipient],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+if (subj(#1[SR-N0-time-calendar],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-calendar=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-cause],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-generic=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-cause],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[cause=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-object],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-generic=+](#1,#2).
+
+if (subj(#1[SR-N0-agent-object],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+
+
+
+
+
+
+//==============================================================================
+//==============================================================================
+// Converting N1 Syntactic dependencies into Semantic Roles
+//==============================================================================
+//==============================================================================
+
+
+
+//================================================
+// Addressee
+//================================================
+
+// Exemplo: O Pedro chamou a Ana  -->  EVENT_addressee(chamar,Ana)
+// Exemplo: O Pedro chamou-a      -->  EVENT_addressee(chamar,a)
+//
+if ( (CDIR(#1[SR-N1-addressee],#2[UMB-Human]) | CDIR(#1[SR-N1-addressee],#2[acc])) &
+     EVENT[other](#1) & ~EVENT(#1,#2)
+   )
+  EVENT[addressee=+](#1,#2).
+
+
+// Exemplo: O Pedro abriu-se à Ana  -->  EVENT_addressee(abrir,Ana)
+// Exemplo: Os candidatos apelaram aos cidadãos para que fizessem isso.
+//
+if ( MOD(#1[SR-N1-addressee],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+  
+// Exemplo: Os candidatos apelaram-lhes para que fizessem isso  -->  ?????????
+//
+if (MOD[dat](#1[SR-N1-addressee],#2[time:~,location:~]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+      
+// Exemplo: O Pedro falou com a Ana  -->  EVENT_addressee(falar,Ana)
+//
+if (MOD(#1[SR-N1-addressee],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+
+// Exemplo: O Pedro lamentou-se junto da Ana  -->  EVENT_addressee(lamentar,Ana)
+//
+if (MOD(#1[SR-N1-addressee],#2[time:~,location:~]) & PREPD(#2,?[lemma:"junto de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+
+
+// Echo complement "entre si"
+// Exemplo: O João e a Ana lamentaram-se entre si  -->  EVENT_addressee(lamentar,si)
+//
+|PP{?[lemma:entre],#2[obl,echo]}|
+if ( (MOD(#1[SR-N1-addressee,sr-n1-hum],#2) || MOD(#1[SR-N2-addressee,sr-n2-hum],#2)) & 
+    SUBJ(#1,#3[UMB-Human]) & COORD(?,#3) & 
+    EVENT[other](#1) & ~EVENT(#1,#2)
+   )
+  EVENT[addressee=+](#1,#2).
+
+
+//================================================
+// Beneficiary
+//================================================
+
+// Exemplo: A tempestade abonou-lhes àgua  -->  EVENT_BENEFICIARY(abonar,lhes)
+//
+if (MOD[dat](#1[SR-N1-beneficiary],#2[time:~,location:~]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[beneficiary=+](#1,#2).
+
+// Exemplo: A tempestade abona em favor da Ana  -->  EVENT_BENEFICIARY(abonar,Ana)
+//
+if (MOD(#1[SR-N1-beneficiary],#2[time:~,location:~]) & PREPD(#2,?[lemma:"em favor de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[beneficiary=+](#1,#2).
+
+// Exemplo: A tempestade abona a favor da Ana  -->  EVENT_BENEFICIARY(abonar,Ana)
+//
+if (MOD(#1[SR-N1-beneficiary],#2[time:~,location:~]) & PREPD(#2,?[lemma:"a favor de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[beneficiary=+](#1,#2).
+
+
+//================================================
+// Cause
+//================================================
+
+// Exemplo: A casa resistiu à tempestade - EVENT_cause(resistir,tempestade)
+//
+if (MOD(#1[SR-N1-cause],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[cause=+](#1,#2).
+
+
+//================================================
+// Co-agent
+//================================================
+
+// Exemplo: O Zé casou com a Ana - EVENT_co-agent(casou,Ana)
+//
+if (MOD(#1[SR-N1-co-agent],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-agent=+](#1,#2).
+  
+// Exemplo: O Zé separou-se da Ana - EVENT_co-agent(separar,Ana)
+//
+if (MOD(#1[SR-N1-co-agent],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-agent=+](#1,#2).
+
+
+//================================================
+// co-agent-co-object
+//================================================
+
+// Exemplo: O Pedro complementa a Ana  -->  EVENT_co-agent(complementar,Ana)
+//
+if (CDIR(#1[SR-N1-co-agent-co-object],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-agent=+](#1,#2).
+
+// Exemplo: O vinagre complementa o azeite  -->  EVENT_co-object(complementar,azeite)
+//
+if (CDIR(#1[SR-N1-co-agent-co-object],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+  
+
+//================================================
+// co-experiencer
+//================================================
+
+// Exemplo: O Pedro dá-se com a Ana  -->  EVENT_co-experiencer(dar,Ana)
+//
+if (MOD(#1[SR-N1-co-experiencer],#2[UMB-Human]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-experiencer=+](#1,#2).
+
+  
+//================================================
+// co-locative
+//================================================
+
+// Exemplo: O terreno do Pedro confronta com o terreno do João  -->  EVENT_co-locative(confrontar,terreno)
+//
+if (MOD(#1[SR-N1-co-locative],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-locative=+](#1,#2).  
+  
+  
+//================================================
+// co-object
+//================================================
+
+// Exemplo: Esta cor assemelha-se àquela cor  -->  EVENT_co-object(assemelhar,cor)
+//
+if (MOD(#1[SR-N1-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: 
+//
+if (MOD[dat](#1[SR-N1-co-object],#2[time:~,location:~]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: Esta comida liga bem com aquele vinho  -->  EVENT_co-object(ligar,vinho)      
+//
+if (MOD(#1[SR-N1-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+  
+// Exemplo: Este quadro difere do outro quadro  -->  EVENT_co-object(diferir,quadro)
+//
+if (MOD(#1[SR-N1-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+
+//================================================
+// co-occurrence
+//================================================
+
+// Exemplo: A vinda da Ana coincidiu com a vinda do Zé  -->  EVENT_co-occurrence(coincidir,vinda)
+//
+if (MOD(#1[SR-N1-co-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-occurrence=+](#1,#2).
+  
+   
+//================================================
+// experiencer-gen
+//================================================
+
+// Exemplo: As despesas pesam sobre o Pedro  -->  EVENT_experiencer-gen(pesar,Pedro)
+//
+if (MOD(#1[SR-N1-experiencer-gen],#2[UMB-Human]) & PREPD(#2,?[lemma:sobre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[experiencer-generic=+](#1,#2).
+ 
+// Exemplo: Fazer isso coube ao Pedro  -->  EVENT_experiencer-gen(caber,Pedro)
+//
+if (MOD(#1[SR-N1-experiencer-gen],#2[UMB-Human]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[experiencer-generic=+](#1,#2).
+
+// Exemplo: A novidade apraz ao Pedro  -->  EVENT_experiencer-gen(apraz,Pedro)
+//
+if (CINDIR(#1[SR-N1-experiencer-gen],#2[UMB-Human]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[experiencer-generic=+](#1,#2).
+ 
+// Exemplo: A notícia abalou o Pedro/abalou-o  -->  EVENT_experiencer-gen(abalar,Pedro)
+//
+if ( (CDIR(#1[SR-N1-experiencer-gen],#2[UMB-Human]) | CDIR(#1[SR-N1-experiencer-gen],#2[acc])) &
+     EVENT[other](#1) & ~EVENT(#1,#2)
+   )
+  EVENT[experiencer-generic=+](#1,#2).
+
+
+//================================================
+// instrument
+//================================================
+
+// Exemplo: O João falou ao telefone  -->  EVENT_instrument(falar,telefone)
+//
+if (MOD(#1[SR-N1-instrument],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[instrument=+](#1,#2).
+
+// Exemplo: O Pedro apontou uma faca ao João  -->  EVENT_instrument(apontar,faca)
+//
+if (CDIR(#1[SR-N1-instrument],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[instrument=+](#1,#2).
+
+
+//================================================
+// message
+//================================================
+
+// Exemplo: O Pedro ordenou a morte do plebeu  -->  EVENT_message(ordenou,morte)
+//
+if (CDIR(#1[SR-N1-message],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+
+
+//================================================
+// object-generic
+//================================================
+
+
+// Exemplo: O Pedro jogou às damas  -->  EVENT_object-gen(jogou,damas)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro acabou com o pudim  -->  EVENT_object-gen(acabar,pudim)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro abdicou do trono  -->  EVENT_object-gen(abdicar,trono)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro acertou na resposta  -->  EVENT_object-gen(acertar,resposta)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro apurou-se para o Mundial  -->  EVENT_object-gen(apurar,Mundial)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro age contra a natureza  -->  EVENT_object-gen(agir,natureza)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:contra]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro conta-se entre um dos alunos mais brilhantes  -->  EVENT_object-gen(contar,alunos)
+//
+if (MOD(#1[SR-N1-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:entre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro abalroou outro carro  -->  EVENT_object-gen(abalroou,carro)
+//
+if (CDIR(#1[SR-N1-object-gen],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+
+//================================================
+// object-cl
+//================================================
+
+// Exemplo: O cão abana a cauda  -->  EVENT_object-cl(abana,cauda)
+//
+if (CDIR(#1[SR-N1-object-cl],#2[sem-an]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-cl=+](#1,#2).
+
+
+//================================================
+// object-f
+//================================================
+
+
+// Exemplo: O Pedro apegou-se à companhia da Ana  -->  EVENT_object-f(apegar,companhia)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro conformou-se com a decisão  -->  EVENT_object-f(conformar,decisão)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro absteve-se de comentar  -->  EVENT_object-f(abster,comentar)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro acredita em extraterrestres  -->  EVENT_object-f(acreditar,extraterrestres)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro anseia pela reforma  -->  EVENT_object-f(ansear,reforma)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro apareceu como o salvador da Pátria  -->  EVENT_object-f(aparecer,salvador)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:como]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: Os manifestantes reclamaram contra o aumento do custo de vida  -->  EVENT_object-f(reclamar,aumento)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:contra]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: Os manifestantes reclamaram a favor do aumento do custo de vida  -->  EVENT_object-f(reclamar,aumento)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:"a favor de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Zé curvou-se perante a ameaça da Ana  -->  EVENT_object-f(curvar,ameaça)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:perante]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro regula-se segundo o Código da Estrada  -->  EVENT_object-f(reger,Código)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:segundo]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro adivinhou a idade da Ana  -->  EVENT_object-f(adivinhar,idade)
+//
+if (CDIR(#1[SR-N1-object-f],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+
+//================================================
+// object-q
+//================================================
+
+// Exemplo: A dívida ascende a 10 mil euros  -->  EVENT_object-q(ascender,euros)
+//
+if (MOD(#1[SR-N1-object-q],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-q=+](#1,#2).
+
+// Exemplo: O Estado comparticipa com 100$00 neste medicamento  -->  EVENT_object-q(comparticipar,euros)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-q=+](#1,#2).
+
+// Exemplo: O índice acabou nos 1000 pontos  -->  EVENT_object-q(acabar,pontos)
+//
+if (MOD(#1[SR-N1-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-q=+](#1,#2).
+
+// Exemplo: O prémio atingiu os 2 milhões de euros  -->  EVENT_object-q(atingiu,euros)
+//
+if (CDIR(#1[SR-N1-object-q],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-q=+](#1,#2).
+
+
+//================================================
+// occurrence
+//================================================
+
+// Exemplo: O aumento do petróleo conduz à crise  -->  EVENT_occurrence(conduz,crise)
+//
+if (MOD(#1[SR-N1-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: A vinda do João prende-se com a necessidade de fazer isso  -->  EVENT_occurrence(prender,necessidade)
+//
+if (MOD(#1[SR-N1-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: Esse problema advém do facto do Pedro não lavar as mãos  -->  EVENT_occurrence(advir,facto)
+//
+if (MOD(#1[SR-N1-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: A celebração da cerimónia dos Óscares culminou na entrega do prémio ao melhor filme  -->  EVENT_occurrence(culminar,entrega)
+//
+if (MOD(#1[SR-N1-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: O Pedro contribuiu para isso  -->  EVENT_occurrence(contribuir,isso)
+//
+if (MOD(#1[SR-N1-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: A relva amparou a queda  -->  EVENT_occurrence(amparou,queda)
+//
+if (CDIR(#1[SR-N1-occurrence],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+
+//================================================
+// patient
+//================================================
+
+// Exemplo: O Pedro acenou ao João  -->  EVENT_patient(acenar,João)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro aconselhou-se com o seu avô  -->  EVENT_patient(aconselhar,avô)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro abusou da Ana  -->  EVENT_patient(abusar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro bateu na Ana  -->  EVENT_patient(bateu,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro mostrou-se da Ana  -->  EVENT_patient(mostrar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro remou pela Ana  -->  EVENT_patient(remar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O exército português carregou sobre os inimigos  -->  EVENT_patient(carregar,inimigos)
+//
+ if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:sobre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O exército português carregou contra os inimigos  -->  EVENT_patient(carregar,inimigos)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:contra]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro testemunhou a favor do João  -->  EVENT_patient(testemunhar,João)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:"a favor de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro confessou-se junto da Ana  -->  EVENT_patient(confessar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:"junto de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro confessou-se junto à Ana  -->  EVENT_patient(confessar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:"junto a"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Zé desculpou-se perante a Ana - EVENT_patient(desculpar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:perante]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Zé desculpou-se diante da Ana - EVENT_patient(desculpar,Ana)
+//
+if (MOD(#1[SR-N1-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:"diante de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O João abordou a Ana  -->  EVENT_patient(abordar,Ana)
+//
+if (CDIR(#1[SR-N1-patient],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+
+//================================================
+// patient-object
+//================================================
+
+// Exemplo: O Pedro alvejou o João  -->  EVENT_patient-object(alvejar,João)
+//
+if (CDIR(#1[SR-N1-patient-object],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O João alvejou a pedra  -->  EVENT_patient-object(alvejou,pedra)
+//
+if (CDIR(#1[SR-N1-patient-object],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+
+//================================================
+// possessor
+//================================================
+
+// Exemplo: O João pertence à Comissão Organizadora  -->  EVENT_possessor(pertence,Comissão Organizadora)
+//
+if (MOD(#1[SR-N1-possessor],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[possessor=+](#1,#2).
+
+// Falta regra para POSS inalienável.  Exemplo: As canelas do João.
+// Não se pode marcar em "a cor da pedra", "pedra" como possessor.
+
+
+
+//================================================
+// recipient
+//================================================
+
+// Exemplo: As recolhas revertem à Ana  -->  EVENT_recipient(reverter,Banco Alimentar)
+//
+if (MOD(#1[SR-N1-recipient],#2[UMB-Human]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+// Exemplo: Os fundos revertem para o Banco Alimentar  -->  EVENT_recipient(reverter,Banco Alimentar)
+//
+if (MOD(#1[SR-N1-recipient],#2[UMB-Human]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+// Exemplo: Os fundos revertem a favor do Banco Alimentar  -->  EVENT_recipient(reverter,Banco Alimentar)
+//
+if (MOD(#1[SR-N1-recipient],#2[UMB-Human]) & PREPD(#2,?[lemma:"a favor de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+
+//================================================
+// topic
+//================================================
+
+// Exemplo: O Paulo percebe de vinhos  -->  EVENT_topicSR(perceber,vinhos)
+//
+if (MOD(#1[SR-N1-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: Os educadores influem na educação das crianças  -->  EVENT_topicSR(influir,educação)
+//
+if (MOD(#1[SR-N1-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O Paulo fala sobre vinhos  -->  EVENT_topicSR(falar,vinhos)
+//
+if (MOD(#1[SR-N1-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:sobre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O João discutiu esse assunto com a Ana  -->  EVENT_topicSR(discutir,assunto)
+//
+if (CDIR(#1[SR-N1-topic],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+
+
+
+//==============================================================================
+//==============================================================================
+// Converting N2 Syntactic dependencies into Semantic Roles
+//==============================================================================
+//==============================================================================
+
+
+
+
+//================================================
+// addressee
+//================================================
+
+// Exemplo: O João invocou que era doente perante o juíz  -->  EVENT_addressee(invocar,juíz)
+//
+if (MOD(#1[SR-N2-addressee],#2[UMB-Human]) & PREPD(#2,?[lemma:perante]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+
+// Exemplo: O João invocou que era doente junto do juíz  -->  EVENT_addressee(invocar,juíz)
+
+if (MOD(#1[SR-N2-addressee],#2[UMB-Human]) & PREPD(#2,?[lemma:"junto de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+
+// Exemplo: A Ana agradeceu o presente ao Pedro  -->  EVENT_addressee(agradeceu,Pedro)
+//
+if (CINDIR(#1[SR-N2-addressee],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[addressee=+](#1,#2).
+
+
+//================================================
+// agent-giver
+//================================================
+
+// Exemplo: O João arrebatou o prémio à Santa Casa  -->  EVENT_agent-giver(arrebatar,Santa Casa)
+//
+if (MOD(#1[SR-N2-agent-giver],#2[UMB-Human]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-giver=+](#1,#2).
+
+// Exemplo: O Pedro herdou muito dinheiro do avô  -->  EVENT_agent-giver(herdar,avô)
+//
+if (MOD(#1[SR-N2-agent-giver],#2[UMB-Human]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-giver=+](#1,#2).
+
+// Exemplo: A Ana recebeu um presente ao Pedro  -->  EVENT_agent-giver(recebeu,Pedro)
+//
+if (CINDIR(#1[SR-N2-agent-giver],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[agent-giver=+](#1,#2).
+
+
+//================================================
+// co-agent
+//================================================
+
+// Exemplo: O João arrebatou o prémio à Santa Casa  -->  EVENT_co-agent(arrebatar,Santa Casa)
+//
+if (MOD(#1[SR-N2-co-agent],#2[UMB-Human]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-agent=+](#1,#2).
+
+// Exemplo: O Zé arrancou à Ana que ela não tinha sido culpada.  -->  EVENT_co-agent(arrancou,Ana)
+//
+if (CINDIR(#1[SR-N2-co-agent],#2[UMB-Human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-agent=+](#1,#2).
+
+
+//================================================
+// co-object
+//================================================
+
+// Exemplo: O João adicionou farinha aos ovos  -->  EVENT_co-object(adicionar,ovos)
+//
+if (MOD(#1[SR-N2-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: O João juntou a farinha com os ovos  -->  EVENT_co-object(juntar,ovos)
+//
+if (MOD(#1[SR-N2-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: O João separou a farinha dos ovos  -->  EVENT_co-object(adicionar,ovos)
+//
+if (MOD(#1[SR-N2-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: O João adicionou a farinha nos ovos  -->  EVENT_co-object(adicionar,ovos)
+//
+if (MOD(#1[SR-N2-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+// Exemplo: O João adicionou atirou farinha para os ovos  -->  EVENT_co-object(adicionar,ovos)
+//
+if (MOD(#1[SR-N2-co-object],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-object=+](#1,#2).
+
+
+//================================================
+// co-patient
+//================================================
+
+// Exemplo: O padre casou o Pedro e a Ana  -->  EVENT_co-patient(casar,Ana)
+//
+if (MOD(#1[SR-N2-co-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-patient=+](#1,#2).
+
+// Exemplo: O padre divorciou o Pedro da Ana  -->  EVENT_co-patient(divorciar,Ana)
+//
+if (MOD(#1[SR-N2-co-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-patient=+](#1,#2).
+
+// Exemplo: O padre trocou a Joana pela Ana  -->  EVENT_co-patient(trocar,Ana)
+
+if (MOD(#1[SR-N2-co-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-patient=+](#1,#2).
+
+// Exemplo: O Zé destacou a Ana entre os outros alunos da turma  -->  EVENT_co-patient(destacar,alunos)
+//
+if (MOD(#1[SR-N2-co-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:entre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-patient=+](#1,#2).
+
+// Exemplo: O Zé destacou a Ana de entre os outros alunos da turma  -->  EVENT_co-patient(destacar,alunos)
+//
+if (MOD(#1[SR-N2-co-patient],#2[UMB-Human]) & PREPD(#2,?[lemma:"de entre"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[co-patient=+](#1,#2).
+
+
+//================================================
+// instrument
+//================================================
+
+// Exemplo: O Pedro assinou o livro com um pseudónimo  -->  EVENT_instrument(assinar,pseudónimo)
+//
+if (MOD(#1[SR-N2-instrument],#2[instrument:+]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[instrument=+](#1,#2).
+
+
+//================================================
+// mannerSR
+//================================================
+
+// Exemplo: A mãe trata o Pedro como se ele fosse uma criança  -->  EVENT_manner(tratar,como se fosse uma criança)
+//
+if (MOD(#1[SR-N2-manner],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[mannerSR=+](#1,#2).
+
+
+//================================================
+// message
+//================================================
+
+// Exemplo: O Pedro falou nesse assunto à Ana  -->  EVENT_message(falar,Ana)
+//
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+// Exemplo: O Pedro falou nesse assunto à Ana  -->  EVENT_message(falar,Ana)
+//
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+// Exemplo: O Pedro falou nesse assunto à Ana  -->  EVENT_message(falar,Ana)
+//
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+// Exemplo: Os candidatos apelaram aos cidadãos para que fossem votar  -->  EVENT_message(falar,Ana)
+//
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+// Exemplo: O Pedro falou à Ana sobre esse assunto  -->  EVENT_message(falar,Ana)
+//
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:sobre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+// Exemplo: O Pedro teimou com a Ana em como conseguia saltar o muro  -->  EVENT_message(teimar,conseguir?)
+
+if (MOD(#1[SR-N2-message],#2[time:~,location:~]) & PREPD(#2,?[lemma:"em como"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[message=+](#1,#2).
+
+
+//================================================
+// object-f
+//================================================
+
+// Exemplo: A mãe apressou o Pedro a sair de casa  -->  EVENT_object-f(apressar,sair de casa)
+//
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro justificou-se com o facto de ter chovido nesse dia  -->  EVENT_object-f(justificar,facto)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro adjectivou a Ana de competente  -->  EVENT_object-f(adjetivou,competente)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Zé baseou a sua argumentação neste conceito  -->  EVENT_object-f(basear,conceito)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro convidou a Ana para jantar  -->  EVENT_object-f(convidar,jantar)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O mecânico levou 500 euros pelo arranjo do carro  -->  EVENT_object-f(levar,arranjo)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Zé deduziu esse resultado a partir dos dados disponíveis  -->  EVENT_object-f(deduzir,dados)
+//
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:"a partir de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+// Exemplo: O Pedro encarou os acontecimentos como um sinal de mudança  -->  EVENT_object-f(encarar,sinal)
+
+if (MOD(#1[SR-N2-object-f],#2[time:~,location:~]) & PREPD(#2,?[lemma:como]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-f=+](#1,#2).
+
+
+//================================================
+// object-generic
+//================================================
+
+// Exemplo: OO Pedro aditou isto àquilo  -->  EVENT_object-gen(aditar,aquilo)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro atestou o carro de gasolina  -->  EVENT_object-gen(atestar,gasolina)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro atestou o carro com gasolina  -->  EVENT_object-gen(atestar,gasolina)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro categorizou esses objectos em diferentes classes  -->  EVENT_object-gen(categorizar,classes)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro cambiou dólares do Zimbabwé por euros  -->  EVENT_object-gen(cambiar,euros)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro retroverteu o texto para latim  -->  EVENT_object-gen(retroverter,latim)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro interpretou o silêncio da Ana como um assentimento  -->  EVENT_object-gen(interpretar,silêncio)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:como]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro vacinou o João contra o tétano  -->  EVENT_object-gen(vacinar,tétano)
+//
+if (MOD(#1[SR-N2-object-gen],#2[time:~,location:~]) & PREPD(#2,?[lemma:contra]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+// Exemplo: O Pedro assanhou o cão à Ana  -->  EVENT_object-gen(assanhar,Ana)
+//
+if (CINDIR(#1[SR-N2-object-gen],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-generic=+](#1,#2).
+
+
+//================================================
+// object-q
+//================================================
+
+// Exemplo: O vendedor abateu 50 euros aos 300 euros iniciais  -->  EVENT_object-q(abater,300 euros iniciais)
+//
+if (MOD(#1[SR-N2-object-q],#2[time:~,location:~]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[object-q=+](#1,#2).
+
+
+//================================================
+// occurrence
+//================================================
+
+// Exemplo: O João conciliou o facto de ter um encontro com o facto de sair tarde  -->  EVENT_occurrence(conciliar,facto)
+//
+if (MOD(#1[SR-N2-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:com]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+// Exemplo: O João culpabiliou a crise pelo seu divórcio  -->  EVENT_occurrence(culpabilizar,divórcio)
+//
+if (MOD(#1[SR-N2-occurrence],#2[time:~,location:~]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[occurrence=+](#1,#2).
+
+
+//================================================
+// patient
+//================================================
+
+// Exemplo: O Pedro deu com um tijolo no João  -->  EVENT_patient(dar,João)
+//
+if (MOD(#1[SR-N2-patient],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro remeteu as dúvidas para o seu acessor  -->  EVENT_patient(remeter,assessor)
+//
+if (MOD(#1[SR-N2-patient],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro distribuiu panfletos pelos transeuntes  -->  EVENT_patient(distribuir,transeuntes)
+//
+if (MOD(#1[SR-N2-patient],#2[time:~,location:~]) & PREPD(#2,?[lemma:por]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro atirar com um tijolo contra o João  -->  EVENT_patient(atirar,João)
+//
+if (MOD(#1[SR-N2-patient],#2[time:~,location:~]) & PREPD(#2,?[lemma:contra]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+// Exemplo: O Pedro chamou mentiroso ao João  -->  EVENT_patient(chamar,João)
+//
+if (CINDIR(#1[SR-N2-patient],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[patient=+](#1,#2).
+
+
+//================================================
+// recipient
+//================================================
+
+// Exemplo: O Pedro deu 500 euros à SAD do Porto  -->  EVENT_recipient(dar,SAD)
+//
+if (MOD(#1[SR-N2-recipient],#2[time:~,location:~]) & PREPD(#2,?[lemma:a]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+// Exemplo: O Pedro entrou com 500 euros para a SAD do Porto  -->  EVENT_recipient(entrar,SAD do Porto)
+//
+if (MOD(#1[SR-N2-recipient],#2[time:~,location:~]) & PREPD(#2,?[lemma:para]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+// Exemplo: O Banco de Portugal adiantou 500 euros ao João  -->  EVENT_recipient(adiantar,João)
+//
+if (CINDIR(#1[SR-N2-recipient],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[recipient=+](#1,#2).
+
+
+//================================================
+// topic
+//================================================
+
+// Exemplo: O Pedro pensa muito mal da Ana  -->  EVENT_topicSR(pensar,Ana)
+//
+if (MOD(#1[SR-N2-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:de]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O Pedro fala muito mal na Ana  -->  EVENT_topicSR(falar,Ana)
+//
+if (MOD(#1[SR-N2-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:em]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O sol espargia a luz sobre as casas  -->  EVENT_topicSR(pensar,Ana)
+//
+if (MOD(#1[SR-N2-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:sobre]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O Pedro pensa muito mal acerca da Ana  -->  EVENT_topicSR(pensar,Ana)
+//
+if (MOD(#1[SR-N2-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:"acerca de"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+// Exemplo: O livro elucidou o Pedro quanto à dúvida que tinha  -->  EVENT_topicSR(pensar,Ana)
+//
+if (MOD(#1[SR-N2-topic],#2[time:~,location:~]) & PREPD(#2,?[lemma:"quanto a"]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[topicSR=+](#1,#2).
+
+
+//================================================
+// victim
+//================================================
+
+// Exemplo: O Pedro sonegou as provas à/da polícia  -->  EVENT_victim(sonegar,polícia)
+//
+if (CINDIR(#1[SR-N2-victim],#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[victim=+](#1,#2).
+
+
+//================================================
+// UNDEF (echo complement)
+//================================================
+
+// Exemplo: O Pedro e o João bateram com o martelo um no outro  -->  EVENT_UNDEF_ECHO(bateram,outro)
+//                                                              -->  EVENT_UNDEF_ECHO(bateram,um)
+//
+if ( EVENT[other](#1) & QUANTD(#2[lemma:outro,echo],#3[lemma:um]) & ~EVENT(#1,#2) )
+  EVENT[undef=+,echo=+](#1,#2),
+  EVENT[undef=+,echo=+](#1,#3).
+
+
+//================================================
+// Copy SR from the 2nd part of echo complemet to
+// the first part of the echo complement
+//================================================
+if ( EVENT[!semantic-role:!](#2,#1[echo]) & QUANTD(#1,#3[lemma:um]) & ~EVENT(#2,#3))
+  EVENT(#2,#3).
+
+if ( ^QUANTD(#1[lemma:outro,echo],#3[lemma:um]) )
+  ~
+
+
+
+//******************************************************************************
+//******************************************************************************
+//***                                                                       ****
+//***                             THIRD  PART                               ****
+//***               (apply rules for LOCATIVE, TIME and MANNER)             ****
+//***                                                                       ****
+//******************************************************************************
+//******************************************************************************
+
+//========================================================
+// Semantic Roles for LOCATIVE
+//========================================================
+
+// If, in a PP, the preposition is a locative Prep, and if the head of the PP
+// is a locative noun, then the semantic role of locative is attributed to the PP. 
+// The specific locative role (SOURCE, DESTINATATION, PLACE or PATH) is derived
+// from the features of the preposition.
+//
+// Example: O João leu o livro em Lisboa   ->   EVENT_locative-place(leu,Lisboa)
+//
+// Example: O Pedro trouxe de Lisboa para o Porto através da Estremadura o livro e leu-o no Algarve
+//                                ->   EVENT_LOCATIVE-SOURCE(trouxe,Lisboa)
+//                                ->   EVENT_LOCATIVE-DESTINATION(trouxe,Porto)
+//                                ->   EVENT_LOCATIVE-PATH(trouxe,Estremadura)
+//                                ->   EVENT_LOCATIVE-PLACE(leu,Algarve)
+//
+if ( MOD(#1,#2[location]) & PREPD(#2,?[preplocsource]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-source=+](#1,#2).
+
+if ( MOD(#1,#2[location]) & PREPD(#2,?[preplocdest]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-destination=+](#1,#2).
+
+if ( MOD(#1,#2[location]) & PREPD(#2,?[preplocpath]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-path=+](#1,#2).
+
+if ( MOD(#1,#2[location]) & PREPD(#2,?[preplocplace]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-place=+](#1,#2).
+
+
+//============================
+// TOP node modifiers
+//============================
+
+//NJM+JB,2013/04/01
+// TOP node modifiers are associated with all the events!!!
+//
+if ( MOD(?[cat:0],#2[location]) & PREPD(#2,?[preplocplace]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[locative-place=+](#1,#2).
+
+
+// Note: In the case of locative NPs in subject or direct object position,
+// the semantic role of locative can only be ascertained by refering to the lexical
+// information about SRs encoded in the verb the NP depends on (mainly viper classes 38Lx).
+
+
+
+//========================================================
+// Semantic Roles for TIME
+//========================================================
+
+// Example: O Pedro fez isso em Agosto  -->  EVENT_TIME-CALENDAR(fez,em Agosto)
+//
+if ( MOD(#1,#3) & HEAD(#3,#2) & NE[t-date](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-calendar=+](#1,#2).
+
+// Example: O Pedro fez isso durante dois dias  -->  EVENT_TIME-DURATION(fez,durante dois dias)
+//
+if ( MOD(#1,#3) & HEAD(#3,#2) & NE[t-duration](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-duration=+](#1,#2).
+
+// Example: O Pedro fez isso todos os dias  -->  EVENT_TIME-FREQUENCY(fez,todos os dias)
+//
+if ( MOD(#1,#3) & HEAD(#3,#2) & NE[t-frequency](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-frequency=+](#1,#2).
+
+
+//============================
+// TOP node modifiers
+//============================
+
+//NJM+JB,2013/04/01
+// TOP node modifiers are associated with all the events!!!
+
+// Example: Em agosto, o Pedro fez isso  -->  EVENT_TIME-CALENDAR(fez,em Agosto)
+//
+if ( MOD(?[cat:0],#3) & HEAD(#3,#2) & NE[t-date](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-calendar=+](#1,#2).
+
+// Example: Durante dois dias, o Pedro fez isso  -->  EVENT_TIME-DURATION(fez,durante dois dias)
+//
+if ( MOD(?[cat:0],#3) & HEAD(#3,#2) & NE[t-duration](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-duration=+](#1,#2).
+
+// Example: Todos os dias, o Pedro fez isso  -->  EVENT_TIME-FREQUENCY(fez,todos os dias)
+//
+if ( MOD(?[cat:0],#3) & HEAD(#3,#2) & NE[t-frequency](#2) & EVENT[other](#1) & ~EVENT(#1,#2) )
+  EVENT[time-frequency=+](#1,#2).
+
+
+
+//========================================================
+// Semantic Roles for MANNERSR
+//========================================================
+
+// If a MODifier has as head a manner operator-noun ('modo', 'maneira', 'forma' and 'jeito' [PB]),
+// then a new participant of the event is created and the feature 'manner' is added to that participant.
+// In this case the participant is the adj that modifies the operator-noun.
+//
+
+// Exemplo: O Pedro cheira de um modo estranho --> EVENT_MANNERSR(cheira,estranho)
+//
+if (MOD(#1,#3[nop]) & MOD(#3,#2[adj]) & EVENT[other](#1) & ~EVENT(#1,#3) & ~EVENT(#1,#2) )
+  EVENT[mannerSR=+](#1,#2).
+
+
+// Exemplo:  Não há exemplo, por isso foi comentado!!!!
+//
+//if (MOD(#1,#3[nop]) & ~MOD(#3,#2[adj]) & EVENT[other](#1) & ~EVENT(#1,#3) & ~EVENT(#1,#2) )
+//  EVENT[mannerSR=+](#1,#3).
+
+
+// Exemplo: O Pedro cheira bem                     --> EVENT_MANNERSR(cheira,bem)
+// Example: O Pedro fez isso inteligentemente      --> EVENT_MANNERSR(fez,lentamente)
+//
+if ( (MOD(#1,#2adv[advmanner]) || MOD(#1,#2[advmansubj]) ) & 
+     EVENT[other](#1) & ~EVENT(#1,#2)
+   )
+  EVENT[mannerSR=+](#1,#2).
+
+
+
+
+
+
+
+
+
+//******************************************************************************
+//******************************************************************************
+//***                                                                       ****
+//***                            FOURTH PART                                ****
+//***               (For verbs that do not belong to Viper)                 ****
+//***                                                                       ****
+//******************************************************************************
+//******************************************************************************
+
+//========================================================
+// Semantic Roles Heuristics:  AGENT-GENERIC
+//========================================================
+
+// if the subject has the distributional feature of human, the semantic role 
+// of AGENT is attributed
+//
+// Example: O João leu o livro   ->   EVENT_AGENT(leu,João)
+//
+if ( SUBJ(#1,#2[human]) & EVENT[other](#1) & ~EVENT(#1,#2) )
+   EVENT[agent-generic=+](#1,#2).
+
+
+
+//========================================================
+// Semantic Roles Heuristics:  INSTRUMENT
+//========================================================
+
+// if a prepositional phrase introduced by the preposition "com" (with) has a name 
+// with the concrete countable or tool semantic feature (Sem-cc, Sem-tool) as its
+// head, the semantic role of INSTRUMENT is attributed to the complement
+//
+// Example: O João bateu no prego com o martelo   ->   EVENT_INSTRUMENT(bater,martelo)
+//
+if ( PREPD(#2[SEM-tool],#3[lemma:com]) & EVENT[other](#1) & MOD(#1,#2) & ~EVENT(#1,#2) )
+   EVENT[instrument=+](#1,#2).
+
+
+
+//========================================================
+// Semantic Roles Heuristics:  MANNER
+//========================================================
+
+// if a prepositional phrase introduced by the preposition "com" (with) 
+// has a name with the mass abstract or countable abstract features as its head, 
+// the complement is marked with the semantic role of MANNER
+//
+// Example: O Pedro andava com leveza   ->   EVENT_MANNERSR(andar,leveza)
+//
+if ( PREPD(#2,#3[lemma:com]) & 
+     EVENT[other](#1) & 
+     (MOD(#1,#2[SEM-am]) | MOD(#1,#2[SEM-ac])) &
+     ~EVENT(#1,#2) 
+   )
+   EVENT[mannerSR=+](#1,#2).
+
+
+
+
+//========================================================
+// Semantic Roles Heuristics:  CO-AGENT
+//========================================================
+
+// É preciso que esta regra tenha primeiro determinado que os argumentos simétricos
+// não se encontram coordenados já noutra posição sintáctica; depende do tipo de construção
+// simétrica: 35S e 36S2 trata-se de coordenação de sujeitos e nos restantes 36S2
+// de coordenação de objectos (CDIR)
+
+// if a prepositional phrase introduced by the preposition "com" (with), has a 
+// name with the human feature as its head; and if the verb on which the 
+// prepositional phrase depends is a symmetric verb (Vsim, 35S, 42S, 36S1, 36S2); 
+// and if no CO-AGENT has been marked yet; the semantic role of CO-AGENT
+// is attributed to the complement
+//
+// Example: O Pedro casou com a Joana   ->   EVENT_CO-AGENT(casar,Pedro)
+//
+if ( PREPD(#2,#3[lemma:com]) & 
+     MOD(#1,#2) 
+     ( EVENT[other](#1[vsim]) | EVENT[other](#1[35S]) | EVENT[other](#1[42S]) | EVENT[other](#1[36S1]) | EVENT[other](#1[36S2]) ) & 
+     ( MOD(#1,#2[human]) | MOD(#1,#2[SEM-ac]) ) &
+     ~EVENT(#1,#2) 
+   )
+   EVENT[co-agent=+](#1,#2).
+
+//Nota: faltam os nomes e os adjetivos simétricos que também podem ter CO-AGENT, etc.
+
+
+
+
+
+//******************************************************************************
+//******************************************************************************
+//***                                                                       ****
+//***                            FIFTH PART                                 ****
+//***                           (corrections)                               ****
+//***                                                                       ****
+//******************************************************************************
+//******************************************************************************
+
+
+// If an EVENT has 2 arguments with the same SR and they are not coordinated,
+// then one of them has to be removed.

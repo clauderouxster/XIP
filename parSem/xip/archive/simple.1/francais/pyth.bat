@@ -1,0 +1,1 @@
+c:\python25\python %1 %2 %3 %4 %5

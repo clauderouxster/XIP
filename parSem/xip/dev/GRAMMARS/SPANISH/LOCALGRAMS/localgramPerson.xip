@@ -1,0 +1,176 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2008 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : localgramPerson.xip
+//!
+//!   Content:	definition of compounds and local rules for geographi
+//!   		entities
+//!
+//!   Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1 [é]
+//!
+//!   Date       : June 2008
+//!
+//!   Author     : Caroline Hagege (using input data given by UCM) Jose Rodrigo 
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+
+// Nombres de personas famosas that are not (or badly) recognized by rules
+3> noun[mwe=+,human=+] @= ?[surface:"Roque"], ?[surface:"Baños"] .
+3> noun[mwe=+,human=+] @= ?[surface:"Mar"], ?[surface:"Flores"] .
+
+
+// Combinations of demonyms
+// franco-griego
+
+4> adj[nationality=+] @= ?[prefnat], punct[lemma:"-"], ?[nationality] .
+4> adj[nationality=+] @= ?[nationality], punct[lemma:"-"], ?[nationality]. 
+
+
+// Compound first names starting by "Jean" followed by hifen
+// e.g. Jean-Claude
+4> noun[mwe=+,maj=+,firstname=+,masc=+] @= ?[lemma:"Jean"], punct[surface:"-"], ?[maj:+,toutmaj:~] .
+
+
+// Cargos compuestos
+// teniente-alcalde
+5> noun[mwe=+,cargo=+]  @= noun[cargo:+], punct[lemma:"-"], noun[cargo:+] .
+
+// jefe de estado
+5> noun[mwe=+,cargo=+] @= noun[lemma:jefe], prep[lemma:de], noun[lemma:estado].
+
+// presidente de la república
+5> noun[mwe=+,cargo=+] @= noun[lemma:presidente], prep[lemma:de], art[def,fem], noun[lemma:"república"].
+
+// Jefe de(l) Gabinete (de Ministros;de la Casa Blanca)
+5> noun[mwe=+,cargo=+] @= noun[lemma:jefe,maj], prep[lemma:de], (art[def]), noun[lemma:gabinete], prep[lemma:de], ?+[maj] .
+5> noun[mwe=+,cargo=+] @= noun[lemma:jefe,maj], prep[lemma:de], (art[def]), noun[lemma:gabinete], (prep[lemma:de], art, ?+[maj]) .
+
+
+
+// Primer ministro
+5> noun[mwe=+,cargo=+] @= ?[lemma:primero], noun[lemma:ministro] .
+
+// Ministros
+// Ministro de XX y YY (Transporte y Telecomunicaciones, Trabajo y Prevision Social etc.)
+5> noun[cargo=+,mwe=+] @=  ?[surface:Ministro], prep[lemma:de], ?[maj,location:~], conj[coord], ?+[maj,location:~] .
+// Ministro de XXX (asuntos exteriores, administraciones publicas,etc.)
+5> noun[cargo=+,mwe=+] @= ?[surface:Ministro], prep[lemma:de], (?[maj,location:~]; prep[lemma:de]; art)*, ?[maj,location:~] .
+
+
+
+
+///////////////////////// PEOPLE
+
+
+// Pedro el Grande
+8> noun[human=+,mwe=+] @= ?[firstname], art[def], ?[surface:Grande].
+
+
+// An uppercase word followed by "Ki-" + something
+// We group together "Ki+-+something"
+// e.g. Kim Ki-duk, Joseph Ki-Zerbo etc.
+8> noun[lastname=+,prop=+] @= ?[surface:"Ki"], punct[surface:"-"], ? .
+
+
+// A guessed noun starting by Mc<Maj> is a lastname
+8> ? = ?[src:guess,lemma:"Mc%C%+",lastname=+] .
+
+// Title + de + location name
+// Presidente del Chile
+// Fiscal General del Estado 
+// check if we need more restrictions
+10> noun[human=+,mwe=+] @= ?[title];?[cargo], (adj[maj,lemma:"c%+al"]), (prep[lemma:de];art; ?[maj])*, ?[maj] .
+
+
+// Title or Cargo followed by upper case words -> people
+// Presidente ; Teniente XXXX
+10> noun[human=+,mwe=+,title=+] @= ?[title];?[cargo], ?+[maj] .
+
+
+
+// Foreign names
+// Herbert von Karajan, Ussama ben Laden etc. Pietro di Roma, Mies van der Rohe
+10> noun[mwe=+,human=+] @= (noun[firstname]), ?[lemma:von];?[surface:van];?[lemma:ben];?[lemma:bin];?[lemma:di], (?[surface:der]), noun[prop] .
+
+//  Abdel Salam Hamud al-Ithawi and other arabic names with al-*
+10> noun[maj=+,mwe=+,human=+] @= noun[prop,maj], ?*[maj], prep[surface:al], (art), punct[lemma:"-"], ?[maj]. 
+
+// Arabic names with "ibn" inbeween. Eg. Tariq ibn Ziyad
+10> noun[maj=+,mwe=+,human=+] @= noun[prop,maj], ?*[maj], ?[src:open,lemma="ibn"], ?[maj] . 
+
+
+
+// coded lastname followed by - followed by something in upper case is a lastname
+10> noun[lastname=+,maj=+] = noun[lastname,propag:~,toutmaj:~], punct[lemma:"-"], ?[maj,toutmaj:~] .
+
+// Concatenation of two firstnames gives firstname
+// Maria Antonieta
+10> noun[firstname=+,maj=+] @= noun[firstname], noun[firstname] .
+
+// Concatenation of two lastnames gives lastname
+// Rodriguez Zapatero, Fernandez de la Vega, Lopez de Varga
+10> noun[lastname=+,maj=+] @= noun[lastname],(prep[lemma:de], art[def]), noun+[lastname] .
+10> noun[lastname=+,maj=+] @= noun[lastname], prep[lemma:de];?[surface:y], noun[lastname] .
+
+
+// Concatenation of one lastname (not propagated) followed by guessed noun with maj:+ gives a lastname
+10> noun[lastname=+,maj=+] @= noun[lastname,propag:~,toutmaj:~], (prep[lemma:de], art[def]), noun[src:guess,maj:+,toutmaj:~] .
+
+
+// Marisa Monte
+// concatenacion de un firstname e nombre que empieza por maj
+11> noun[mwe=+,human=+]  @= noun[firstname], ?+[maj:+,sufix_company:~] .
+
+
+// Jorge del Castillo (to treat in fst, in this case do not want to develop "del"
+11> noun[mwe=+,human=+] @= noun[firstname], prep[lemma:de], (art), noun[maj]. 
+
+// Taking advantage of lastname codification
+// if a guessed noun starting with maj is on the left of a known lastname, then the whole is a person name
+// e.g. Lyn Evans
+11> noun[mwe=+,human=+] @= | ?[maj:~] | noun[src:guess, maj, toutmaj:~,firstname=+], noun[lastname] .
+
+
+// if a firstname is followed by a complex noun which has been calculated before with the presence of a Title
+// then we concatenate firstname and complex noun together
+// e.g. Enrique Barón Crespo, José Manuel Caballero Bonard
+11> noun[mwe=+,human=+] @= ?[firstname,propag:~], noun[mwe:+,human] .
+
+// lastname (from lexicon) followed by firstname (from lexicon) gives person name
+11> noun[mwe=+,human=+] @= noun[lastname,propag:~], noun[firstname:+,propag:~] .
+
+// Contextual rules
+
+// relative relations
+// el abuelo de XXXX YYYY
+15> ? @= ?[relative], prep[lemma:de], ?[maj, title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+,sufix_company:~] .
+
+
+// Xwerwe, el padre de ....
+15> ? @= ?[maj,title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+] | punct[comma], (art[lemma:el]), ?[relative], prep[lemma:de] | .
+
+// su esposo Todd
+14> ? @= | ?[poss,det], ?[relative] | ?[maj,title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+] .
+
+
+// reinado de XXX YYYYY
+15> ? @= | noun[lemma:reinado], prep[lemma:de] | ?[maj, title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+] .
+
+
+// taking advantage of profession codification
+// e.g. El guitarrista Ray Leman
+15> ? @= | art[def], ?[profession], (?[nationality]) | ?[maj, title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+] .
+
+
+// de acuerdo con Guess:+ gives person name
+15> ? @= | prep[lemma:de], ?[lemma:acuerdo], prep[lemma:con] | ?[maj,title:~,start_human=+,human=+], ?*[maj,end_human=+,human=+] .

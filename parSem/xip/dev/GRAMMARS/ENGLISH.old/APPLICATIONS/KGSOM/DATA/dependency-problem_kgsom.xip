@@ -1,0 +1,1125 @@
+Script:
+
+iftest ( @_xtd.title->Test() ) { print ("<title>\n"); }
+iftest ( @_xtd.body->Test() ) { print ("<question>\n"); }
+iftest ( @_xtd.solution->Test() ) { print ("<solution>\n"); }
+
+
+DependencyRules:
+
+
+///////////////// Mark every sentence \\\\\\\\\\\\\\
+
+| TOP#1 |
+  SENT(#1).
+
+
+///////////////// New dependencies \\\\\\\\\\\\\\
+
+//The web browser data is not remembered / saved .
+//SUBJ_PRE(is,data)
+//NUCL_VLINK_PASSIVE(is,remembered)
+
+if ( SUBJ(#1,#2) & NUCL[vlink,passive](#1,#3) )
+   SUBJ-N(#3,#2).
+
+/////////////////////////////////////////
+///////  CONTEXTUAL FEATURES \\\\\\\\\\\\
+/////////////////////////////////////////
+
+
+| #1[appearance=+] |
+if ( SUBJ(#1[lemme:find],#2[lemme:I]) )
+   ~.
+
+
+/////////////////////////////////////////
+/////////////////  TERM  \\\\\\\\\\\\\\\\
+/////////////////////////////////////////
+
+// context-dependent tags
+
+//this, that, these, those when used as pronouns
+
+| #1[lemme:this,term=+,pron] |
+  ~.
+
+| #1[lemme:these,term=+,pron] |
+  ~.
+
+| #1[lemme:that,term=+,pron] |
+  ~.
+
+
+
+// "it" isn't a TERM when it is the SUBJ of APPEARANCE
+
+//I 'm not sure that it 's called BSoD on OSX , but it doesn't look like kernel panic screen ( black screen in text mode ) either .
+//SUBJ_PRE(doesn't,it)
+//NUCL_VLINK_INSIST(doesn't,look)
+
+| #2[term=~] |
+if ( SUBJ(#1,#2) & NUCL[vlink](#1[pron],#2[appearance]) )
+   ~.
+
+//SUBJ-N_PRE(look,it_TERM:+)
+
+| #2[term=~] |
+if ( SUBJ-N(#1[appearance],#2[pron,term]) )
+   ~.
+
+
+
+// tags
+
+| #1[guess,term=+] |
+  ~.
+
+
+| #1[tag,term=+] |
+  ~.
+
+// list of devices
+//MOD_POST(list,devices_TERM:+)
+//PREPD(devices,of)
+
+| #1[term=+,tag:~] |
+if ( MOD[post](#1[noun],#2[term]) & PREPD(#2,#3[lemme:of]) )
+   ~.
+
+| #1[term,dsw=+] |
+if ( ~TERM(#1) )
+    TERM(#1).
+
+| #1[tag,term] |
+if ( ^TERM(#1) )
+   TERM[tag=+](#1).
+
+| #1[topmod,term] |
+if ( ^TERM(#1) )
+   TERM[topmod=+](#1).
+
+///////////////////////////////////////////
+/////////////////  ACTION  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////
+
+//Unable to send an email.
+//OBJ_POST(send,email)
+
+| #1[action=+,dsw=+] |
+if ( OBJ[sentence:~,infinit:~](#1[verb],#2[term,tag]) )
+   ACTION(#1).
+
+//'No SIM inserted' message appears in the notifications bar.
+//SUBJ-N_PRE(inserted,SIM)
+
+| #1[action=+,dsw=+] |
+if ( SUBJ-N[pre](#1[verb,partpas],#2[term,tag]) )
+   ACTION(#1).
+
+//I can't connect to wifi
+//RESULT_POST(connect,wifi)
+
+| #1[action=+,dsw=+] |
+if ( RESULT(#1[verb],#2[term,tag]) )
+   ACTION(#1).
+
+//// not action \\\\
+
+//ACTION(have_DSW:+)
+
+| #1[noaction,dsw=~,action=~] |
+if ( ^ACTION(#1) )
+   ~.
+
+///////////////////////////////////////////////////////////
+/////////////////  dsw that is not ACTION  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////
+
+//personal hotspot won't work , it says go onto the o2 website for a set up guide .
+//SUBJ-N_PRE(work,hotspot[term])
+
+| #1[dsw=+] |
+if ( SUBJ-N(#1,#2[term]) )
+   ~.
+
+////////////////////////////////////////////
+////////////////////////////////////////////
+/////////////////  ANOMALY  \\\\\\\\\\\\\\\\
+////////////////////////////////////////////
+////////////////////////////////////////////
+
+// TERM & BAD || CONTR + CIRC
+// TERM & BAD || RANDOM
+// TERM & BAD || TITLE
+// TERM & BAD & APPEARANCE
+// TERM & BAD || NEGATIVE CHANGE
+// TERM & INTENT
+// CONTR + CIRC || CONTR || TERM
+// TERM & BAD || NEGATIVESENT
+// 
+
+
+
+////////////////////////////////////////
+/////////////////  BAD  \\\\\\\\\\\\\\\\
+////////////////////////////////////////
+
+
+| #1[contr_neg,bad=+] |
+  ~.
+
+| #1[auxnot,bad=+] |
+  ~.
+
+//I installed Xcode but I still don't have gcc in my terminal.
+//VDOMAIN_INSIST(have,don't[contr_neg])
+
+| #1[bad=+] |
+if ( VDOMAIN[insist](#1,#2[contr_neg]) )
+    ~.
+
+
+//// contextual BAD \\\\
+
+//Every time I quite Mail or reboot my computer, all of my mail accounts are gone and I'm prompted to reconfigure my accounts (6 of them).
+//SUBJATTR(accounts,gone)
+
+| #2[bad=+] |
+if ( SUBJATTR(#1,#2[surface:gone]) )
+    ~.
+
+//An iPhone has been detected, but it could not be identified properly
+//NUCL_VLINK_MODAL(could,be)
+//SUBJ_PRE(could,it)
+//MOD_NEG(identified,not_BAD:+)
+//NFV{not_BAD:+ be identified}
+
+| ?{#1[bad], #2[bad=+], #3[verb,last,bad=+]} |
+   ~.
+
+| ?{#1[bad], #3[verb,last,bad=+]} |
+   ~.
+
+
+//my internet is still not working even after I paid my bill yesterday.
+//NFV{still not_BAD:+ working}
+
+| ?{#1, #2[bad], #3[verb,last,bad=+]} |
+   ~.
+
+//NUCL_VLINK_PROGRESS(is,working_BAD:+)
+
+
+| #1[bad=+] |
+if ( NUCL[vlink,progress](#1,#2[bad]) )
+   ~.
+
+
+//I can't connect to wifi
+//NUCL_VLINK_MODAL(can't_BAD:+,connect)
+
+| #2[bad=+] |
+if ( NUCL[vlink,modal](#1[bad],#2[dsw]) )
+   ~.
+
+//I just made the switch from Windows to Mac , and one thing that 's been bothering me is that on a Mac , I can't see multiple Word documents that I have open .
+//NUCL_VLINK_MODAL(can't,see)
+//OBJ_POST(see,documents)
+
+| #2[bad=+] |
+if ( NUCL[vlink,modal](#1[bad],#2) & $1(#2,#3[dsw]) )
+   ~.
+
+
+// negated BAD is NOBAD
+
+// appearance words are nobad
+
+| #1[appearance,nobad=+] |
+  ~.
+
+
+// I 'm not worried about losing stuff as the accounts are all IMAP ).
+//MOD_NEG(worried,not)
+
+| #1[negativesent,bad=~,nobad=+] |
+if ( MOD[neg](#1,#2) )
+   ~.
+
+//// "not" is not BAD if the SUBJ of the verb is "I"
+//Also, I do not prefer to install any paid software and would like to use build in features if possible.
+
+//SUBJ_PRE(do,I)
+//NUCL_VLINK_INSIST(do,prefer)
+//MOD_NEG(prefer,not_BAD:+)
+
+| #4[negativesent=~,bad=~,nobad=+] |
+if ( SUBJ(#1,#2) & NUCL[vlink,insist](#1,#3) & MOD[neg](#3,#4) )
+   ~.
+
+
+//NUCL_VLINK_INSIST(don't,appear)
+//NEGAT(appear)
+// except: he SUBJ of the BAD verb is a "I"
+//SUBJ_PRE(do,I)
+//NUCL_VLINK_INSIST(do,prefer)
+
+| #2[bad=+,nobad:~] |
+if ( NUCL[vlink,insist](#1,#2) & NEGAT(#2) & SUBJ(#1,#3[perspron:~]) )
+   ~.
+
+| #1[negativesent=~,bad=~,nobad=+] |
+if ( NUCL[vlink,insist](#1,#2) & NEGAT(#2) & SUBJ(#1,#3[perspron]) )
+   ~.
+
+| #2[afterbad=~,nobad=+] |
+if ( NUCL[vlink,insist](#1[bad:~],#2) & NEGAT(#2) & SUBJ(#1,#3[perspron]) )
+   ~.
+
+
+// In some settings the screen may be illuminated, but the keyboard is not well- lit and hard to see, so I'd really like the backlight to turn on.
+
+//QUALIF(keyboard,well_AFTERBAD:+)
+
+| #1[adj,afterbad,bad=+,nobad:~] |
+  ~.
+
+//The hard disk is full.
+//ATTRIB(hard disk,full)
+
+| #1[lemme:full,bad=+,nobad:~] |
+if ( ATTRIB(#1[term],#2) )
+   ~.
+
+//'Error 1004 please try again later' message appears.
+//SUBJ_PRE(appears,message)
+
+| #1[bad=+,dsw=+] |
+if ( $1(#1[badwterm],#2[dsw]) )
+   ~.
+
+| #1[bad=+,dsw=+,nobad:~] |
+if ( $1(#1[dsw],#2[badwterm]) )
+   ~.
+
+//I'm fine using any of the tools that ship with the system and any software I already own (like WireTap) but would rather not go out and buy more software.
+//IV{rather not_BAD:+ go_BAD:+}
+
+| ?{#1[lemme:rather], ?[negativesent=~,bad=~,nobad=+], ?[negativesent=~,bad=~,nobad=+] } |
+  ~.
+
+//An iPhone has been detected , but it could not be identified properly
+//MOD_NEG(identified_BAD:+,not_BAD:+)
+
+
+| #1[bad=+] |
+if ( MOD[neg](#1,#2) )
+   ~.
+
+| #1[bad=~] |
+if ( MOD[neg](#1,#2[lemme:matter]) )
+   ~.
+
+
+///////////////////////////////////////////////////////////
+/////////////////  TERM & BAD = BATDTHING  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////
+
+if ( ^$1[appos:~,sentence:~,temp_rel:~](#1[dsw],#2[bad,nobad:~]) | ^$1[appos:~,sentence:~,temp_rel:~](#1[bad,nobad:~],#2[dsw]) )
+   $1[badthing=+](#1,#2).
+
+// I just made the switch from Windows to Mac , and one thing that 's been bothering me is that on a Mac , I can't see multiple Word documents that I have open .
+//
+
+
+/
+//An iPhone has been detected , but it could not be identified properly
+//MOD_NEG(identified,not)
+//OBJ-N(identified,it)
+
+if ( MOD[neg](#1,#2) & OBJ-N(#1,#3) & TERM(#3) )
+   OBJ-N[badthing=+](#1,#3).
+\
+
+
+////////////////////////////////////////
+//////////////// RANDOM \\\\\\\\\\\\\\
+////////////////////////////////////////
+
+//// CONTR + CIRC \\\\
+
+// but/yet/though[contrmark] +  when(ever)/now/still/today[circmark]
+
+//// CONTR \\\\
+
+| #1[contrmark] |
+    WORD[contrmark=+](#1).
+
+//// CIRC \\\\
+
+| #1[circmark] |
+    WORD[circmark=+](#1).
+
+//// EMPHASIS \\\\
+
+| #1[emphmark] |
+    WORD[emphmark=+](#1).
+
+
+//// RANDOM \\\\
+
+//// CIRC + CONTR \\\\
+
+| #2[random=+] |
+if ( WORD[contrmark](#1) & WORD[circmark](#2)  )
+    ~.
+
+// random
+
+//In some settings the screen may be illuminated, but the keyboard is not well- lit and hard to see, so I'd really like the backlight to turn on.
+//QUANTD(settings,some)
+//TERM(settings)
+
+
+| #1[random=+] |
+if ( QUANTD(#1,#2[lemme:some]) & TERM(#1) )
+    ~.
+
+//For some reason, Image Capture doesn't always update the list of devices after I plug in my iPhone.
+//MOD_PRE(update_BAD:+,always)
+
+
+| #1[random=+] |
+if ( $1(#1[bad],#2[lemme:always]) )
+   ~.
+
+//// when + ing \\\\
+
+//BG{when} GV{playing}
+
+| bg{#1[lemme:when]}, gv{#2[random=+]} |
+    ~.
+
+//When GV{using}
+| #1[lemme:when], gv{#2[random=+]} |
+    ~.
+
+
+//Sometimes restarting Image Capture works, and sometimes it does not.
+
+| #1[random] |
+  WORD[random=+](#1).
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = RANDOM + BADTHING \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+
+if ( WORD[random](#2) & ^SENT(#3) & $1[badthing](#1,#4) )
+   ANOMALY[random=+](#3).
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = BADTHING (STRONGBAD) \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+if ( ^SENT(#3) & $1[badthing](#1[strongbad],#4) )
+   ANOMALY[strong=+](#3).
+
+if ( ^SENT(#3) & $1[badthing](#1,#4[strongbad]) )
+   ANOMALY[strong=+](#3).
+
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = RANDOM + RANDOM \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+if ( WORD[random](#1) & WORD[random](#2) & ^SENT(#3) & TERM(#4) )
+   ANOMALY[random=+](#3).
+
+//I sent it to Samung and they just did a software update and sent it back to me a couple days ago , and it still power cycles
+//, and NP{it} still 
+
+| #1[comma], #2[lemme:and] |
+if ( WORD[contrmark](#3[lemme:still]) & #2 < #3 & ^SENT(#4) )
+   ANOMALY[random=+](#4).
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = RANDOM + TERM_SUBJ \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+//However, when I wake the computer from sleep and the login prompt appears, the keyboard backlight turns on.
+//WORD_CONTRMARK(However)
+//WORD_RANDOM(when)
+//SUBJ_RANDOM_PRE(turns,backlight)
+
+
+if ( WORD(#5[contrmark]) & WORD[random](#1) & ^SENT(#3) & SUBJ(#2,#4[lemme:~it]) & TERM(#4) & #5 < #1 )
+   ANOMALY[random=+](#3).
+
+if ( WORD(#5[contrmark]) & WORD[random](#1) & ANOMALY[random](#3) & ^SUBJ(#2,#4[lemme:~it]) & TERM(#4) & #5 < #1 )
+   SUBJ[random=+](#2,#4).
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = BUT BAD + EMPHMARK \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+//Today I tried to use the iTunes-cover screensaver (for the first time), but my screen (and the preview area in the system preferences) simply stays black, nothing else happens.
+//CONNECTOR_SUBORD(stays_BAD:+,but)
+
+
+if ( CONNECTOR(#1[bad],#2[contrmark]) & ^SENT(#3) & WORD[emphmark](#4) )
+   ANOMALY[random=+](#3).
+
+//For some reason Adobe Bridge is opening on login, even though my Login Items shows that it is unchecked.
+
+| #1[random]{?[lemme:for], ?[lemme:some], ?[lemme:reason]} | 
+if ( ^SENT(#2) & WORD(#3[contrmark]) )
+   ANOMALY[random=+](#2).
+
+
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = TITLE + BADTHING \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+
+if ( @_xtd.title->Test() & $1[badthing](#1,#2) & ^SENT(#3) )
+   ANOMALY(#3).
+
+//Skype way too quiet .
+
+if ( @_xtd.title->Test() & WORD[emphmark](#1[lemme:too]) & ^SENT(#3) )
+   ANOMALY(#3).
+
+   
+/
+| #1[bad] |
+if ( @_xtd.title->Test() & TERM(#2) & ^SENT(#3) )
+   ANOMALY[proba=+](#3).
+\
+
+//////////////////////////////////////////////////////////////
+////////////// ANOMALIE = NEGATIVE SENTIMENT + BADTHING \\\\\
+//////////////////////////////////////////////////////////////
+
+//I 'm not worried about losing stuff as the accounts are all IMAP )
+
+| #1[bad,negativesent=~] |
+  ~.
+
+| #4[negativesent,nobad:~] |
+if ( $1[badthing](#1,#2) & ^SENT(#3) )
+   ANOMALY(#3).
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = CONTR before BADTHING + GOOD \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+/
+//hey my galaxy s 3 has an amazing screen but it's so dim is there anything i can do about that ?
+
+//WORD_CONTRMARK(but)
+//ATTRIB_BADTHING(it,dim_BAD:+)
+
+| #5[good] |
+if ( WORD[contrmark](#1) & $1[badthing](#2,#3) & #1 < #2 & ^SENT(#4) )
+   ANOMALY[contrmark=+](#4).
+\
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = insistance +  BADTHING  \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+//Every time I quite Mail or reboot my computer , all of my mail accounts are gone_BAD:+ and I 'm prompted to reconfigure my accounts ( 6 of them ) .
+//QUANTD(time_TAG:+,Every)
+
+if ( $1(#1,#2[lemme:every]) & $2[badthing](?,?) & ^SENT(#3) )
+    ANOMALY(#3).
+
+//I 'm seeing a ripple - like interference on an external display attached to my 2010 Mac Book Pro via VGA ( Display adapter.
+//MAIN_PROGRESS(seeing)
+
+if ( MAIN[progress](#1[lemme:see]) & $2[badthing](?,?) & ^SENT(#3) )
+    ANOMALY(#3).
+
+//I have Word 2008 on my Mac right now and none of those documents will even open .
+
+| #1[lemme:even] |
+if ( $1[badthing](#2,#3) & ^SENT(#4) )
+   ANOMALY(#4).
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = APPEARANCE +  BADTHING  \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+| #1[appearance] |
+if ( $1[badthing](?,?) & ^SENT(#2) )
+    ANOMALY(#2).
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = NEGATIVE CHANGE +  BADTHING  \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+| #1[negchange] |
+if ( $1[badthing](#3,#4) & ^SENT(#2) )                 
+    ANOMALY(#2).
+
+| #1[negchange] |
+if ( $1[badthing](#1,?) | $1[badthing](?,#1) & ^ANOMALY(#2) ) 
+    SENT(#2).
+
+
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = MULTIPLE INDICATORS \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+//The problem is , it seems the push mail downloads all of my labels on GMail , which is 200 labels , and it annoys me .
+
+//BAD + NEGSATIVESENT + APPEARANCE
+
+| #1[bad,nobad:~] |
+   WORD[bad=+](#1).
+
+| #1[negativesent,bad:~,nobad:~] |
+   WORD[negativesent=+](#1).
+
+| #1[appearance] |
+   WORD[appearance=+](#1).
+
+if ( WORD[bad](#1) & WORD[negativesent](#2) & WORD[appearance](#3) & ^SENT(#4) & TERM(#5) )
+   ANOMALY(#4).
+
+// BUT + NOW
+
+| #1[lemme:but] |
+if ( WORD(#2[lemme:now]) & #1 < #2 & & ^SENT(#4) & TERM(#5) )
+   ANOMALY(#4).
+
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = NEGATIVESENT[start] + EMPHMARK \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+if ( WORD[negativesent](#1[start]) & WORD[emphmark](#2) & TERM(#3) & ^SENT(#4) )
+   ANOMALY(#4).
+
+
+
+///////////////////////////////////////////////////
+
+//I found that I can install vsftpd via homebrew , but I can't find the vsftpd.conf file
+
+if ( WORD[appearance](#1) & WORD[contrmark](#2) & TERM(#3) & #1 < #2 & ^SENT(#4) )
+   ANOMALY(#4).
+
+//When I hold the Option key ( as I [ read on MacWorld ] ( http :/ / hints . macworld.com / article . php ' story = 20050502011428531 ) ) doesn't do anything . 
+
+if ( WORD[circmark](#1[start]) & WORD[emphmark](#2) & WORD[bad](#5) & TERM(#3) & ^SENT(#4) )
+   ANOMALY(#4).
+  
+
+
+////////////////////////////////////////////
+////////////////////////////////////////////
+/////////////////  QUESTION  \\\\\\\\\\\\\\\
+////////////////////////////////////////////
+////////////////////////////////////////////
+
+/////////////////////////////////////////////////
+/////////////////  question mark  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+
+| #2[form:fquest,end] |
+if ( ^SENT(#1) )
+   QUESTION(#1).
+
+//Questions without question mark
+//What is the cheapest way to get windows running on a Mac
+//NUCL_SUBJCOMPL(is,What)
+
+if ( NUCL[subjcompl](#2,#1[wh,start]) & ^SENT(#3) )
+    QUESTION(#3).
+
+//How to speed up my iMac (Mid 2007) running Lion
+//TOP{How IV{to speed_TERM:+}
+
+| #1[wh,startbis], iv{#2[lemme:to],?+} |
+if ( ^SENT(#3) )
+    QUESTION(#3).
+
+
+//
+
+| #2[form:fquest,end] |
+if ( ^ANOMALY(#1) )
+   QUESTION[anomaly=+](#1).
+
+if ( NUCL[subjcompl](#2,#1[wh,startbis]) & ^ANOMALY(#3) )
+    QUESTION[anomaly=+](#3).
+
+| #1[wh,startbis], iv{#2[lemme:to],?+} |
+if ( ^ANOMALY(#3) )
+    QUESTION[anomaly=+](#3).
+
+// if there is no question mark
+
+// I wonder
+//SUBJ-N_PRE(wonder,I)
+
+
+if ( SUBJ-N(#1[lemme:wonder],#2[lemme:I]) & ^SENT(#3) )
+   QUESTION(#3).
+   
+if ( SUBJ-N(#1[lemme:wonder],#2[lemme:I]) & ^ANOMALY(#3) )
+   QUESTION[anomaly=+](#3).
+   
+// I'd like
+//I'd like a quick way to start tethering using my iPhone, hopefully just using the keyboard.
+//NUCL_VLINK_MODAL('d,like)
+//SUBJ-N_PRE(like,I)
+
+if ( NUCL[modal](#1[lemme:would],#2[lemme:like]) & SUBJ-N(#2,#3[lemme:I]) & ^SENT(#4) )
+   QUESTION[implicit=+](#4).
+
+if ( NUCL[modal](#1[lemme:would],#2[lemme:like]) & SUBJ-N(#2,#3[lemme:I]) & ^ANOMALY(#4) )
+   QUESTION[implicit=+,anomaly=+](#4).
+
+//I'm looking for
+//I'm looking for info on how to enable FileVault 2 with an existing BootCamp installation, and also for creating a BootCamp installation after FileVault 2 is already installed.
+//So, I'm looking for a way either to:
+
+//NUCL_VLINK_PROGRESS('m,looking)
+//SUBJ-N_PRE(looking,I)
+
+if ( NUCL[progress](#1,#2[lemme:look]) & SUBJ-N(#2,#3[lemme:I]) & ^SENT(#4) )
+   QUESTION[implicit=+,property=+](#4).
+
+if ( NUCL[progress](#1,#2[lemme:look]) & SUBJ-N(#2,#3[lemme:I]) & ^ANOMALY(#4) )
+   QUESTION[anomaly=+,implicit=+](#4).
+
+// 
+
+//I want to know
+//I want to know what software tweaks that I can use to speed up the iMac as it is now slow for much of anything except the basics.
+//SUBJ_PRE_NFINIT(know,I)
+
+if ( SUBJ[nfinit](#1[lemme:know],#2[lemme:I]) & ^SENT(#3) )
+   QUESTION[implicit=+](#3).
+
+if ( SUBJ[nfinit](#1[lemme:know],#2[lemme:I]) & ^ANOMALY(#3) )
+   QUESTION[anomaly=+,implicit=+](#3).
+
+
+if ( SUBJ[nfinit](#1[lemme:know],#2[lemme:we]) & ^SENT(#3) )
+   QUESTION[implicit=+](#3).
+
+if ( SUBJ[nfinit](#1[lemme:know],#2[lemme:we]) & ^ANOMALY(#3) )
+   QUESTION[anomaly=+,implicit=+](#3).
+
+
+// I am curious
+//SUBJATTR(I,curious)
+
+if ( SUBJATTR(#1[lemme:I],#2[lemme:curious]) & ^SENT(#3) )
+   QUESTION[implicit=+](#3).
+
+if ( SUBJATTR(#1[lemme:I],#2[lemme:curious]) & ^ANOMALY(#3) )
+   QUESTION[anomaly=+,implicit=+](#3).
+
+/////////////////////////////////////////////////
+/////////////////  how to question  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+// how + SUBJ(?,I)
+
+| #1[lemme:how] |
+if ( ^QUESTION(#2) & SUBJ(?,#3[lemme:I]) )
+   QUESTION[howto=+](#2).
+
+//I just can't see how to make Contacts create a list of people and easily send an email to them without including a huge To
+//BG{how} IV{to make}
+
+| bg{#1[lemme:how]}, iv |
+if ( ^SENT(#2) | ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+
+| #1[lemme:how], iv |
+if ( ^SENT(#2) | ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+| #1[lemme:how], pp{#3[lemme:to],?+} |
+if ( ^SENT(#2) | ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+
+| #1[lemme:how], #3[lemme:to] |
+if ( ^SENT(#2) | ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+
+//Is there any way to force-enable it?
+
+| #1[lemme:way] |
+if ( ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+| #1[lemme:step] | 
+if ( ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+//What do I have to do to my tracks to get the iTunes Album Art ?
+//OBJ-N(do,What)
+
+if ( OBJ(#1[lemme:do],#2[lemme:what]) & ^QUESTION(#3) )
+   QUESTION[howto=+](#3).
+
+
+/////////////////////////////////////////////////
+/////////////////  explanation question  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+// Sentence containing "how" and not being howto
+
+| #1[lemme:how] |
+if ( ^QUESTION[howto:~](#2) )
+    QUESTION[explanatory=+](#2).
+
+| #1[lemme:why] |
+if ( ^QUESTION[howto:~](#2) | ^SENT(#2) )
+    QUESTION[explanatory=+](#2).
+
+| #1[lemme:understand] |
+if ( ^QUESTION[howto:~](#2) | ^SENT(#2) )
+    QUESTION[explanatory=+](#2).
+
+//What can cause the phone to not automatically connect to a know access point?
+//MOD_PRE(cause,What)
+
+if ( $1(#1[lemme:cause],#2[lemme:what]) & ^QUESTION(#3)  )
+    QUESTION[explanatory=+](#3).
+
+if ( $1(#1[lemme:cause],#2[lemme:what]) & ^SENT(#3) )
+    QUESTION[explanatory=+](#3).
+
+//Can anything cause the battery cycles count to appear higher than it really is ?
+//SUBJ-N(cause,anything)
+
+
+| #1[lemme:cause] |
+if ( ^QUESTION(#2) & SUBJ-N(#1,?) )
+   QUESTION[explanatory=+](#2).
+
+
+
+/////////////////////////////////////////////////
+/////////////////  property question  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+//Any performance gains when disabling secure virtual memory ?
+
+| #1[lemme:any,startbis] |
+//if ( ^QUESTION[explanatory:~](#2) | ^SENT(#2) )
+if ( ^QUESTION(#2) | ^SENT(#2) )
+    QUESTION[property=+](#2).
+
+
+//Are the devices returned in factory condition?
+//auxbh:+,start
+
+| #1[auxbh,startbis] |
+//if ( ^QUESTION[explanatory:~](#2) | ^SENT(#2) )
+if ( ^QUESTION(#2) | ^SENT(#2) )
+    QUESTION[property=+](#2).
+
+
+| #1[lemme:can,startbis] |
+//if ( ^QUESTION[explanatory:~](#2) | ^SENT(#2) )
+if ( ^QUESTION(#2) | ^SENT(#2) )
+    QUESTION[property=+](#2).
+
+| #1[aux,startbis] |
+//if ( ^QUESTION[explanatory:~](#2) | ^SENT(#2) )
+if ( ^QUESTION(#2) | ^SENT(#2) )
+    QUESTION[property=+](#2).
+
+//What could happen if I upgrade_TAG:+ an iPod_TAG:+ to iOS 5_TAG:+ and what is the likelihood it will happen ?
+
+| #1[wh,startbis] |
+if ( ^QUESTION[explanatory:~](#2) )
+    QUESTION[property=+](#2).
+
+| #1[wh,det,startbis] |
+if ( ^SENT(#2) )
+    QUESTION[property=+](#2).
+
+//We would like to know if Apple keeps track of iOS App opening by users .
+//BG{if} NP{Apple} 
+
+| bg{#1[lemme:if]}, np |
+if ( ^QUESTION(#2) )
+    QUESTION[property=+](#2).
+
+//Daniel Beck has found out that the SharePort software does work on Mac, but is it Time Machine friendly ?
+//OBJ_POST(is,it)
+
+if ( OBJ[post](#1[auxbh],#2) & ^QUESTION[explanatory:~](#3) )
+    QUESTION[property=+](#3).
+
+if ( OBJ[post](#1[aux],#2) & ^QUESTION[explanatory:~](#3) )
+    QUESTION[property=+](#3).
+
+
+//LOC_POST(is,there)
+
+if ( LOC[post](#1[auxbh],#2) & ^QUESTION[explanatory:~](#3) )
+    QUESTION[property=+](#3).
+
+//He's currently on Tmobile and is planning on getting a 6s, but would he be able to use it in China or with any other international sim card?
+
+//SUBJ_POST(would,he)
+
+if ( SUBJ[post](#1[aux],#2) & ^QUESTION[explanatory:~](#3) )
+    QUESTION[property=+](#3).
+
+
+//SC{but FV{is}} BG{that} 
+
+| sc{#1, fv}, bg |
+if ( ^QUESTION[explanatory:~](#3) )
+    QUESTION[property=+](#3).
+
+// I want to know what software tweaks that I can use to speed up the iMac as it is now slow for much of anything except the basics .
+
+//If not , where can I get information about using FileVault and BootCamp ?
+
+// implicit
+
+| #1[lemme:whether] |
+if ( ^QUESTION[implicit](#2) )
+   QUESTION[property=+](#2).
+
+
+
+/////////////////////////////////////////////////
+/////////////////  property question  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+// context disambiguation of evalwords
+
+
+//QUESTION_NOISE_PROPERTY(Do non - retina graphics looks worse on a retina display_TAG:+ than they did before ? )
+/
+| #1[compar,evalword=+,time:~] |
+    ~.
+
+| #1[sup,evalword=+,time:~] |
+    ~.
+
+| #1[positive,evalword=+] |
+    ~.
+
+| #1[negative,evalword=+] |
+    ~.
+\
+//We would like to know if Apple keeps track of iOS_TAG:+ App opening by users .
+//EMBED_INFINIT(know,like)
+
+| #2[evalword=~] |
+if ( EMBED(#1,#2) )
+    ~.
+
+
+
+| #1[evalword] |
+if ( ^QUESTION(#2) )
+    QUESTION[property=~,property=+](#2).
+
+
+//////////////////////////////////////////////////////
+/////////////  property + howto questions  \\\\\\\\\\\
+//////////////////////////////////////////////////////
+
+//Can I get system sound along with QuickTime Player screen recording?
+
+//Yes-no questions
+
+//SUBJ_POST(Can,I)
+
+if ( ^QUESTION(#1) & SUBJ[post](#2[aux],#3) )
+   QUESTION[yesno=+](#1).
+
+if ( ^QUESTION(#1) & SUBJ[post](#2[auxbh],#3) )
+   QUESTION[yesno=+](#1).
+
+if ( ^QUESTION(#1) & SUBJ[post](#2[lemme:do],#3) )
+   QUESTION[yesno=+](#1).
+
+//NUCL_VLINK_INSIST(Does,know)
+
+if ( ^QUESTION(#1) & NUCL[insist](#2,#3) & #2 < #3 )
+   QUESTION[yesno=+](#1).
+
+//LOC_POST(Are,there)
+
+if ( ^QUESTION(#1) & LOC[post](#2[verb],#3[lemme:there]) )
+   QUESTION[yesno=+](#1).
+
+//Is it possible to <get the API details and protocol details from an MFI certified Accessory Manufacturer ?
+
+| verb#2[start] |
+if ( ^QUESTION(#1) )
+   QUESTION[yesno=+](#1).
+
+| #2[lemme:can, start] |
+if ( ^QUESTION(#1) )
+   QUESTION[yesno=+](#1).
+
+//I think someone I know might have some boxes of floppies , so would it be possible to copy files off of them ?
+//SUBJ_PRE_NFINIT(be,it)
+//OBJ-N(would,it)
+
+if ( ^OBJ-N(#1[aux],#2) & #1 < #2 & ^QUESTION(#3) )
+   QUESTION[yesno=+](#3).
+
+// Can I
+
+| #2[lemme:can] |
+if ( ^QUESTION[property,howto:~,yesno](#1) & SUBJ(#2,#3[lemme:I]) )
+   QUESTION[howto=+](#1).
+
+
+//Can the hardware inside be replaced with a PC motherboard etc ?
+
+| #2[lemme:can] |
+if ( QUESTION[property,howto:~,yesno](#1) )
+   LIXO(#1).
+
+| #2[surface:be] |
+if ( LIXO(#1) & ^QUESTION[property,howto:~,yesno](#1) )
+   QUESTION[property,howto=+,yesno](#1).
+
+if ( ^LIXO(#1) )
+   ~.
+
+| #2[lemme:could] |
+if ( ^QUESTION[property,howto:~,yesno](#1)& SUBJ(#2,#3[lemme:I])  )
+   QUESTION[howto=+](#1).
+
+| #2[lemme:could] |
+if ( QUESTION[property,howto:~,yesno](#1) )
+   LIXO(#1).
+
+| #2[surface:be] |
+if ( LIXO(#1) & ^QUESTION[property,howto:~,yesno](#1) )
+   QUESTION[property,howto=+,yesno](#1).
+
+if ( ^LIXO(#1) )
+   ~.
+
+
+
+| #2[lemme:possible] |
+if ( ^QUESTION[property,howto:~,yesno](#1) )
+   QUESTION[howto=+](#1).
+
+| #2[lemme:should] |
+if ( ^QUESTION[property,howto:~,yesno](#1) )
+   QUESTION[howto=+](#1).
+
+| #1[lemme:how] |
+if ( ^QUESTION[property](#2) )
+   QUESTION[property=~](#2)
+
+
+// exception 
+
+//Is there a place where I can find some actual software that was meant for the original Macintosh ?
+
+| #2[lemme:where] |
+if ( ^QUESTION[howto,property](#1) )
+   QUESTION[howto=~](#1)
+
+//////////////////////////////////////////////////////
+/////////////////  implicit questions  \\\\\\\\\\\\\\\
+//////////////////////////////////////////////////////
+
+//I'm looking for a FREE chat client that supports Windows Live network (Messenger) and is designed for iPad.
+//I'd like to not only open all these documents but also to continue writing mathematical documents the same way I'm used to on Windows.
+//I can't find an answer to this one here or elsewhere, so here goes.
+
+
+//////////// last  \\\\\\\\\\\
+
+// if a QUESTION doesn't contain a term it should not be highlighted unless it contains a colon (which signals that the question is in the following sentences)
+
+| #1[form:fcolon] |
+if (^QUESTION(#2) )
+    QUESTION[nextsent=+](#2).
+
+if ( ^QUESTION[nextsent:~](#1) & ~TERM(#2) )
+    QUESTION[howto=~,property=~,explanatory=~](#1).
+
+if ( ^QUESTION[howto:~,property:~,property:~,explanatory:~,anomaly:~](#1) )
+    SENT(#1).
+
+//////////////// label TITLE \\\\\\\\\\\\\\\\\\
+
+if (@_xtd.title->Test() & ^ANOMALY(#1) )
+   ANOMALY[posttitle=+](#1)
+
+if (@_xtd.title->Test() & ^QUESTION(#1) )
+   QUESTION[posttitle=+](#1)
+
+if (@_xtd.title->Test() & ^SENT(#1) )
+   SENT[posttitle=+](#1)
+
+/////////////// ANOMALY, QUESTION: LABEL titles and questions only \\\\\\\\\\\\\\   
+
+//if (@_xtd.solution->Test() & ^ACTION(#1) )
+//   ~.
+
+if (@_xtd.solution->Test() & ^ANOMALY(#1) )
+   SENT(#1).
+
+if (@_xtd.solution->Test() & ^$1[badthing](#1,#2) )
+   $1[badthing=~](#1,#2).
+
+if (@_xtd.solution->Test() & ^QUESTION(#1) )
+   SENT(#1).
+
+if ( ^SENT[anomaly](#1) )
+    SENT[anomaly=~](#1).
+
+if ( ^SENT[property](#1) )
+    SENT[property=~](#1).
+
+if ( ^SENT[howto](#1) )
+    SENT[howto=~](#1).
+
+if ( ^SENT[explanatory](#1) )
+    SENT[explanatory=~](#1).
+
+if ( ^SENT[random](#1) )
+    SENT[random=~](#1).
+
+
+
+///////////////////////
+
+// it shouldn't be returned as TERM
+
+
+if ( ^TERM(#1[pron]) )
+   ~.
+

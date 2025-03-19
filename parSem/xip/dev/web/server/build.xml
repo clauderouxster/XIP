@@ -1,0 +1,429 @@
+<project name="xipWeb" default="info" basedir=".">
+    
+    <property name="env" environment="env"	value="env"/>
+    <property name="fs"			value="${file.separator}" />
+    <property name="ps"			value="${path.separator}" />
+    
+    <property name="common.dir" location="${basedir}/../../../../common" />
+    <property name="xip.dev.dir" location="${basedir}/../.." />
+    <import file="${common.dir}/taskExt.xml" />
+    <import file="${common.dir}/xipVersion.xml" />
+    
+    <property name="app.name"      		value="xip"/>
+    <property name="java_debug"      	value="off"/>
+    <property name="java_optimize"    	value="on"/>
+    <property name="java_deprecation"	value="off"/>
+    <property name="log.level"		value="verbose" />
+    <property name="build.dir"   		location="${basedir}/build"/>
+    <property name="build.grammar"    	location="${basedir}/build/grammar"/>
+    <property name="grammars.root"    	location="${basedir}/../../GRAMMARS"/>
+    <property name="dist.dir"   		location="${basedir}/dist"/>
+    <property name="docs.dir"  	   	location="${basedir}/docs"/>
+    <property name="src.dir"      		location="${basedir}/src"/>
+    <property name="web.dir"      		location="${basedir}/web"/>
+    <property name="jxip.jar" 		location="${basedir}../../../java/dist/jxipJdk14.jar"/>
+    <property name="java.exe" 		location="/opt/Linux/Java/j2sdk1.4.2_07/bin/java"/>
+    <property name="log.dir" 		location="${basedir}/log" />
+    
+    <target name="info" depends="" description="return the important targets" >
+        <echo message="Main targets:" />
+        <echo message="	dev :   build, install and test for the server: development" />
+        <echo message="	int :   build, install and test for the server: intern" />
+        <echo message="	pub :   build, install and test for the server: public" />
+        <echo message="	ext :   build, install and test for the server: extern" />
+        <echo message="	" />
+        <echo message="For each of these servers the following targets are available:" />
+        <echo message="	stopdev, startdev, instaldev, cleandev, infodev, testdev  (ex for the dev server)" />
+        <echo message="	stopint, startint, ....  				  (ex for the int server)" />
+    </target>
+    
+    <!--  ++++++++++++++++++++++++++++ dev +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="dev" depends="initdev, build, stopdev, cleandev, instal, startdev, testdev, infodev" description="build, start dev server" />
+    
+    <target name="initdev" depends="" description="" unless="initdevDone">
+        <property name="initdevDone"    value="true" />
+        <property name="tomcat.dir" 	location="/home/grondeau/tools/apache/jakarta-tomcat-5.0.25"/>
+        <property name="hostName"	value="dima"/>
+        <property name="userName"	value="grondeau"/>
+        <property name="keyfile"	value="${user.home}/.ssh/id_rsa"/>
+        <property name="stopCmd"	value="${tomcat.dir}/bin/catalina.sh stop"/>
+        <property name="startCmd"	value="${tomcat.dir}/bin/catalina.sh start"/>
+        <property name="url"		value="http://dima.grenoble.xrce.xerox.com:8082"/>
+        <property name="login"		value="ssh dima"/>
+        <property name="siteName"	value="dev"/>
+        <property name="otherInfo"	value=" "/>
+        <property name="tomcat.manager.url"   		value="${url}/manager"/>
+        <property name="tomcat.manager.username"	value="admin"/>
+        <property name="tomcat.manager.password"	value="admin"/>
+    </target>
+    
+    <target name="stopdev" depends="initdev, stop" description="" />
+    <target name="startdev" depends="initdev, start" description="" />
+    <target name="instaldev" depends="initdev, instal" description="" />
+    <target name="cleandev" depends="initdev, cleanServer" description="" />
+    <target name="infodev" depends="initdev, infoServer" description="" />
+    <target name="testdev" depends="initdev, test" description="" />
+    
+    <!-- use tomcat web application manager 
+<target name="listDev" depends="initdev, tomcatList" description="list the application running on tomcat" />
+do nor run !!!
+<target name="stopDev" depends="initdev, tomcatStop" description="stop only the xip application" />
+<target name="startDev" depends="initdev, tomcatStart" description="start only the xip application" />
+-->
+    
+    <!--  ++++++++++++++++++++++++++++ intern +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="int" depends="initint, build, stopint, cleanint, instal, startint, testint, infoint" description="build, start intern server">
+    </target>
+    
+    <target name="initint" depends="" description="" unless="initintDone">
+        <property name="initintDone"    value="true" />
+        <property name="tomcat.dir" 	location="/opt/W3/tools/tomcat-8003"/>
+        <property name="hostName"	value="dima"/>
+        <property name="userName"	value="webadm"/>
+        <property name="keyfile"	value="${user.home}/.ssh/id_rsa"/>
+        <property name="stopCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh stop"/>
+        <property name="startCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh start"/>
+        <property name="url"		value="http://dima.grenoble.xrce.xerox.com:8086"/>
+        <property name="login"		value="ssh webadm@dima"/>
+        <property name="siteName"	value="int"/>
+        <property name="otherInfo"	value=" "/>
+    </target>
+    
+    <target name="stopint" depends="initint, stop" description="" />
+    <target name="startint" depends="initint, start" description="" />
+    <target name="instalint" depends="initint, instal" description="" />
+    <target name="cleanint" depends="initint, cleanServer" description="" />
+    <target name="infoint" depends="initint, infoServer" description="" />
+    <target name="testint" depends="initint, test" description="" />
+    
+    <!--  ++++++++++++++++++++++++++++ public +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="pub" depends="initpub, build, stoppub, cleanpub, instal, startpub, testpub, infopub" description="build, start public server">
+    </target>
+    
+    <target name="initpub" depends="" description="" unless="initpubDone">
+        <property name="initpubDone"    value="true" />
+        <property name="tomcat.dir" 	location="/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14"/>
+        <property name="hostName"	value="dima"/>
+        <property name="userName"	value="webadm"/>
+        <property name="keyfile"	value="${user.home}/.ssh/id_rsa"/>
+        <property name="stopCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh stop"/>
+        <property name="startCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh start"/>
+        <property name="url"		value="http://www2.grenoble.xrce.xerox.com:8003"/>
+        <property name="login"		value="ssh webadm@dima"/>
+        <property name="siteName"	value="pub"/>
+        <property name="otherInfo"	value=" "/>
+    </target>
+    
+    <target name="stoppub" depends="initpub, stop" description="" />
+    <target name="startpub" depends="initpub, start" description="" />
+    <target name="instalpub" depends="initpub, instal" description="" />
+    <target name="cleanpub" depends="initpub, cleanServer" description="" />
+    <target name="infopub" depends="initpub, infoServer" description="" />
+    <target name="testpub" depends="initpub, test" description="" />
+    
+    <!--  ++++++++++++++++++++++++++++ extern +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="ext" depends="initext, build, stopext, cleanext, instal, startext, testext, infoext" description="build, start extern server">
+    </target>
+    
+    <target name="initext" depends="" description="" unless="initextDone">
+        <property name="initextDone"    value="true" />
+        <property name="tomcat.dir" 	location="/opt/W3/tools/jakarta-tomcat-4.1.30-LE-jdk14"/>
+        <property name="hostName"	value="epine.xerox.fr"/>
+        <property name="userName"	value="webadm"/>
+        <property name="keyfile"	value="${user.home}/.ssh/id_rsa"/>
+        <property name="stopCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh stop"/>
+        <property name="startCmd"	value="/opt/W3/tools/Lirix2/bin/lirix2_start ${tomcat.dir}/bin/catalina.sh start"/>
+        <property name="url"		value="http://www.xrce.xerox.com"/>
+        <property name="login"		value="ssh epine.xerox.fr -l webadm"/>
+        <property name="siteName"	value="ext"/>
+        <property name="otherInfo"	value="other tomcat application: http://www.xrce.xerox.com/lirix2-search/result.jsp${line.separator}
+		web service:   http://wsportal.xrce.xerox.com:8080"/>
+    </target>
+    
+    <target name="stopext" depends="initext, stop" description="" />
+    <target name="startext" depends="initext, start" description="" />
+    <target name="instalext" depends="initext, instal" description="" />
+    <target name="cleanext" depends="initext, cleanServer" description="" />
+    <target name="infoext" depends="initext, infoServer" description="" />
+    <target name="testext" depends="initext, test" description="" />
+    
+    
+    <!--  ++++++++++++++++++++++++++++ common web +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="instal" depends="" description="" >
+        <!-- wait the server is really stopped -->
+        <sleep seconds="6"/>
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}"  
+                 command="rm -rf ${tomcat.dir}/webapps/xip" outputproperty="out1" failonerror="false"/>
+        <echo message="${out1}" />
+        <scp file="${dist.dir}/${app.name}.zip"
+             todir="${userName}@${hostName}:${tomcat.dir}/webapps" 
+             keyfile="${keyfile}"
+             passphrase=""
+        />
+        <property name="cmd" value="unzip ${tomcat.dir}/webapps/${app.name}.zip -d ${tomcat.dir}/webapps"/>
+        <echo message="${cmd}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}" outputproperty="out3" 
+                 command="${cmd}"/>
+        <echo message="${out3}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}"  
+                 command="rm -f ${tomcat.dir}/webapps/xip.zip"/>
+    </target>
+    
+    <target name="infoServer" depends="" description="" >
+        <echo message="---------------- ${siteName} ---------------------" />
+        <echo message="test: ${url}/xip/page1.jsp" />
+        <echo message="test: ${url}/demos/xipdemo.html" />
+        <echo message="test: ${url}/competencies/content-analysis/homepage.en.html" />
+        <echo message="logs: ${tomcat.dir}/logs/catalina.out" />
+        <echo message="logs: ${tomcat.dir}/logs/xipweb.txt" />
+        <echo message="port: ${tomcat.dir}/conf/server.xml" />
+        <echo message="login: ${login}" />
+        <echo message="les pages dans /opt/W3/public sont recopiees sur le site externe /opt/W3/synchro tous les soirs" />
+        <echo message="vi /opt/W3/public/docs/competencies/content-analysis/homepage.en.html line 141" />
+        <echo message="vi /opt/W3/public/docs/competencies/content-analysis/robustparsing/home.en.html line 138" />
+        <echo message=" " />
+        <echo message="${otherInfo}" />
+    </target>
+    
+    <target name="test" depends="" description="" >
+        <!-- wait the server is really started -->
+        <sleep seconds="10"/>
+        <ant antfile="build.xml" dir="${basedir}/test/test1" target="${siteName}" inheritAll="false" />
+    </target>
+    
+    <target name="cleanServer" depends="" description="" >
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}" outputproperty="out" failonerror="false" 
+                 command="rm -rf ${tomcat.dir}/webapps/xip"/>
+        <echo message="${out}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}" outputproperty="out" failonerror="false" 
+                 command="rm -rf ${tomcat.dir}/work/Catalina/localhost/xip"/>
+        <echo message="${out}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}" outputproperty="out" failonerror="false"
+                 command="mv ${tomcat.dir}/logs/catalina.out ${tomcat.dir}/logs/catalina.out.bak"/>
+        <echo message="${out}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}" outputproperty="out" failonerror="false"
+                 command="mv ${tomcat.dir}/logs/xipweb.txt ${tomcat.dir}/logs/xipweb.txt.bak"/>
+        <echo message="${out}" />
+    </target>
+    
+    <target name="stop" depends="" description="" >
+        <echo message="stopping server: ${hostname}  ${stopCmd}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}"  command="${stopCmd}" failonerror="false"/>
+    </target>
+    
+    <target name="start" depends="" description="" >
+        <echo message="starting server: ${hostname}  ${startCmd}" />
+        <sshexec host="${hostName}" username="${userName}" keyfile="${keyfile}"  command="${startCmd}"/>
+    </target>
+    
+    <!--  ++++++++++++++++++++++++++++ common build +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <target name="build" depends="clean, init-common, compileJxipWithJDK14, gram, doc, dist" description="">
+    </target>
+    
+    <target name="init-common" depends="" description="">
+        <!-- Create build directories -->
+        <mkdir  dir="${build.dir}"/>
+        <mkdir  dir="${build.dir}/WEB-INF"/>
+        <mkdir  dir="${build.dir}/WEB-INF/classes"/>
+        <!-- Copy static content of this web application -->
+        <copy todir="${build.dir}">
+            <fileset dir="${web.dir}" includes="*" />
+        </copy>
+        <!-- create log dir -->
+        <mkdir dir="${log.dir}" />
+    </target>
+    
+    <target name="compileJxipWithJDK14" depends="" description="">
+        <record name="${log.dir}/jxip.compile" loglevel="${log.level}" action="start"/>
+        <!--
+	<ant antfile="build.xml" dir="${basedir}/../../java" target="jarForWeb.debug" inheritAll="false" />
+-->
+        <ant antfile="build.xml" dir="${basedir}/../../java" target="jarForWeb" inheritAll="false" />
+        <mkdir  dir="${build.dir}/WEB-INF/lib"/>
+        <copy tofile="${build.dir}/WEB-INF/lib/jxip.jar" file="${jxip.jar}"/>
+        <record name="${log.dir}/jxip.compile"  action="stop"/>
+    </target>
+    
+    <target name="dist" depends="" description="Create distribution">
+        <mkdir dir="${dist.dir}"/>
+        <zip destfile="${dist.dir}/${app.name}.zip">
+            <zipfileset dir="${build.dir}" prefix="${app.name}"/>
+        </zip>
+    </target>
+    
+    <target name="doc" depends="" description="">
+        <!-- doc -->
+        <copy  file="${grammars.root}/ITALIAN/DOC/dependenciesDescription.pdf" tofile="${build.dir}/itaDoc.pdf" />
+        <copy  file="${grammars.root}/SPANISH/DOC/XIP_Spanish_Grammar.pdf" tofile="${build.dir}/spaDoc.pdf" />
+    </target>
+    
+    <target name="gram" depends="crypteGram, gramEnglishEntity, gramFrenchEntity, gramSpanish, gramPortuguese, gramItalian, gramGerman" >
+    </target>
+    
+    <target name="crypteGram" depends="getXipVersionAnBuild" description="">
+        <!-- crypte the grammars in the delivery dir -->
+        <property name="delivery.grammar"	location="${basedir}/../../../delivery/xip-${xip.version}-${xip.build}/grammar"/>
+        <mkdir dir="${log.dir}" />
+        <record name="${log.dir}/crypteGram" loglevel="${log.level}" action="start"/>
+        <!--
+        <ant antfile="build.xml" dir="${basedir}/../../GRAMMARS" target="gramWeb" inheritAll="false" />
+        -->
+        <exec executable="ant" dir="${basedir}/../../GRAMMARS" failonerror="true" >
+            <arg line="gramWeb -q" />
+        </exec>
+        <record name="${log.dir}/crypteGram"  action="stop"/>
+    </target>
+    
+    <target name="gramEnglishEntity" depends="" description="">
+        <record name="${log.dir}/gramEnglishEntity" loglevel="${log.level}" action="start"/>
+        <!-- Copy english grammar files -->
+        <property name="eng.entity.build.dir" location="${build.grammar}/english/entity" />
+        <mkdir  dir="${eng.entity.build.dir}"/>
+        <copy  todir="${eng.entity.build.dir}">
+            <fileset dir="${delivery.grammar}/english/entity" />
+        </copy>
+        <record name="${log.dir}/gramEnglishEntity"  action="stop"/>
+    </target>
+    
+    <target name="gramFrenchEntity" depends="" description="">
+        <record name="${log.dir}/gramFrenchEntity" loglevel="${log.level}" action="start"/>
+        <!-- Copy french grammar files -->
+        <property name="fr.entity.build.dir" location="${build.grammar}/french/entity" />
+        <mkdir  dir="${fr.entity.build.dir}"/>
+        <copy  todir="${fr.entity.build.dir}">
+            <fileset dir="${delivery.grammar}/french/entity" />
+        </copy>
+        <record name="${log.dir}/gramFrenchEntity"  action="stop"/>
+    </target>
+    
+    <target name="gramSpanish" depends="" description="">
+        <record name="${log.dir}/gramSpanish" loglevel="${log.level}" action="start"/>
+        <!-- Copy spanish grammar files -->
+        <property name="spanish.build.dir" location="${build.grammar}/spanish/basic" />
+        <mkdir  dir="${spanish.build.dir}"/>
+        <copy  todir="${spanish.build.dir}">
+            <fileset dir="${delivery.grammar}/spanish/basic" />
+        </copy>
+        <record name="${log.dir}/gramSpanish"  action="stop"/>
+    </target>
+    
+    <target name="gramPortuguese" depends="" description="">
+        <record name="${log.dir}/gramPortuguese" loglevel="${log.level}" action="start"/>
+        <!-- Copy spanish grammar files -->
+        <property name="portuguese.build.dir" location="${build.grammar}/portuguese/basic" />
+        <mkdir  dir="${portuguese.build.dir}"/>
+        <copy  todir="${portuguese.build.dir}">
+            <fileset dir="${delivery.grammar}/portuguese/basic" />
+        </copy>
+        <record name="${log.dir}/gramPortuguese"  action="stop"/>
+    </target>
+    
+    <target name="gramItalian" depends="" description="">
+        <record name="${log.dir}/gramItalian" loglevel="${log.level}" action="start"/>
+        <!-- Copy italian grammar files -->
+        <property name="italian.build.dir" location="${build.grammar}/italian/basic" />
+        <mkdir  dir="${italian.build.dir}"/>
+        <copy  todir="${italian.build.dir}">
+            <fileset dir="${delivery.grammar}/italian/basic" />
+        </copy>
+        <record name="${log.dir}/gramItalian"  action="stop"/>
+    </target>	
+    
+    <target name="gramGerman" depends="" description="">
+        <record name="${log.dir}/gramGerman" loglevel="${log.level}" action="start"/>
+        <!-- Copy german grammar files -->
+        <property name="german.build.dir" location="${build.grammar}/german/basic" />
+        <mkdir  dir="${german.build.dir}"/>
+        <copy  todir="${german.build.dir}">
+            <fileset dir="${delivery.grammar}/german/basic" />
+        </copy>
+        <record name="${log.dir}/gramGerman"  action="stop"/>
+    </target>
+    
+    <target name="clean" description="Delete previous build and dist directories">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+        <delete dir="${log.dir}"/>
+    </target>
+    
+    <!--  ++++++++++++++++++++++++++++ Tomcat basic task +++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!--
+  The "install" target tells the specified Tomcat 5 installation to dynamically
+  install this web application and make it available for execution.
+  It does *not* cause the existence of this web application to be remembered across Tomcat restarts;
+  if you restart the server, you will need to re-install all this web application.
+  If you have already installed this application, and simply want Tomcat to
+  recognize that you have updated Java classes (or the web.xml file), use the "reload" target instead.
+  NOTE:  This target will only succeed if it is run from the same server that Tomcat is running on.
+  NOTE:  This is the logical opposite of the "remove" target.
+    -->
+    <target name="tomcatInstall" depends="initTomcat" description="Install application to servlet container">
+        <deploy url="${tomcat.manager.url}"
+                username="${tomcat.manager.username}"
+                password="${tomcat.manager.password}"
+                path="/${app.name}"
+                war="file://${build.dir}"/>
+    </target>
+    
+    <target name="tomcatReload" depends="initTomcat" description="Reload application on servlet container">
+        <reload url="${tomcat.manager.url}"
+                username="${tomcat.manager.username}"
+                password="${tomcat.manager.password}"
+                path="/${app.name}"/>
+    </target>
+    
+    <target name="tomcatRemove" depends="initTomcat" description="Remove application on servlet container">
+        <undeploy url="${tomcat.manager.url}"
+                  username="${tomcat.manager.username}"
+                  password="${tomcat.manager.password}"
+                  path="/${app.name}"/>
+    </target>
+    
+    <target name="tomcatList" depends="initTomcat" description="List installed applications on servlet container">
+        <list url="${tomcat.manager.url}"
+              username="${tomcat.manager.username}"
+              password="${tomcat.manager.password}"/>
+    </target>
+    
+    <target name="tomcatStart" depends="initTomcat" description="Start Tomcat application">
+        <start url="${tomcat.manager.url}"
+               username="${tomcat.username}"
+               password="${tomcat.password}"
+               path="/${app.name}"/>
+    </target>
+    
+    <target name="tomcatStop" depends="initTomcat" description="Stop Tomcat application">
+        <stop url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${app.name}"/>
+    </target>
+    
+    <!--
+  These properties define custom tasks for the Ant build tool that interact
+  with the "/manager" web application installed with Tomcat 5.  Before they
+  can be successfully utilized, you must perform the following steps:
+  - Copy the file "server/lib/catalina-ant.jar" from your Tomcat 5
+    installation into the "lib" directory of your Ant installation.
+  - Create a "build.properties" file in your application's top-level
+    source directory (or your user login home directory) that defines
+    appropriate values for the "tomcat.manager.password", "tomcat.manager.url", and
+    "tomcat.manager.username" properties described above.
+  For more information about the Manager web application, and the functionality
+  of these tasks, see <http://localhost:8080/tomcat-docs/manager-howto.html>.
+    -->
+    <target name="initTomcat" >
+        <path id="tomcat.classpath">
+            <fileset dir="${tomcat.dir}/server/lib" includes="catalina-ant.jar" />
+        </path>
+        <taskdef name="deploy"   	classname="org.apache.catalina.ant.DeployTask"		classpathref="tomcat.classpath" />
+        <taskdef name="list"     	classname="org.apache.catalina.ant.ListTask"		classpathref="tomcat.classpath" />
+        <taskdef name="reload"   	classname="org.apache.catalina.ant.ReloadTask"		classpathref="tomcat.classpath" />
+        <taskdef name="resources" 	classname="org.apache.catalina.ant.ResourcesTask"	classpathref="tomcat.classpath" />
+        <taskdef name="roles"     	classname="org.apache.catalina.ant.RolesTask"		classpathref="tomcat.classpath" />
+        <taskdef name="start"     	classname="org.apache.catalina.ant.StartTask"		classpathref="tomcat.classpath" />
+        <taskdef name="stop"      	classname="org.apache.catalina.ant.StopTask"		classpathref="tomcat.classpath" />
+        <taskdef name="undeploy" 	classname="org.apache.catalina.ant.UndeployTask"	classpathref="tomcat.classpath" />
+    </target>
+    
+</project>

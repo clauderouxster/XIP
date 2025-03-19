@@ -1,0 +1,128 @@
+
+<project name="" default="zip" basedir=".">
+
+    <property name="jxip.jar" value="../xip/dev/java/dist/jxip.jar" />
+    
+    <target name="testsample" depends="jar, gram"  >
+        <ant antfile="build.xml" dir="sample" target="test" inheritAll="false" />
+    </target>
+
+    <target name="testzip" depends=""  >
+        <exec command="unzip jcoref.zip" />
+        <ant antfile="build.xml" dir="jcoref/sample" target="test" inheritAll="false" />
+    </target>
+
+    <target name="zip" depends="jar, gram, javaDoc">
+        <zip destfile="jcoref.zip">
+            <zipfileset dir="gram" prefix="jcoref/gram" />
+            <zipfileset dir="sample" prefix="jcoref/sample" includes="build.xml, Test.java, input.txt" />
+            <zipfileset dir="dist" prefix="jcoref/dist" />
+            <zipfileset dir="javaDoc" prefix="jcoref/javaDoc" />
+        </zip>
+    </target>
+
+    <target name="gram" depends="">
+        <delete dir="gram" />
+        <mkdir dir="gram" />
+        <!-- grammar crypting -->
+        <exec executable="/opt/ParSem/bin/linux/xip" failonerror="true" outputproperty="out" >
+            <arg line= " -crypte gram -grm JCoref/grm/coref.grm" />
+        </exec>
+        <!-- rename *.xip.crypte to *.xip  -->
+        <move todir="gram">
+            <fileset dir="gram">
+                <include name="**/*.crypte"/>
+            </fileset>
+            <regexpmapper from="^(.*)\.xip\.crypte$" to="\1.xip"/>
+        </move>
+        <!-- add files -->
+        <copy todir="gram" >
+            <fileset dir="../xip/dev/GRAMMARS/ENGLISH/NTMFILES/SOURCEFST/BASICS">
+                <include name="*.fst"/>
+            </fileset>
+            <fileset dir="../xip/dev/GRAMMARS/ENGLISH/NTMFILES/SOURCEFST/FORSEM">
+                <include name="*.fst"/>
+            </fileset>
+            <fileset dir="../xip/dev/GRAMMARS/ENGLISH/NTMFILES/SOURCEFST/FORENTITIES">
+                <include name="*.fst"/>
+            </fileset>
+        </copy>
+        <echo file="gram/coref.grm" append="false" >
+            path:
+            HMM=$GRM_PATHNAME
+            path:
+            NTM_ROOT=$GRM_PATHNAME
+            path:
+            FEAT=$GRM_PATHNAME
+            path:
+            LEXICONFILES=$GRM_PATHNAME
+            path:
+            LOCALGRAMS=$GRM_PATHNAME
+            path:
+            CHUNKS=$GRM_PATHNAME
+            path:
+            DEP=$GRM_PATHNAME
+            path:
+            COREF=$GRM_PATHNAME
+
+            gram:
+            $GRM_PATHNAME/coref.xip
+            ntm:
+            $GRM_PATHNAME/ntmscript_norm
+            hmm:
+            $GRM_PATHNAME/hmm-1-std
+        </echo>
+        <copy todir="gram" file="../xip/dev/GRAMMARS/ENGLISH/NTMFILES/ntmscript_norm" />
+        <replaceregexp file="gram/ntmscript_norm" byline="true" encoding="ASCII"
+                match="\$NTM_ROOT/SOURCEFST/FORENTITIES" replace="$GRM_PATHNAME"/>
+        <replaceregexp file="gram/ntmscript_norm" byline="true" encoding="ASCII"
+                match="\$NTM_ROOT/SOURCEFST/FORSEM" replace="$GRM_PATHNAME"/>
+        <replaceregexp file="gram/ntmscript_norm" byline="true" encoding="ASCII"
+                match="\$NTM_ROOT/SOURCEFST/BASICS" replace="$GRM_PATHNAME"/>
+        <copy todir="gram" file="../xip/dev/GRAMMARS/ENGLISH/NTMFILES/HMMFILES/hmm-1-std" />
+        <copy todir="gram" file="../xip/dev/GRAMMARS/ENGLISH/DEPENDENCIES/new_pred.xip" />
+        <move file="gram/new_pred.index.crypte" tofile="gram/new_pred.index"/>
+    </target>
+
+    <target name="javaDoc" depends="">
+        <delete dir="javaDoc"/>
+        <mkdir dir="javaDoc"/>
+        <javadoc packagenames="jcoref"
+                 sourcepath="${basedir}/JCoref/src"
+                 destdir="javaDoc"
+                 author="false"
+                 version=""
+                 use="false"
+                 windowtitle="jcoref API"
+		 classpath="${jxip.jar}"
+        >
+            <doctitle><![CDATA[<h1>XIP jcoref API</h1>]]>
+            </doctitle>
+            <bottom><![CDATA[<i>Copyright &#169; 2008 Xerox All Rights Reserved.</i>]]>
+            </bottom>
+        </javadoc>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="dist" />
+        <jar jarfile="dist/jcoref.jar" update="no" basedir="build">
+            <zipfileset src="${jxip.jar}" />
+        </jar>
+    </target>
+
+    <target name="compile" depends="clean">
+        <mkdir dir="build" />
+        <javac srcdir="${basedir}/JCoref/src" destdir="build" classpath="${jxip.jar}" >
+        </javac>
+    </target>
+
+    <target name="clean" depends="" >
+        <delete dir="build"/>
+        <delete dir="dist"/>
+        <delete dir="gram"/>
+        <delete dir="jcoref"/>
+        <delete dir="javaDoc"/>
+        <delete file="jcoref.zip"/>
+    </target>
+
+</project>

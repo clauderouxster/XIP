@@ -1,0 +1,56 @@
+features:
+[anous:+]
+
+variables:
+int i1;
+int i2;
+xml courant;
+xml parent;
+dictionary attributes;
+
+string id;
+string task;
+string ent;
+string tag;
+//string tAnnotation;
+
+Script:
+
+@_current()->set(courant);
+xmlparent(courant,parent);
+attributes="";
+xmldata(parent,attributes);
+
+xmltag(courant,tag);
+//tAnnotation=tag+"Annotation";
+
+ent=attributes["entailment"];
+id=attributes["id"];
+//task=attributes["task"];
+task="toto";
+
+print ("ID="+id+"  ENT="+ent+"  "+task+"\n");
+
+if ($1(#1,#2)) {
+	#1[anous=+];
+	#2[anous=+];
+}
+
+@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/text)->Create(@sentence);
+|#1[anous]| {
+	i1=nodenumber(#1);
+	@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/syntax/graph/node[@id=i1]/word[@id=i1])->Create();
+	@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/syntax/graph/node[@id=i1]/word[@id=i1]/lemma)->Create(#1[lemme]);
+	@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/syntax/graph/node[@id=i1]/word[@id=i1]/token)->Create(#1[surface]);
+	@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/syntax/graph/node[@id=i1]/word[@id=i1]/pos)->Create(#1);
+}
+
+if ($1(#1,#2)) {
+    i1=nodenumber(#1);
+    i2=nodenumber(#2);
+	@mydb(/entailment-corpus/pair[@id=id][@entailment=ent][@task=task]/tAnnotation/syntax/graph/edge[@to=i1][@name=$1][@from=i2])->Create();
+}
+
+final:
+id=@pathname+".xml";
+@mydb()->save(id);

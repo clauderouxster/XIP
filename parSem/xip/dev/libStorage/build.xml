@@ -1,0 +1,137 @@
+<project name="xip" default="compile" basedir=".">
+
+<property name="name"	 		value="xip" />
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"			value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}buildInclude.xml" />
+
+<!--     project properties -->
+<!-- debug,log -->
+<property name="cc.debug"		value="${cc.debug.common}" />
+<property name="log.level"		value="verbose" />
+<!-- dir -->
+<property name="src.dir"		location="${basedir}${fs}src" />
+<property name="python.dir"             location="${basedir}${fs}..${fs}..${fs}..${fs}python${fs}${python.version}" />
+<!-- define -->
+<property name="define.common" 		value="" /> 
+<property name="define.windows" 	value="WIN32, XIPDLL_EXPORT" />
+<property name="define.solaris" 	value="UNIX" />	
+<property name="define.linux" 		value="UNIX, XIPSTDC" />
+<!-- include -->
+<property name="inc.dir"		location="${basedir}${fs}include" />
+<!-- doc -->
+<property name="doc.name"		value="libStorage" />
+<!-- compiler arg -->
+<property name="compiler.arg.solaris"	value="-w" />
+<property name="compiler.arg.linux"	value="-w" />
+<property name="compiler.arg.windows"	value="" />
+<!-- linker arg -->
+<property name="link.arg.solaris"	value="-mt" />
+<property name="link.arg.linux"		value="-mt" />
+<property name="link.arg.windows.exe"	value="" />
+<property name="link.arg.windows.lib.static"	value="" />
+<property name="link.arg.windows.lib.shared"	value="" />
+<!-- source file names -->
+<property name="src.files" value="
+	agde.cxx, automate.cxx, entities.cxx, level.cxx, rcaconnect.cxx, sinput.cxx, vecteur.cxx, corpusStorage.cxx	
+"/>
+
+<target name="test" depends="compile" description="" >
+	<echo message="------------- libStorage TEST: start ---------- " />
+	<ant antfile="build.xml" dir="${basedir}${fs}test${fs}test1" target="test" inheritAll="false" />
+	<echo message="------------- libStorage TEST: end ---------- " />
+</target>
+
+<!-- ******************************************** compile and link all ************************************* -->
+<target name="compile" depends="mySQL++, setCommonProperties" description="compile And Link all " unless="solaris" >
+	<echo message="------------- libStorage compile: start ---------- " />
+	<record name="${log.dir}${fs}compile" loglevel="${log.level}" action="start"/>
+		<antcall target="sharedLib" inheritAll="false" />
+	<record name="${log.dir}${fs}compile"  action="stop"/>
+	<echo message="------------- libStorage compile: end ---------- " />
+</target>
+
+<target name="mySQL++" depends="" description="" >
+	<ant antfile="build.xml" dir="${basedir}${fs}mySQL++" target="compile" inheritAll="false" />
+</target>
+
+<!-- ********************************************  library: compile and link shared lib  ************************************* -->
+<target name="sharedLib" depends="setCommonProperties" description="compile and link shared lib ">
+	<property name="shared.lib.obj.dir.name" value="libStorage" />
+	<property name="sharedLibOutfile" value="libStorage" />
+	<property name="sharedLibRecordFile" value="${log.dir}${fs}${shared.lib.obj.dir.name}" />
+	<property name="sharedLibObjDir" location="${obj.dir}${fs}" />
+	<property name="sharedLibDir" location="${lib.dir}${fs}" />
+        <record name="${sharedLibRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibDir}" />
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${sharedLibObjDir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="shared" runtime="dynamic" outfile="${sharedLibDir}${fs}${sharedLibOutfile}" >
+		<!-- C++ compilation -->
+		<compiler name = "${compilerCplus.name}" debug="${cc.debug}">
+			<compilerarg value="${compiler.arg.solaris}" location="start" if="solaris" />
+			<compilerarg value="${compiler.arg.linux}" location="start" if="linux" />
+			<compilerarg value="${compiler.arg.windows}" location="start" if="windows" />
+			<fileset dir="${src.dir}" includes="${src.files}"  />
+			<includepath>
+				<pathelement location="${inc.dir}"/>
+				<pathelement location="${mySQL.inc.dir}"/>
+				<pathelement location="${mySQL++.inc.dir}"/>
+			</includepath>
+			<defineset define="${define.common}"/> 
+			<defineset define="${define.windows}" if="windows"/> 
+			<defineset define="${define.solaris}" if="solaris"/> 
+			<defineset define="${define.linux}" if="linux"/>
+		</compiler>
+		<!-- link -->
+		<linker name= "${compilerCplus.name}" debug="${cc.debug}" >
+			<linkerarg value="${link.arg.solaris}" location="start" if="solaris" />
+			<linkerarg value="${link.arg.linux}" location="start" if="linux" />
+			<linkerarg value="${link.arg.windows.lib.shared}" location="start" if="windows" />
+			<syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+			<syslibset libs="${system.libCplus.names}" if="linux"/>
+			<syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+			<libset dir="${mySQL.lib.dir}" libs="libmysql" if="windows"/>
+			<libset dir="${mySQL.lib.dir}" libs="mysqlclient" if="linux"/>
+			<libset dir="${mySQL++.lib.dir}" libs="mysql++" />
+			<libset dir="${python.dir}${fs}${platform}" libs="python24" if="windows"/>
+			<libset dir="${basedir}${fs}..${fs}lib${fs}${platform}${fs}sharedLibPy" libs="xips" />
+		</linker>
+	</cc>
+	<record name="${sharedLibRecordFile}" action="stop"/>	
+</target>
+
+<!-- ********************************************  property  ************************************* -->
+<target name="setCommonProperties" depends="platformSetting, mysql, mysql++" description="action before compiling">
+	<property name="lib.dir" 		location="${lib.dirs}${fs}${platform}" />
+	<property name="obj.dir" 		location="${obj.dirs}${fs}${platform}" />
+	<property name="bin.dir" 		location="${bin.dirs}${fs}${platform}" />
+	<property name="log.dir" 		location="${log.dirs}${fs}${platform}" />
+	<mkdir dir="${lib.dir}" />
+	<mkdir dir="${obj.dir}" />	
+	<mkdir dir="${bin.dir}" />	
+	<mkdir dir="${log.dir}" />
+</target>
+
+<target name="mysql++" depends="" description="mySql++ setting" >
+	<property name="mySQL++.dir"           	location="${basedir}${fs}mySQL++" />
+	<property name="mySQL++.lib.dir"       	location="${mySQL++.dir}${fs}lib${fs}${platform}" />
+	<property name="mySQL++.inc.dir"       	location="${mySQL++.dir}${fs}mysql++-2.0.4${fs}lib" />
+</target>
+
+<target name="mysql" depends="" description="mySql setting" >
+	<property name="mySQL.dir"           location="${basedir}${fs}mySQL${fs}4.1.14${fs}${platform}" />
+        <property name="mySQL.inc.dir"       location="${mySQL.dir}${fs}include" />
+        <property name="mySQL.lib.dir"       location="${mySQL.dir}${fs}lib" />
+
+</target>
+
+<target name="localCleanAll" depends="" >
+	<ant antfile="build.xml" dir="${basedir}${fs}mySQL++" target="cleanAll" inheritAll="false" />
+	<ant antfile="build.xml" dir="${basedir}${fs}test${fs}test1" target="clean" inheritAll="false" />
+</target>
+
+</project>

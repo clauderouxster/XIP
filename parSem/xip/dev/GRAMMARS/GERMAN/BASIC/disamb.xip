@@ -1,0 +1,782 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb.xip
+//! Content:	Disambiguation rules fornon-ambiguous contexts
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	08-Nov-2006
+//! Updated:	08-Nov-2006
+//! Updated:	30-Oct-2009
+//!
+//! ENCODING : UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging: 
+
+
+// -----------------------------------------------------------------------------
+// DERIVATIONS: remove unmarked words (cf. lexicon_deriv) 
+//:: Der Abgeordnete und der Wahlforscher
+
+2> noun<no_deriv> = noun<no_deriv>, ?[noun:~].
+2> noun<no_deriv,start2:~> = ?<adj:~>.
+
+// -----------------------------------------------------------------------------
+// ELISIONS: prefer non-elided readings
+3> ?<elid> = ?<elid:~>.
+3> ?<elid_s> = ?<elid_s:~>.
+
+// -----------------------------------------------------------------------------
+// SPELLING: prefer new spellings
+3> ?<oldspell> = ?<oldspell:~>.
+
+// -----------------------------------------------------------------------------
+// Present participles
+// consider present participles always as adjectives
+4> verb[ppres] = ?<verb,ppres:~>, ?<verb:~>.
+4> verb[pprzu] = ?<verb,pprzu:~>, ?<verb:~>.
+
+// Verb prefixes
+// remove analyses "hin=zu=nehmen" 
+5> verb<lemma:"?*=zu=?*"> = verb[lemma:~"?*=zu=?*"],?[verb:~].
+
+// modals 
+5> verb<modal>, verb<modal:~> = verb[modal], ?[verb:~].
+
+// word based choices
+10> adv<lemma:erst> = adv.			// not ordinal
+10> adv<lemma:längst> = adv.			// not verb or adjective
+10> adv<lemma:schon> = adv.			// not verb !But: "schon deine Nerven!"
+10> conj<lemma:während> = conj,prep.		// not present participle
+10> conj<lemma:weil> = conj.			// not verb imperative
+10> adv<lemma:nun> = adv.			// not conjunction
+10> verb<inf,lemma:"äußern"> = verb.		// not adjective ("äußern")
+10> noun<lemma:Heute> = | det;prep[det] | noun.	// not adverb or verb
+10> adv<lemma:heute> = adv.			// not verb (past tense of "heuen")
+10> adv<lemma:möglichst> = adv.		// not adjective
+10> noun<lemma:Herbst> = ?[adj:~].		// not superlative "herbst"
+10> noun<lemma:Mehr> = | det;prep[det] | noun.	
+10> noun<lemma:Bilder>,noun<lemma:Bild>	= noun<lemma:Bild>.
+10> adj<lemma:doppelt> = adj.			// not verb
+10> adv<lemma:lange> = ?[verb:~].		// no verb
+10> prep<cap,abbr>,num = ?[prep:~].			// "V." 
+10> noun<lemma:Streik>,verb<imp> = noun.		// not imperative.
+// prepositions as quantifing particles
+// :: es sind unter/ptcl[padv] 100 Leute
+10> adv<prenum> = ?[prenum:~] | ?[card:~] | .
+
+10> punct,symbol = ?[symbol:~].
+
+// =========================================================================
+// words that can not appear at the end of a sentence
+
+15> prep[end2] = ?[prep:~].
+15> prep = ?[prep:~] | punct[comma] |.
+15> det[end2] = ?[det:~].
+15> det = ?[det:~] | punct[comma] |.
+
+15> ptcl[mod_adj,end] = ?[mod_adj:~].
+15> ptcl[mod_adj] = ?[mod_adj:~] | punct[comma];punct[sent] |.
+
+
+// =========================================================================
+// words that cannot appear at beginning of a sentence
+15> postp[start2] = ?[postp:~].
+15> postp = | punct; conj | ?[postp:~].
+15> ptcl[pref,start2] = ?[pref:~].
+15> ptcl[pref] = | punct[sent]; punct[comma]; conj[subord] | ?[pref:~].
+
+
+
+
+// -----------------------------------------------------------------------------
+// at beginning of sentence
+// :: Bei dem Auftritt versagte Herr Bei.
+18> prep[noun,start2,guessed:~] = ?[noun:~] ~|verb|.
+
+//:: Leider, Heute, Mehr, ...
+18> adv[noun,start2,guessed:~] = ?[noun:~].
+
+//:: All die schönen Sachen
+18> noun[predet,start2] = ?[noun:~] | det |.
+
+//:: Alternative Lösungen ...
+//:: Organisches Material ...
+8> noun[start2,adj,prep:~] = ?[noun:~] | adj;noun |.
+8> noun[start2,adj,prep:~] = ?[adj:~] | prep;det |.
+
+//:: Verlegen die Daumen drehend hört er zu
+8> adj[noun,start2] = ?[noun:~] | ?*[punct:~,finite:~], adj[ppres] |.
+
+//:: Drei Spieler setzen auf die Drei.
+8> num[card,noun,start2] = ?[noun:~].
+
+
+//:: Einige sind hier.
+8> pron[noun,start2] = ?[noun:~].
+
+
+// =========================================================================
+// verb prefix 
+// es steht bevor/ptc[pref]
+// er kommt bevor/conj es regnet
+// er fängt an zu singen
+
+9> ptcl[pref,end] = | verb[req_pref], ?* | ptcl[pref].
+9> ptcl[pref] = | verb[req_pref], ?* | ptcl[pref] | conj; punct; ptcl[infzu] |.
+9> ptcl[pref] =  ?[pref:~] ~| punct;conj[coord]; ptcl[infzu] | .
+
+
+// numeral "ein" not at end of sentence
+10> ptcl[pref,num,end] = ?[num:~].
+10> ptcl[pref,num] = ?[num:~] | punct[sent] |.
+
+// imperative ... only at beginning of a sentence
+11> verb[imp] = | ?[punct:~, coord:~] | ?[imp:~].
+11> verb[imp] = | verb[finite,imp:~], ?* | ?[imp:~].
+
+// imperatives or finite verbs
+//:: gebt ihr das Buch 
+//:: seht ihr die Fehler?
+//:: schaut ihr genau, seht ihr die Fehler
+11> verb[imp] = ?[imp:~] | pron[nom], ?*[exclam:~], ?[exclam:~,end] |.
+
+// =========================================================================
+// adjective or pronoun
+//:: einer der wenigen
+12> pron[adj] = |det| ?[pron:~].
+
+//:: Vieles Gute
+//:: Vieles hat viele Möglichkeiten.
+//:: Vieles, was wir wollen
+12> pron[adj,end] = ?[adj:~].
+12> pron[adj] = ?[adj:~] | verb[not_verb:~];punct[sent];punct[comma] |.
+
+//:: es geht ihm etwas besser
+//:: er hat etwas Neues gekauft
+//:: er sieht etwas
+12> adv<lemma:etwas> = ?[adv:~] | ?[comp:~] |.
+12> adv<lemma:etwas,end> = ?[adv:~].
+
+// -----------------------------------------------------------------------------
+// GUESSER ITEMS
+
+15> noun[guessed] = noun |verb[finite] |.
+
+
+// -----------------------------------------------------------------------------
+// WORD BASED PREFERENCES
+// -----------------------------------------------------------------------------
+
+// music symbols
+//:: es ist eine Fuge in es	
+//   =pron                =symbol
+//:: Die Note des im Werk des Komponisten Bach.
+//            =symbol     =det 
+//!: Die Note des im Schloss gespielten Werkes.
+//            =det
+
+20> symbol[music,cap,start2:~] = symbol.
+//20> symbol[music] = | det[neut,sg], adj*[attr] | symbol.
+20> symbol[music] = ?[music:~].
+
+// CHECK !!!!!
+////:: die achten Spieler achten auf den Abstieg
+//21> adj<lemma:acht>,verb<lemma:achten> = ?[adj:~] | punct[sent];det;verb[not_verb:~] |.
+//		
+
+
+// "nahe"
+//:: weil er nahe 	(ignore!)
+//:: er ist nahe des Hauses; ein Haus nahe München
+//:: die Zeit ist nahe; das nahe Ereignis; nahe Ereignisse
+21> prep<lemma:nahe> = prep | det[gen]; noun[proper,town] |.
+21> prep<lemma:nahe> = | ?[prep:~,det:~] | prep | noun[gen,nom:~,acc:~,dat:~] |.
+
+// "zunächst"
+//:: den Hâusern zunÄchst	(ignore ???)
+//:: zunächst der Häuser 	(ignore ??
+//:: er kommt zunächst
+21> prep<lemma:"zunächst">,adv = adv.
+
+// "laut"
+//:: laut Aussagen der anderen
+//:: Laut sind nur die anderen
+//:: weil sie laut Aussagen aller laut sind.
+//:: er ist laut geworden
+21> prep<lemma:laut>,adj<pred> = adj | verb |.
+21> prep<lemma:laut>,adj<pred> = prep | ?[gen];?[dat] |.
+
+// Noun or preposition
+//:: Angesichts der Tatsache 
+//:: Im Schweiße seine Angesichts
+//:: Kraft deines Amtes
+21> prep<gen>,noun =  prep | det[gen];adj[gen], ?*, noun[gen] |.
+21> prep<gen>,noun =  ?[noun:~] | ?*, noun[gen] |.
+
+
+// adverbial "mit" *****
+//:: er kommt mit		(verb prefix)
+//:: er kommt mit uns 	(preposition)
+//:: er ist mit dabei	(adverb)
+
+
+//:: Die einen wollen dies, die anderen wollen das
+21> adj<lemma:ein>,det = | det#1[def] | adj | verb[finite] |
+	where ( TestAgree(#0,#1) ).
+
+// "einiges"
+//:: einiges Wasser
+//:: es gibt einiges
+21> adj[pron] = ?[pron:~] | adj*, noun |.
+21> adj[pron] = ?[adj:~] | verb[finite] |.
+
+// "noch"
+//:: er kommt noch
+//:: er kommt weder Freitag noch Samstag
+21> conj<lemma:noch> = ~| conj[lemma:weder], ?* | adv.
+
+
+//// CHECK !!!!
+//:: sowie er kommt
+//:: Autos sowie ihre Fahrer
+21> conj[coord,subord] = | ?[comma:~,quote:~]| ?[subord:~] .
+
+
+22> noun[conj,start2:~] = noun.		// Wenn er kommt. Ohne Wenn und Aber
+22> noun[conj,start2] = conj.
+
+//: mehr als 70 Teilnehmer
+//: weniger als drei Spieler
+24> adv<quant,comp> = adv[quant,comp] | conj%[lemma:als], num%[card] |.
+
+//:: über 30
+24> adv<prenum> = | prep;det | adv<prenum> | ?[card] |.
+
+//:: rund 20; etwa 5 Millionen
+24> adv[prenum,prep:~] = adv<prenum> | ?[card] |.
+
+// "ein", "eine", "einen"
+//!: mehr als ein Spieler
+
+//: der eine oder andere
+25> adj, det = | det[def] | adj | conj[coord] |.
+25> adj, det = ?[adj:~,verb:~,num:~] .
+
+//: ein, einen
+25> det<lemma:ein> =  ?[verb:~,num:~].
+
+// "sein"
+//:: das ist sein, weil es sein ist
+//:: das ist sein Buch, sein ganzer Stolz
+//:: Es muss schon lange geschehen sein
+//:: weil es jetzt unbedingt sein muss
+//!: Er muss geschlagen worden sein
+//25> pron<lemma:sein>, verb =  | verb<aux,lemma:sein> | pron | punct[sent];punct[comma] |.
+25> pron<lemma:sein>, verb =  pron | verb<aux,lemma:sein> |.
+25> pron<lemma:sein>, verb =  verb | ?*[skip], punct[comma];punct[sent];punct[dash];verb |.
+25> pron<lemma:sein,end>, verb =  verb.
+//25> pron<lemma:sein>, verb =  det.
+
+
+
+// "mehr"
+25> verb, adv<lemma:mehr> = ?[verb:~,noun:~].
+
+// "mehr", "weniger"
+26> det[adv,quant]	= det | noun |.
+
+// viel adverb or attributive quantifier
+//:: er spielt jetzt viel besser	-> ADV
+//:: der viel gepriesene Autor		-> ADV
+//:: er hat viel Wein getrunken	-> DET_QUANT
+//:: er hat (einen) viel besseren Wein getrunken	-> ADV _or_ DET_QUANT
+26> det[adv,lemma:viel] = ?[adv:~] | adj[comp:~,deverbal:~] |.
+26> det[adv,quant] = adv.
+
+// Essen, Singen, etc.
+//:: Er wohnt in Essen
+//:: Er kommt zum Essen
+26> noun<town:~>,noun<town> = |?[det], adj* | ?[town:~].
+
+// "sondern"
+//:: nicht heute sondern morgen komen wir.
+//:: Er will keine Autos, sondern Bücher.
+//:: Sie sondern die schlechte Ware aus.
+26> conj<lemma:sondern> = | ?[neg], ?* | conj.
+26> conj<lemma:sondern> = verb |?*, ptcl[pref,lemma:aus] |.
+26> conj <lemma:sondern> = conj.
+
+
+
+// ==================================================
+// Some word based rules to choose lemmas
+
+// old dative forms in -e
+//:: im Grunde genommen
+//:: in diesem Falle
+30> noun<dat,arch> = ~| det[dat,fem:~,sg];prep[dat] | ?[arch:~].
+
+// conjunction or preposition
+// :: Er kommt während Otto schläft
+// :: Er kommt während der Ferien.
+31> conj<lemma:während> = conj | ?[dat:~,gen:~] |.
+31> conj<lemma:während> = |punct[comma] | conj | (adv*,adj)*, noun[is_nom] |.
+31> conj<lemma:während,start2> = conj | (adv*,adj)*, noun[is_nom] |.
+
+// CHECK !!!!!
+//:: Bis es soweit ist
+//:: Bis Montag, bis morgen, bis Juli
+//:: Bis 13 Uhr
+//:: Bis die Sache ausgestanden ist
+//:: Bis zum nächsten Mal
+//:: Bis auf ihn.
+31> conj<lemma:bis> = prep | ?[temporal];prep;?[time];?[date] |.
+31> conj<lemma:bis> = prep | num[card], noun[lemma:Uhr] |.
+31> conj<lemma:bis> = conj.
+
+// numerals
+//:: 50 bis 60 Prozent 	CHECK????
+31> conj[coord],prep = | ?[card] | conj<coord> | ?[card] |.
+31> ?[num_conj]	%= | ?[card] | conj[coord=+] | ?[card] |.
+
+// :: Ob/conj er kommt, weiss ich nicht
+// :: Er grübelt ob/prep dieser Sache (*archaic*)
+31> conj<lemma:ob,start2> = conj .
+31> conj<lemma:ob> = | punct;?[coord] | conj .
+
+
+// adverb or conjunction
+// :: Damit kann er nichts anfangen
+// :: Damit er anfangen kann
+// :: Er kann schwimmen und damit auch über den Fluss kommen
+
+31> conj[subord],adv = | punct*[quote] | adv | ?<*verb, finite> | .
+31> conj[subord],adv = | punct*[quote] | adv | ?[nom:~] | .
+31> conj[subord],adv = | punct*[quote] | conj | ~verb[finite] |.
+
+31> conj[subord],adv = |punct[comma]| conj | ~verb[finite] |.
+31> conj[subord],adv = adv.
+
+
+// preposition, particle or as adverb
+//:: Das Spiel ist aus.
+//:: weil das Licht noch an ist.
+//:: weil er mit dabei ist.
+//31> adv,prep = ?[adv:~] | det;adj;noun;pron |.
+
+31> adv,prep = ?[adv:~] | det;adj[verb:~];noun[verb:~];pron |.
+31> adv,prep = ?[adv:~] | adv*, adj[verb:~] |.
+
+
+// verb lassen vs. adjective lass
+32> verb<lemma:lassen,finite>, adj<attr> = | ?[det:~] | ?[adj:~].
+
+// verb planen vs. adjective plan
+32> verb<lemma:planen,finite>, adj<attr> = | ?[det:~] | ?[adj:~].
+
+// remove predicative adjective reading for "wollen"
+// except for context  "ist wollen
+33> verb[adj,pred,modal] = | verb[aux,lemma:sein] | adj[pred] .
+33> verb[adj,pred,modal] = adj[pred]  | verb[aux,lemma:sein] |.
+33> verb[adj,pred,modal] =  ?[pred:~] .
+
+
+// 					checked AS@18/02/2009
+//:: in ganz Deutschland
+//:: er ist ganz schmutzig
+50> adv[adj,verb:~] = ?[adj:~] | prep; adv; adj[pred]; verb |.
+
+///: CHECK !!!!	xxx
+////:: der Platz ist belegt
+////:: er belegt den Kurs
+//52> adj<pred>, verb = verb | adv; det |. 
+
+
+// -----------------------------------------------------------------------------
+// verb or noun (at beginning of sentence)
+// Infinites at begining of sentence
+// :: Entscheiden/verb[inf] muss das der Chef.
+// :: Eislaufen/noun[ninf] macht Spass
+60> noun[verb,inf] = verb[inf] | (conj[coord], verb[inf]), verb[finite,sub_inf] |.
+
+// :: Folgen des Unfalls sind noch nicht bekannt.
+// :: Folgen Sie den Anweisungen.
+// :: Folgen die Kinder den Regeln ?
+//:: Tritt ein Fehler auf, ...
+
+61> noun[verb,start2] = ?[verb,finite] | pron[nom] | .
+61> noun[verb,start2] = ?[verb,finite] | ?*, punct[quest] |.
+61> noun[verb,start2] = ?[verb:~] | (det[gen]), adj*, noun[gen], verb[finite] |.
+61> noun[verb,start2] = ?[noun:~] | (det[nom]), adj*, noun[nom] |.
+
+61> noun[verb,imp:~] = ?[verb:~].	   // ????
+
+
+
+
+// -------------------------------------------------------------------------------------------
+// markers
+
+// ein bisschen; ein wenig
+//:: er ist ein bisschen besser als sie
+
+100> det<lemma:ein,neut,sg> = det<neut,sg,quant=+> | (adj%<lemma:klein,neut,sg>), adj%<quant,lemma:bisschen> |.
+
+
+//: Kinder- und Jugendheim
+100> punct[comma] = | trunc | punct<comma,coord=+>.
+
+
+
+// =========================================================================
+// adjective particles
+
+
+// "am"
+//::  das ist am besten am besten Platz der Welt.
+
+118> ptcl<lemma:am> = ptcl[super] | adj[sup_am,end] |. 
+118> ptcl<lemma:am> = ptcl[super] | adj[sup_am], ?[noun:~] |. 
+118> ptcl<lemma:am> = ?[super:~].
+
+//:: er ist allzu/ptcl[pos] klein
+120> adj = | ptcl[mod_adj,super, noambiguity] | adj<super>,adv<super>.
+120> adj = | ptcl[mod_adj,comp, noambiguity] | adj<comp>,adv<comp>.
+120> adj = | ptcl[mod_adj,pos, noambiguity] | adj<pos>,adj<invar>,adv.
+
+
+// adjective or noun
+//:: Stuttgarter Bürger kaufen Berliner in Leipziger Läden.
+120> adj[invar,upp],noun = adj | noun |.
+
+// ===========================================================
+// verb in context of disambiguated infinitive particle
+
+152> verb[inf] = | ptcl[infzu, noambiguity] | verb[inf] .
+
+// ============================================================
+// check positive conditions
+
+// check that right part of circumpositions has the approriate left part.
+// von ... ab/an/aus/auf
+161> postp[crc] = | prep#1, (det), ?*[noun:~], noun |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+161> postp[crc] = | prep#1, (adv;adj[pred])+ |  ?[crc2 = +] ,
+	where ( #1[req_prep] :: #0[req_prep] ).
+
+// eliminate candidate otherwise
+162> postp[crc2:~] = ?[crc:~].
+
+// check that a verb prefix is preceeded (somewhere) by a verb
+165> ptcl[pref] = ~| verb[req_pref], ?* | ?[pref:~].
+
+// if a verb is followed by a unique prefix, dont allow unprefixed reading
+166> verb[v1] = verb[v1],?[verb:~] | ?*[finite:~], ptcl[pref,noambiguity] |.
+
+// ----------------------------------------------------------------------------------------------------------
+// conjunction or preposition "um", "ohne", "anstatt"
+// conj[cinf] = {um,ohne,anstatt}
+
+170> conj[cinf] = ?[cinf:~] ~| ?*, ptcl[infzu];verb[infzu] |.
+
+// :: er kommt (,) um (an dieser Sache) zu arbeiten
+// :: er geht, ohne sie verlassen zu haben
+170> conj<cinf> = conj[cinf] | ?*[inf:~,punct:~], (?[inf];?[ppast]), ptcl[infzu], verb[with_zu] |.
+
+// :: er kommt (,) um an dieser Sache mitzuarbeiten
+170> conj<cinf> = conj[cinf] | ?*[inf:~,punct:~], verb[infzu] |.
+
+
+
+// -----------------------------------------------------------------------------------------------------------
+// Ein Berliner/adj Bürger
+// Er gibt einem Berliner/noun das Geld.
+
+171> noun[adj,attr,invar] = | ?[det];?[adj] | adj[attr,invar] | noun | .
+
+// -----------------------------------------------------------------------------
+// dates
+// :: am 17.3.99
+171> num[date] = | prep[det] | ?[num:~] .
+171> num[date,start2] = ?[num:~] | punct |.
+
+
+173> conj[subord,pref] = | ?[comma:~] | ?[subord:~] | conj[coord] |.
+
+171> adv<lemma:etwa> = | conj[lemma:wie] | adv[sadv=+]. 
+
+// -----------------------------------------------------------------------------
+// subordinating conjunction or something else
+
+// :: Er geht, damit/conj[subord] er seine Ruhe hat.
+// :: Er geht damit/adv nach Hause.
+//CHECK: er geht bevor es regnet 
+//* there should be a comma, but it is somtetimes missing
+//175> conj[subord,ptcl:~] = | ?[coord:~,comma:~,semicolon:~,colon:~] | ?[subord:~] .
+
+// :: Da/adv sind manche Probleme zu lösen.
+// :: Da/conj[subord] viele Probleme zu lösen sind.
+175> conj<subord> = ?[subord:~] | ?<*verb> |.
+
+
+
+// comparative or positive
+//: ein kleiner Mann
+//: er ist kleiner als
+176> adj[comp,pos] = ?[pos:~] | ?[lemma:als] |.
+
+// NEW NEW NEW 
+
+// PRE-NOMINALS (-> TERMS)
+
+
+// possessive "ihr"
+//:: das ist ihr Haus.
+//:: Gebt ihr das Buch!
+//:: Gebt ihr das Buch weiter ?
+//:: Kommt das an, gebt ihr es weiter.
+180> det<lemma:ihr>, pron = pron | verb[finite] |.
+
+// possessive !!!!! CHECK !!!!!
+//:: das sind die meinen/noun
+//:: Mein/det Bruder
+//:: Mein/pron ist die Rache
+//:: es geht ihr gut, gebt iht das Buch
+//:: ihr gut gehender Laden wird verkauft
+
+
+180> det[poss,noun] = | det[def,rel:~] | noun.
+180> det[pron,poss] = pron | verb[pred];det;prep |.
+180> det[pron,poss] =  | verb[pred] | pron | punct |.
+180> det[pron,poss]	=  pron | adv;adj[pred,attr:~], ~adj[attr] |.
+180> det[pron,poss] = | prep | det.
+
+180> det[pron,poss] = ?[noun:~].
+
+// gender and number 
+
+
+
+Tagging:
+// -----------------------------------------------------------------------------
+// adjective or verb
+
+// :: mit weniger/mehr transmissiven [guessed] Auswirkungen
+200> adj[verb,guessed] = |prep, adv*| ?[verb:~,adv:~] | noun |.
+
+//:: Der Fahrer benutzte gute Reifen.
+//:: Der Fahrer hatte benutzte(,) gute Reifen.
+//:: Der Fahrer, der gewann, benutzte gute Reifen.
+
+240> adj<attr>,verb<finite> = | verb[finite] | ?[finite:~].
+240> adj<attr>,verb<finite> = | noun;pron[det:~], (punct[comma],?*,verb[finite],punct[comma]) | ?[attr:~] | adj[attr] |.
+
+
+// CHECK !!!!!!
+// :: mit schnellen/adj Autos
+// :: die schnellen/adj Autos
+// :: die Läufer schnellen/verb hervor
+// :: sie kommen schnell/adj hervor.
+//250> verb[adj] = | det[pron:~]; prep[infzu:~,adv:~] | ?[verb:~] .
+250> verb,adj = | det[pron:~] | ?[verb:~] .
+250> verb,adj = | prep[infzu:~,adv:~] | ?[verb:~] .
+
+
+// Sie weisen damit auch auf das Problem hin
+250> verb[pres],adj = verb | adv*, prep |.		// **CHECK**//
+
+//x//250> verb[adj,attr] = | ?[det:~] | ?[attr:~] | ptcl[pref]; punct[sent] | .
+
+//:: er orientiert/verb sich
+250> verb[finite] = verb[finite] | pron[refl] | .
+
+// leere/verb die Flaschen
+// leere/verb;adj Flaschen
+250> verb[adj,attr, finite] = ?[attr:~] | adv*, det | .
+
+// die leere/adj Flasche
+250> verb[adj,attr, finite] = | det[pron:~] | ?[verb:~].
+
+// :: So bekannte/verb Maier
+//!: Das eher demokratisch orientierte Miami
+250> verb[adj,attr, finite] = | det, (adv;adj)* | adj[attr] | noun |.
+250> verb[adj,attr, finite] = | ?[det:~] | ?[attr:~] | noun[proper] |.
+
+// :: benötigt mehr Kraft
+250> verb[adj,pred] = ?[pred:~] | (adv), ?[quant] |.
+
+// :: Es wird viel knapper ausfallen
+// :: Knapper nicht daran !
+250> verb<imp>,adj	= | ? | ?[imp:~] | verb |.
+
+// CHECK!!!!
+250> verb[adj,pred, finite] = | ?[pron,det:~,nom] | verb[finite] | ?[pred:~] |.
+
+// :: Das funktioniert so
+250> verb[adj,pred, finite] = | ?[pron,det:~,nom] | verb[finite] | ?[pred:~] |.
+
+// CHECK!!!!
+//: Er hat das Spiel verbessert.
+//: weil er das Spiel verbessert.
+250> verb[adj,deverbal] =  ?[deverbal:~] | punct[sent] |.
+//: produziert er Schuhe?
+250> verb[adj,deverbal,pred] =  ?[deverbal:~] ~| adv*, adj |.
+
+// :: dieser modernisierte/verb sein Haus
+// BUT: dieser modernisierte/adj Bau steht leer.
+250> verb[adj,attr, finite] = | ?[pron,nom] | verb[finite] | det, noun |.
+
+//:: So, ergänzt/verb Paul, geht es.
+250> verb[finite,pred] = | punct[comma], ?*[skip] | verb[finite] | det; noun |.
+
+
+
+274> verb[inf] = | ptcl[infzu,prep:~,prenum:~] | verb[inf]  .
+274> verb[inf,infzu] = | conj[infzu], ?*[infzu:~,punct:~] | verb[infzu] .
+274> verb[inf] = | conj[infzu], ?*[infzu:~,punct:~], ptcl[infzu] | verb[inf] .
+274> verb[inf] = verb[inf] | (ptcl[infzu]), verb[inf,modal] | .
+
+
+// no finite verb in infinitive subclause
+//:: Er tut es, ohne gehört/verb[ppast] zu werden.
+
+277> verb[finite] = | conj[cinf], ?*[infzu:~] | ?[finite:~] .
+
+
+// ----------------------------------------------------------------------------
+// finite verb or participle
+
+// Als Reiter verkleidet nahm er an den Spielen teil.
+290> verb[finite,adj] = verb[finite] | pron;det |.
+
+// :: die erneut/adj[pred] stattfindenen Verhandlungen
+291> verb[adj,pred] = | det[pron:~] | adj[pred] .
+291> verb[adj,pred] = | det | adj[pred] | ?*[adj,attr], noun |.
+
+// :: Die Schritte können vereinfacht/verb[ppast] werden
+// :: weil er es vereinfacht/verb[ppast] hat
+// :: ohne ihn gesehen zu haben
+291> verb[adj,pred,ppast] = ?[pred:~]  | (ptcl[infzu]), verb[sub_ppast];verb[modal] |.
+
+// :: da er immer noch leicht verwundert/adj lächelt
+// :: er hat immer verwundert/adj gelächelt/verb.
+291>  verb[adj,pred,ppast] =  adj[pred]  | verb[sub_ppast:~,modal:~] |.		// ????
+
+// CHECK !!!!!
+// :: er fährt gewollt/adj schnell.
+// :: er hat es gewollt/verb[ppast]
+// :: er lächelt immer noch leicht verwundert/adj
+291> verb[adj,pred,ppast] = | verb[sub_ppast,lemma:haben],  ?*[punct:~,subord:~] | ?[pred:~] .
+//291> verb[adj,pred,ppast,ppast_adj:~] = | verb[sub_ppast,lemma:sein],  ?*[punct:~,subord:~] | ?[pred:~] .
+//291> verb[adj,pred,ppast] = | verb[sub_ppast:~,modal:~],  ?*[punct:~,subord:~] | ?[verb:~],?[verb,ppast:~] .
+//291> verb[adj,pred,ppast] = ~| ?[sub_ppast], ?* | verb[ppast:~], ?[verb:~] ~| ?*, ?[sub_ppast] | .
+//
+// finite or infinitive verb
+// :: wir können/verb[finite] morgen kommen/verb[inf]
+// :: wir werden/verb[finite] nach Hause kommen/verb[inf] können/verb[inf]
+// :: weil sie morgen kommen/verb[inf] können/verb[finite] 
+// :: um damit anfangen/verb[inf] zu können/verb[inf]. 
+
+292> verb[finite,inf] = ?[finite:~] | ptcl[infzu], ?[modal] |.
+
+//:: Sollte er kommen, gehen wir.
+292> verb[finite] = verb[p1], ?[verb:~] | pron[nom,p1] |.
+
+// otherwise infinitive is always at the end of a main clause or
+// before a finite modal/auxiliary in a sub clause
+//292> verb[finite, inf] = ?<inf:~> | ?[punct:~, conj:~, sub_inf:~, ptcl:~] |.
+//292> verb[finite, inf,modal:~] = | ?[sub_inf], ?*[punct:~,conj:~] | ?[finite:~].
+//292> verb[finite, inf] = ?[finite:~] | ?*[inf], ?[sub_inf] |.
+//
+
+293> verb[finite, inf] = | conj[subord], ?*[finite:~] | ?[verb,inf:~] | punct[sent] | .
+293> verb[finite, inf] = | pron[rel,wh], ?*[finite:~] | ?[verb,inf:~] | punct[sent] | .
+
+// finite verb or participle
+293> verb[finite, ppast] = | verb[finite, sub_ppast], ?*[subord:~,punct:~] | ?[finite:~] .
+293> verb[finite, ppast] = ?[finite:~] | verb[sub_ppast] | .
+
+293> verb[finite, ppast] = | conj[subord], ?*[finite:~] | ?[verb,ppast:~] | punct[sent] | .
+
+// CHECK::
+//93> verb[finite, ppast] = | conj[subord:+], ?*[verb:~] | ?[finite:~] | verb[finite, sub_ppast] | .
+//93> verb[finite, ppast] = | noun[nom:+] | ?[ppast:~] | ?*[verb:~], verb[finite, sub_ppast:~] |.
+//
+
+// adjective or finite verb
+// :: sie studierten/verb[finite] Medizin
+// :: die studierten/adj Mediziner
+// :: er las und studierte mit viel Eifer
+294> verb[adj, attr, finite] = | verb[finite,aux:~,modal:~,noun:~], ?*[noun:~, pron:~, punct:~, coord:~] | ?[verb:~].
+294> verb[adj, attr, finite] = | det | ?[verb:~] | ?[noun] |.
+294> verb[adj, attr, finite] = | pron[nom,det:~] | ?[adj:~,ppast:~].
+294> verb[adj, attr, finite] = ?[adj:~] | prep |.
+
+// :: weil sich neue Aufgaben ergeben
+294> verb[adj,finite] = | conj[subord], ?*[finite:~] | ?[adj:~] | punct[sent];punct[comma] |.
+
+// CHECK:
+//94> verb[adj, finite] = | adj#1, conj[coord]; punct[comma] | ?[adj:+],
+//	 where (#0[agr]::#1[agr]).
+//94> verb[adj, finite] = | conj[subord]; adv[wh:+] | ?[adj:~].
+//94> verb[adj, finite] = | noun | ?[adj:~] | (det), (adj), ?[noun] |.
+
+
+// -----------------------------------------------------------------------------
+// finite verb or something else
+// don't allow sequence of 2 finite verbs
+// :: die grünen/adj grünen/verb[fin]
+295> verb[finite] = ?[finite:~] | ?<*verb,finite> |.
+295> verb[finite] = | ?<*verb,finite> | ?[finite:~] .
+
+// full verb  or auxiliary
+// main clause 
+//:: er ist nach Hause gegangen/verb[ppast]
+//:: er hat ihm das Buch gekauft/verb[ppast]
+//:: er wird morgen nach Berlin fahren/verb[inf]
+296> verb[sub_ppast] = verb[sub_ppast],?[verb:~] | ?*[semicolon:~,comma:~, colon:~,subord:~], verb[ppast] |.
+296> verb[sub_inf] = verb[sub_inf],?[verb:~] | ?*[semicolon:~,comma:~, colon:~,subord:~], verb[inf] |.
+
+// sub clause
+//:: weil er nach Hause gegangen ist.
+//:: weil er ihm das Buch gekauft hat.
+//:: weil er morgen nach Berlin fahren wird.
+296> verb[sub_ppast] = | verb[ppast] , (ptcl[infzu]) | ?[sub_ppast].
+296> verb[sub_inf] = | verb[inf] , (ptcl[infzu]) | ?[sub_inf].
+
+// otherwise: full verb
+//:: Er hat ein Buch.
+//:: Er wird rot.
+//:: Er ist Lehrer.
+//296> verb[aux] = ?[aux:~].
+
+
+// :: sie sind zu verschieden
+297> verb[adj] = | ptcl[mod_adj,noambiguity] | ?[verb:~].
+
+// relative or demonstrative pronoun
+//:: wer bittet, dem/pron[dem] wird gegeben
+//:: weil der/pron[dem] den Mann bittet, dem/pron[rel] er das Buch gegeben hat.
+//:: so war das/pron[dem] also
+300> pron[rel,dem] = | verb[finite] | ?[rel:~] .
+300> pron[rel,dem] = ?[rel:~] | verb[finite], ?[punct:~] |.
+
+
+
+// ambiguous proper names
+// ein klarer Sieg
+// die klare Sieg
+302> noun<proper,fem> = | det[fem:~], (adj)* | ?[proper:~].
+302> noun<proper,masc> = | det[masc:~], (adj)* | ?[proper:~].
+302> noun<proper,neut> = | det[neut:~], (adj)* | ?[proper:~].
+
+
+
+//
+//
+//

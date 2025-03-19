@@ -1,0 +1,128 @@
+
+function readLM(string LM_filename){
+     map lm;
+     file f(LM_filename, 'r');
+     string line;
+
+     for (line in f){
+          //println(line.split("\t"),line.split("\t").size());
+          if (line.split("\t").size()>2){
+               float v1 = line.split("\t")[0];
+               float v2 = line.split("\t")[2];
+               //float exp_v1 = v1.exp();
+               //float exp_v2 = v2.exp();
+               float maxV = -99;
+	       //println(exp_v1, "=",exp(line.split("\t")[0]));
+               lm[line.split("\t")[1].trim()] = [max(maxV, line.split("\t")[0]), max(maxV, line.split("\t")[2])];
+	       //lm[line.split("\t")[1].trim()] = [max(maxV, exp(v1)), max(maxV, exp(v2))];
+             
+          }
+          else if (line.split("\t").size()==2){
+               // println(line);
+	       // float v1 = line.split("\t")[0];
+               lm[line.split("\t")[1].trim()] = [max(-99, line.split("\t")[0]), 0];
+             
+          }
+     }
+     f.close();
+     return(lm);
+}
+
+function getZknowingY(string z, string y, map LM){
+     if (LM.test(y+" "+z)){
+          return(LM[y+" "+z][0]);
+     }
+     else{
+          float beta = 0;
+          float prob = -99;
+          if (LM.test(y)){
+               beta = LM[y][1];
+          }
+          if (LM.test(z)){
+               prob = LM[z][0];
+          }
+          return(beta+prob);
+     }
+}
+function getZknowingXY(string z, string xy, map LM){
+     //println(LM[xy+" "+z]);
+     if ( LM.test(xy+" "+z)){
+          println(xy+" "+z);
+          //print LM[xy+" "+z][0];
+          return(LM[xy+" "+z][0]);
+     }
+     else{
+          float beta = 0;
+          float prob = -99;
+     	  if (LM.test(xy)){
+             beta = LM[xy][1];
+             prob = getZknowingY(z, xy.split(" ")[1], LM);
+     	  }          
+          println(xy+" "+z, beta, prob);
+          return(beta+prob);
+     }
+}
+function getProb(string ngr, map LM){
+     //print ngr
+     if (ngr == "<s>") {
+          return(0);
+     }
+     //if ngr.split()[-1] == "</s>":
+     //    return getProb(" ".join(ngr.split()[:-1]), LM)
+     elif (ngr.split().size()==1){
+          if (LM.test(ngr)){
+               return(LM[ngr][0]);
+          }
+          else{
+               return(-99);
+          }
+     }
+     elif (ngr.split().size() == 2){
+          return(getZknowingY(ngr.split(" ")[1], ngr.split(" ")[0], LM));
+     }
+     elif (ngr.split().size() == 3){
+          return(getZknowingXY(ngr.split(" ")[2], ngr.split(" ")[0:2].join(" "), LM));
+     }
+}
+
+function getLMValue(string sent, map LM){
+     list line = [];
+     line.merge(sent.split(" "));
+     //line.pushlast("</s>");
+     float lm = 1;
+     list ngrams = [];
+     int w1;
+     for (w1 in range(0, line.size())){
+          string ngr = line[max(0, w1-2):w1+1].join(" ");
+          //print ngr, getProb(ngr, LM);
+          lm =lm + getProb(ngr, LM);
+     }
+
+     return(lm);
+}
+function getTrigramLMValue(string left, string curr, string right, map LM){
+     list line = [left, curr, right];	 
+     //line.pushlast("</s>");
+     float lm = 1;
+     list ngrams = [];
+     int w1;
+     for (w1 in range(0, line.size())){
+          string ngr = line[max(0, w1-1):w1+1].join(" ");
+          println("##", ngr, getProb(ngr, LM));
+          lm =lm + getProb(ngr, LM);
+     }
+
+     return(lm);
+}
+function getLMValue(string left, string curr, string right, map LM){   
+     return(getZknowingXY(right, left+" "+curr, LM));
+}
+//time mt;
+//print(mt);
+//map lm = readLM('/home/vnikouli/CB/semeval_total.lemma_lm3');
+//println(lm);
+//time new_mt;
+//print(new_mt-mt);
+//println(getLMValue("it taste the", lm));
+
+

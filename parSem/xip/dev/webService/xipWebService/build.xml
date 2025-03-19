@@ -1,0 +1,291 @@
+
+<project name="xipWebService" basedir="." default="all">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="../../../../common/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+    
+    <!-- -->
+    <target name="all" depends="server, client" />
+    
+    <!--  +++++++++++++++++++++++++++  mdi: machine extern network +++++++++++++++ -->
+    <target name="instal.mdi.all" depends=" client, instal.mdi, instal.mdi.gram" 
+        description="compile client and server, install the webService and the grammars on the machine mdi"/>
+    <target name="instal.mdi" depends="server, instal.mdi.server " 
+        description="compile server, install the webService on the machine mdi"/>
+        
+    <!-- -->
+    <target name="instal.mdi.server" depends="init" description="install the webService on the machine mdi">
+        <echo message=" install the webService on the machine mdi " />
+        <echo message="-----------------------------" />
+        <echo message=" http://${host}:8080 " />
+        <echo message="-----------------------------" />
+        <sshexec host="${host}" username="${login}" password="${passwd}" 
+            command="del c:/users/grondeau/axis2-1.4/repository/services/${aar.file}"/>
+        <!-- copy xipWebService.aar -->
+        <scp file="${aar.file}"
+             todir="${login}:${passwd}@${host}:c:/users/grondeau/axis2-1.4/repository/services" 
+	     verbose="true"
+        />
+        <sshexec host="${host}" username="${login}" password="${passwd}" 
+            command="del c:/users/grondeau/grammars.properties"/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" 
+            command="del c:/users/grondeau/log4j.properties"/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" 
+            command="del c:/users/grondeau/startAxis.bat"/>
+        <!-- copy properties, startAxis.bat files -->
+        <scp todir="${login}:${passwd}@${host}:c:/users/grondeau"  >
+            <fileset dir="${basedir}/mdi" includes="grammars.properties, log4j.properties, startAxis.bat" />
+        </scp>
+    </target>
+    
+     <!-- -->
+    <target name="instal.mdi.dll" depends="init" description="install dll used by xip">
+        <scp todir="${login}:${passwd}@${host}:c:/users/grondeau"  >
+            <fileset dir="${basedir}/../../filesToDeliver" includes="vcredist_x86.exe" />
+        </scp>
+    </target>
+    
+    <!-- -->
+    <target name="instal.mdi.gram" depends="instal.mdi.g1, instal.mdi.g2" />
+    
+    <!-- -->
+    <target name="del.mdi.g1" depends="init" >
+        <!--
+        <sshexec host="${host}" username="${login}" password="${passwd}"
+            command="rmdir c:/users/grondeau/grammars/english/entity "/>
+            -->
+    </target>
+    
+    <!-- -->
+    <target name="del.mdi.g2" depends="init">
+        <!--
+        <sshexec host="${host}" username="${login}" password="${passwd}"
+            command="rmdir c:\\users\\grondeau\\grammars\\french\\cacao"/>
+            -->
+    </target>
+        
+    <!-- -->
+    <target name="instal.mdi.g1" depends="init, del.mdi.g1" description="install the english entity gram on the machine mdi">
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars"/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars/english "/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars/english/entity "/>
+        <!-- copy english-entity grammar -->
+        <scp todir="${login}:${passwd}@${host}:c:/users/grondeau/grammars/english/entity" verbose="true" >
+            <fileset dir="${basedir}/../../../delivery/xip-9.63-47/grammar/english/entity" />
+        </scp>
+    </target>
+    
+    <!-- -->
+    <target name="instal.mdi.g2" depends="init, del.mdi.g2" description="install the cacao gram on the machine mdi" >
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars"/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars/french "/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars/french/cacao "/>
+        <sshexec host="${host}" username="${login}" password="${passwd}" command="mkdir c:/users/grondeau/grammars/french/cacao/FST "/>
+        <!-- copy cacao grammar -->
+        <scp todir="${login}:${passwd}@${host}:c:/users/grondeau/grammars/french/cacao" verbose="true" >
+            <fileset dir="${basedir}/../../GRAMMARS/cacao/french/BASIC" includes="*.grm, *.xip, ntmscript" />
+        </scp>
+        <scp todir="${login}:${passwd}@${host}:c:/users/grondeau/grammars/french/cacao/FST" verbose="true" >
+            <fileset dir="${basedir}/../../GRAMMARS/cacao/french/BASIC/FST" includes="*.fst" />
+        </scp>
+    </target>
+    
+    <!--  +++++++++++++++++++++++++++  server +++++++++++++++ -->
+    <target name="server" depends="server.compile, build.aar, instal" />
+    
+    <!-- -->
+    <target name="server.compile" depends="init" >
+        <javac srcdir="${basedir}/src" destdir="${build.dir.server.classes}" 
+        includes="xip/ws/server/**, xip/generic/**">
+            <classpath refid="server.class.path" />
+        </javac>
+    </target>
+    
+    <!-- -->
+    <target name="build.aar" depends="init" >
+        <delete dir="${build.dir.server.classes}/META-INF" />
+        <mkdir dir="${build.dir.server.classes}/META-INF" />
+        <copy file="${basedir}/src/META-INF/services.xml" 
+        tofile="${build.dir.server.classes}/META-INF/services.xml" overwrite="true" />
+        <jar basedir="${build.dir.server.classes}" destfile="${aar.file}" >
+            <zipfileset src="${basedir}/../../java/dist/jxip.jar" />
+        </jar>
+    </target>
+    
+    <!-- -->
+    <target name="instal" depends="init">
+        <copy file="${aar.file}" 
+        tofile="${repository.path}/xipWebService.aar" overwrite="true" />
+    </target>
+    
+    
+   <!-- ++++++++++++++++++++++++++++ client ++++++++++++++++++++ -->
+    <target name="client" depends="init, generate.wsdl, client.codegen-stub,
+        client.compile, client.jar, client.run " description="build the client and run it " >
+    </target>
+    
+    <!-- -->
+    <target name="generate.wsdl" depends="server.compile, build.aar">
+        <delete dir="${build.dir}/wsdl" />
+        <mkdir dir="${build.dir}/wsdl" />
+        <taskdef name="java2wsdl"
+                 classname="org.apache.ws.java2wsdl.Java2WSDLTask"
+                 classpathref="axis2.class.path"/>
+        <java2wsdl className="xip.ws.server.XipWebService"
+                   outputLocation="${build.dir}/wsdl">
+            <classpath refid="services.class.path" />
+        </java2wsdl>
+    </target>
+    
+    <!-- -->
+    <target name="client.codegen-stub" depends="init">
+        <delete dir="${stubSrc.dir}" />
+        <property name="wsdl" location="${build.dir}/wsdl/XipWebService.wsdl" />
+        <java classname="org.apache.axis2.wsdl.WSDL2Java">
+            <arg value="-uri" />
+            <arg value="${wsdl}" />
+            <arg value="-p" />
+            <arg value="xip.ws.stub" />
+            <arg value="-o" />
+            <arg value="${stubSrc.dir}" />
+            <arg value="-f" />
+            <classpath refid="axis2.class.path" />
+        </java>
+    </target>
+    
+    <!-- -->
+    <target name="client.compile" depends="init" >
+        <javac srcdir="${basedir}/src:${stubSrc.dir}" destdir="${build.dir.client.classes}" 
+        includes="xip/ws/client/**, xip/ws/stub/**" >
+            <classpath refid="axis2.class.path" />
+        </javac>
+    </target>
+    
+    <!-- -->
+    <target name="client.jar" depends="init">
+        <delete file="${dist.dir}/client.jar" />
+        <jar basedir="${build.dir.client.classes}" destfile="${dist.dir}/client.jar" >
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-class" value="xip/ws/client/Client"/>
+                <attribute name="Class-path" value="."/>
+            </manifest>
+            <zipfileset dir="${axis2.home}/lib" >
+                <include name="**/*.jar" />
+            </zipfileset>
+        </jar>
+    </target>
+    
+    <!-- -->
+    <target name="client.run" depends="init" description="launch a client to dev server">
+        <echo message="You have to launch the server dev before launching the client: startAxis" />
+        <java  classname="xip.ws.client.Client"  failonerror="true" fork="true" maxmemory="2600m">
+            <classpath refid="client.class.path" />
+        </java>
+    </target>
+    
+    <!-- -->
+    <target name="client.mdi.run" depends="init" description="send request to mdi machine">
+        <java  classname="xip.ws.client.Client"  failonerror="true" fork="true" maxmemory="2600m">
+            <classpath refid="client.class.path" />
+            <arg value="http://${host}:8080/axis2/services/xipWebService" />
+        </java>
+    </target>
+    
+    <!-- -->
+    <target name="client.run.jar" depends="init">
+        <java jar="${dist.dir}/client.jar"  fork="true"  failonerror="true" maxmemory="1024m">
+            <classpath refid="client.class.path" />
+        </java>
+    </target>
+    
+    <!-- -->
+    <target name="init" >
+        <property name="build.dir" location="${basedir}/build" />
+        <property name="build.server.dir" location="${build.dir}/server" />
+        <property name="build.client.dir" location="${build.dir}/client" />
+        <property name="build.dir.server.classes" location="${build.server.dir}/classes" />
+        <property name="build.dir.client.classes" location="${build.client.dir}/classes" />
+        <property name="dist.dir" location="${build.dir}/dist" />
+        <property name="stubSrc.dir" location="${build.dir}/stubSrc" />
+        <property name="aar.file" location="${build.dir}/dist/xipWebService.aar" />
+        <property name="host" value="217.109.185.152" />
+        <property name="login" value="mdi" />
+        <property name="passwd" value="dsmdi" />
+        <mkdir dir="${build.dir}" />
+        <mkdir dir="${build.server.dir}" />
+        <mkdir dir="${build.client.dir}" />
+        <mkdir dir="${build.dir.server.classes}" />
+        <mkdir dir="${build.dir.client.classes}" />
+        <mkdir dir="${dist.dir}" />
+        <mkdir dir="${build.dir.server.classes}/META-INF" />
+        <if>
+            <equals arg1="${os.name}" arg2="Windows XP" />
+            <then>
+                <property name="axis2.root" location="z:" />
+            </then>
+            <else>
+                <if>
+                    <equals arg1="${os.name}" arg2="Mac OS X" />
+                    <then>
+                        <property name="axis2.root" location="/Volumes/PARSEM" />
+                    </then>
+                    <else>
+                        <property name="axis2.root" location="/opt/ParSem" />
+                    </else>
+                </if>
+            </else>
+        </if>
+        <property name="axis2.home" location="${axis2.root}/tools/axis2/1.4" />
+        <property name="repository.path" location="${axis2.home}/repository/services" />
+        <path id="services.class.path">
+            <fileset dir="${basedir}/build/dist">
+                <include name="xipWebService.aar" />
+            </fileset>
+        </path>
+        <path id="server.class.path">
+            <path id="axis2.class.path" /> <!--  do not work: =>add the 3 next line -->
+            <fileset dir="${axis2.home}/lib">
+                <include name="**/*.jar" />
+            </fileset>
+            <fileset dir="${basedir}/../../java/dist">
+                <include name="jxip.jar" />
+            </fileset>
+        </path>
+        <path id="axis2.class.path">
+            <fileset dir="${axis2.home}/lib">
+                <include name="**/*.jar" />
+            </fileset>
+        </path>
+        <path id="client.class.path">
+            <path refid="axis2.class.path" /> <!--  do not work: =>add the 3 next line -->
+            <fileset dir="${axis2.home}/lib">
+                <include name="**/*.jar" />
+            </fileset>
+            <fileset dir="${dist.dir}">
+                <include name="*.jar" />
+            </fileset>
+        </path>
+    </target>
+    
+    <!-- -->
+    <target name="clean.server" depends="init">
+        <delete dir="${build.server.dir}" />
+        <delete file="${aar.file}" />
+    </target>
+    
+    <!-- -->
+    <target name="clean.client" depends="init">
+        <delete dir="${build.client.dir}" />
+        <delete dir="${stubSrc.dir}" />
+    </target>
+    
+    <!-- -->
+    <target name="clean" depends="init, clean.server, clean.client">
+        <delete dir="${build.dir}" />
+        <delete file="${basedir}/axis2Server.log" />
+        <delete file="${basedir}/axis2Client.log" />
+    </target>
+</project>

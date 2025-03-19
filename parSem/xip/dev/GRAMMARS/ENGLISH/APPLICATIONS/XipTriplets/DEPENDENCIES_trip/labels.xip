@@ -1,0 +1,453 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : construction ressource d'EN pour l'anglais
+//!   filename   : dependency_ressource.xip
+//!   Date       : 
+//!   Author     :
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+////////////
+//  ETAPE 1 :  Sélectionner ce qui nous intéresse comme unités
+// -A) les entités nommées déjà reconnues : personne, org, location, locorg
+// -B) d'autres entités potentielles : les mots commençant par une majuscule
+///////////
+
+// A) Entités Nommées déjà reconnues : marquage du noeud avec le trait "entitnom"
+// qu'on fait descendre à tous les noeuds fils.
+
+
+// Pour faire affecter le trait de la dep au noeud concerné
+
+Script: 
+
+1> if (PERSON(#1)) {#1[entitnom=+];}
+1> if (ORGANISATION(#1)) {#1[entitnom=+];}
+1> if (EVENT(#1)) {#1[entitnom=+];}
+1> if (LOCORG(#1[!country:+!, !city:+!, !contin:+!])) {#1[entitnom=+,tutu=+];}
+
+// Pour faire "descendre" le trait a ts les noeuds fils
+
+1> |Noun[entitnom]{noun#1}| {#1[entitnom=+];}
+1> |Noun[entitnom]{?*#1}| {#1[entitnom_part=+];}
+//1> |Noun[entitnom]{?*,#1}| { #1[entitnom_part=+];}
+//1> |Noun[entitnom]{?*,?#2,Noun}| {#2[entitnom_part=+];}
+//1> |Noun[entitnom]{?*,?#3,Noun,Noun}| {#3[entitnom_part=+];}
+
+
+
+DependencyRules:
+
+// B) Faire qlqch pour les mots avec majuscule
+
+
+|noun#1[maj:+,entitnom:~,entitnom_part:~,title:~,hmm_tit:~,startbis:~,month:~,day:~,prof:~,cardpoint:~,email:~,pron:~,season:~,dig:~]|
+	ENTIT_POT(#1)
+
+|NP#1{?+[maj:+,entitnom:~,title:~,startbis:~,month:~,day:~,det:~],noun[maj:+,entitnom:~,entitnom_part:~,title:~,hmm_tit:~,startbis:~,month:~,day:~,prof:~,cardpoint:~,email:~,pron:~,season:~,dig:~]}|
+   ENTIT_POT(#1)
+
+|NP#3{?#2,?#1}|
+   if(^ENTIT_POT(#1) & ENTIT_POT(#3))
+	~
+
+|NP#3{?#2,?#1}|
+   if(^ENTIT_POT(#2) & ENTIT_POT(#3))
+	~
+Script: 
+
+1> if (ENTIT_POT(#1)) {#1[entitpot=+];}
+1> |Noun[entitpot:+]{?*#1}| {#1[entitpot=+];}
+
+DependencyRules:
+
+
+//CONCERN ENTIT
+
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & $2(#1[entitnom:+]))
+//	$1[entitrecteur=+](#1,#2).
+
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & $2(#2[entitnom:+]))
+//	$1[entitregi=+](#1,#2).
+
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & $2(#1[entitpot:+]))
+//	$1[entitrecteur=+,pot=+](#1,#2).
+
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & $2(#2[entitpot:+]))
+//	$1[entitregi=+,pot=+](#1,#2).
+
+//pour voir : MOD_ENTITREGI_PRE
+
+if ($1[!pre:+!,!appos:+!,!proper:+!](#1,#2) & $2(#2[entitnom:+]))
+	$1[entitregi=+](#1,#2).
+
+////////////
+// ETAPE 2 : Sélectionner les dépendances dans lesquelles apparaissent
+// les unités qui nous intéressent.
+////////////
+
+//****************
+// Dep MOD
+
+// Titres et Professions
+if (MOD[pre:+](#1[entitnom:+],#2[title:+]) & ~LABEL(#1,#2)) 
+   LABEL[titre=+,label=+](#1,#2)
+
+if (MOD[pre:+](#1[entitnom:+],#2[prof:+]) & ~LABEL(#1,#2))
+   LABEL[profession=+,label=+](#1,#2)
+
+if (MOD[proper:+](#1[entitnom:+],#2[title:+]) & ~LABEL(#1,#2)) 
+   LABEL[titre=+,label=+](#1,#2)
+
+if (MOD[proper:+](#1[entitnom:+],#2[prof:+]) & ~LABEL(#1,#2))
+   LABEL[profession=+,label=+](#1,#2)
+
+//eventuellement
+if (MOD[proper:+](#1[entitnom:+],#2[firstname:~,verb:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+
+
+
+// Modifieurs préposés(tête=entité)
+
+//The model Naomi Campbell has been arrested on suspicion of assault.
+//MOD_PRE(entit,label)
+if (MOD[pre:+,temp:~](#1[entitnom:+],#2[nadj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (MOD[pre:+,temp:~](#1[entitpot:+],#2[nadj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+
+
+if (MOD[pre:+,temp:~](#1[entitnom:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (MOD[pre:+,temp:~](#1[entitpot:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+
+//if (MOD[pre:+](#1[entitnom:+],#2[adj:+,entitnom:~]) & ~LABEL(#1,#2))
+//  LABEL(#1,#2)
+
+
+
+// Modifieurs postposés(tête=entité)
+// Y a-t-il qlqch d'intéressant après ?
+// NON rien de bien
+
+// the post-gaullist Chirac
+//MOD_POST_APPOS(post-gaullist, Chirac)
+//TEST
+
+//if (MOD[post:+,appos:~](#1,#2[entitnom]))
+//  TUTU(#1,#2)---> rien de bien
+
+//if (MOD[post:+,appos:~](#1[entitnom],#2))
+//  TOTO(#1,#2) ---> rien de bien
+
+
+//****************
+// Dep ATTRIB
+// e.g. Musician Miles Davis is famous.
+// e.g. George Bush became President.
+// gestion negation (LABEL_NEG) pour :
+// Sarkozy will not become president
+// LABEL_LONG pour avoir la possibilité de matcher plus d'info si possible:
+
+
+//ATTRIB_APPOS(entit,label) entit recteur
+
+//(entit,nadj)
+if (ATTRIB[appos:+](#1[entitnom:+],#2[nadj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (ATTRIB[appos:+](#1[entitpot:+],#2[nadj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+//(entit,adj)
+if (ATTRIB[appos:+](#1[entitnom:+],#2[adj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (ATTRIB[appos:+](#1[entitpot:+],#2[adj:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+//(entit,noun)
+if (ATTRIB[appos:+](#1[entitnom:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (ATTRIB[appos:+](#1[entitpot:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+
+//ATTRIB_APPOS(label,entit) entit regie
+
+//(nadj,entit)
+if (ATTRIB[appos:+](#1[nadj:+,entitnom:~,dig:~,month:~,day:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+if (ATTRIB[appos:+](#1[nadj:+,entitnom:~,dig:~,month:~,day:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+//(adj,entit) a garder?
+if (ATTRIB[appos:+](#1[adj:+,entitnom:~,dig:~,month:~,day:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+if (ATTRIB[appos:+](#1[adj:+,entitnom:~,dig:~,month:~,day:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+//(noun,entit)
+if (ATTRIB[appos:+](#1[noun:+,entitnom:~,dig:~,month:~,day:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+if (ATTRIB[appos:+](#1[noun:+,entitnom:~,dig:~,month:~,day:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+   LABEL[label=+](#2,#1)
+
+//ATTRIB(entit,label) entit recteur
+//ici on ne prend que les noms, le reste n'est pas bien
+//(entit,noun)
+if (ATTRIB[appos:~](#1[entitnom:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+if (ATTRIB[appos:~](#1[entitpot:+],#2[noun:+,entitnom:~,dig:~,month:~,day:~]) & ~LABEL(#1,#2))
+   LABEL[label=+](#1,#2)
+
+//ATTRIB(label,entit) entit regie
+//ici on ne prend rien (cf voir tests)
+//(nadj,entit)
+
+
+
+//************
+//TESTS
+//ATTRIB_APPOS(label,entit) 77
+//if (ATTRIB[appos:+](#1[entitnom:+],#2))
+//	TESTAPPOS[entitrecteur=+](#1,#2)
+//ATTRIB_APPOS(label,entit) 44
+//if (ATTRIB[appos:+](#1,#2[entitnom:+]))
+//	TESTAPPOS[entitregi=+](#1,#2)
+//ATTRIB(entit,label) 32 pour ca, ne prendre que les labels noms ?
+//if (ATTRIB[appos:~](#1[entitpot:+],#2))
+//	TEST[entitrecteur=+](#1,#2)
+//ATTRIB(label,entit) 15 A NE PAS PRENDRE
+//if (ATTRIB[appos:~](#1,#2[entitpot:+]))
+//	TEST[entitregi=+](#1,#2)
+
+
+//****************
+// Constructions possessives
+// Pour récupérer la tête d'une construction possessive ayant une EN en arg
+// (savoir ce que "possède" ou "fait" untel)
+//  George Bush's speech
+// à garder ou non ??
+
+| NP#5{?*, noun#1[last:~,entitnom:+], part#2[last:~],?*,noun#4[verb:~]}|
+	if (PARTICLE (#1,#2) & HEAD(#4,#5))
+	POSSES(#1,#4)
+
+| NP#5{?*, noun#1[last:~,entitpot:+], part#2[last:~],?*,noun#4[verb:~]}|
+	if (PARTICLE (#1,#2) & HEAD(#4,#5))
+	POSSES(#1,#4)
+
+
+//****************
+//Pour ce qu'on ne veut pas
+//MOD_PRE(label,entit)
+//Bon, alors ici ce ne sont pas vraiment des labels qu'on obtient, c'est le contraire en fait.
+//Ce sont des mots "qualifiés" par une EN, ca dit ce que font-produisent-disent-pensent les EN
+// (The) Bush presidency was a disaster.
+// ici l'entit n'est pas la tete
+
+//ce qu'on ne veut vraiment pas
+//if (MOD[pre:+](#1[nadj:~,noun:~,adj:~,entitnom:~,dig:~,month:~,day:~],#2[entitnom:+]) & ~POSSES(#2,#1))
+//   LABEL[label=+,not=+](#2,#1)
+//if (MOD[pre:+](#1[nadj:~,noun:~,adj:~,entitnom:~,dig:~,month:~,day:~],#2[entitpot:+]) & ~POSSES(#2,#1))
+//   LABEL[label=+,not=+](#2,#1)
+
+
+//ce qui peut a tout hasard servir MOD_PRE(mot, entitregi)
+//if (MOD[pre:+,temp:~](#1[nadj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+
+//if (MOD[pre:+,temp:~](#1[nadj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+
+//if (MOD[pre:+,temp:~](#1[noun:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+//if (MOD[pre:+,temp:~](#1[noun:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+
+//if (MOD[pre:+,temp:~](#1[adj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+
+//if (MOD[pre:+,temp:~](#1[adj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1))
+//   LINK[label=+](#2,#1)
+
+//avec des PPs
+// (The) presidency of Bush was a disaster.
+
+//|PP#3|
+//if (MOD[post:+](#4[entitnom:~,verb:~],#2[entitnom:+])& HEAD(#2,#3))
+//   LINK[prep:+,label=+](#2,#4)
+//|PP#3|
+//if (MOD[post:+](#4[entitnom:~,verb:~],#2[entitpot:+]) & HEAD(#2,#3))
+//   LINK[prep:+,label=+](#2,#4)
+
+
+//***************************************
+//MODIFS
+//***************************************
+
+//ce qu'on ne veut vraiment pas
+if (MOD[pre:+](#1[nadj:~,noun:~,adj:~,entitnom:~,dig:~,month:~,day:~],#2[entitnom:+]) & ~POSSES(#2,#1))
+    LIXO(#2,#1)
+if (MOD[pre:+](#1[nadj:~,noun:~,adj:~,entitnom:~,dig:~,month:~,day:~],#2[entitpot:+]) & ~POSSES(#2,#1))
+    LIXO(#2,#1)
+
+
+//ce qui peut a tout hasard servir MOD_PRE(mot, entitregi)
+if (MOD[pre:+,temp:~](#1[nadj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LABEL[label=+](#2,#1)
+
+if (MOD[pre:+,temp:~](#1[nadj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LABEL[label=+](#2,#1)
+
+if (MOD[pre:+,temp:~](#1[noun:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LABEL[label=+](#2,#1)
+if (MOD[pre:+,temp:~](#1[noun:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LABEL[label=+](#2,#1)
+
+if (MOD[pre:+,temp:~](#1[adj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitnom:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LIXO[label=+](#2,#1)
+
+if (MOD[pre:+,temp:~](#1[adj:+,entitnom:~,dig:~,month:~,day:~,verb:~],#2[entitpot:+]) & ~LABEL(#2,#1) & ~POSSES(#2,#1))
+   LIXO[label=+](#2,#1)
+
+//avec des PPs
+// (The) presidency of Bush was a disaster.
+
+|PP#3|
+if (MOD[post:+](#4[entitnom:~,verb:~],#2[entitnom:+])& HEAD(#2,#3))
+   LINK[prep:+,label=+](#2,#4)
+|PP#3|
+if (MOD[post:+](#4[entitnom:~,verb:~],#2[entitpot:+]) & HEAD(#2,#3))
+   LINK[prep:+,label=+](#2,#4)
+
+//*********************************
+//END MODIF
+//********************************
+
+
+
+//****************
+// pour choper des labels un peu plus longs lorsque l'info est intéressante
+// exemples:
+// John Kerry, challenger-->the democratic chellenger
+// qlqun, adviser-->the US national security adviser
+// qlqun, spokesman-->the ingush interior ministry's top spokesman
+
+|NP#3{noun,noun#2}|
+if (LABEL[not:~](#1,#2) & ~LABEL(#1,#3))
+   LABEL[long=+,label=+](#1,#3)
+|NP#3{det;pron;noun,?+,noun#2}|
+if (LABEL[not:~](#1,#2) & ~LABEL(#1,#3))
+   LABEL[long=+,label=+](#1,#3)
+
+
+//*****************
+//essai avec les PREP (pour groupes prépositionnels cplments du nom)
+
+
+//s'applique aux deps sans pronom
+//if((MOD(#1,#2[pronpers:~])| LOC (#1,#2)) & PREPD(#2,#3[!form_prep:!]))
+       // TOTOprep(#1,#2,#3),
+//	PREP(#1,#2).
+
+
+
+//****************
+//NEGATION
+
+if ($1[neg](#1,#2) & LABEL(#1,#2))
+   LABEL[neg=+](#1,#2)
+if (^LABEL[neg:~](#1,#2) & LABEL[neg:+](#1,#2))
+   ~
+
+//****************
+//effacement label entre une entite et une autre:
+// mais attention, est-ce que ca peut pas faire louper des choses ?
+if (^$1(#1[entitpot:+],#2[entitpot:+]))
+	~
+if (^$2(#1[entitnom:+],#2[entitnom:+]))
+	~
+if (^$1(#1[entitpot:+],#2[entitnom:+]))
+	~
+if (^$2(#1[entitnom:+],#2[entitpot:+]))
+	~
+
+//au cas ou:
+if (^LABEL(#1,#2[verb:+]))
+	~	
+
+//TEST COORDITEMS
+
+|NP{?*,#1[last,entitnom]},CONJ,NP{?*,#2[last,entitnom]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+|NP{?*,#1[last,entitpot]},CONJ,NP{?*,#2[last,entitnom]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+|NP{?*,#1[last,entitnom]},CONJ,NP{?*,#2[last,entitpot]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+|NP{?*,#1[last,entitpot]},CONJ,NP{?*,#2[last,entitpot]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+
+|PP{PREP,NP{?*,#1[last:+,entitnom:+]}},CONJ,NP{?*,#2[last:+,entitnom:+]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+|PP{PREP,NP{?*,#1[last:+,entitpot:+]}},CONJ,NP{?*,#2[last:+,entitnom:+]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+
+|PP{PREP,NP{?*,#1[last:+,entitnom:+]}},CONJ,NP{?*,#2[last:+,entitpot:+]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+
+|PP{PREP,NP{?*,#1[last:+,entitpot:+]}},CONJ,NP{?*,#2[last:+,entitpot:+]}|
+	if(COORD(#3,#1) & COORD(#4,#2))
+	COORDENTIT[label=+](#1,#2)
+	
+
+//EFFACE POUR CONCERN
+
+//if (^$1[entitrecteur:~](#1,#2) & $1[entitrecteur:+](#1,#2) & ~LABEL(#1,#2) & ~LINK(#1,#2) & ~POSSES(#1,#2) &  ~LABEL[not:+](#1,#2))
+//   ~
+
+//if (^$1[entitregi:~](#1,#2) & $1[entitregi:+](#1,#2) & ~LABEL(#1,#2) & ~LINK(#1,#2) & ~POSSES(#1,#2) &  ~LABEL[not:+](#1,#2))
+//   ~
+
+//Script:
+
+//if (LOCORG(#1)) {
+//   print("coucou");
+  // print(#1[lemme]);
+//  print(#1[features]);
+//   print($1);
+//  // print(LABEL[features]);
+//   
+//}
+
+
+//if (LABEL[titre:~](#1,#2)){
+//    print("mot 1");
+//    print("\n");
+//    print(#1[lemme]);
+//    print(#1[traits]);
+//    print("\nmot 2");
+//    print("\n");
+//    print(#2[lemme]);
+//    print(#2[traits]);
+//    print("\n");
+//    print("bonjour");
+//    print("\n");
+    
+//    print($1[features]);
+//    print("\n\n");
+//}
+
+
+
+

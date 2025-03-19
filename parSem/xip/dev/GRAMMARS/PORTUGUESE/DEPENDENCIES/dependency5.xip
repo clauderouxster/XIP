@@ -1,0 +1,305 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! L2F - Spoken Language Systems Laboratory / INESC-ID Lisboa                 !
+//!                                                                            !
+//! Copyright (c) 2006 INESC-ID Lisboa.  All Rights Reserved.                  !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency5.xip                                             !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Paula Vaz, Nuno Mamede                                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating subject, direct complement and quantification   !
+//!                                                                            !
+//!   Dependencies handled in this file:   SUBJ                                !
+//!                                        HSUBJ                               !
+//!                                        QUANTD (uma parte)                  !
+//!                                        CDIR                                !
+//!                                        COMPL                               !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// $Id: dependency5.xip,v 1.4 2008/10/21 12:39:42 chagege Exp $
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// SUBJECT DEPENDENCIES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: muitos/alguns dos rapazes comeram a sopa -> SUBJ_PRE(comeram,rapazes)
+//
+| NP#6, PP#1 , ADVP*, (PP; AP)*, #2[verb:+,inf:~] |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & HEAD(#7,#6) & VDOMAIN(#4,#5) & QUANTD(#3,#7)  & ~subj(#5,?) & #3[acc:~] )
+  SUBJ[pre=+](#5,#3)
+
+
+// Example: A panteras faladoras conversavam animadamente -> SUBJ(conversavam,panteras)
+// Example: Estes ofereceram pinturas                     -> SUBJ_PRE(ofereceram,estes)
+// Example: Os amigos tinham oferecido pinturas           -> SUBJ_PRE(ofereceram,amigos)
+//
+// CH, May 17th
+// Added a restriction [pp_not_np:~] on the potential subject in order to avoid to take
+// as subject a head of a coordinated PP which is superficially a NP
+// Example : Entre o coração e a memória vive a saudade. *SUBJ(vive,memoria)
+| NP#1, ADVP*, (PP;AP)*, (ADVP), #2[verb:+,inf:~] |
+ if ( HEAD(#3[pp_not_np:~],#1) & HEAD(#4,#2) & VDOMAIN(#4,#5) & ~subj(#5,?) & #3[acc:~,refl:~] )
+   SUBJ[pre=+](#5,#3)
+
+
+// Example: Os amigos, vendo o livro, tinham oferecido pinturas -> SUBJ_PRE(oferecido,amigos)
+// Example: Os amigos, tendo visto o livro, ofereceram pinturas -> SUBJ_PRE(ofereceram,amigos)
+//
+| NP#1, PUNCT[comma:+], ?*[punct:~], PUNCT[comma:+], #2[verb:+,inf:~] |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & VDOMAIN(#4,#5) & #3[acc:~] & ~subj(#5,?) )
+   SUBJ[pre=+](#5,#3)
+
+// Example: Manuela, quando estava sozinha,... -> SUBJ_PRE(estava,Manuela)
+//
+| NP#1, PUNCT[comma:+], SC{?*,#2[verb:+, last:+]} |
+ if ( HEAD(#3,#1) & head(#4,#2) & ~subj(#4,?) & #3[acc:~] )
+   SUBJ[pre=+](#4,#3)
+
+
+// Example: Os amigos, vendo o livro, tinham oferecido pinturas -> SUBJ_PRE(vendo,amigos)
+// Example: Os amigos, tendo visto o livro, ofereceram pinturas -> SUBJ_PRE(visto,amigos)
+//
+| NP#1, PUNCT[comma:+], #2[verb:+,inf:~], ?*, PUNCT[comma:+] |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & VDOMAIN(#4,#5) & #3[acc:~] & ~SUBJ(#5,#3) )
+   SUBJ[pre=+](#5,#3)
+
+// Example: Um urso branco, já velho, tinha sido astronauta -> SUBJ_PRE(sido,urso)
+//
+| NP#1,AP,(PUNCT[comma],AP*;PP*;ADVP*,punct[comma])+,?*[verb:+],#2[verb:+,inf:~] |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & VDOMAIN(?,#4)  & ~subj(#4,?) & #3[acc:~] )
+   SUBJ[pre=+](#4,#3)
+
+
+
+// CH -> adding one subj rule because SC has been revisited : the first element of
+// the verbal chain is under an SC and the last is not
+//
+// Example: Dizia [que eles podiam]SC fazer os deveres -> SUBJ(fazer,eles)
+//
+| SC#1{?*,NP#5} |
+ if ( HEAD(#2,#1) & VDOMAIN(#2,#3) & #2 < #3 & HEAD(#6[acc:~,dat:~],#5) & ~SUBJ(#3,?) )
+   SUBJ[pre=+](#3,#6)
+
+
+// Example: Nós vamos todos brincar -> QUANTD(nós,todos)
+//
+| ?[verb:+], NP#1{PRON[indef]}, #2[verb:+] |
+ if ( HEAD(#3,#1) & HEAD(#4,#2) & SUBJ(#4,#5) & VDOMAIN(?,#6) )
+   QUANTD(#5,#3)
+
+
+// Example: Vamos todos brincar     -> QUANTD(brincar,todos), HSUBJ(brincar)
+//
+| ?[verb:+], NP#2{PRON[indef]}, #3[verb:+] |
+ if ( ~SUBJ(#1,#6) & HEAD(#5,#2) & HEAD(#6,#3) & VDOMAIN(?,#6) )
+   HSUBJ(#6),
+   QUANTD(#6,#5)
+
+
+// Example: O rapaz [que conheço]SC comeu um bolo         -> SUBJ(comeu,rapaz)
+// Example: O rapaz [que tinha]SC conhecido comeu um bolo -> SUBJ(comeu,rapaz)
+//
+| NP#1, AP*, SC#2{?*, ?[verb:+,last:+]}, ?*[verb:+],AP*,ADVP*, #3[verb:+,inf:~] |
+ if ( ~SUBJ(#6,?) & HEAD(#4,#1) & HEAD(#5,#2) & HEAD(#6,#3) & VDOMAIN(#5,#7) & #6>#7 )
+   SUBJ[pre=+](#6,#4)
+
+
+//========================================================
+// NOT ACCEPTING QUANTIFIERS AS SUBJECTS
+//========================================================
+
+// If the computed subject is quantifying a noun, then that noun must be the
+// real subject
+//
+// Example: Nós todos vamos brincar       -> subj(brincar,nós)
+// Example: As raprigas todas vão brincar -> subj(brincar,raparigas)
+//
+ if ( QUANTD(#1,#2) & ^SUBJ[!features:!](#3,#2) )
+  SUBJ(#3,#1)
+
+
+//========================================================
+// COORDINATION of SUBJECTS
+//========================================================
+
+// Example: Os leões, os macacos e as panteras faladoras conversavam animadamente
+//                                      ->  SUBJ(conversavam,panteras)
+//                                      ->  SUBJ(conversavam,macacos)
+//                                      ->  SUBJ(conversavam,leões)
+//
+ if ( SUBJ(#4,#3) & COORD(#2,#3) & COORD(#2,#1) & ~subj(#4,#1) )
+    SUBJ[pre=+](#4,#1)
+
+
+// Example: A pata cozeu e comeu as maçãs -> SUBJ(comeu,pata)
+//                                        -> SUBJ(cozeu,pata)
+//
+ if ( SUBJ(#2,#1) & coord(#3,#2) & coord(#3,#4) & ~subj(#4,#1) )
+    SUBJ[pre=+](#4,#1)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// OBJECT DIRECT DEPENDENCIES
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Eles deram muitos dos livros -> CDIR_POST(comeram,rapazes)
+//
+// CH May, 14th Esta regra como esta e problematica pois apanha como CDIR
+// coisas que deveriam ser MOD.
+// como por exemplo: Ele garantiu mais quatro anos no Palácio do Planalto.
+// que apanha CDIR(garantiu,Palacio do Planalto)
+//
+// Comento esta regra e vou fazer um acrescimo dos CDIR com quantificacao
+//| #2[verb:+];sc{?*,#2[verb:+]}, (ADVP), NP#5, PP#3 |
+// if ( HEAD(#1,#2) & HEAD(#4,#3) & HEAD(#6,#5) & VDOMAIN(?,#1)  & QUANTD(#4,#6) & ~CDIR(#1,?) & ~PREDSUBJ(?,#4) )
+//   CDIR[post=+](#1,#4)
+
+
+// Example: Os amigos comeram duas bananas      -> CDIR(comeram,bananas)
+// Example: Os amigos tinham comido as bananas  -> CDIR(comido,bananas)
+//
+| #2[verb:+];sc{?*,#2[verb:+]}, (ADVP), NP#3 |
+ if ( HEAD(#1,#2) & HEAD(#4[time:~,dat:~],#3) & VDOMAIN(?,#1)  & ~CDIR(#1,?) & ~PREDSUBJ(?,#4) )
+   CDIR[post=+](#1,#4)
+
+
+// O JORGE DIZ QUE ESTAS REGRAS ESTÂO ERRADAS PARA OS EXEMPLOS EM CAUSA
+// NO CASO DE DAR É UM COMPLEMENTO INDIRECTO ESSENCIAL
+// NO SEGUNDO CASO É UM COMPLEMENTO INDIRECTO NÃO ESSENCIAL BENEFACTIVO
+//      ASSIM COMENTEI-AS
+//         NUNO 2007/05/11
+//
+// Example: O livro que a Ana me tinha acabado de dar era muito interessante -> cdir(dar,me)
+// Example: A estante me caiu em cima do pé                                  -> cdir(caiu,me)
+//
+//| NP{#3[acc]}, #2[verb:+] |
+// if ( HEAD(#1,#2) & VDOMAIN(#1,#4) & ~cdir(#4,?) & ~PREDSUBJ(#4,?))
+//   CDIR[post=+](#4,#3)
+
+// Example: A lebre foi buscar à estante um grande livro -> CDIR(buscar,livro)
+//
+| #2[verb:+];sc{?*,#2[verb:+]}, pp, ap*, NP#3 |
+ if ( HEAD(#1,#2) & HEAD(#4,#3) & VDOMAIN(?,#1) & ~CDIR(#1,?) & ~PREDSUBJ(?,#4) )
+   CDIR[post=+](#1,#4)
+
+
+//========================================================
+// NOT ACCEPTING QUANTIFIERS AS CDIR
+//========================================================
+
+// If the computed CDIR is quantifying a noun, then that noun must be the
+// real CDIR
+//
+// Example: Deu todos os livros -> subj(deu,livros)  THIS IS NOT A REAL EXAMPLE!
+//
+// if ( QUANTD(#1,#2) & ^CDIR[!features:!](#3,#2) )
+//  CIR(#3,#1)
+
+// CH, May, 14th
+// Treating quantified CDIR of the form QUANT + PP{de}
+// Example: Eles deram muitos/alguns dos livros.
+| #2[verb:+];sc{?*,#2[verb:+]}, (ADVP), NP{pron#6[first,last,indef]}, PP#3 |
+if ( HEAD(#1,#2) & HEAD(#4,#3) & VDOMAIN(?,#1)  & QUANTD(#4,#6) & ^CDIR(#1,#6) & ~PREDSUBJ(?,#6) )
+ CDIR[post=+](#1,#4)
+
+
+// CH, May, 15th
+// This rules deals with percent or other measures expressions quantifiying CDIR
+//
+// Example: Ele somou 30 por cento | 30% | 30 kilogramas dos voto
+//
+| #2[verb:+];sc{?*,#2[verb:+]}, (ADVP), NP{num, noun#6[meas:+]}, PP#3 |
+if ( HEAD(#1,#2) & HEAD(#4,#3) & VDOMAIN(?,#1)  & QUANTD(#4,#6) & ^CDIR(#1,#6) & ~PREDSUBJ(?,#6) )
+ CDIR[post=+](#1,#4)
+
+
+// CDIR of "Dar" when this verb is followed by a clitic
+//
+// Example: Deu-lhe os livros  -> CDIR(deu,livros)
+//
+| #2[verb:+];sc{?*,#2[verb:+]}, NP{?[tokenend,dat,first,last]}, NP#4 |
+if ( HEAD(#1[tokenstart],#2) & HEAD(#3,#4) & VDOMAIN(?,#1) & ~CDIR(#1,#3) )
+ CDIR[post=+](#1,#3)
+
+
+//========================================================
+// CDIR COORDINATION
+//========================================================
+
+// Example: A pata comeu peras e maçãs -> CDIR(comeu,peras)
+//                                     -> CDIR(comeu,maçãs)
+//
+ if ( CDIR(#1,#2) & COORD(#3,#2) & COORD(#3,#4) & ~CDIR(#1,#4) & ~PREDSUBJ(?,#4) )
+   CDIR[post=+](#1,#4)
+
+
+// CDIR for coordinated verbs
+// Example: A pata cozeu e comeu peras -> CDIR(cozeu,peras)
+//                                     -> CDIR(comeu,peras)
+//
+ if ( CDIR(#3,#4) & COORD(#2,#3) & COORD(#2,#1) & ~CDIR(#1,#4) & ~PREDSUBJ(?,#4) )
+   CDIR[post=+](#1,#4)
+
+//========================================================
+// CDIR clitic pronoun and infinitive
+//========================================================
+
+
+// Example: Ele tem-na de comer CDIR(comer,a)
+//
+//
+
+| VMOD[obrig]{?*, verb, pron#1[acc:+], prep[lemma:de]}, VINF{#2[first,last]} |
+if ( ~CDIR(#2,?) )
+CDIR(#2,#1)
+
+
+// Clitic in dative badly taken as direct object
+// Example : Ela deu-me a laranja.
+//
+| NP{#2[first,last,dat,pron]}, NP#3 |
+if ( ^CDIR(#1,#2[pron:+,dat:+]) & HEAD(#4,#3) & ~SUBJ(?,#4) & ~PREDSUBJ(?,#4) )
+	CDIR(#1,#4),
+	MOD(#1,#2).
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  ATTRIB
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// X cop Y gives
+//            PREDSUBJ(cop,Y) and SUBJ(cop,X)
+// and now also produces:
+//            ATTRIB(X,Y)
+//
+ if ( PREDSUBJ(#1[cop],#2) & SUBJ(#1,#3) )
+   ATTRIB(#3,#2).
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// COMPLEMENT OF A COPULATIVE VERB
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O Pato foi um grande médico.  -> COMPL(foi, médico)
+//
+ if ( ^cdir(#1,#2) & #1[cop] )
+   COMPL(#1,#2)
+
+

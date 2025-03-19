@@ -1,0 +1,888 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! C. BRUN
+//! ESTER2: modification des interprétations des ENs
+//! tenant compte de la syntaxe
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+/############################## DEDUCTION   ################################################\
+
+Déduction:
+
+// Noms de lieu inconnus
+
+//eg "Il vit à INCONNU, en Toscane 
+
+|PP{?,NP{?*,NOUN#1[last,inconnu]}},PUNCT[form:fcm],PP{?,NP{?*,NOUN#3[lieu]}}|
+     if (VMOD(#2[vloc],#1) | VMOD(#2[vgo],#1))
+	LIEU(#1)
+
+|PP{?,NP{?*,NOUN#1[last,inconnu]}},PUNCT[form:fcm],PP{?,NP{?*,NOUN#3[lieu]}}|
+     if ( (VMOD(#2[vlocrefl],#1) | VMOD(#2[vgorefl],#1) ) & REFLEX(#2,?) )
+	LIEU(#1)
+
+
+// modification d'interpretation
+if (^ORG[batiment,lieu,!traits:!](#1))
+	LIEU[batiment=+,org=+,lieu=~](#1).
+
+
+if (NMOD(#1[preville],#2) & LIEU(#2) & ^PERSONNE(#2))
+	~
+
+// *** Coordinations ad-hoc ***********************************
+
+|PP{?*,NP{?*,Noun#1[last]}},COORD,PP{?*,NP{?*,Noun#2[last]}},punct;verb;sent|
+	if (LIEU(#1) & LIEU(#2))
+	COORDITEMS(#1,#2)
+
+| NP{?*,NOUN#1[last]}, punct[form:fcm], NP{?*,NOUN#2[last]}, (punct[form:fcm]), coord,  NP{?*,NOUN#3[last]},punct;verb;sent|
+	if (LIEU(#1) & LIEU(#2) & LIEU(#3))
+	LINK-COORD(#1,#2)
+
+| PP{?,NP{?*,NOUN#1[last]}}, punct[form:fcm], PP{?,NP{?*,NOUN#2[last]}}, (punct[form:fcm]), coord,  PP{?,NP{?*,NOUN#3[last]}},punct;verb;sent|
+	if (LIEU(#1) & LIEU(#2) & LIEU(#3))
+	LINK-COORD(#1,#2)
+
+| NP{?*,NOUN#1[last]}, punct[form:fcm], NP{?*,NOUN#2[last]}, punct[form:fcm], NP{?*,NOUN#4[last]}, (punct[form:fcm]), coord,  NP{?*,NOUN#3[last]},punct;verb;sent|
+	if (LIEU(#1) & LIEU(#2) & LIEU(#3) & LIEU(#4))
+	LINK-COORD(#1,#2)
+
+| PP{?,NP{?*,NOUN#1[last]}}, punct[form:fcm], PP{?,NP{?*,NOUN#2[last]}}, punct[form:fcm], PP{?,NP{?*,NOUN#4[last]}}, (punct[form:fcm]), coord,  PP{?,NP{?*,NOUN#3[last]}},punct;verb;sent |
+	if (LIEU(#1) & LIEU(#2) & LIEU(#3) & LIEU(#4))
+	LINK-COORD(#1,#2)
+
+// *** TRAITEMENT DES ANTECEDENTS DES RELATIVES 
+
+// qui 
+	if (SUBJ(#1,#2) & COREF[rel](#3,#2[lemme:"qui"]))
+		SUBJ(#1,#3)
+
+
+// etre en train de : calcul sujet profond
+
+if(SUBJ(#1[lemme:"être"],#2) & VMOD(#1,#3) & PREPOBJ(#3,#4[lemme:"en train de"]))
+	SUBJ(#3,#2)
+
+// ****  Utilisation de certains contextes syntaxiques pour tagger des mots inconnus
+
+// mort à / né à --> lieu
+
+if (VMOD(#1[verb,lemme:"mourir"],#2[maj]) & PREPOBJ(#2,#3[prep,form:fa])& ~LIEU(#2) )
+	LIEU[ville=+](#2)
+
+//*** VEHICULES
+
+//*** PERSONNES
+//Felix est un chat, emploi figuré problématique
+
+if (^PERSONNE[hum](#1) & OBJ[spred](#2,#3[animal]) & SUBJ(#2,#1))
+	PERSONNE[animal=+,hum=~](#1)
+
+
+//*** VEHICULES
+// Il conduit une 106
+
+
+if (OBJ(#1[lemme:"conduire"],#2[num,chiffres,lettres:~]))
+	PRODUIT[vehicule=+](#2)
+
+if (SUBJ(#2[lemme:appeler,reflexive],#1[lemme:bateau]) & OBJ(#2,#3) & ^PERSONNE(#3))
+		PRODUIT[vehicule=+](#3)
+
+// l'Erika est un pétrolier
+
+if (SUBJ(#2,#1[proper]) & OBJ[spred](#2,#3[vehicule]))
+		PRODUIT[vehicule=+](#1)
+
+if (SUBJ(#2,#1[pron,rel]) & COREF[rel](#3[proper],#1) & OBJ[spred](#2,#4[vehicule]))
+		PRODUIT[vehicule=+](#3)
+
+// L'Erika, qui est un petrolier
+
+//l'Erika, un pétrolier ...
+ |NP[det]{?*,NOUN#2}|
+if (SEQNP(#1[proper,org:~,person:~,pren:~,lieu:~],#2[vehicule]))
+		PRODUIT[vehicule=+](#1)
+
+// coordinations : les avions XXX et YYY
+
+|noun#1{noun[pl,vehicule],?+}|
+	if(PRODUIT[vehicule](#1) & COORDITEMS(#1,#2[maj,proper]))
+	PRODUIT[vehicule=+](#2) 
+
+
+// pilote de McLaren
+
+if(NMOD[POSIT1](#1[lemme:"pilote"],#2[firme]) & ^ORG(#2))
+		PRODUIT[vehicule=+](#2)
+
+
+// à bord du de la ...
+
+
+|PP{prep[form:fa],np{noun[lemme:"bord"]}},PP{PREP[form:fde],NP{?*,NOUN#2}}|
+	if (^PERSONNE(#2) & ~PRODUIT(#2))
+	PRODUIT[vehicule=+,hum=~](#2)
+
+
+// age
+
+|noun#1[lemme:"centenaire"]|
+	AGE(#1)
+
+|noun#1[lemme:"bicentenaire"]|
+	AGE(#1)
+
+// Il a (plus de/moins de) 10 ans
+// attention: il a 10 ans d'ancienneté, il a 3 semaines pour en profiter
+//(modif maud après chgment de l'arbre en amont)
+
+// les enfants de 5 à 7 ans 
+
+|NP{?*,NOUN[plusage]},ADV*, PP#1{PREP[form:fde],NP{NUM#2,PREP[form:fa],NUM#2,noun[lemme:"an"]}},?[form:~fde]|
+	AGE(#1)
+
+|NP{?*,NOUN[plusage]},ADV*, PP#1{PREP[form:fde],NP{NUM*,(punct[form:fcm]),NUM#2,COORD,NUM#2,noun[lemme:"an"]}},?[form:~fde]|
+	AGE(#1)
+
+
+|NP#1{DET{ADV[lemme:"moins"],?},NOUN#3[date:+,duree:+]{NUM,NOUN}},?[form:~fde]|
+	if (OBJ(#2[lemme:"avoir"],#3))
+	AGE(#3)
+
+|NP#1{DET{ADV[lemme:"plus"],?},NOUN#3[date:+,duree:+]{NUM,NOUN}},?[form:~fde]| 
+	if (OBJ(#2[lemme:"avoir"],#3))
+	AGE(#3)
+
+|NP#1{NOUN#3[date:+,duree:+]{NUM,NOUN}},?[prep:~]| 
+	if (OBJ(#2[lemme:"avoir"],#3))
+	AGE(#3)
+
+|PP#1{prep[form:fentre],NP{NUM,COORD,NUM,NOUN#3[lemme:"an",last]}},?[prep:~]|
+	if (VMOD(#2[lemme:"avoir"],#3))
+	AGE(#1)
+
+|PP#1{prep[form:fchez],NP{det[def,pl],?*, num, NOUN#3[lemme:"an",last]}} |
+	AGE(#1)
+
+|NP#1{det[poss:+],NOUN#3[date:+,duree:+]{NUM,NOUN}},?[prep:~]| 
+	if (OBJ(#2[lemme:"fêter"],#3))
+	AGE(#3)
+
+// les enfants agés de 10 a 14 ans
+
+|AP{ADJ#2[lemme:"âgé"]},PP#1{PREP,NP{?*,NOUN[last,lemme:"an"]}}|
+     	AGE(#1)
+
+
+// il fete ses 10 ans
+
+
+// Pierre, 10 ans, 
+|NP{?*,NOUN#1},PUNCT[form:fcm], NP#2{ADV*,NOUN#4{NUM,NOUN#3[timeduree,lemme:"an"]}},PUNCT[form:fcm];coord[coord]|
+	if (PERSONNE(#1))
+	AGE(#4)
+
+|NP{?*,NOUN#1},PUNCT[form:fcm],NP#2{ADV*,NOUN#4{NUM,NOUN#3[timeduree,lemme:"an"]}},SENT|
+	if (PERSONNE(#1))
+	AGE(#4)
+
+// âgé de 10 ans
+
+|AP{ADV*,ADJ[lemme:"âgé"]},PP{?*,NP#1{ADV*,NOUN#2{NUM,NOUN#3[timeduree,lemme:"an"]}}}|
+			AGE(#2)
+
+// a l'age de 10 ans 
+
+|PP{?*,NP{DET[def],NOUN[lemme:"âge"]}},PP{?*,NP{NOUN#2{NUM,NOUN#3[timeduree,lemme:"an"]}}}|
+		AGE(#2)
+
+// à 20 ans 
+
+|PP#1{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}},?[prep:~]|
+		if (~AGE(#2) & ~VMOD(?,#3))
+		AGE(#1)
+
+
+|PP#1[first,start]{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}},?[prep:~]|
+		if (~AGE(#2))
+		AGE(#1)
+
+
+|PP[last]{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	       if (~AGE(#2) & ~VMOD(?,#3))
+		AGE(#2)
+
+|PP{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	if(VMOD(?[lemme:"mourir"],#3) & ~AGE(#2))
+		AGE(#2)
+
+|PP{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	if(NMOD(?[lemme:"mort"],#3) & ~AGE(#2))
+		AGE(#2)
+
+|PP{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	if(VMOD(?[lemme:"décéder"],#3) & ~AGE(#2))
+		AGE(#2)
+
+|PP{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	if(NMOD(?[lemme:"décès"],#3) & ~AGE(#2))
+		AGE(#2)
+
+|PP{PREP[form:fa], NP#2{ADV*,NUM,NOUN#3[lemme:"an"]}}|
+	if(VMOD(#1[lemme:"éteindre"],#3) & ~AGE(#2) & REFLEX(#1,?))
+		AGE(#2)
+
+// un homme de trente ans
+|NOUN#2{NUM,NOUN#3[timeduree,lemme:"an"]}|
+if(NMOD[posit1](#1[plusage],#2))
+	AGE(#2)
+
+
+// la ménagère de moins de 50 ans
+
+|NOUN#3{NUM,NOUN#4[timeduree,lemme:"an"]}|
+if(NMOD[posit1](#1[plusage],#2[quant]) & (NMOD[posit1](#2,#3)))
+	AGE(#3)
+
+// les moins/plus de douzes ans
+
+// traitement des coordinations type 3, 4 , 6 et 10 ans
+// A SUPPRIMER POUR ESTER SELON LES GUIDELINES 
+
+//|NP{NUM#2,COORD[lemme:"et"],NOUN#3}|
+//	if (AGE(#3) & ~AGE(#2))
+//	AGE(#2)
+
+
+//|NP{NUM#1,PUNCT[form:fcm],NUM#2,COORD[lemme:"et"],NOUN#3}|
+//	if (AGE(#3))
+//	AGE(#1),AGE(#2).
+
+
+|NOUN#1[ex_age:+]|
+	AGE(#1)
+
+// ajout Maud
+// Il savait chanter dès 13 ans. Spectacle tout public dès 3 ans.
+|PP#1{PREP[lemme:"dès"],NP{NOUN#2}}|
+	if(^DUREE(#1))
+	AGE[date=~](#2),
+	~.
+
+
+
+
+
+//*** METEO
+//l'ouragan Katrina
+
+|noun#1[proper,maj,meteo]|
+	PHENOMENE-METEO(#1)
+
+// Katrina est un ouragan
+
+if (SUBJ(#2,#1[proper]) & OBJ[spred](#2,#3[meteo,proper:~]))
+	PHENOMENE-METEO(#1)
+
+//Katrina , qui est un ouragan
+
+if (SUBJ(#2,#1[pron,rel]) & COREF[rel](#3[proper],#1) & OBJ[spred](#2,#4[meteo,proper:~]))
+		PHENOMENE-METEO(#3)
+//Katrina, l'ouragan ...
+
+ |NP[det]{?*,NOUN#2}|
+if (SEQNP(#1[proper,org:~,lieu:~,maj],#2[proper:~,meteo]))
+			PHENOMENE-METEO(#1)
+
+
+// equipes sportive : stade toulousain
+// a verifier: c'est quand meme ambigu
+
+|#1{#2,#3}|
+if (^ORG[batiment,lieu](#1) & NMOD(#2,#3) & AGEO(#3,?))
+	ORG[sport=+,div=+,batiment=~,lieu=~](#1)
+
+
+// faire monter le trait du premodifieur sur
+//les orgs pour avoir leurs types
+
+
+if (NMOD[pol](#1,#2) & ^ORG(#2))
+	ORG[pol=+](#2)
+
+if (NMOD[posit1](#1[prefirme],#2) & ^ORG(#2))
+	ORG[entreprise=+](#2)
+
+
+// adresses versus line : elle habite rue des Petunias
+
+if (OBJ(#1[lemme:"habiter"],#2) & ^LIEU[line](#2))
+	LIEU[adresse=+,line=~](#2)
+if (OBJ(#1[lemme:"demeurer"],#2) & ^LIEU[line](#2))
+	LIEU[adresse=+,line=~](#2)
+if (OBJ(#1[lemme:"vivre"],#2) & ^LIEU[line](#2))
+	LIEU[adresse=+,line=~](#2)
+if (OBJ(#1[lemme:"domicilier"],#2) & ^LIEU[line](#2))
+	LIEU[adresse=+,line=~](#2)
+
+
+
+// Coordination, modifictaion des unites 
+
+/8 et 9 degres\
+|PP#1{prep,NP{num#3,coord,noun#2}}| 
+	if ( ^AMOUNT[!unit:!](#2) & ~AMOUNT(#1))
+	AMOUNT(#1)
+
+|NP#1{num#3,coord,noun#2}| 
+	if ( ^AMOUNT[!unit:!](#2) & ~AMOUNT(#1))
+	AMOUNT(#1)
+
+|NP#1{num#3,noun#2[!unit:!,unit,time:~]}| 
+	if ( ~AMOUNT(#1))
+	AMOUNT(#1)
+
+
+/8 à 9 degrés\
+
+|NP#1{?*,num#3[last]},PP{prep[form:fa],NP{NOUN#2}}|
+	if (^AMOUNT[!unit:!](#2))
+	AMOUNT(#1)
+
+/ de 8 à 9 degrés\
+// ajout maud : pas de trait année sur le num
+// de 60% du PIB en 2008 à 89% en ....
+
+|NP#1{det[lemme:un];det[lemme:chaque],noun#2[unit,!unit:!]}|
+	 AMOUNT(#1)
+
+
+|NP#2{DET,NOUN#1}|
+	if (^AMOUNT[!unit:!](#1))
+	AMOUNT(#2)
+
+|NP#2{NUM,PUNCT[form:fcm],ADV*,NOUN#1}|
+	if (^AMOUNT[!unit:!](#1))
+	AMOUNT(#2)
+
+|PP{?*,NP{?*,num#1[last,annee:~]}},PP{prep[form:fa],NP{NOUN#2}}|
+	if (AMOUNT[!unit:!](#2))
+	AMOUNT(#1)
+
+|PP#2{PREP,ADV*,NP{DET*,NOUN#1}}|
+	if (^AMOUNT[!unit:!](#1))
+	AMOUNT(#2)
+
+|PP#2{PREP,ADV*,NP#1}|
+	if (^AMOUNT[!unit:!](#1))
+	AMOUNT(#2)
+
+
+|PP#2{PREP,ADV*,NP{DET*,NOUN#1}}|
+	if (^AGE(#1))
+	AGE(#2)
+
+// le mètre carré ; du metre carré
+
+|NP#1{det[def],noun#2[measure:+,noun:+,unit,!unit:!,last,nat:~,lettres:~]} |
+	if (~AMOUNT(#1))
+	AMOUNT(#1)
+
+|pp#1{prep[def],NP{noun#2[measure:+,noun:+,!unit:!,last,nat:~,lettres:~]}} |
+       if (~AMOUNT(#1))
+	AMOUNT(#1)
+
+
+
+
+//**********METONYMIES*************************
+// Changement loc.admi --> org.gsp
+//*********************************************
+
+// Lieu surs
+
+if (PREPOBJ(#1,#2[form:fen]) & ^LIEU[!traits:!](#1))
+ 	LIEU[locsure=+](#1)
+
+if (NMOD(#1[lemme:frontière],#2) & ^LIEU[!traits:!](#2))
+	LIEU[locsure=+](#2)
+
+
+if (NMOD(#1[ptcard],#2) & ^LIEU[!traits:!](#2))
+	LIEU[locsure=+](#2)
+
+// changements 
+
+
+if (NMOD(#1[lemme:"ville"],#2) & SUBJ(#3[metolocorgsubj],#1) &  LIEU[locsure:~](#2))
+	METO-ORG(#2)
+
+if ( (SUBJ(#1[metolocorgsubj],#2) | DEEPSUBJ(#1[metolocorgsubj],#2)) & LIEU[locsure:~](#2))
+	METO-ORG(#2)
+
+if ( (OBJ(#1[metolocorgobj],#2) | DEEPOBJ(#1[metolocorgobj],#2))  & LIEU[locsure:~](#2))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_de],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fde]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_par],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fpar]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_sur],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fsur]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_avec],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:favec]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_dir],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[lemme:"en direction de"]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_aupresde],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[lemme:"auprès de"]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_a],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fa]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_entre],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fentre]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_contre],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fcontre]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_pour],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fpour]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg_devant],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fdevant]))
+	METO-ORG(#2)
+
+// en proie: modifieur inversé
+if (NMOD(#2,#1[nmodlocorg_en]) & LIEU[locsure:~](#2) & PREPOBJ(#1,#3[form:fen]))
+	METO-ORG(#2)
+
+if (NMOD(#1[nmodlocorg],#2) & LIEU[locsure:~](#2) & LIEU[locsure:~](#3) & NMOD(#3,#2))
+	METO-ORG(#2), METO-ORG(#3)
+
+if (ADJMOD(#1[nmodlocorg_de],#2) &  LIEU[locsure:~](#2))
+		METO-ORG(#2)
+
+
+if (NMOD(#1,#2[nmodlocorg_de]) & LIEU[locsure:~](#1))
+	METO-ORG(#1)
+
+if (NMOD(#1,#2) & EVENEMENT[sport](#1) & LIEU[locsure:~](#2) &  ( PREPOBJ(#2,#3[form:fentre]) | PREPOBJ(#2,#3[form:fcontre])))
+		METO-ORG(#2)
+
+
+
+// *** ATTRIBUTS
+
+if ( OBJ[spred](#1,#2[metospred]) & SUBJ(#1,#3) & LIEU[locsure:~](#3))
+		METO-ORG(#3)
+
+|#2{?*,#4[metospred]}|
+if ( OBJ[spred](#1,#2) & SUBJ(#1,#3) & LIEU[locsure:~](#3))
+		METO-ORG(#3)
+
+// l'Irak vaincu
+
+if (NMOD(#1,#2[metospred,adj]) &  LIEU[locsure:~](#1))
+	METO-ORG(#1)
+
+// **** VMODS
+
+
+if (VMOD(#1[vmodlocorg_de],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[form:fde]))
+	METO-ORG(#2)
+
+
+if (VMOD(#1[vmodlocorg_entre],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[lemme:"entre"]))
+	METO-ORG(#2)
+
+if (VMOD(#1[vmodlocorg_pour],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[lemme:"pour"]))
+	METO-ORG(#2)
+
+if (VMOD(#1[vmodlocorg_sur],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[lemme:"sur"]))
+	METO-ORG(#2)
+
+if (VMOD(#1[vmodlocorg_a],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[form:fa,start:~]))
+	METO-ORG(#2)
+
+if (VMOD(#1[vmodlocorg_vers],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[form:fvers]))
+	METO-ORG(#2)
+
+if (VMOD(#1[vmodlocorg_contre],#2) & LIEU[locsure:~](#2) &  PREPOBJ(#2,#3[form:fcontre]))
+	METO-ORG(#2)
+
+if (VMOD(#1[lemme:"dire"],#2) & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[lemme:"du côté de"]))
+	METO-ORG(#2)
+
+if (VMOD(#1[lemme:"agir",ilse],#2)  & LIEU[locsure:~](#2) & PREPOBJ(#2,#3[form:fde]))
+		METO-ORG(#2)
+
+// il y a  la France --> toujours org
+
+if (SUBJ[imperso](#1[lemme:avoir],#2[lemme:il]) & LIEU[locsure:~](#3) & OBJ(#1,#3))
+		METO-ORG(#3)
+
+
+// la guerre à PAYS
+
+|NP{?*,noun[lemme:"guerre"]}, PP{prep[form:fa],np{noun#1}}|
+	if  (LIEU[admi](#1))
+		METO-ORG(#1)
+
+// la Syrie accusée de cacher ...
+
+
+if ( ~PRECOMMA(#2) & NMOD(#1,#2[metolocorgsubj,partpas]) & LIEU[locsure:~](#1))
+	METO-ORG(#1)
+
+//*** systematique : preposition induisant un glissement
+
+if (PREPOBJ(#2,#3[prepmeto,admi:~]) &  LIEU[locsure:~](#2))
+		METO-ORG(#2)
+
+if (PREPOBJ(#2,#3[prepmeto,admi]) &  LIEU[locsure:~,admi](#2))
+		METO-ORG(#2)
+
+// *** systematique : antecedent de relative /qui/
+
+if (COREF[rel](#1,#2[lemme:"qui"]) &   LIEU[locsure:~](#1))
+		METO-ORG(#1)
+
+
+// cas a plusieurs argument
+
+// Test: si l'objet a le trait POL --> meto
+//ex: la Belgique a un ministre
+
+if ( SUBJ(#1[lemme:"avoir"],#2) & LIEU[locsure:~](#2) & OBJ[pol](#1,#3))
+		METO-ORG(#2)
+
+
+if ( SUBJ(#1[lemme:"avoir"],#2) & LIEU[locsure:~](#2) & OBJ(#1,#3[obj_avoir_metosubj]))
+			METO-ORG(#2)
+
+if ( OBJ(#1[lemme:"mettre"],#2[lemme:"pression"]) & VMOD(#1,#3) & LIEU[locsure:~](#3))
+		METO-ORG(#3)
+
+if ( OBJ(#1[lemme:"remettre"],#2[lemme:"pression"]) & VMOD(#1,#3) & LIEU[locsure:~](#3))
+		METO-ORG(#3)
+
+if ( SUBJ(#1[lemme:"être"],#2) & LIEU[locsure:~](#2) & VMOD(#1,#3) & PREPOBJ(#3,#4[lemme:"contre"]))
+	METO-ORG(#2)
+
+if ( SUBJ(#1[lemme:"être"],#2) & LIEU[locsure:~](#2) & VMOD(#1,#3) & PREPOBJ(#3,#4[lemme:"pour"]))
+	METO-ORG(#2)
+
+if ( SUBJ(#1[lemme:"être"],#2) & LIEU[locsure:~](#2) & VMOD(#1,#3[lemme:embarras]) & PREPOBJ(#3,#4[lemme:"dans"]))
+	METO-ORG(#2)
+
+//Il y a Paris 
+
+// correction pour PB d'analyse syntaxique
+
+|AP{ADJ[lemme:contesté]},PP{prep[form:fpar],NP{NOUN#1}}| 
+	if( LIEU[locsure:~](#1))
+	METO-ORG(#1)
+
+|NP{?*,NOUN[last,nmodlocorg_entre]}, PP{prep[form:fentre],NP{det,noun#1}}|
+		if( LIEU[locsure:~](#1))
+		METO-ORG(#1)
+
+|NP{?*,NOUN[last,nmodlocorg_contre]}, PP{prep[form:fcontre],NP{det,noun#1}}|
+		if( LIEU[locsure:~](#1))
+		METO-ORG(#1)
+
+
+// La france est parmi ce spays qui
+if (SUBJ(#1[lemme:être],#2) & LIEU[locsure:~](#2) & VMOD(#1,#3[lemme:"pays"]) & COREF[rel](#3,#4[lemme:qui]))
+	METO-ORG(#2)
+
+if (SUBJ(#1[lemme:être],#2) & LIEU[locsure:~](#2) & VMOD(#1,#3[lemme:"ville"]) & COREF[rel](#3,#4[lemme:qui]))
+	METO-ORG(#2)
+
+// la france est en passe de ...
+
+if (SUBJ(#1[lemme:être],#2) & LIEU[locsure:~](#2)  & VMOD(#1,#3) & PREPOBJ(#3,#4[lemme:"en passe de"]))
+		METO-ORG(#2)
+
+// la france est sur le fil  ...
+
+if (SUBJ(#1[lemme:être],#2)   & LIEU[locsure:~](#2)  & VMOD(#1,#3[lemme:fil]) &  PREPOBJ(#3,#4[lemme:"sur"]))
+	METO-ORG(#2)
+
+if (SUBJ(#1[lemme:être],#2)   & LIEU[locsure:~](#2)  & VMOD(#1,#3[lemme:croisée]) &  PREPOBJ(#3,#4[lemme:"à"]))
+	METO-ORG(#2)
+
+
+|ADV[lemme:"pour sa part"],NP{DET,NOUN#1}|
+	if( LIEU[locsure:~](#1))
+	METO-ORG(#1)
+
+
+
+// *** Il lit Kant
+
+if (^PERSONNE(#1) & OBJ(#2[lemme:"lire"],#1))
+	PRODUIT[docu=+,hum=~](#1)	
+
+// cas de coordinations : on considere que le glissement
+//sémantique opere sur tous les coordonnés
+
+
+
+if (METO-ORG(#1) & (LINK-COORD(#1,#2) | LINK-COORD(#2,#1)) &  LIEU[locsure:~](#2) & ~METO-ORG(#2))
+	METO-ORG(#2)
+
+if (METO-ORG(#1) & (COORDITEMS(#1,#2) | COORDITEMS(#2,#1)) &  LIEU[locsure:~](#2) & ~METO-ORG(#2))
+	METO-ORG(#2)
+
+// MMe Tathcher et la France
+if (PERSONNE(#1) & (COORDITEMS(#1,#2) | COORDITEMS(#2,#1)) &  LIEU[locsure:~](#2))
+	METO-ORG(#2)
+
+
+// l'ONU et la France
+
+if (ORG(#1) & (COORDITEMS(#1,#2) | COORDITEMS(#2,#1)) &  LIEU[locsure:~](#2))
+	METO-ORG(#2)
+
+
+// org --> LIEU.fac
+if (PREPOBJ(#2,#3[prepmetoloc]) &  ^ORG(#2))
+		LIEU[batiment=+](#2)
+
+
+
+
+//*** modif finale
+
+if (METO-ORG(#1) & ^LIEU[admi](#1) )	
+    ORG[gsp=+,admi=~](#1)
+
+if (METO-ORG(#1) & ^LIEU[batiment,org,!pol:!](#1))
+	ORG[lieu=~,batiment=~,org=~,pol=+](#1)
+
+// l'Europe:org.gsp par defaut
+
+|NP{det[def],noun#1[lemme:"Europe"],?*}|
+	if (^LIEU(#1))
+	ORG[gsp=+,admi=~](#1)
+
+// Union européenne gsp 
+
+if (^LIEU(#1[lemme:"Union Européenne"]))
+		ORG[gsp=+,admi=~,non-profit=~,region=~](#1)
+
+if (^ORG(#1[lemme:"union européen"]))
+		ORG[gsp=+,non-profit=~](#1)
+
+if  (^ORG[lieu](#1[lemme:"Bercy"]))
+	ORG[gsp=+,pol=~](#1)
+
+|PP{prep[form:fa],NP{NOUN#1}}|
+	if(^ORG[batiment](#1))
+	LIEU[batiment](#1)
+
+// Equipes sportives :
+//France Angleterre
+
+|NP{NOUN#1[first],NOUN#2[last]}|
+	if (^LIEU(#1) & ^LIEU(#2))
+	ORG[div=+](#1),ORG[div=+](#2). 
+
+|NP{NOUN#1[first],NOUN#2[last]}|
+	if (^LIEU(#1) & ORG[div=+](#1))
+		~
+if(^ORG[div,pays,admi](#1)  )
+	ORG[div](#1)
+
+//PERSONNES
+
+|NP#1{NOUN[tit],NOUN[last]{NOUN#2}}|
+	if (^PERSONNE(#2))
+	PERSONNE(#1)
+
+
+// Pour INA: attention
+
+|NP{?*,noun#1},NP{NOUN#2[proper]}|
+	if ( AGEO (#1,?) & ^ORG(#2) & PERSONNE(#2))
+
+	~
+/******* moins de / plus de AMOUNT**********\
+
+|NP#1{det{adv[lemme:"moins"],det[lemme:de]},noun#2}| 
+	if (^AMOUNT[!traits:!](#2))
+	AMOUNt(#1)
+
+|NP#1{det{adv[lemme:"plus"],det[lemme:de]},noun#2}| 
+	if (^AMOUNT[!traits:!](#2))
+	AMOUNt(#1)
+
+|PP#1{prep[lemme:"à moins de"],NP{noun#2}}| 
+	if (^AMOUNT[!traits:!](#2))
+	AMOUNt(#1)
+
+
+// ****************PHONE
+
+|NP{NUM#3{NUM,NUM,NUM,NUM,NUM*}}|
+if (PREPOBJ(#3,#2[form:fa,masc]))
+	LIEU[telfax=+](#3)
+
+|PP{prep[form:fa],NP{NUM#3{NUM,NUM,NUM,NUM,NUM*},?*}}|
+	if (~LIEU[telfax](#3))
+	LIEU[telfax=+](#3)
+
+
+
+
+/******* marquage des éléments à propager **********\
+Script:
+
+if (PHENOMENE-METEO(#1))
+	{METEO##1=1;PERS##1=0;}
+
+if (PRODUIT[VEHICULE](#1))
+	{VEHIC##1=1;}
+
+|noun#1{?*,noun#2}| 
+  if (PRODUIT[VEHICULE](#1))
+		{VEHIC##2=1;}
+
+
+/******* fin marquage des éléments à propager **********\
+
+Déduction:
+|NOUN#1| 
+	if (METEO##1:1)
+	PHENOMENE-METEO(#1)
+
+|NP{DET[def],NOUN#1[vehicule:~,maj]}| 
+	if ( (VEHIC##1:1) & ~PRODUIT[VEHICULE=+](#1))
+	PRODUIT[VEHICULE=+](#1)
+
+|PP{PREP[def],NP{NOUN#1[vehicule:~,maj]}}| 
+	if (VEHIC##1:1)
+	PRODUIT[VEHICULE=+](#1)
+
+//if (^PERSONNE(#1) & VEHIC##1:1 & PERS##1:0)
+//	PRODUIT[VEHICULE=+](#1)
+
+
+// changement d'interpretation
+
+//|NOUN#1{noun[lemme:"biennale"],?*}| 
+//	if (^EVENEMENT(#1))
+//	ORG[div=+](#1)
+
+//if (^EVENEMENT[!traits:!](#1))
+//	ORG(#1)
+
+|np{noun[tit],noun#1}}| 
+	if ( ^ORG(#1) & PERSONNE(#1))
+	~
+
+|np{noun[tit],noun#1}}}| 
+	if ( ^LIEU(#1) & PERSONNE(#1))
+	~
+
+// effacements
+
+ |NP{det[def],noun#1[lemme:Aïd]}|
+	if (^PERSONNE(#1))
+	~
+
+if (NMOD(#1,#2[lemme:échelle]) & ^AMOUNT[unit_temper](#1))
+	~
+
+|noun#1{?*,#2}|
+	if (ORG(#1) & ^$1(#2))
+	~
+
+
+if (^PERSONNE(#1) & PRODUIT(#1))
+	~
+
+if (^PERSONNE(#1) & PHENOMENE-METEO(#1))
+	~
+
+|#1{#2,?*}| if (^DATE-ESTER(#2) & AMOUNT(#1)) ~
+
+|NOUN#1{?#2,?+}|
+	if (PERSONNE(#1) & ^DATE-ESTER(#2))
+	~
+
+
+|NOUN#1{?*,NOUN{NOUN#2,?}}|
+	if (PERSONNE(#1) & ^DATE-ESTER(#2))
+	~
+
+//ajout maud
+if (AGE(#1) & ^DUREE[date](#1))
+   ~.
+
+if (AGE(#1) & ^DUREE[date](#3) & MOTHER(#1,#3))
+   ~.
+
+if (AGE(#1) & ^DUREE[date](#3) & MOTHER(#1,#4) & MOTHER(#4,#3))
+  ~.
+
+if (AGE(#1) & ^DUREE-ESTER(#1))
+   ~.
+
+if (AGE(#1) & ^DUREE-ESTER(#3) & MOTHER(#1,#3))
+   ~.
+
+if (AGE(#1) & ^DUREE-ESTER(#3) & MOTHER(#1,#4) & MOTHER(#4,#3))
+  ~.
+
+if (AGE(#1) & ^DUREEMOD[date](#1))
+   ~.
+
+if (AGE(#1) & ^DUREEMOD[date](#3) & MOTHER(#1,#3))
+   ~.
+
+if (AGE(#1) & ^DUREEMOD[date](#3) & MOTHER(#1,#4) & MOTHER(#4,#3))
+  ~.
+
+|PP#1{?*,NP{?*,NOUN#2}}|
+if (AGE(#2) & ^DATE(#1))
+   ~
+
+
+
+|NP#1{ADV,NOUN#2}|
+if (AGE(#2) & ^DUREEMOD[date](#1))
+   ~
+// non couverts pour estre
+if(^PHENOMENE-METEO(#1))
+	~
+if(^AMOUNT[percent](#1))
+	~
+
+// correction 
+// Marie, 14 ans, qui est : ans n'est pas le sujet de être
+
+|NP{?*,NOUN#1[last]},punct[form:fcm],NP{NOUN#2{num,noun[lemme:an]}},punct[form:fcm],SC{BG{PRON#3[lemme:qui]},FV{?*,verb#4[last]}}}|
+	if (^SUBJ(#4,#2) & ^COREF[rel](#2,#3) & AGE(#2))
+	SUBJ(#4,#1),COREF[rel=+](#1,#3)
+
+|NP{?*,NOUN#1[last]},punct[form:fcm],NP{NOUN#2{num,noun[lemme:an]}},punct[form:fcm],SC{BG{PRON#3[lemme:qui]},FV{?*,verb#4[last]}}}|
+	if (^SUBJ(#4,#2)   & AGE(#2))
+	~
+
+// Lui et moi sommestentes 
+// ajout de la dependance SUBJ
+
+if (SUBJ(#1,#2) & COORDITEMS(#3,#2))
+	SUBJ(#1,#3)

@@ -1,0 +1,251 @@
+# ============================================================================
+# TYPE:		fst script
+# CONTENT:	mapping morph. categories to standard POS tags
+#
+# LANGUAGE:	DUTCH
+#
+# AUTHOR:	Anne Schiller
+#
+# CREATED:	06-Mar-2007	(by A. Schiller)
+# ============================================================================
+# USAGE:	xfst -l ThisFile
+# ============================================================================
+
+
+# main categories
+# (NOTE: if not defined the compilation of the mapping FST is very slow!)
+define CAT	[ %+Adj | %+Adjv | %+Adv | %+WAdv | %+PronAdv 
+		| %+Verb
+		| %+Noun | %+Prop | %+CmpdPart | %+Init |%+Let | %+Title
+		| %+Conj | %+SubConj | %+InfConj
+		| %+Prep | %+Postp | %+Circp 
+		| %+Art | %+Det | %+Pron | %+PronDet | %+Quant
+		| %+Dig | %+Num | %+Interj | %+Onom
+		| %+Ptcl | %+Spec | %+Symbol | %+Punct | %+Sgml ] ;
+
+
+define DET	[ %+Det | %+PronDet ];
+define PRON	[ %+Pron | %+PronDet ];
+
+define PROPTYPE	[ %+Country | %+City | %+Continent ];
+
+define APOS	[ %+Pos | %+Dem | %+Indef | %+PastPart | %+PresPart | %+Neg 
+		| PROPTYPE ];
+
+define REST	~$[CAT];
+
+# ====================================================================
+
+define PPART	[ %+PresPart | %+PastPart ] ;
+define MOOD	[ %+Ind | %+Con | %+Impv ] ;
+
+# -------------------------------------------------------------------
+echo >>> Special Cases
+
+define AuxStem	[ {zijn} | {hebben} | {worden} ] ;
+
+define SPECIAL [
+  {anderhalf} %+Adj APOS %+Decl		"+hmm_INDDET":0
+| {anderhalf} %+Adj APOS %+Basic		"+hmm_INDDET":0
+| {anderhalf} %+Adj APOS %+Basic		"+hmm_INDPRO":0
+
+| {niet} %+Adv					"+hmm_PTKNEG":0
+| {wanneer} %+Adv				"+hmm_CWADV":0
+
+| AuxStem 	%+Verb MOOD REST		"+hmm_VAFIN":0 
+| AuxStem 	%+Verb %+Inf REST		"+hmm_VAINF":0
+#| AuxStem 	%+Verb %+PastPart REST		"+hmm_VAPP":0
+#| AuxStem 	%+Verb %+PresPart REST		"+hmm_ADJA":0 
+#| AuxStem 	%+Verb %+PresPart REST		"+hmm_ADJD":0 
+
+#| {dan}	%+Conj				"+hmm_CON":0
+| {dan}		%+Conj				"+hmm_COMCON":0
+| {al}		%+Conj				"+hmm_SUBCON":0
+| {zowel}	%+Conj				"+hmm_CON":0
+| {zowel}	%+Conj				"+hmm_SUBCON":0
+| {als}		%+SubConj			"+hmm_CON":0
+| {als}		%+SubConj			"+hmm_SUBCON":0
+| {als}		%+SubConj			"+hmm_COMCON":0
+| {hetzij}	%+SubConj			"+hmm_CON":0
+| {hetzij}	%+SubConj			"+hmm_SUBCON":0
+| {ofwel}	%+SubConj			"+hmm_CON":0
+| {dat}		%+SubConj			"+hmm_RELSUB":0
+| {wanneer}	%+SubConj			"+hmm_CWADV":0
+
+| {te} 		%+Ptcl %+Inf			"+hmm_PTKTE":0		# "te" + infinitive
+| {te} 		%+Ptcl %+AMod			"+hmm_PTKA":0		# "te" + adjective or adverb
+
+
+| {al} 		%+Det %+Indef			"+hmm_INDPRE":0
+| {al} 		%+Pron %+Indef			"+hmm_INDPRO":0
+| {heel} 	%+Adv				"+hmm_INDPRE":0
+| {menig} 	%+Det %+Indef			"+hmm_INDPRE":0
+| {menig} 	%+Det %+Indef			"+hmm_INDDET":0
+| {dat} 	%+Pron %+Rel			"+hmm_RELSUB":0
+
+| {beide} 	%+Num %+Card %+Def		"+hmm_INDPOST":0
+| {beide} 	%+Num %+Card %+Def		"+hmm_INDPRO":0
+| {beide} 	%+Num %+Card %+Def		"+hmm_CARD":0
+| {allebei} 	%+Num %+Card %+Def		"+hmm_INDPRO":0
+| {allebei} 	%+Num %+Card %+Def		"+hmm_INDPRO":0
+
+| {miljoen}	%+Num %+Card %+Def		"+hmm_NOUN":0
+| {miljard}	%+Num %+Card %+Def		"+hmm_NOUN":0
+| {biljoen}	%+Num %+Card %+Def		"+hmm_NOUN":0
+| {biljard}	%+Num %+Card %+Def		"+hmm_NOUN":0
+];
+
+
+
+# -------------------------------------------------------------------
+echo >>> General Mappings
+
+define MAP ?* [
+  %+CmpdPart				"+hmm_CMPDPART":0
+
+# nouns
+| %+Noun REST				"+hmm_NOUN":0
+| %+Prop REST				"+hmm_NOUN":0 
+| %+Init				"+hmm_NOUN":0
+| %+Let REST				"+hmm_NOUN":0
+| %+Title REST				"+hmm_NOUN":0
+| %+Spec REST				"+hmm_NOUN":0
+| %+Symbol REST				"+hmm_NOUN":0
+
+# adjectives, adverbs
+
+| %+Adj %+PostMod			"+hmm_PADJ":0
+| %+Adj (%+Abbr)			"+hmm_ADJA":0
+| %+Adj (APOS) %+Basic REST		"+hmm_ADJA":0
+| %+Adj (APOS) %+Decl REST		"+hmm_ADJA":0
+| %+Adj %+Dim %+Pl			"+hmm_ADJA":0
+| %+Adj %+Neg				"+hmm_ADJA":0
+| %+Adj %+Comp %+Decl REST		"+hmm_ADJA":0
+| %+Adj %+Comp %+Basic REST		"+hmm_ADJA":0
+| %+Adj %+Sup %+Decl REST		"+hmm_ADJA":0
+
+
+| %+Adj (APOS) %+Basic REST		"+hmm_ADJD":0
+| %+Adj (%+Abbr)			"+hmm_ADJD":0
+
+| %+Adjv REST				"+hmm_ADJD":0
+| %+Adv REST				"+hmm_ADV":0
+
+| %+PronAdv REST			"+hmm_PROADV":0
+| %+WAdv				"+hmm_WADV":0
+
+
+# verbs
+| %+Verb MOOD REST			"+hmm_VVFIN":0
+| %+Verb %+Inf REST			"+hmm_VVINF":0
+| %+Verb %+PastPart REST		"+hmm_VVPP":0	
+#| %+Verb PPART REST			"+hmm_ADJA":0
+#| %+Verb PPART (%+Basic)		"+hmm_ADJD":0
+
+# conjunctions
+| %+Conj REST				"+hmm_CON":0
+| %+SubConj REST			"+hmm_SUBCON":0
+| %+InfConj REST			"+hmm_INFCON":0
+
+# prepositions
+| %+Prep REST				"+hmm_PREP":0
+| %+Postp REST				"+hmm_POSTP":0
+| %+Circp REST				"+hmm_CIRCP":0
+
+
+
+# determiners pronouns
+| %+Art REST				"+hmm_ART":0
+
+| DET %+Dem REST			"+hmm_DEMDET":0
+| PRON %+Dem REST			"+hmm_DEMPRO":0
+
+| DET %+Indef	REST			"+hmm_INDDET":0
+| PRON %+Indef REST			"+hmm_INDPRO":0
+
+| DET %+Neg	REST			"+hmm_INDDET":0		# geen
+| PRON %+Neg REST			"+hmm_INDPRO":0		# geen
+
+| NOUN %+Poss	REST			"+hmm_NOUN":0
+| DET %+Poss REST			"+hmm_POSDET":0
+
+| PRON %+Pers	REST			"+hmm_PERS":0
+| PRON %+Rec REST			"+hmm_PERS":0
+| PRON %+Refl	REST			"+hmm_PERS":0
+
+| DET %+Rel	REST			"+hmm_RELPRO":0
+| PRON %+Rel	REST			"+hmm_RELPRO":0
+
+| DET %+Interrog REST			"+hmm_WDET":0
+| PRON %+Interrog REST			"+hmm_WPRO":0
+
+
+# numerals
+| %+Dig	[REST & ~$[%+Ord] ]		"+hmm_DIG":0		# was %+CARD
+| %+Dig %+Ord REST			"+hmm_ORD":0
+
+# ordinals
+| %+Num %+Ord REST			"+hmm_ORD":0
+
+# cardinals
+| %+Num %+Card %+Def			"+hmm_CARD":0
+
+# QUANTIFIERS (CHECK !!!!)
+| %+Quant REST				[ "+hmm_INDPRO"|"+hmm_INDDET" ]:0
+
+
+# "zoveel", "geen"
+| %+Num %+Card %+Indef			["+hmm_INDPRO"|"+hmm_INDDET"]:0
+
+# "veel" ("véél"), "weinig"
+| %+Num %+Card %+Indef %+Basic (%+Emph)	["+hmm_INDPRO"|"+hmm_INDDET"]:0
+
+# "veele", "weinige"
+| %+Num %+Card %+Indef %+Decl		["+hmm_INDPOST"|"+hmm_INDPRO"]:0
+
+# "meer", "minder"
+| %+Num %+Card %+Indef %+Comp %+Basic	["+hmm_INDPRO"|"+hmm_INDDET"]:0
+
+# "minst", "meest"
+| %+Num %+Card %+Indef %+Sup %+Basic	["+hmm_NOUN"|"+hmm_ADV"]:0
+
+# "minste", "meeste"
+| %+Num %+Card %+Indef %+Sup %+Decl	["+hmm_NOUN"|"+hmm_ADJA"]:0
+
+
+# other
+| %+Ptcl %+Sep				"+hmm_PTKVA":0
+
+| %+Interj REST				"+hmm_ITJ":0
+| %+Onom REST				"+hmm_ITJ":0
+
+| %+Ptcl %+Sup				"+hmm_PTKA":0		# "het [meest]"
+
+| %+Punct %+Sent                	"+SENT":0
+| %+Punct %+Comma                       "+hmm_CM":0
+| %+Punct [ REST - [%+Sent|%+Comma] ] 	"+hmm_PUNCT":0
+
+| %+Sgml %+Sent				"+SENT":0
+| %+Sgml [REST - %+Sent] 		"+hmm_SGML":0
+
+| %+Ignore				# for NTM (don't add HMM tag here !!)
+];
+
+
+
+# -------------------------------------------------------------------
+echo >>> Combine
+
+
+read regex SPECIAL .p. MAP ;
+
+
+
+
+# NOTE: For Noun-agreement; 
+# Basic Adjectives can only combine in context indefinite determiners
+# indefinite determiner - Neuter Noun Singular
+
+
+
+

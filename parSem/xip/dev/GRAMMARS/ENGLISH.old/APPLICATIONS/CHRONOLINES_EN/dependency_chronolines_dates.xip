@@ -1,0 +1,741 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : dependency_chronolines.xip
+//!   Date       : August 2011
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+/// Corrections - missing embedments
+
+// if an infinitive appears without any EMBED connection
+// If there is just one verb on its left, then it is linked to this verb.
+// e.g.AUSCHWITZ  ,  Poland  ,  Jan 19  (  AFP  ) - Some 2,000 survivors of the  Auschwitz  - Birkenau extermination camp will gather  on January 27  alongside world leaders and  Red Army  soldiers to mark the 60th anniversary of the liberation of the camp by the  former  Soviet army
+
+| ?[verb]{?*,#2[last]} ,?*[verb:~], IV{prep[lemme:to], ?*, verb#1[last]} |
+if ( ~EMBED(#1,?) & ~EMBED(?,#2) )
+   EMBED(#1,#2)
+
+
+
+
+/////////////////// Corrections
+
+// Deleting ambiguity between shortyear and day (two digits numbers)
+// Friday Oct. 13
+| noun[mwe,date]{noun[day,period], noun[month], dig[shortyear=~]} | 
+~
+
+
+// deleting non-temporal expressions
+| #1{?*,#2[last]} |
+if ( ^TIMEX3(#1) & (SUBJ-N(#3,#2) | OBJ-N(#3,#2) | SUBJ-N(#3,#1) | OBJ-N(#3,#1)) )
+~
+
+| #1[e_age] |
+if ( ^TIMEX3(#1) )
+~
+
+
+// restriction on expressions denoting ages
+// adding missing TIMEXes
+| #1[tempexpr,e_age:~] |
+if ( TEMP(#2,#1) & ~TIMEX3(#1) )
+   TIMEX3(#1)
+
+
+
+
+// cleaning embeded TIMEXES
+| #1{?*,#2} |
+if ( TIMEX3(#1) & ^TIMEX3(#2) )
+~
+
+// For all PP[tempexpr] which are introduced by a notime preposition.
+// We transfer the TIMEX3 value from the PREP to the embedded NP
+// e.g. the salary for 2003
+
+| PP#1[tempexpr]{prep[notime], NP#2[tempexpr,last]} |
+if ( TIMEX3(#1) & TEMP(#3,#1) )
+TIMEX3(#2),
+TEMP(#3,#2).
+
+| #1{prep,#2} |
+if ( ^TIMEX3(#1) & TIMEX3(#2))
+~
+
+| #1{prep,#2} |
+if ( ^TEMP(#3,#1) & TEMP(#3,#2) )
+~
+
+//////////////////////////////				//////////////////////
+/////////////////////////////				//////////////////////
+////////////////////////////				//////////////////////
+///////////////////////////	CLOSED INTERVALS	//////////////////////
+///////////////////////////	       			//////////////////////
+//////////////////////////				//////////////////////
+//////////////////////////				//////////////////////
+
+//////////////////////////////////////////////////////////////////////////
+// ABSOLUTE DATES
+/////////////////////////////////////////////////////////////////////////
+
+// complex absolute dates
+// e.g. on Monday, 30th of December 2011
+
+| PP#1[tempexpr,c_absolut,day]{
+  PP[period,day]{prep[lemme:on,mrt=+,temp_pos="="]},
+  punct[comma],
+  NP[c_absolut,day]{NP[dig], PP[form:fof]{?*,NP{noun[first,last]{noun[month], dig[year]}}}}
+} |			
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+
+// if t_absolute they we can catch day value, month value and year value
+| #1{prep[lemme:on,mrt=+,temp_pos="="], NP{?*, noun[mwe]{dig[day], prep, noun[month], dig[year]}} } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+// on 23/12/2003
+| prep[lemme:on,mrt=+,temp_pos="="], NP{#1[first,last,mwe]{dig,punct,dig,punct,dig}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+// 23/12/2003 (used alone)
+| NP[first:~,last:~]{#1[first,last,mwe]{dig,punct,dig,punct,dig}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+// on Jan 1st 2011
+| PP#1[tempexpr]{prep[lemme:on,mrt=+,temp_pos="="], NP{noun[first,last,mwe,date]{noun[month], dig, (punct), dig}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+// on (Monday,) 21st November 2011
+| PP#1[tempexpr]{prep[lemme:on,mrt=+,temp_pos="="], NP{noun[first,last,mwe,date]{(?[day]), (punct[comma]), dig, noun[month],dig}}} | 
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+
+// September 11 2001
+| noun#1{noun[month], dig, (punct;prep[lemme:of]), dig} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1) 
+
+// Sept. 11, 2001
+| NP#1{noun[first,last,tempexpr,date,mwe]{noun[month], dig, punct, dig[year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+
+
+// only month and year
+// in february 2011
+| PP#1[tempexpr,form:fin]{prep[mrt=+,temp_pos="="],?*, noun[mwe,date]{noun[month],dig[year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// used alone
+// September 2005
+| NP#1[tempexpr]{noun[mwe,date,first,last]{noun[month], dig[year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+
+// only year but not years interval *(1996-1997)
+| PP#1[form:fin,year]{prep[mrt=+,temp_pos="="],?*,dig[mwe:~];noun[mwe]{?*,dig[last,mwe:~]}};PP#1[year]{prep[form:fduring,mrt=+,temp_pos="="],dig[mwe:~]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// PP introduced with prep which is not a MRT
+| PP[tempexpr]{prep[notime],NP#1{?*,dig[last,year,mwe:~]} } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+
+// when modifies a noun eg. the 1973 Arab-Israeli war
+// avoiding date intervals
+| dig#1[date,year,mwe:~] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+// with time_anchor
+// beginning 2003
+| NP#1[tempexpr]{noun{noun[time_anchor], dig[date,year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+// in the beginning of 2003
+| PP#1[tempexpr]{prep[time_anchor], dig[date,year]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+// complex quant + date[dig]
+// the second third of 2003
+| NP#1[tempexpr]{?*, quant[mwe], dig[date,year]};
+  PP#1[tempexpr]{prep, NP{?*,quant[mwe],dig[date,year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+
+// in the first quarter of 2003
+| PP#1{prep[lemme:in];prep[lemme:during], NP[tempexpr]{
+	det, noun[last,mwe]{
+		num, noun[period], prep[lemme:of], dig[date,year]
+		}
+	}
+ } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, seen=+](#1)
+
+
+
+
+/// absolute but missing year
+
+// On Jan 1
+| #1{prep[lemme:on,mrt=+,temp_pos="="], NP{?*, noun[mwe]{(noun[day]),noun[month], (det[def]), dig[last,year:~,mwe:~];num[day,last,mwe:~]}} } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1) 
+
+// used alone
+// Jan 1
+| NP#1{?*, noun[mwe,last]{noun[month], dig[last,year:~];num[day,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1) 
+
+
+// On (the) 29 (of) Jan
+| #1{prep[lemme:on,mrt=+,temp_pos="="], NP{?*, noun[mwe]{dig[mwe:~];num[day,mwe:~];num[ord,day=+], (prep[lemme:of]), noun[month,last]}} } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1) 
+
+
+// AB 2012.06.20 added year:~ to dig to avoid marking 2003 as day in "2003 February and July" (shortyear:+ digs are stilla problem)
+// 29 Jan
+| NP#1{?*,noun[mwe]{dig[year:~];num[day], noun[month]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, t_incomplete=+, seen=+](#1)
+
+// as pre-modifier of a non-temporal noun
+| NP{?*, noun#1[mwe]{noun[month], dig[last];num[day,last]}, noun[tempexpr:~]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+, t_incomplete=+, seen=+](#1)
+
+// Friday Oct. 13 (without MRT)
+// Normalized as October 13
+| NP#1{noun[mwe,date]{noun[day], noun[month], dig[day]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_absolut=+,t_incomplete=+, seen=+](#1)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// RELATIVE DATES SPEECH TIME
+///////////////////////////////////////////////////////////////////////////////
+
+// this year/late this year
+| NP#1{?*, det[form:fthis], ?*, noun[surface:year]}; NP#1{adv[time,time_anchor=+], NP{det[form:fthis], ?*, noun[surface:year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_m=+, seen=+](#1)
+
+// at the end/in the beginning/middle of this year
+| PP#1{prep[lemme:at,mrt="+", temp_pos="="];prep[lemme:in, mrt=+, temp_pos="="], NP[tempexpr,t_relat]{?*,?[time_anchor,noun], ?*, det[form:fthis],?*, noun[surface:year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_m=+, seen=+](#1)
+
+// in the current year
+// in the current year ~= this year
+| PP#1{prep[lemme:in], NP{det, nadj[lemme:current], noun[lemme:year,sg:+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_m=+, seen=+](#1)
+
+
+
+
+// this month
+| NP#1{det[form:fthis], ?*, noun[surface:month]}; NP#1{adv[time,time_anchor=+], NP{det[form:fthis], ?*, noun[surface:month]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_d=+, seen=+](#1)
+
+// at the end/in the beginning/middle of this month
+| PP#1{prep[lemme:at,mrt="+", temp_pos="="];prep[lemme:in, mrt=+, temp_pos="="], NP[tempexpr,t_relat]{?*,?[time_anchor,noun], ?*, det[form:fthis],?*, noun[surface:month]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_d=+, seen=+](#1)
+
+// in the current month
+| PP#1{prep[lemme:in], NP{det, nadj[lemme:current], noun[lemme:month,sg:+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+, temp_ref=s, temp_rel=equals, blurr_d=+, seen=+](#1)
+
+
+| #1[lemme:now] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=equals,seen=+,noprocess=+](#1)
+
+
+| #1[lemme:today] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=equals,seen=+,noprocess=+](#1)
+
+// this afternoon, this evening, this morning - normalized as DCT
+| #1{det[lemme:this], noun[posttime,period]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=equals,seen=+](#1)
+
+
+
+// yesterday (morning, afternoon...)
+| #1[lemme:yesterday]; #1{?[lemme:yesterday],np{noun[first,last,period,posttime]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// tomorrow (morning, afternoon...)
+| #1[lemme:tomorrow]; #1{?[lemme:tomorrow], np{noun[first,last,period,posttime]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=d,seen=+](#1)
+
+| #1[lemme:"the day after tomorrow"] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_relat=+,t_interval=t_point, temp_ref=s,temp_rel=after,temp_delta=2,unit_delta=d,seen=+](#1)
+
+
+// temp_delta is acquired in java code i.e. temp_delta=find.
+// adding blurr_m and blurr_d features in order to have a looser normalization within java code. 
+
+// in 2 days time
+| PP#1{PP[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:day]}},NP[lemme:time]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=d,seen=+](#1)
+
+// in three weeks time
+| PP#1 {PP[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:week]}},NP[lemme:time]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=w,seen=+](#1)
+
+// in three months time
+| PP#1 {PP[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:month]}},NP[lemme:time]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// in three years time
+| PP#1 {PP[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:year]}},NP[lemme:time]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=y,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// in two days
+| PP#1[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:day]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=d,seen=+,blurr_d=+](#1)
+
+// in three weeks
+| PP#1[form:fin]{prep, NP[firstdig,period]{?*,noun[last,lemme:week]}} |
+if ( ^TIMEX3[seen:~](#1)  )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// in three months
+| PP#1[form:fin]{prep[mrt=+,temp_pos="="], NP[firstdig,period]{?*,noun[last,lemme:month]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+
+// in three years
+| PP#1[form:fin]{prep, NP[firstdig,period]{?*,noun[last,lemme:year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=y,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// next week/month/year
+| NP#1{nadj[lemme:next],noun[period,surface:week]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+| NP#1{nadj[lemme:next],noun[period,surface:month]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// next year with underspecified month and day values
+| NP#1{nadj[lemme:next],noun[period,surface:year]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,blurr_m=+, seen=+](#1)
+
+
+// (late|early) last week/month/year
+| NP#1{nadj[lemme:last],noun[period,surface:week]}; NP#1{adv[time],NP{nadj[lemme:last],noun[period,surface:week]}}  |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+| NP#1{nadj[lemme:last],noun[period,surface:month]}; NP#1{adv[time], NP{nadj[lemme:last],noun[period,surface:month]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// last year. In this case, this is not the same than a year ago as month and day has to remain unspecified.
+| NP#1{nadj[lemme:last],noun[period,surface:year]}; NP#1{adv[time], NP{nadj[lemme:last],noun[period,surface:year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y, blurr_m=+, seen=+](#1)
+
+
+// two days ago
+| ADV#1[mwe,t_relat]{dig;num, noun[lemme:day], adv[lemme:ago]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=d,seen=+,blurr_d=+](#1)
+
+// two weeks ago
+| ADV#1[mwe,t_relat]{dig;num, noun[lemme:week], adv[lemme:ago]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// two months ago
+| ADV#1[mwe,t_relat]{dig;num, noun[lemme:month], adv[lemme:ago]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+
+// a year ago or one year ago
+// In this case we can specify directly the value of temp_delta (=1). Day field is unspecified
+| ADV#1[mwe,t_relat]{det[indef];num[form:fone], noun[lemme:year], adv[lemme:ago]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_d=+](#1)
+
+
+
+// two years ago
+// day and month fields are unspecified when at least two years before DCT
+| ADV#1[mwe,t_relat]{dig;num, noun[lemme:year], adv[lemme:ago]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=y,seen=+,blurr_m=+](#1)
+
+
+
+
+// next + monthname
+// next January
+| NP#1{nadj[lemme:next],noun[month]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// last + monthname
+| NP#1{nadj[lemme:last],noun[month]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+
+// next + dayname
+// e.g next Tuesday
+| NP#1{nadj[lemme:next], noun[day]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// last + dayname
+| NP#1{nadj[lemme:last],noun[day]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+// ST dates involving the predicate tense for normalization
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
+// dayname alone get the tense on the predicate
+
+
+// In order to avoid rule duplications, 
+// in a first stage, temp_rel will have the value "to_add".
+// in a second stage, the value of "temp_rel" will be modified according to the tense of the verb.
+
+
+//on  Monday 29
+// temp_rel value added later by XIP rules
+| PP#1{prep[lemme:on,mrt=+,temp_pos="="], NP{noun[first,last,mwe]{noun[day], dig[day]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add, unit_delta=d, temp_delta=dig_and_day_name, seen=+](#1)
+
+
+
+
+// on thursday (morning, afternoon ...) 
+| PP#1[day]{prep[lemme:on,mrt=+,temp_pos="="], NP{noun[first,day]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=d, temp_delta=day_name,seen=+](#1)
+
+
+// thursday 
+| NP#1{noun[first,last,day]}; NP#1{adj[time,first],noun[last,day]} | 
+if ( ^TIMEX3[seen:~](#1) ) 
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=d, temp_delta=day_name,seen=+,np_raw=+](#1)
+
+
+// same as above within a NP - TIMEX3 is on noun
+| noun#1[day] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=d, temp_delta=day_name,seen=+,np_raw=+](#1)
+
+
+
+// only monthname alone
+// When month name is nominal premodifier
+// eg in the march survey
+| noun#1[month] |
+if ( TEMP[pre](?[noun],#1) & ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name, seen=+](#1)
+
+| NP#1{noun[first,last,month]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name, seen=+](#1)
+
+
+// In December this year - tense sensitive
+| PP#1[tempexpr]{PP[form:fin,miss_year]{prep[mrt=+,temp_pos="="]}, NP{det[form:fthis], noun[lemme:year]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// in/this December - tense sensitive 
+// temp_ref added later
+| PP#1[tempexpr,form:fin,miss_year]{prep[mrt=+,temp_pos="="],?*,NP{noun[month]}};
+PP#1[tempexpr,miss_year]{prep[lemme:on, temp_pos="=", mrt=+], ?*, NP{noun[month]}} 
+;
+NP#1[tempexpr]{det[lemme:this], ?*,noun[month]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// in case we do not have any verb or infinitive verb in the sentence, we consider as future month - also works for modal verbs
+// check if OK
+| PP#1[tempexpr,form:fin,miss_year]{prep[mrt=+,temp_pos="="],?*,NP{noun[month]}}; NP#1[tempexpr]{det[lemme:this], ?*, noun[month]} |
+if ( ^TIMEX3[seen:~](#1) & TEMP(#2,#1) ) 
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// early/late <monthname>
+// early March
+| NP#1{noun[mwe,tempexpr]{?[adv,time,time_anchor=+], noun[month,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// beginning/end/middle of <monthname>
+// refine further afterwards
+| NP#1{?[time_anchor,noun], prep[lemme:of];punct[form:fhyph], noun[month,last]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+// at the beginning /end of <monthname> or in the middle of <monthname>
+| PP#1{prep[lemme:at,mrt=+,temp_pos="="];prep[lemme:in,mrt=+,temp_pos="="], NP{det, ?[time_anchor,noun],prep[lemme:of],noun[month,last]}} |
+if ( ^TIMEX3[seen:~](#1) ) 
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=to_add,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+
+
+////////////
+//////////// ADDING THE VALUE FOR TEMP_REL according to the tense of the verb
+///////////
+
+// for timex linkded to a past verb
+if ( ^TIMEX3[seen:+,temp_rel:to_add](#1) & TEMP(#2,#1) & ( PAST(#2) | PRES-OR-PAST(#2) | ( MAIN(#3) & (PAST(#3) | PRES-OR-PAST(#3)) ) ) ) 
+TIMEX3[temp_rel=~,temp_rel=before](#1)
+
+// for timex linked to a future verb
+if ( ^TIMEX3[seen:+,temp_rel:to_add](#1) & TEMP(#2,#1) & (FUTURE(#2) | PRESENT(#2) | ( MAIN(#3) & (FUTURE(#3) | PRESENT(#3)) ) ) )
+TIMEX3[temp_rel=~,temp_rel=after](#1)
+
+// modal without tense
+// e.g he should;could arrive on Monday
+// consider as future - modality is added later
+if ( ^TIMEX3[seen:+,temp_rel:to_add](#1) & TEMP(#2,#1) & VMODAL(#2) & ~PAST(#2) & ~VASPECT(#2) )
+TIMEX3[temp_rel=~,temp_rel=after](#1)
+
+
+// default, when the timex is not linked to any predicate - choose temp_rel:before. Can be changed
+if ( ^TIMEX3[seen, temp_rel:to_add](#1) )
+TIMEX3[temp_rel=~,temp_rel=before](#1)
+
+
+// TO DO
+// In <num> hours can be a-priori be either duration or date
+// approx: 
+// - if modifies verb in present or future tense, it is a date
+// - if modifies verb in past tense, it is a duration (see dependency_chronolines_duration.xip
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RELATIVE DATES TO A DISCOURSE REFERENT (an event introduced before)
+/////////////////////////////////////////////////////////////////////////////
+
+// feature temp_ref:e
+// take the time of the last referred event
+
+// ADD SEEN LATER
+
+// PERIOD +EARLIER
+// a year earlier
+| NP#1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:year], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=y, t_relat=+, temp_rel=before, temp_delta=1, blurr_d=+](#1)
+
+// num year earlier
+| #1{(adv), dig;num, noun[period,lemme:year], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=y, t_relat=+, temp_rel=before, temp_delta=find, blurr_d=+](#1)
+
+
+//same for months
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:month], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=m, t_relat=+, temp_rel=before, temp_delta=1, blurr_d=+](#1)
+
+// num month earlier
+| #1{(adv), dig;num, noun[period,lemme:month], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=m, t_relat=+, temp_rel=before, temp_delta=find, blurr_d=+](#1)
+
+// same for weeks
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:week], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=before, temp_delta=1, blurr_d=+](#1)
+
+// num weeks earlier
+| #1{(adv), dig;num, noun[period,lemme:week], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=before, temp_delta=find, blurr_d=+](#1)
+
+// same for days
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:day], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=before, temp_delta=1](#1)
+
+// num days earlier
+| #1{(adv), dig;num, noun[period,lemme:day], adv[lemme:early]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=before, temp_delta=find](#1)
+
+// PERIOD+LATER
+// Three years later
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:year], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=y, t_relat=+, temp_rel=after, temp_delta=1, blurr_d=+](#1)
+
+// num year later
+| #1{(adv), dig;num, noun[period,lemme:year], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=y, t_relat=+, temp_rel=after, temp_delta=find, blurr_d=+](#1)
+
+//same for months
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:month], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=m, t_relat=+, temp_rel=after, temp_delta=1, blurr_d=+](#1)
+
+// num month earlier
+| #1{(adv), dig;num, noun[period,lemme:month], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=m, t_relat=+, temp_rel=after, temp_delta=find, blurr_d=+](#1)
+
+// same for weeks
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:week], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=after, temp_delta=1, blurr_d=+](#1)
+
+// num weeks earlier
+| #1{(adv), dig;num, noun[period,lemme:week], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=after, temp_delta=find, blurr_d=+](#1)
+
+// same for days
+| #1{(adv),num[lemme:one];det[def];det[indef], noun[period,lemme:day], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=after, temp_delta=1](#1)
+
+// num days earlier
+| #1{(adv), dig;num, noun[period,lemme:day], adv[lemme:late]} |
+if ( ^TIMEX3[temp_ref:~](#1) )
+TIMEX3[temp_ref=e, unit_delta=w, t_relat=+, temp_rel=after, temp_delta=find](#1)
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////				//////////////////////
+/////////////////////////////				//////////////////////
+////////////////////////////				//////////////////////
+///////////////////////////	OPEN INTERVALS		//////////////////////
+///////////////////////////	       			//////////////////////
+//////////////////////////				//////////////////////
+//////////////////////////				//////////////////////
+
+// since date
+| #1{prep[temp_pos:">",mrt=+],det, noun[mwe]{dig[day], prep, noun[month], dig[year]} } |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,seen=+,t_absolut=+](#1) 
+
+
+
+
+////////////////////////////////////////////////////////////////////////////
+//////////////////////////  ADDING OPERATORS ON TIMEXES ////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+// beginning of november/early this month
+| NP#1{?*,?[time_anchor,lemme:"begin"];?[time_anchor,lemme:"early"]}; PP#1{prep,NP{?*,?[time_anchor,lemme:"begin"]}} |
+if ( ^TIMEX3[seen](#1) )
+TIMEX3[op=beg](#1)
+
+// end of april - late this year
+| NP#1{?*,?[time_anchor,lemme:"end"];?[time_anchor,lemme:"late"]};PP#1{prep,NP{?*,?[time_anchor,lemme:"end"]}} |
+if ( ^TIMEX3[seen](#1) )
+TIMEX3[op=end](#1) 
+
+// mid-March middle of March
+| NP#1{?*,?[time_anchor,lemme:"mid%c*"]};PP#1{prep,NP{?*,?[time_anchor,lemme:"mid%c*"]}} |
+if ( ^TIMEX3[seen](#1) )
+TIMEX3[op=mid](#1)
+
+// late/early + <monthname> : specific rule because structure is different
+// noun within a NP
+// late April
+| NP#1{noun[first,last]{?[time_anchor,lemme:"late"]}} |
+if ( ^TIMEX3[seen](#1) )
+TIMEX3[op=end](#1)
+// early April
+| NP#1{noun[first,last]{?[time_anchor,lemme:"early"]}} |
+if ( ^TIMEX3[seen](#1) )
+TIMEX3[op=beg](#1)
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////// FACTUALITY //////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+// ADDING information on Timex3 expressions regarding the factuality of the verb which introduce them
+// if future verb - feature FUTPRED
+// if modality verb - feature MODPRED
+if ( TEMP(#1,#2) & ^TIMEX3(#2) & FUTURE(#1) )
+   TIMEX3[futpred=+](#2)
+
+if ( TEMP(#1,#2) & ^TIMEX3(#2) & VMODAL(#1) )
+   TIMEX3[modpred=+](#2)
+
+

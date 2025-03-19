@@ -1,0 +1,1825 @@
+DependencyRules:
+
+if ( ^VDOMAIN(?,?))
+	~.
+
+if ( ^HEAD(#1,#2) )
+	~.
+
+//if ( ^EMBED(#1,#2) )
+//	~.
+
+// create a dependency between a the negative word and a subject complement
+
+if ( MOD(#1,#2[form:fnot]) & NUCL(#1,#3) )
+	MOD[negative=+](#3,#2).
+
+
+
+//marking words that have special roles in relsents and gbdepsent: negative words, subjmat, level
+
+// dependency NEGWORD
+
+| #1[negword] |
+	NEGWORD(#1).
+	
+
+// If a sentence contains a word that has the feature SUBJMAT, the sentence is marked
+
+| #1[subjmat,1] |
+	SUBJMAT[1=+](#1) .
+
+| #1[subjmat,2] |
+	SUBJMAT[2=+](#1) .
+
+
+// If a sentence contains a word that has the feature LEVEL, the sentence is marked
+
+| #1[level] |
+	LEVEL(#1) .
+
+
+////////////////////////////////////////////////////////////
+//GBDEP
+////////////////////////////////////////////////////////////
+
+
+/////////////////////
+
+// basic dependency 1 
+
+if ( $1(#1[gb],#2[gb]) )
+        $1[gb=+](#1,#2).
+
+
+//////////////////
+
+//////////////////
+// 2 keywords that are not potential gbdeps
+//////////////////
+
+if ( ^$1[gb](#1[mental,know],#2[mental,know:~]) )
+	$1[gb=~](#1,#2).
+
+// Basic dependency 2: Words that cannot build unary dependencies are possible GBDEPs when in relationship with importance and attitude words. Importance words can also make a potential gbdep with scope words
+
+if ( $1(#1[nounary],#2[importance]) )
+        $1[gb=+](#1,#2).
+
+if ( $1(#1[nounary],#2[attitude]) )
+        $1[gb=+](#1,#2).
+
+if ( $1(#1[scope,level:~],#2[importance]) )
+        $1[gb=+,weak=+](#1,#2).
+
+if ( $1(#1[noun,know,level:~],#2[importance]) )
+        $1[gb=+,weak=+](#1,#2).
+
+if ( $1(#1[contr],#2[importance]) )
+        $1[gb=+](#1,#2).
+
+if ( $1(#1[importance],#2[contr]) )
+        $1[gb=+](#1,#2).
+
+
+//////////////////
+// dependency types that don't allow the feature gb
+//////////////////
+
+// AJCOORD
+
+if ( ^AJCOORD[gb](#1,#2) )
+	~.
+
+// NCOORD
+
+if ( ^NCOORD[gb](#1,#2) )
+	~.
+
+// VCOORD
+
+if ( ^VCOORD[gb](#1,#2) )
+	~.
+
+//////////////////
+
+// indirect dependencies
+
+// "it has been done" the parser links "it has" and "has been done"
+
+
+//if ( SUBJ(#1,#2[gb]) & OBJ(#1,#3[gb]) )
+//	OBJ[gb=+](#2,#3).
+
+//if ( SUBJ(#1,#2[gb]) & NUCL[subjcompl](#1,#3[gb]) & ~GBDEP(#2,#3) )
+if ( SUBJ(#1,#2[gb]) & NUCL(#1,#3[gb]) & ~GBDEP(#2,#3) )
+	SUBJ[gb=+](#2,#3).
+
+//"In contrast to what was generally believed"
+
+if ( $1(#1[mental],#2[form:fwhat]) & PREPD(#2,#3[contr]) )
+	CONTR[gb=+](#3,#1).
+
+// dependency with the same lemma is not a potential GBDEP
+
+if ( ^$1(#1,#2) & #1[lemme]::#2[lemme] )
+	$1[gb=~](#1,#2).
+
+
+
+
+////////////////////////
+//idiosyncrasies
+////////////////////////
+
+
+// certain words (wseem) when they are in a dependency with "seem", are GBDEPs
+
+if ( $1(#1[form_gb:fseem],#2[wseem]) )
+	GBDEP(#1,#2).
+
+if ( $1(#1[wseem],#2[form_gb:fseem]) )
+	GBDEP(#1,#2).
+
+// first time
+
+if ( QUANTD(#1[form_gb:ftime],#2[change,form:fone]) )
+	QUANTD[gb=+](#1,#2).
+
+// first report
+
+if ( QUANTD(#1[article,noun],#2[change,form:fone]) )
+	QUANTD[gb=+](#1,#2).
+
+//hitherto, debate, questions
+
+| #1[gbgb] |
+	GBDEP(#1).
+
+// Restrictions on the cooccurence
+
+// wscope: if the word having this feature appears with a word that does not have the feature "scope", the dependency is removed. However, if it also appears with a contr word, the gb is kept
+
+if ( ^$1[gb](#1[wscope],#2[scope]) )
+	$1[wscope=+](#1,#2).
+
+if ( ^$1[gb](#1[scope],#2[wscope]) )
+	$1[wscope=+](#1,#2).
+
+if ( $1[gb,wscope](#1[wscope],#2[scope]) & ^$2(#1[wscope],#3[contr] ))
+	$2[wscope=+](#1,#3).
+
+if ( $1[gb,wscope](#1[wscope],#2[scope]) & ^$2(#3[contr],#1[wscope] ))
+	$2[wscope=+](#3,#1).
+
+if ( $1[gb,wscope](#1[scope],#2[wscope]) & ^$2(#3[contr],#2[wscope] ))
+	$2[wscope=+](#3,#2).
+
+if ( $1[gb,wscope](#1[scope],#2[wscope]) & ^$2(#2[wscope],#3[contr] ))
+	$2[wscope=+](#2,#3).
+
+if ( ^$1[gb,wscope:~](#1[wscope],#2) )
+	~.
+
+if ( ^$1[gb,wscope:~](#1,#2[wscope]) )
+	~.
+
+if ( ^$1[wscope](#1,#2) )
+	$1[gb=+,wscope=~](#1,#2).
+
+
+
+
+
+// wwidescope: if the word having this feature appears with a word that does not have the feature "widescope", the dependency is removed
+
+if ( ^$1[gb](#1[wwidescope],#2[widescope]) )
+	$1[wwidescope=+](#1,#2).
+
+if ( ^$1[gb](#1[widescope],#2[wwidescope]) )
+	$1[wwidescope=+](#1,#2).
+
+if ( $1[gb,wwidescope](#1[wwidescope],#2[widescope]) & ^$2(#1[wwidescope],#3[contr] ))
+	$2[wwidescope=+](#1,#3).
+
+if ( $1[gb,wwidescope](#1[wwidescope],#2[widescope]) & ^$2(#3[contr],#1[wwidescope] ))
+	$2[wwidescope=+](#3,#1).
+
+if ( $1[gb,wwidescope](#1[widescope],#2[wwidescope]) & ^$2(#3[contr],#2[wwidescope] ))
+	$2[wwidescope=+](#3,#2).
+
+if ( $1[gb,wwidescope](#1[widescope],#2[wwidescope]) & ^$2(#2[wwidescope],#3[contr] ))
+	$2[wwidescope=+](#2,#3).
+
+if ( ^$1[gb,wwidescope:~](#1[wwidescope],#2) )
+	~.
+
+if ( ^$1[gb,wwidescope:~](#1,#2[wwidescope]) )
+	~.
+
+if ( ^$1[wwidescope](#1,#2) )
+	$1[gb=+,wwidescope=~](#1,#2).
+
+
+
+// wtime
+
+if ( ^$1[gb](#1[wtime],#2[timefact,verb:~]) ) 
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[timefact,verb:~],#2[wtime]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb,weak:~](#1[wtime],#2 ) )
+	~ .
+
+if ( ^$1[gb,weak:~](#1,#2[wtime]) )
+	~ .
+
+//wcontr
+
+if ( ^$1[gb](#1[wcontr],#2[contr:~]) )
+	~ .
+
+if ( ^$1[gb](#1[contr:~],#2[wcontr]) )
+	~ .
+
+if ( ^$1[gb](#1[wcontr],#2[contr,noun:~]) )
+	~ .
+
+if ( ^$1[gb](#1[contr,noun:~],#2[wcontr]) )
+	~ .
+
+// wneg: positive words that make up a contr dependency when negated
+
+if ( $1(#1,#2[form:fnot,toutmaj:~]) & $2(#1,#3[wneg]) )
+	GBDEP[weak=+](#2,#3).
+
+
+// wment
+
+if ( ^$1[gb](#1[wment],#2[mental:~]) )
+	~ .
+
+if ( ^$1[gb](#1[mental:~],#2[wment]) )
+	~ .
+
+// wknow
+
+if ( ^$1[gb](#1[wknow],#2[know:~]) )
+	~ .
+
+if ( ^$1[gb](#1[know:~],#2[wknow]) )
+	~ .
+
+// wmentsco
+
+if ( ^$1[gb](#1[wment],#2[mentsco:~]) )
+	~ .
+
+if ( ^$1[gb](#1[mentsco:~],#2[wment]) )
+	~ .
+
+// "first" + verb
+
+if ( ^$1[gb](#1[verb],#2[form_gb:ffirst]) )
+	~.
+
+if ( ^$1[gb](#1[verb],#2[form:fone,ord]) )
+	~.
+
+if ( ^$1[gb](#1[form:fone,ord],#2[verb]) )
+	~.
+
+// "recognition" is very ambiguous. It is accepepted only in a dependency with a word that has the feature "incr" or "timefact"
+
+if ( ^$1[gb](#1[form_gb:frecognition],#2) | ^$1[gb](#1,#2[form_gb:frecognition]) )
+	~.
+
+
+if ( ^$1(#1[form_gb:frecognition],#2[incr]) | ^$1(#1[incr],#2[form_gb:frecognition]) )
+	$1[gb=+](#1,#2).
+
+if ( ^$1(#1[form_gb:frecognition],#2[timefact]) | ^$1(#1[timefact],#2[form_gb:frecognition]) )
+	$1[gb=+](#1,#2).
+
+//"accumulate" is a "change" word, but it can only be coupled with words that can "grow":
+
+if ( ^$1[gb](#1[nogrow],#2[wnogrow]) )
+	~.
+
+if ( ^$1[gb](#1[wnogrow],#2[nogrow]) )
+	~.
+
+
+
+
+
+//////////////////
+
+// Unary dependencies: for important words for which either no dependency is calculated in the general grammar or are in relationship with a non-marked word
+
+| #1[contr,form:~fnot,toutmaj:~,form:~fno,form_gb:~flittle,wscope:~,nounary:~] |
+if ( ~$1[gb](#1[contr,form:~fnot,toutmaj:~,form:~fno,form_gb:~flittle],?) & ~$2[gb](?,#1[contr,form:~fnot,toutmaj:~,form:~fno]) )
+	MAIN[gb=+,weak=+](#1).
+	
+| #1[attitude,nounary:~] |
+if ( ~$1[gb](#1[attitude],?) & ~$2[gb](?,#1[attitude]) )
+	MAIN[gb=+,weak=+](#1).
+
+| #1[form:fwhile,contr,func:~,wment:~] |
+	MAIN[gb=+,weak=+](#1).
+
+// challenge when it is vprog
+
+| #1[form_gb:fchallenge,vprog] |
+if ( ~$1[gb](#1[form_gb:fchallenge,vprog],?) & ~$2[gb](?,#1[form_gb:fchallenge,vprog]) )
+	MAIN[gb=+,weak=+](#1).
+
+// exceptions wscope
+
+if ( ^$1[gb](#1[wscope]) )
+	~ .
+
+// exceptions wment
+
+if ( ^$1[gb](#1[wment]) )
+	~ .
+
+// If a word consituting a unary dependency is an argument in a dependency, the unary dependency is deleted
+
+if (^MAIN[gb,weak](#1) & $1[gb](#1,#2) )
+	~.
+
+if (^MAIN[gb,weak](#2) & $1[gb](#1,#2) )
+	~.
+
+
+
+// If a sentence just contains a dependency with 1 importance argument and one uanry dependency, it is not a potential weak gbdep
+
+if ( ^$1[gb](#1[importance],#2[contr:~]) & $2[gb](#3) & ~$3[gb](#4[importance:~],#5) )
+	$1[gb=~](#1,#2).
+
+if ( ^$1[gb](#1[contr:~],#2[importance]) & $2[gb](#3) & ~$3[gb](#4,#5[importance:~]) )
+	$1[gb=~](#1,#2).
+
+if ( ^$1[gb](#1[importance],#2[contr,func]) & $2[gb](#3) & ~$3[gb](#4[importance:~],#5) )
+	$1[gb=~](#1,#2).
+
+if ( ^$1[gb](#1[contr,func],#2[importance]) & $2[gb](#3) & ~$3[gb](#4,#5[importance:~]) )
+	$1[gb=~](#1,#2).
+
+
+
+////////////////////
+
+// weak GBDEP
+
+// just "possibility"
+
+if ( ^$1[gb](#1[possibility],#2) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1,#2[possibility]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+// dependency with arguments of the same type
+
+if ( ^$1[gb](#1[scope],#2[scope]) )
+	$1[gb=+,weak=+](#1,#2) .
+	
+if ( ^$1[gb](#1[timefact],#2[timefact]) )
+	$1[gb=+,weak=+](#1,#2) .
+	
+if ( ^$1[gb](#1[change],#2[change]) )
+	$1[gb=+,weak=+](#1,#2) .
+	
+if ( ^$1[gb](#1[mental],#2[mental]) )
+	$1[gb=+,weak=+](#1,#2) .
+	
+if ( ^$1[gb](#1[contr,mental:~,change:~,know:~],#2[contr,mental:~,change:~,know:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+// subject dependencies with arguments of the same kind are not potential GBDEPs
+
+
+if ( ^SUBJ[gb,weak](#1[scope],#2[scope]) )
+	SUBJ[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[gb,weak](#1[timefact],#2[timefact]) )
+	SUBJ[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[gb,weak](#1[change],#2[change]) )
+	SUBJ[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[gb,weak](#1[mental],#2[mental]) )
+	SUBJ[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJ[gb,weak](#1[contr],#2[contr]) )
+	SUBJ[gb=~,weak=~](#1,#2) .
+
+if ( ^SUBJATTR[gb,weak](#1[scope],#2[scope]) )
+	SUBJATTR[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[gb,weak](#1[timefact],#2[timefact]) )
+	SUBJATTR[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[gb,weak](#1[change],#2[change]) )
+	SUBJATTR[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[gb,weak](#1[mental],#2[mental]) )
+	SUBJATTR[gb=~,weak=~](#1,#2) .
+	
+if ( ^SUBJATTR[gb,weak](#1[contr],#2[contr]) )
+	SUBJATTR[gb=~,weak=~](#1,#2) .
+
+// certain couples of dependencies
+
+if ( ^$1[gb](#1[mental,contr:~],#2[scope]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+
+if ( ^$1[gb](#1[scope],#2[mental,contr:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+
+if ( ^$1[gb](#1[change],#2[timefact]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[timefact],#2[change]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+//if ( ^$1[gb](#1[scope],#2[timefact]) )
+//	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[timefact],#2[scope]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[contr,noun:~,mental:~],#2[timefact]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[timefact],#2[contr,mental:~,noun:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[timefact,adj],#2[attitude]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1[mental,know,contr:~],#2[question,contr]) || ^$1(#1[question,contr],#2[mental,know,contr:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+// specweak: no evidence/role
+
+if ( ^$1[gb](#1[specweak],#2[form:fno,toutmaj:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+// "recent results may"
+
+if ( ^$1[gb](#1[possibility],#2[scope]) & $2[gb](#2[scope],#3[timefact]) )
+	$1[weak=+](#1,#2).
+
+if ( $1[gb](#1[possibility],#2[scope]) & ^$2[gb](#2[scope],#3[timefact]) )
+	$2[weak=+](#2,#3).
+
+//(may_GB:+_MENTSCOPOSS:+_POSSIBILITY:+,results_GB:+_MENTSCOPOSS:+_MENTSCOTIME:+_MENTSCO:+_SCOPE:+)
+//(results_GB:+_MENTSCOPOSS:+_MENTSCOTIME:+_MENTSCO:+_SCOPE:+,Recent_GB:+_MENTSCOTIME:+_TIMEFACT:+)
+
+
+// "no contradiction" - not a GBDEP, and the other dependencies with "contradiction" don't count either
+
+| ?{#1[contr,form:fno,toutmaj:~],?*,#2[contr,noun]} |
+if ( ^$1[gb](?,#2) )
+	~ .
+
+| ?{#1[contr,form:fno,toutmaj:~],?*,#2[contr,noun]} |
+if ( ^$1[gb](#2,?) )
+	~ .
+
+// if one argument of the dependency has the feature "weak", the dependency becomes weak
+
+if ( ^$1[gb](#1[weak],#2) )
+	$1[gb=+,weak=+](#1,#2) .
+
+if ( ^$1[gb](#1,#2[weak]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+// if a sentence contains just 1 negation with "not", the dependency is weak
+
+if ( ^$1[gb](#1,#2[form:fnot,toutmaj:~]) )
+	$1[gb=+,weak=+](#1,#2) .
+
+//////////////////////////////
+// noweak
+////////////////////////////
+
+// If an argument of a weak dependency has the feature "noweak", the 
+// dependency is not weak any more. If 1 of the arguments of a GBDEP has the feature noweak, and the other argument is a possibility, the dependency is still weak.
+
+
+if ( ^$1[weak](#1[noweak],#2[possibility:~]) | ^$1[weak](#1[possibility:~],#2[noweak]) )
+	$1[weak=~](#1,#2).
+
+
+
+
+
+/////////////////////////////////////
+// Marking GBDEP's
+/////////////////////////////////////
+
+
+
+// If besides a weak dependency, a sentence just contains a dependency
+// whose only argument has the feature "attitude<", both dependencies
+// will be GBDEPs, and get the feature "attitude"
+
+if ( $1[weak](#1) & ^$2(#2[attitude]) & ~$1[gb,weak:~](#3,#4))
+	$2[attitude=+,weak=~](#2).
+
+if ( $1[weak](#1) & ^$2(#2[attitude]) & ~$1[gb,weak:~](#3))
+	$2[attitude=+,weak=~](#2).
+
+if ( ^$1[weak](#1) & $2(#2[attitude]) & ~$1[gb,weak:~](#3,#4) )
+	$1[attitude=+,weak=~](#1).
+
+if ( ^$1[weak](#1) & $2(#2[attitude]) & ~$1[gb,weak:~](#3) )
+	$1[attitude=+,weak=~](#1).
+
+if ( $1[weak](#1,#2) & ^$2(#3[attitude]) & ~$1[gb,weak:~](#4,#5) )
+	$2[attitude=+,weak=~](#3).
+
+if ( $1[weak](#1,#2) & ^$2(#3[attitude]) & ~$1[gb,weak:~](#4) )
+	$2[attitude=+,weak=~](#3).
+
+if ( ^$1[weak](#1,#2) & $2(#3[attitude]) & ~$1[gb,weak:~](#4,#5) )
+	$1[attitude=+,weak=~](#1,#2).
+
+if ( ^$1[weak](#1,#2) & $2(#3[attitude]) & ~$1[gb,weak:~](#4) )
+	$1[attitude=+,weak=~](#1,#2).
+
+if ( $1[attitude](#1) )
+	GBDEP[attitude=+](#1).
+
+if ( $1[attitude](#1,#2) )
+	GBDEP[attitude=+](#1,#2).
+
+//if ( ^GBDEP[attitude](#1) & $1[attitude:~,gb](#2) )
+//	~.
+
+//if ( ^GBDEP[attitude](#1) & $1[attitude:~,gb](#2,#3) )
+//	~.
+
+//if ( ^GBDEP[attitude](#1,#2) & $1[attitude:~,gb](#3) )
+//	~.
+
+//if ( ^GBDEP[attitude](#1,#2) & $1[attitude:~,gb](#3,#4) )
+//	~.
+
+// if 2 importance words are syntactic relationship, the dependency gets the feature attitude
+
+if ( $1(#1[importance],#2[importance]) )
+	GBDEP[attitude=+](#1,#2).
+
+
+// if the sentence contains other gb-dependencies besides a weak one, the sentence is selected
+
+//a) if the sentence contains a non-weak gb dependency, the sentence is selected
+
+
+if ($1[gb,weak:~](#1,#2))
+	GBDEP(#1,#2).
+
+if (^$1[gb,weak](#1,#2) & GBDEP(#3,#4))
+	GBDEP[weak=~,gb=~](#1,#2).
+
+if (^$1[gb,weak](#1) & GBDEP(#3,#4))
+	GBDEP[weak=~,gb=~](#1).
+
+if (^$1[gb,weak](#1,#2) & GBDEP(#3))
+	GBDEP[weak=~,gb=~](#1,#2).
+
+if (^$1[gb,weak](#1) & GBDEP(#2))
+	GBDEP[weak=~,gb=~](#1).
+
+// b) if the sentence contains several weak dependencies, the sentence is selected
+
+
+if (~GBDEP(#1,#2) & $1[gb,weak](#1,#2) & $2[gb,weak](#3,#4) &  (#1<#3 | #3<#1 | #2<#4 | #4<#2) )
+	GBDEP(#1,#2).
+
+if (~GBDEP(#3,#4) & $1[gb,weak](#1,#2) & $2[gb,weak](#3,#4) &  (#1<#3 | #3<#1 | #2<#4 | #4<#2) )
+	GBDEP(#3,#4).
+
+
+if (~GBDEP(#1,#2) & $1[gb,weak](#1,#2) & $2[gb,weak](#3) & (#1<#3 | #3<#1 | #2<#3 | #3<#2 ))
+	GBDEP(#1,#2).
+
+if (~GBDEP(#3) & $1[gb,weak](#1,#2) & $2[gb,weak](#3) & (#1<#3 | #3<#1 | #2<#3 | #3<#2 ) )
+	GBDEP(#3).
+
+if (~GBDEP(#1) & $1[gb,weak](#1) & $2[gb,weak](#2) & (#1<#2 | #2<#1) )
+	GBDEP(#1).
+
+if (~GBDEP(#2) & $1[gb,weak](#1) & $2[gb,weak](#2) & (#1<#2 | #2<#1) )
+	GBDEP(#2).
+
+/////////////////////////////////////
+
+// if the sentence contains GBDEP's that only contain "mental" and "scope" arguments, the sentence is not selected
+
+
+if ( ^GBDEP(#1[mentsco],#2[mentsco]) )
+	GBDEP[mentsco=+](#1,#2).
+
+if ( ^GBDEP[mentsco](#1,#2) &  GBDEP[mentsco:~](?,?) )
+	GBDEP[mentsco=~](#1,#2) .
+
+if ( ^GBDEP[mentsco](#1,#2) &  GBDEP[mentsco:~](?) )
+	GBDEP[mentsco=~](#1,#2) .
+
+if ( ^GBDEP[mentsco](#1,#2) )
+	~ .
+
+// if the sentence contains GBDEP's that only contain "mental" and "contr" arguments, the sentence is not selected
+
+
+if ( ^GBDEP(#1[mentcont,func],#2[mentcont,func:~]) )
+	GBDEP[mentcont=+](#1,#2).
+
+if ( ^GBDEP(#1[mentcont,func:~],#2[mentcont,func]) )
+	GBDEP[mentcont=+](#1,#2).
+
+if ( ^GBDEP[mentcont](#1,#2) &  GBDEP[mentcont:~](?,?) )
+	GBDEP[mentcont=~](#1,#2) .
+
+if ( ^GBDEP[mentcont](#1,#2) &  GBDEP[mentcont:~](?) )
+	GBDEP[mentcont=~](#1,#2) .
+
+
+if ( ^GBDEP[mentcont](#1,#2) )
+	~ .
+
+// If a sentence contains GBDEP's that only contain CONTR arguments that have the feature FUNC, the sentence is not selected
+
+if ( ^GBDEP(#1[func,mental:~,change:~]) )
+	GBDEP[contr=+](#1).
+
+if ( ^GBDEP[contr](#1) & GBDEP[contr:~](#2,#3) )
+	GBDEP[contr=~](#1).
+
+if ( ^GBDEP[contr](#1) & GBDEP[contr:~](#2) & ~GBDEP[contr](#2) )
+	GBDEP[contr=~](#1).
+
+if ( ^GBDEP[contr](#1) )
+	~ .
+
+// If a sentence besides unary contr+func dependencies only contains dependencies that contain an argument with the "possibility" feature, the sentence is not selected
+
+
+if ( ^GBDEP(#1[possibility],#2) & GBDEP(#3[contr,func]) )
+	GBDEP[test=+](#1,#2).
+
+
+if ( ^GBDEP(#1,#2[possibility]) & GBDEP(#3[contr,func]) )
+	GBDEP[test=+](#1,#2).
+
+if ( ^GBDEP[test](#1,#2) & GBDEP(#3,#4) )
+	GBDEP[test=~](#1,#2).
+
+
+if ( ^GBDEP[test](#1,#2) & GBDEP(#3[contr:~,func:~]) )
+	GBDEP[test=~](#1,#2).
+
+if ( ^GBDEP[test](#1,#2) )
+	~ .
+
+
+
+
+
+
+
+/////////////////////////////////////
+// Giving features to change of direction sentences
+/////////////////////////////////////
+
+
+// A GBDEP that has an "importance" argument gets the feature "emph"
+
+if ( ^GBDEP(#1[contr:~],#2[importance]) | ^GBDEP(#1[importance],#2[contr:~])   )
+	GBDEP[emph=+](#1,#2).
+
+if ( ^GBDEP(#1[contr,func],#2[importance]) | ^GBDEP(#1[importance],#2[contr,func])   )
+	GBDEP[emph=+](#1,#2).
+
+if ( ^GBDEP(#1[contr,func:~],#2[importance]) | ^GBDEP(#1[importance],#2[contr,func:~])   )
+	GBDEP(#1,#2).
+
+// more complicated than previously thought - must be refined
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[old],#2[art]) | $1(#1[art],#2[old]) & MOD[pre](#3[particlepas],#4[compar]) & #4<#5 )
+//	GBDEP(#3,#4,#5).
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[old],#2[article]) | $1(#1[article],#2[old]) & MOD[pre](#3[partpas],#4[compar]) & #4<#5 )
+//	GBDEP(#1,#2).
+
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & MOD[pre](#3[adv],#4[compar]) & #4<#5 )
+//	GBDEP(#3,#4,#5).
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & MOD[pre](#3[adv],#4[compar]) & #4<#5 )
+//	GBDEP(#1,#2).
+
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & MOD[pre](#3[adj],#4[compar]) & #4<#5 )
+//	GBDEP(#3,#4,#5).
+
+//| #5[form_gb:fthan] |
+//if ( GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & MOD[pre](#3[adj],#4[compar]) & #4<#5 )
+//	GBDEP(#1,#2).
+
+
+//| #1[compar] |
+//if ( ~MOD[pre](#2,#1[compar]) )
+//	MAIN(#1).
+
+//| #3[form_gb:fthan] |
+//if ( MAIN(#4[compar]) & GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & #4<#3 )
+//	GBDEP(#4,#3).
+
+//| #3[form_gb:fthan] |
+//if ( MAIN(#4[compar]) & GBDEP(#1[old],#2) | GBDEP(#1,#2[old]) | $1(#1[article],#2[old]) | $1(#1[old],#2[article]) & #4<#3 )
+//	GBDEP(#1,#2).
+
+//if ( ^MAIN(#1[compar]) )
+//	~.
+	
+
+
+
+
+/////////////////////////////////////
+// 1. Sentences containing dependencies having words with the feature "old" 
+// express a change of direction if they also contain dependencies with
+// the features "contr", "change" or "attitude". If this is not the case
+// the sentence is marked "OLD". Such sentences are potentially
+// change of direction sentences, but it is less probable than the
+// sentences that contain the above-mentioned features
+//////////////////////////////////////
+
+
+if ( ^GBDEP(#1[old,contr:~,change:~,attitude:~],#2[contr:~,change:~,attitude:~]) | ^GBDEP(#1[contr:~,change:~,attitude:~],#2[old,contr:~,change:~,attitude:~]) )
+	GBDEP[old=+](#1,#2).
+
+if ( ^GBDEP[old](#1,#2) & GBDEP(#3[attitude]) | GBDEP(#3,#4[attitude]) | GBDEP(#3[attitude],#4) | GBDEP(#3[contr]) | GBDEP(#3,#4[contr]) | GBDEP(#3[contr],#4) | | GBDEP(#3,#4[change]) | GBDEP(#3[change],#4) )
+	GBDEP[old=~](#1,#2).
+
+
+////////////////////////////////////
+// 2. Sentences containing dependencies having words with no other features
+// than "mental", "scope" and "timefact", are marked TEMPSTAT, since they 
+// are probably just statements about some past, present or current 
+// hypotheses.
+////////////////////////////////////
+
+if ( ^GBDEP(#1[old,mental],#2) | ^GBDEP(#1,#2[old,mental]) )
+	GBDEP[tempstat=+](#1,#2).
+
+
+
+if ( ^GBDEP(#1[timefact],#2[mentscotime]) | ^GBDEP(#1[mentscotime],#2[timefact]) )
+	GBDEP[tempstat=+](#1,#2).
+
+if ( GBDEP[tempstat](#1,#2) & ^GBDEP[tempstat:~](#3[mentscotime],#4[mentscotime]) )
+	GBDEP[tempstat=+](#3,#4).
+
+// TEMPSTAT_OLD
+
+if ( ^GBDEP[tempstat](#1[old],#2) | ^GBDEP[tempstat](#1,#2[old]) )
+	GBDEP[old=+](#1,#2).
+
+if ( ^GBDEP[tempstat,old](#1,#2) & ^GBDEP[tempstat,old:~](#1,#3) )
+	GBDEP[old=+](#1,#3).
+
+if ( ^GBDEP[tempstat,old](#1,#2) & ^GBDEP[tempstat,old:~](#3,#1) )
+	GBDEP[old=+](#3,#1).
+
+if ( ^GBDEP[tempstat,old](#1,#2) & ^GBDEP[tempstat,old:~](#2,#3) )
+	GBDEP[old=+](#2,#3).
+
+if ( ^GBDEP[tempstat,old](#1,#2) & ^GBDEP[tempstat,old:~](#3,#2) )
+	GBDEP[old=+](#3,#2).
+
+
+////////////////////////////////////
+// 2.a "However+GBDEP[tempstat]" 
+////////////////////////////////////
+
+if ( ^GBDEP[tempstat](#1,#2) & GBDEP[tempstat:~](#3[however]) & ~GBDEP[tempstat:~](#4,#5) )
+	GBDEP[tempstat=+,contr=+](#1,#2).	
+
+if ( GBDEP[tempstat](#1,#2) & ^GBDEP[tempstat:~](#3[however]) & ~GBDEP[tempstat:~](#4,#5) )
+	GBDEP[tempstat=+,contr=+](#3).	
+
+if ( GBDEP[tempstat](#1,#2) & ^GBDEP[tempstat:~](#3,#4[however]) & ~GBDEP[tempstat:~](#4,#5) )
+	GBDEP[tempstat=+,contr=+](#3,#4).	
+
+//if ( GBDEP[tempstat](#1,#2) & ^GBDEP[tempstat](#3[mental,old],#4[however]) & ~GBDEP[tempstat:~](#4,#5) )
+//	GBDEP[tempstat=+,contr=+](#3,#4).	
+
+////////////////////////////////////
+// end 
+////////////////////////////////////
+
+if ( ^GBDEP[tempstat](#1,#2) & GBDEP[tempstat:~,emph:~](#3,#4) | GBDEP[tempstat:~](#5) )
+	GBDEP[tempstat=~,contr=~](#1,#2).
+	
+if ( ^GBDEP[tempstat](#1) & GBDEP[tempstat:~,emph:~](#2,#3) | GBDEP[tempstat:~](#4) )
+	GBDEP[tempstat=~,contr=~](#1).
+
+
+
+	
+////////////////////////////////////
+// 3. Sentences containing dependencies having words with no other features
+// than "mental", "scope" and "possibility", are marked POSTAT, since they 
+// are probably just statements about some past, present or current 
+// hypotheses.
+////////////////////////////////////
+
+if ( ^GBDEP(#1[possibility],#2[mentscoposs]) | ^GBDEP(#1[mentscoposs],#2[possibility]))
+	GBDEP[postat=+](#1,#2).
+
+if ( GBDEP[postat](#1,#2) & ^GBDEP[postat:~,emph:~](#3[mentscoposs],#4[mentscoposs]) )
+	GBDEP[postat=+](#3,#4).
+
+if ( GBDEP[postat](#1,#2) & ^GBDEP[postat:~,emph:~](#3[mental],#4[func,contr]) )
+	GBDEP[postat=+](#3,#4).
+
+if ( GBDEP[postat](#1,#2) & ^GBDEP[postat:~,emph:~](#3[func,contr],#4[mental]) )
+	GBDEP[postat=+](#3,#4).
+
+if ( GBDEP[postat](#1,#2) & ^GBDEP(#3[func,contr]) )
+	GBDEP[postat=+](#3).
+
+if ( ^GBDEP[postat](#1,#2) & GBDEP[postat:~,emph:~,tempstat:~,old:~](#3,#4) | GBDEP[postat:~](#3) )
+	GBDEP[postat=~](#1,#2).
+
+
+// open possibility
+
+if ( ^GBDEP(#1[p_open],#2[possibility]) | ^GBDEP(#1[possibility],#2[p_open]) )
+	GBDEP[postat=+](#1,#2).
+
+
+////////////////////////////////////
+// 4. Some sentences just draw our attention to the fact that a
+// phenomenon is unknown. In this case the sentence is marked NOSTAT.
+////////////////////////////////////
+
+////////////////////////////////////
+// 4.a. dependency type: SUBJ or SUBJATTR(scope,know+contr)
+////////////////////////////////////
+
+if ( ^GBDEP(#1[scope],#2[know,contr]) & SUBJ[pre](#1[scope],#2[know,contr]) | SUBJATTR(#1[scope],#2[know,contr]) | MOD[pre](#1[scope],#2[know,contr]) | NUCL[pre](#1[scope],#2[know,contr]) )
+	GBDEP[nostat=+](#1,#2).
+
+
+if ( ^GBDEP(#1[know,contr:~,partpas],#2[form:fnot,toutmaj:~]) )
+	GBDEP[nostat=+](#1,#2).
+	
+
+////////////////////////////////////
+// 4.b. dependency type: GBDEP(cop+timefact,know+contr)
+////////////////////////////////////
+
+if ( ^GBDEP(#1[cop,timefact],#2[know,contr]) )
+	GBDEP[nostat=+](#1,#2).
+
+
+
+////////////////////////////////////
+// 4.c. dependency type: GBDEP(scope;mental,fno) (no evidence)
+////////////////////////////////////
+
+if (^GBDEP(#1[scope],#2[form:fno,toutmaj:~]) | ^GBDEP(#1[noun,mental],#2[form:fno,toutmaj:~]))
+	GBDEP[nostat=+](#1,#2).
+
+
+////////////////////////////////////
+// 4.d. dependency type: GBDEP(know,nocompl) (no studies)
+////////////////////////////////////
+
+if ( ^GBDEP(#1[know,nocomp]) )
+	GBDEP[nostat=+](#1).
+
+if ( ^GBDEP(#1[know,nocomp],#2) )
+	GBDEP[nostat=+](#1,#2).
+
+if ( ^GBDEP(#1,#2[know,nocomp]) )
+	GBDEP[nostat=+](#1,#2).
+
+if ( ^GBDEP(#1[know,nocomp]) & ~GBDEP(#1[know,nocomp]) & #1::#1)
+	GBDEP[nostat=+](#1).
+
+if ( ^GBDEP(#1[know,nocomp],#2) & ~GBDEP(#1[know,nocomp],#2) & #1::#1 & #2::#2 )
+	GBDEP[nostat=+](#1,#2).
+
+if ( ^GBDEP(#1,#2[know,nocomp]) & ~GBDEP(#1,#2[know,nocomp]) & #1::#1 & #2::#2 )
+	GBDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.e. dependency type: GBDEP(scope,form_gb:flittle) 
+////////////////////////////////////
+
+if ( ^GBDEP(#1[scope],#2[form_gb:flittle]) )
+	GBDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.f. dependency type: GBDEP(form_gb:flittle,know) 
+////////////////////////////////////
+
+if ( ^GBDEP(#1[form_gb:flittle],#2[know]) )
+	GBDEP[nostat=+](#1,#2).
+
+if ( ^GBDEP(#1[know],#2[form_gb:flittle]) )
+	GBDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.g. dependency type: GBDEP(mentscotime,mentscotime) GBDEP(know,contr)
+////////////////////////////////////
+
+if ( ^GBDEP(#1[mentscotime],#2[mentscotime]) & GBDEP(#3[know,contr]) )
+	GBDEP[nostat=+](#1,#2).
+	
+if ( GBDEP(#1[mentscotime],#2[mentscotime]) & ^GBDEP(#3[know,contr]) )
+	GBDEP[nostat=+](#3).
+
+if ( ^GBDEP[nostat:~](#1[mentscotime],#2[mentscotime]) & GBDEP[nostat](#3,#4) )
+	GBDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.h. dependency type: GBDEP(know) GBDEP(know,contr,adv) "poorly understood"
+////////////////////////////////////
+
+if ( ^GBDEP(#1[know],#2[know,contr,adv]) )
+	GBDEP[nostat=+](#1,#2).
+
+////////////////////////////////////
+// 4.h. dependency type: GBDEP(know;mental;contr,~contr) " largly uncharacterized"
+////////////////////////////////////
+
+if ( ^GBDEP(#1[mental,know,contr],#2[contr:~]) || ^GBDEP(#1[contr:~],#2[mental,know,contr]) )
+	GBDEP[nostat=+](#1,#2).
+
+	
+
+////////////////////////////////////
+// 4.h. "However ... unknown" dependency type: GBDEP(know+contr); 
+// GBDEP(however) 
+////////////////////////////////////
+
+if ( ^GBDEP(#1[contr,know]) & GBDEP(#2[however]) )
+	GBDEP[nostat=+,contr=+](#1).
+	
+if ( GBDEP(#1[contr,know]) & ^GBDEP(#2[however]) )
+	GBDEP[nostat=+,contr=+](#2).
+
+////////////////////////////////////
+// 4.i. nostat + GBDEP(mentscotime,mentscotime)
+//////////////////////////////////////
+
+if (GBDEP[nostat](#1,#2) & ^GBDEP(#3[mentscotime],#4[mentscotime]) )
+	GBDEP[nostat=+](#3,#4).
+
+
+////////////////////////////////////
+// 5. staknow: sentences that indicate the state of knowledge at a 
+// certain time. Dependency type: GBDEP(know;time,old:~)
+////////////////////////////////////
+
+
+if (^GBDEP[old:~](#1[know],#2[timefact,old:~]) )
+	GBDEP[statknow=+](#1,#2).
+
+if (^GBDEP[old:~](#1[timefact,old:~,form:fhave],#2[know]) )
+	GBDEP[statknow=+](#1,#2).
+
+//if ( GBDEP[statknow](#1,#2) & ^GBDEP[statknow:~](#3) )
+//	GBDEP[statknow=+](#3).
+
+//if ( GBDEP[statknow](#1,#2) & ^GBDEP[statknow:~](#3,#4) )
+//	GBDEP[statknow=+](#3,#4).
+
+
+////////////////////////////////////
+//6. GBDEP_with_feature+however: If a sentence contains one or several
+// featured GBDEPs, plus "however", and no other GBDEPs, "however" should
+// also get the feature, and all the dependencies should also get the
+// feature "contr"
+////////////////////////////////////
+
+
+////////////////////////////////////
+// 6.a "However+GBDEP[nostat]" 
+////////////////////////////////////
+
+if ( ^GBDEP[nostat](#1,#2) & GBDEP[nostat:~](#3[however]) )
+	GBDEP[nostat=+,contr=+](#1,#2).	
+
+if ( GBDEP[nostat](#1,#2) & ^GBDEP[nostat:~](#3[however]) )
+	GBDEP[nostat=+,contr=+](#3).	
+
+if ( ^GBDEP[nostat](#1,#2) & GBDEP[nostat:~](#3,#4[however]) )
+	GBDEP[nostat=+,contr=+](#1,#2).	
+
+if ( GBDEP[nostat](#1,#2) & ^GBDEP[nostat:~](#3,#4[however]) )
+	GBDEP[nostat=+,contr=+](#3,#4).	
+
+if ( ^GBDEP[nostat](#1) & GBDEP[nostat:~](#2[however]) )
+	GBDEP[contr=+](#1).
+
+if ( GBDEP[nostat](#1) & ^GBDEP[nostat:~](#2[however]) )
+	GBDEP[contr=+,nostat=+](#2).
+
+if ( GBDEP[nostat](#1) & ^GBDEP[nostat:~](#2,#3[however]) )
+	GBDEP[contr=+,nostat=+](#2,#3).
+
+if ( ^GBDEP[nostat](#1) & GBDEP[nostat:~](#2,#3[however]) )
+	GBDEP[contr=+](#1).
+
+if ( ^GBDEP(#1[know,contr]) & GBDEP(#2,#3[however]) )
+	GBDEP[nostat=+,contr=+](#1).
+
+if ( GBDEP(#1[know,contr]) & ^GBDEP(#2,#3[however]) )
+	GBDEP[nostat=+,contr=+](#2,#3).
+
+if ( ^GBDEP[nostat](#1,#2) & GBDEP[nostat,contr](#3) )
+	GBDEP[contr=+](#1,#2).
+
+if ( ^GBDEP[nostat,contr](#1,#2) & GBDEP[nostat:~,emph:~](#3,#4) )
+	GBDEP[nostat=~,contr=~](#1,#2).
+
+if ( ^GBDEP[nostat,contr](#1,#2) & GBDEP[nostat:~](#3) )
+	GBDEP[nostat=~,contr=~](#1,#2).
+
+if ( ^GBDEP[nostat,contr](#1) & GBDEP[nostat:~,emph:~](#2,#3) )
+	GBDEP[nostat=~,contr=~](#1).
+
+if ( ^GBDEP[nostat,contr](#1) & GBDEP[nostat:~](#2) )
+	GBDEP[nostat=~,contr=~](#1).
+
+// if a dependency like "previously[timefact,old] unknown[know,contr]" gets the feature nostat, it should be deleted
+
+if ( ^GBDEP[nostat](#1[timefact,old],#2[know,contr]) | ^GBDEP[nostat](#1[know,contr],#2[timefact,old]) )
+	GBDEP[nostat=~](#1,#2).
+
+// If besides "nostat" dependencies a sentence only contains an "attitude"
+// dependency that just has 1 argument, all the dependencies get the feature
+// "nostat" and "attitude"
+
+if ( ^GBDEP[nostat](#1,#2) & GBDEP(#3[attitude]) )
+	GBDEP[attitude=+](#1,#2).
+
+if ( GBDEP[nostat](#1,#2) & ^GBDEP(#3[attitude]) )
+	GBDEP[nostat=+,attitude=+](#3).
+
+if ( ^GBDEP[nostat](#1) & GBDEP(#2[attitude]) )
+	GBDEP[attitude=+](#1).
+
+if ( GBDEP[nostat](#1) & ^GBDEP(#2[attitude]) )
+	GBDEP[nostat=+,attitude=+](#2).
+
+// If a sentence only contains dependecies that have an argument whose feature is FUNC, the sentence should not be selected
+
+
+if ( ^GBDEP(#1[func],#2) | ^GBDEP(#1[know:~],#2[func]) )
+	GBDEP[test=+](#1,#2).
+
+if ( ^GBDEP(#1[func]) )
+	GBDEP[test=+](#1).
+
+if ( ^GBDEP[test](#1,#2) & GBDEP[test:~](#3,#4) )
+	GBDEP[test=~](#1,#2).
+
+
+if ( ^GBDEP[test](#1,#2) & GBDEP[test:~](#3) )
+	GBDEP[test=~](#1,#2).
+
+
+if ( ^GBDEP[test](#1) & GBDEP[test:~](#2,#3) )
+	GBDEP[test=~](#1).
+
+
+if ( ^GBDEP[test](#1) & GBDEP[test:~](#2) )
+	GBDEP[test=~](#1).
+
+if ( ^GBDEP[test](#1,#2) )
+	~.
+
+if ( ^GBDEP[test](#1) )
+	~.
+
+// If a sentence contains just 1 GBDEP(scope,change) or 1 GBDEP(change,scope),
+// it gets the feature GROW
+
+if ( ^GBDEP(#1[scope],#2[incr,know:~]) | ^GBDEP(#1[incr,know:~],#2[scope]) )
+	GBDEP[grow=+](#1,#2).
+
+if ( GBDEP[grow](#1,#2) & ^GBDEP[grow:~](#3,#4) )
+	GBDEP[grow=+](#3,#4).
+
+if ( GBDEP[grow](#1,#2) & ^GBDEP[grow:~](#3) )
+	GBDEP[grow=+](#3).
+
+// If a sentence contains just 1 GBDEP and it contains the word "first", the
+// GBDEP gets the feature "first"
+
+if ( ^GBDEP(#1,#2[form_gb:ffirst]) | ^GBDEP(#1,#2[form:fone, numer,change]) )
+	GBDEP[first=+](#1,#2).
+
+// No idea why these 2 rules were made:
+
+//if ( ^GBDEP[first](#1,#2) & GBDEP[first:~](#3,#4) )
+//	GBDEP[first=~](#1,#2).
+
+//if ( ^GBDEP[first](#1,#2) & GBDEP[first:~](#3) )
+//	GBDEP[first=~](#1,#2).
+
+
+
+// If a GBDEP sentence contains a contradiction that is weaker than a change of direction, it is marked WEAKCONTR. These sentences have dependencies that contain a mental and a scope argument, as well as a cont,func
+
+
+if ( GBDEP(#1[mental],#2[scope]) & ^GBDEP(#3[contr,func]) )
+	GBDEP[weakcontr=+](#3).
+
+if ( ^GBDEP(#1[mental],#2[scope]) & GBDEP(#3[contr,func]) )
+	GBDEP[weakcontr=+](#1,#2).
+
+
+if ( GBDEP[weakcontr:~,emph:~](#1,#2) & ^GBDEP[weakcontr](#3) )
+	GBDEP[weakcontr=~](#3).
+
+
+if ( GBDEP[weakcontr:~,emph:~](#1,#2) & ^GBDEP[weakcontr](#3,#4) )
+	GBDEP[weakcontr=~](#3,#4).
+
+
+if ( ^GBDEP[weakcontr](#1,#2) & GBDEP[weakcontr:~](#3) )
+	GBDEP[weakcontr=~](#1,#2).
+
+
+if ( ^GBDEP[weakcontr](#1) & GBDEP[weakcontr:~](#2) )
+	GBDEP[weakcontr=~](#1).
+
+// If a sentence just contains unary dependencies and one of them is contr, the dependecy is weakcontr
+
+if ( ^GBDEP(#1[contr]) & GBDEP(#2[gbgb:~]) & #1~:#2 )
+	GBDEP[weakcontr=+](#1).
+
+if ( GBDEP[weakcontr](#1[contr]) & ^GBDEP(#2[gbgb:~]) & #1~:#2 )
+	GBDEP[weakcontr=+](#2).
+
+if ( ^GBDEP[weakcontr](#1) & GBDEP[weakcontr:~,emph:~](#2,#3) )
+	GBDEP[weakcontr=~](#1).
+
+if ( ^GBDEP[weakcontr](#1) & GBDEP[weakcontr:~](#2) )
+	GBDEP[weakcontr=~](#1).
+
+// Give the feature "novstat" to sentences that just speak about a novelty
+
+if ( ^GBDEP(#1[new],#2) )
+	GBDEP[novstat=+,tempstat=~](#1,#2).
+
+if ( ^GBDEP(#1,#2[new]) )
+	GBDEP[novstat=+,tempstat=~](#1,#2).
+
+if ( GBDEP[novstat](#1,#2) & ^GBDEP[novstat:~](#3,#4) )
+	GBDEP[novstat=+,tempstat=~](#3,#4).
+
+if ( GBDEP[novstat](#1,#2) & ^GBDEP[novstat:~](#3) )
+	GBDEP[novstat=+,tempstat=~](#3).
+
+// Sentences that have a GBDEP+a subject-matter word get the feature SUBJMAT
+
+if ( ^GBDEP(#1,#2) & SUBJMAT(#3) )
+	GBDEP[subjmat=+](#1,#2).
+
+if ( ^GBDEP(#1) & SUBJMAT(#2) )
+	GBDEP[subjmat=+](#1).
+
+// Sentences that have a GBDEP+a level word get the feature LEVEL
+
+if ( ^GBDEP(#1,#2) & LEVEL(#3) )
+	GBDEP[level=+](#1,#2).
+
+if ( ^GBDEP(#1) & LEVEL(#2) )
+	GBDEP[level=+](#1).
+
+
+////////////////////////////////////////////////////////////
+//Relevant sentences: titles, synthetic sentences, last sentences
+////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////
+//Synthetic sentences
+////////////////////////////////////////////////////////////
+
+| TOP#1{ ?+ } |
+if ( synthsent:1 )
+	RELSENT[synth=+](#1).
+
+| TOP#1{ ?+ } |
+if ( _nextanalyse:1 & _nextanalyse=0 )
+//if ( _nextanalyse:1 )
+	RELSENT[synth=+](#1).
+
+//Script:
+
+//_nextanalyse=0;
+
+
+// provide evidence is article:+ : We provide evidence
+
+Script:
+
+iftest ( OBJ(#1[form_gb:fprovide],#2[form_gb:fevidence]) ) { #1[article=+];}
+
+DependencyRules:
+
+// add the feature synth to sentences that contain 2 marked words
+
+if ( ^$1(#1[article,gbsynth],#2[deict,gbsynth]) )
+        $1[synth=+](#1,#2).
+
+if ( ^$1(#1[deict,gbsynth],#2[article,gbsynth]) )
+        $1[synth=+](#1,#2).
+
+//if ( NUCL[passive](#1,#2[article]) )
+//	NUCL[synth=+](#1,#2).
+
+// we will discuss
+
+| TOP#4{ ?+ } |
+if ( SUBJ(#1,#2[deict,gbsynth]) & NUCL(#1,#3[article,gbsynth]) )
+	RELSENT[synth=+](#4).
+
+// taken together/altogether/all together + scope -> synth (These results, taken together)
+
+| #1[adv,article] |
+	MAIN(#1).
+
+| TOP#4{ ?+ } |
+if ( ^MAIN(#1[adv,article]) & SUBJ(#2,#3[scope]) )
+	RELSENT[synth=+](#4).
+
+| TOP#4{ ?+ } |
+if ( ^MAIN(#1[adv,article]) & SUBJ(#2[mental],#3[deict]) )
+	RELSENT[synth=+](#4).
+
+if ( MAIN(#1[adv,article]) )
+	~ .
+| TOP#3{ ?+ } |
+if ( $1[synth](#1) & ~RELSENT(#2) )
+	RELSENT[synth=+](#3).
+	
+| TOP#3{ ?+ } |
+if ( $1[synth](#1,#2) & ~RELSENT(#4) )
+	RELSENT[synth=+](#3).
+
+//In conclusion
+
+| TOP#3{ ?+ } |
+if ( $1(#1[relword],#2[prep,maj]) )
+	RELSENT[synth=+](#3).
+
+////////////////////////////////////
+// Last sentences
+////////////////////////////////////
+
+| #1[lastsent] |
+	LASTSENT(#1).
+
+| TOP#1{ ?+ } |
+if ( LASTSENT(#2) )
+	RELSENT[lastsent=+](#1).
+
+if ( ^RELSENT[synth](#1) & RELSENT[lastsent](#2) )
+	RELSENT[synth=+,lastsent=+](#1).
+
+if ( RELSENT[synth,lastsent](#1) & ^RELSENT[lastsent](#2) )
+	~.
+
+if ( ^LASTSENT(#2) )
+	~.
+
+///////////////////////////////
+// Titles
+//////////////////////////////
+
+| TOP#1{ ?+ } |
+if (@_xtd.title->Test())
+	RELSENT[title=+](#1).
+
+// strong titles
+
+//| #1[verb] |
+//	LIXO(#1).
+
+//| #4[form:fquest] |
+//if ( ^RELSENT(#1) & ~LIXO(#2) & @_xtd.title->Test() & ~NEGWORD(#3) & ~RELSENT[strong](#1) )
+//	RELSENT[strong=+](#1).
+
+//if ( ^LIXO(#1) )
+//	~.
+
+
+
+// Marking pearls: GBDEPS without a feature of with "first" or "change"
+
+if ( ^GBDEP[old:~,tempstat:~,postat:~,nostat:~,weakcontr:~,statknow:~,contr:~,attitude:~,emph:~,question:~](#1,#2) )
+	GBDEP[pearl=+](#1,#2).
+
+
+if ( ^GBDEP[old:~,tempstat:~,postat:~,nostat:~,weakcontr:~,statknow:~,contr:~,attitude:~,question:~](#1) )
+	GBDEP[pearl=+](#1).
+
+| TOP#3{ ?+ } |
+if ( GBDEP(#1) & ~GBDEPSENT(#2) )
+	GBDEPSENT(#3).
+	
+| TOP#3{ ?+ } |
+if ( GBDEP(#1,#2) & ~GBDEPSENT(#4) )
+	GBDEPSENT(#3).
+
+if ( LEVEL(#1) & ^GBDEPSENT(#2) )
+	GBDEPSENT[level=+](#2).
+
+if ( SUBJMAT(#1) & ^GBDEPSENT(#2) )
+	GBDEPSENT[subjmat=+](#2).
+
+// Give features to GBDEPSENT
+
+// If a sentence has a pearl GBDEP, the GBDEPSENT is a pearl
+
+if ( GBDEP[pearl](#1,#2) & ^GBDEPSENT(#4) & ~GBDEPSENT[pearl](#5) )
+	GBDEPSENT[pearl=+](#4).
+
+if ( GBDEP[pearl](#3) & ^GBDEPSENT(#4) & ~GBDEPSENT[pearl](#5) )
+	GBDEPSENT[pearl=+](#4).
+
+// contrast: the best pearls
+
+// a. contr+scope
+
+if ( ^GBDEP(#1[contr,question:~],#2[scope]) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2). 
+
+if ( ^GBDEP(#1[scope],#2[contr,question:~]) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2). 
+
+// b. mental+contr_scope
+
+| #1[scope] |
+if ( GBDEP(#1[scope],#2) | GBDEP(#2,#1[scope]) )
+	LIXO(#1).
+
+if ( ^GBDEP(#1[mental],#2[contr,question:~]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2). 
+
+if ( ^GBDEP(#1[contr,question:~],#2[mental]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2).
+
+if ( LIXO(#1) )
+	~.
+
+// c. scope+attitude_time 
+
+| #1[timefact] |
+if ( GBDEP(#1[timefact],#2) | GBDEP(#2,#1[timefact]) )
+	LIXO(#1).
+
+if ( ^GBDEP(#1[scope],#2[attitude]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2). 
+
+if ( ^GBDEP(#1[attitude],#2[scope]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2).
+
+if ( LIXO(#1) )
+	~.
+
+// d. scope+old_contr
+
+| #1[contr] |
+if ( GBDEP(#1[contr,question:~],#2) | GBDEP(#2,#1[contr,question:~]) | GBDEP(#1[contr]) )
+	LIXO(#1).
+
+if ( ^GBDEP(#1[scope],#2[old]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2). 
+
+if ( ^GBDEP(#1[old],#2[scope]) & LIXO(#4) & GBDEPSENT[pearl](#3) )
+	GBDEP[contrast=+](#1,#2).
+
+if ( LIXO(#1) )
+	~.
+
+// If a GBDEPSENT contains a dependency with contrast, it gets the feature contrast
+
+if ( GBDEP[contrast](#1,#2) & ^GBDEPSENT[pearl](#3) )
+	GBDEPSENT[contrast=+](#3)
+
+// Other features
+
+if ( GBDEP[tempstat](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[tempstat=+](#3).
+
+if ( GBDEP[old](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[old=+](#3).
+
+if ( GBDEP[postat](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[postat=+](#3).
+
+if ( GBDEP[nostat](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[nostat=+](#3).
+
+if ( GBDEP[nostat](#1) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[nostat=+](#3).
+
+if ( GBDEP[contr](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[contr=+](#3).
+
+if ( GBDEP[contr](#1) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[contr=+](#3).
+
+if ( GBDEP[weakcontr](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[weakcontr=+](#3).
+
+if ( GBDEP[weakcontr](#1) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[weakcontr=+](#3).
+
+if ( GBDEP[statknow](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[statknow=+](#3).
+
+if ( GBDEP[novstat](#1,#2) & ^GBDEPSENT(#3) )
+	GBDEPSENT[novstat=+](#3).
+
+if ( GBDEP[grow](#1,#2) & ^GBDEPSENT(#3) )
+	GBDEPSENT[grow=+](#3).
+
+if ( GBDEP[first](#1,#2) & ^GBDEPSENT(#3) )
+	GBDEPSENT[first=+](#3).
+
+if ( GBDEP[emph](#1,#2) & ^GBDEPSENT(#3) )
+	GBDEPSENT[emph=+](#3).
+
+if ( GBDEP[attitude](#1,#2) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[attitude=+](#3).
+
+if ( GBDEP[attitude](#1) & ^GBDEPSENT[pearl:~](#3) )
+	GBDEPSENT[attitude=+](#3).
+
+// if a GBDEPSENT does not have any feature and its verb whose subject is 
+
+////////////////////////////////
+// marking features of relsents
+////////////////////////////////
+
+
+| #1[form:fquest] |
+if ( ^RELSENT(#2) & LEVEL(#3))
+	RELSENT[question=+](#2).
+
+| #1[questlevel] |
+	LIXO(#1).
+
+| #1[form:fquest] |
+if ( ^RELSENT(#2) & LIXO(#3) & ~RELSENT[question](#2))
+	RELSENT[question=+](#2).
+
+if ( ^LIXO(#1) )
+	~.
+
+| #1[possibility] |
+if ( ^RELSENT(#2))
+	RELSENT[postat=+](#2).
+
+| #1[negword] |
+if ( ^RELSENT(#2))
+	RELSENT[negword=+](#2).
+
+| #1[postat] |
+if ( ^RELSENT(#2))
+	RELSENT[postat=+](#2).
+
+//////
+// Wrong rules for future
+//////
+
+////| #1[future] |
+//if ( ^RELSENT[lastsent](#2)  & $1(#1[genebio_feat],#3[future]) )
+//	RELSENT[lastsent=+,future=+](#2).
+
+//if ( ^RELSENT[lastsent](#2)  & $1(#1[future],#3[genebio_feat]) )
+//	RELSENT[lastsent=+,future=+](#2).
+
+////will have implications
+
+//if ( ^RELSENT[lastsent](#2) & NUCL(#1[future],#3) & $1(#3,#4[genebio_feat]) )
+//	RELSENT[lastsent=+,future=+](#2).
+
+//////
+// Wrong rules for future
+//////
+
+
+//////
+//Test for future
+//////
+
+
+//if ( ^RELSENT[lastsent](#1) & $1(#2[future],#3[scope]) )
+//	RELSENT[lastsent=+,future=+](#1).
+
+
+//if ( ^RELSENT[lastsent](#1) & $1(#2[scope],#3[future]) )
+//	RELSENT[lastsent=+,future=+](#1).
+
+
+if ( ^RELSENT(#2[future],#3[scope]) )
+	RELSENT[future=+](#2,#3).
+
+
+if ( ^RELSENT(#2[scope],#3[future]) )
+	RELSENT[future=+](#2,#3).
+
+
+| #1[forneg] |
+if ( ^RELSENT(#2) )
+	RELSENT[negative=+](#2).
+
+//| #1[form:fnot] |
+if ( ^RELSENT(#2) & $1(#1,#3[forneg,toutmaj:~]) )
+	RELSENT[negative=+](#2).
+
+if ( ^RELSENT(#2) & $1(#1[forneg,toutmaj:~],#3) )
+	RELSENT[negative=+](#2).
+
+| #1[negative] |
+if ( ^RELSENT(#2) )
+	RELSENT[negative=+](#2).
+
+| #1[question] |
+if ( ^RELSENT(#2)  & $1(#1[genebio_feat],#3[question]) )
+	RELSENT[question=+](#2).
+
+| #1[question] |
+if ( ^RELSENT(#2)  & $1(#1[question],#3[genebio_feat]) )
+	RELSENT[question=+](#2).
+
+if ( ^RELSENT[postat:~,future:~,contr:~,question:~,title:~](#1) )
+	RELSENT[stat=+](#1).
+
+if ( ^RELSENT(#1) & LEVEL(#3) & ~RELSENT[level](#1) )
+	RELSENT[level=+](#1).
+
+//| #3[importance] |
+//if ( ^RELSENT(#1) & ~RELSENT[strong](#1) )
+//	RELSENT[strong=+](#1).
+
+
+//| #3[questlevel] |
+//if ( ^RELSENT[title](#1) & ~RELSENT[strong](#1) )
+//	RELSENT[title=+,strong=+](#1).
+
+
+//| #3[gb,possibility:~,func:~] |
+//if ( ^RELSENT[title,question,negative:~](#1) & ~RELSENT[strong](#1) )
+//	RELSENT[title=+,strong=+](#1).
+
+//if ( ^RELSENT(#1) & $1[gb](#2[form:~fnot,form:~fno,negative:~]) )
+//	RELSENT[strong=+](#1).
+
+//if ( ^RELSENT(#1) & $1[gb](#2[form:~fnot,form:~fno,negative:~],#3[form:~fnot,form:~fno,negative:~]) )
+//	RELSENT[strong=+](#1).
+
+
+////////////</////////////////
+//GBDEPRELSENT
+////////////////////////////
+
+// Marking relevant sentences that are GBDEPs - this doesn't seem to be an important category
+
+if ( ^RELSENT(#1) & GBDEPSENT[pearl](#2) )
+	GBDEPRELSENT[pearl=+](#1).
+
+if ( GBDEP[contrast](#1,#2) & ^GBDEPRELSENT(#3) )
+	GBDEPRELSENT[contrast=+](#3).
+
+if ( ^RELSENT(#1) & GBDEPSENT[novstat](#2) )
+	GBDEPRELSENT[novstat=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[novstat](#2) )
+	GBDEPRELSENT[novstat=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[first](#2) )
+	GBDEPRELSENT[first=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[first](#2) )
+	GBDEPRELSENT[first=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[old](#2) )
+	GBDEPRELSENT[old=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[old](#2) )
+	GBDEPRELSENT[old=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[grow](#2) )
+	GBDEPRELSENT[grow=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[grow](#2) )
+	GBDEPRELSENT[grow=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[tempstat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[tempstat=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[tempstat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[tempstat=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[nostat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[nostat=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[nostat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[nostat=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[postat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[postat=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[postat](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[postat=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[statknow](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[statknow=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[statknow](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[statknow=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[contr](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[contr=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[contr](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[contr=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[weakcontr](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[weakcontr=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[weakcontr](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[weakcontr=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[attitude](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[attitude=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[attitude](#2) & ~GBDEPRELSENT[pearl](#3) )
+	GBDEPRELSENT[attitude=+](#1).
+
+if ( ^RELSENT(#1) & GBDEPSENT[weakreview](#2) )
+	GBDEPRELSENT[weakreview=+](#1).
+
+if ( ^GBDEPRELSENT(#1) & GBDEPSENT[weakreview](#2) )
+	GBDEPRELSENT[weakreview=+](#1).
+
+if ( GBDEPRELSENT(#1) & ^GBDEPSENT(#2) )
+	~.
+
+if ( GBDEPRELSENT(#1) & ^RELSENT(#2) )
+	~.
+
+if ( ^GBDEPRELSENT[strong](#1) )
+	GBDEPRELSENT[strong=~](#1).
+
+//if ( LEVEL(#1) & ^GBDEPRELSENT(#2) )
+//	GBDEPRELSENT[level=+](#2).
+	
+//if ( SUBJMAT(#1) & ^GBDEPRELSENT(#2) )
+//	GBDEPRELSENT[subjmat=+](#2).
+	
+// Giving precedence to negsent
+
+//if ( NEGSENT(#1) & ^RELSENT[subjmat](#2) | ^RELSENT[level](#2) )
+//	~.
+
+
+// This is a correction: GBDEP(REL)SENT having the features CONTR+OLD should have the feature PEARL, CONTRAST and not TEMPSTAT or OLDSTAT
+
+if ( ^$1[contr,old](#1) )
+	$1[contr=~,old=~,tempstat=~,oldstat=~,contrast=+,pearl=+](#1).
+
+// Marking weak reviews
+
+// grow
+
+if ( ^GBDEPSENT[grow](#1) )
+	GBDEPSENT[weakreview=+](#1).
+
+if ( ^GBDEPRELSENT[grow](#1) )
+	GBDEPRELSENT[weakreview=+](#1).
+
+if ( ^GBDEPSENT[first](#1) )
+	GBDEPSENT[weakreview=+](#1).
+
+if ( ^GBDEPRELSENT[first](#1) )
+	GBDEPRELSENT[weakreview=+](#1).
+
+if ( ^GBDEPSENT[novstat,pearl](#1) )
+	GBDEPSENT[weakreview=+](#1).
+
+if ( ^GBDEPRELSENT[novstat,pearl](#1) )
+	GBDEPRELSENT[weakreview=+](#1).
+
+| #1[possibility] |
+if ( ^GBDEPSENT[pearl](#2) )
+	GBDEPSENT[weakreview=+](#2).
+
+| #1[possibility] |
+if ( ^GBDEPRELSENT[pearl](#2) )
+	GBDEPRELSENT[weakreview=+](#2).
+
+| #1[weakreview] |
+if ( ^GBDEPSENT[pearl](#2) )
+	GBDEPSENT[weakreview=+](#2).
+
+| #1[weakreview] |
+if ( ^GBDEPRELSENT[pearl](#2) )
+	GBDEPRELSENT[weakreview=+](#2).
+
+| #1[form:fquest] |
+if ( ^GBDEPSENT[pearl](#2) )
+	GBDEPSENT[weakreview=+](#2).
+
+| #1[form:fquest] |
+if ( ^GBDEPRELSENT[pearl](#2) )
+	GBDEPRELSENT[weakreview=+](#2).
+
+
+// If a weakreview sentence contains a gbgb and and a contr it should not be a weakreview
+
+if ( ^GBDEPSENT[weakreview](#1) & GBDEP(#2[gbgb]) & GBDEP(#3[contr]) )
+	GBDEPSENT[weakreview=~](#1)
+
+if ( ^GBDEPSENT[weakreview](#1) & GBDEP(#2[gbgb]) & GBDEP(#3[contr],#4) )
+	GBDEPSENT[weakreview=~](#1)
+
+if ( ^GBDEPSENT[weakreview](#1) & GBDEP(#2[gbgb]) & GBDEP(#3,#4[contr]) )
+	GBDEPSENT[weakreview=~](#1)
+
+
+
+// There are part-of-speech tags that go up to mother nodes. They shouldn't
+
+
+// Marking GBDEPs in the introduction
+
+| TOP#1{ ?+ } |
+if (@_xtd.introduction->Test() & ^GBDEPSENT(#1))
+	GBDEPSENT[intro=+](#1).
+
+
+| TOP#1{ ?+ } |
+if (@_xtd.discussion->Test() & ^GBDEPSENT(#1))
+	GBDEPSENT[disc=+](#1).
+
+
+| TOP#1{ ?+ } |
+if (@_xtd.introduction->Test() & ^RELSENT(#1))
+	RELSENT[intro=+](#1).
+
+
+| TOP#1{ ?+ } |
+if (@_xtd.discussion->Test() & ^RELSENT(#1))
+	RELSENT[disc=+](#1).
+
+
+| TOP#1{ ?+ } |
+if (@_xtd.introduction->Test() & ^GBDEPRELSENT(#1))
+	GBDEPRELSENT[intro=+](#1).
+
+
+| TOP#1{ ?+ } |
+if (@_xtd.discussion->Test() & ^GBDEPRELSENT(#1))
+	GBDEPRELSENT[disc=+](#1).
+
+
+| #1[role] |
+	ROLE(#1) .
+
+if ( ^$1(#1) & ROLE(#2) )
+	$1[role=+](#1).
+
+if ( ^ROLE(#1) )
+	~. 

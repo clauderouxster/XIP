@@ -1,0 +1,108 @@
+<project name="" default="all" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}/../../../../common" />
+<property name="xip.dev.dir" location="${basedir}/../.." />
+<import file="${common.dir}/testInclude.xml" />
+
+<property name="name"			value="xip" />
+<property name="lib.names"		value="${name}" />
+<property name="app.name"		value="sample" />
+<property name="cc.debug"		value="${cc.debug.common}" />
+<property name="input"                  value="input.txt" />
+<property name="output"                 value="output.txt" />
+<property name="outputRef"              value="outputRef.txt" />
+<property name="root_xip.dir" 		location="${xip.dev.dir}/GRAMMARS" />
+<property name="include.dir"		location="${xip.dev.dir}/include" />
+<property name="grm.file"		location="sample.grm" />
+<property name="root.dir" 		location="${xip.dev.dir}" />
+
+<target name="test" depends=" shared, testShared"> </target>
+
+<target name="testShared" depends="init, copyDll">
+        <exec os="SunOS" executable="${test.bin.dir}/${app.name}" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}/sharedLib:/usr/lib:/opt/gnu/lib"/>
+              	<arg value="${grm.file}"/>
+        </exec>
+        <exec os="Linux" executable="${test.bin.dir}/${app.name}" failonerror="true" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}/sharedLib"/>
+              	<arg value="${grm.file}"/>
+        </exec>
+        <exec os="Windows 2000" executable="${test.bin.dir}/${app.name}" failonerror="true" >
+              	<arg value="${grm.file}"/>
+	</exec>
+        <exec os="Windows XP" executable="${test.bin.dir}/${app.name}" failonerror="true" >
+              	<arg value="${grm.file}"/>
+	 </exec>
+</target>
+
+
+<target name="copyDll" depends="" description="" if="windows">
+	<copy file="${lib.dir}/sharedLib/${name}.dll" todir="."/>
+</target>
+
+<target name="testStatic" depends="init" description=" ">
+        <exec executable="${test.bin.dir}/${app.name}" failonerror="true" >
+              	<arg value="${grm.file}"/>
+        </exec>
+</target>
+
+<target name="compile" depends="static" description="compile And Link (shared and static)" > </target>
+
+<!-- compile and link(shared lib)  code -->
+<target name="shared" depends="init" >
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}/${app.name}" >
+		<compiler name = "${compilerCplus.name}" debug="false">
+			<fileset dir="." includes="${app.name}.cxx" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerCplus.name}" debug="false">
+			<syslibset libs="${system.libCplus.names}"  />
+			<libset dir="${lib.dir}/sharedLib" libs="${lib.names}" type="shared"/> 
+		</linker>
+	</cc>
+</target>
+
+<!-- compile and link(static lib)  code -->
+<target name="static" depends="init" >
+	<cc name="${compilerCplus.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}/${app.name}" >
+		<compiler name = "${compilerCplus.name}" debug="false">
+			<fileset dir="." includes="${app.name}.cxx" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerCplus.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libCplus.names}" if="linux" />
+			<syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+			 <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+			<libset dir="${lib.dir}/staticLib" libs="${lib.names}" type="static"/> 
+		</linker>
+	</cc>
+</target>
+
+<target name="init" depends="setCommonProperties" >
+</target>
+ 
+<target name="localClean" depends="localCleanWindows" >
+        <delete file="sample"/>
+        <delete file="sample.o"/>
+</target>
+
+<target name="localCleanWindows" depends="" if="windows">
+        <delete file="${name}.dll"/>
+</target>
+
+<target name="localCleanAll" depends="localClean" >
+	<delete file="${name}.dll"/>
+</target>
+
+</project>
+

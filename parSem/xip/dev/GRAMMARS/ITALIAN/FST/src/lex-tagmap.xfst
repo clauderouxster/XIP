@@ -1,0 +1,408 @@
+# ============================================================================
+# TYPE:		(x)fst script 
+# CONTENT:	mapping morph. categories to standard POS tags
+#
+# LANGUAGE:	ITALIAN	
+# ENCODING:	UTF-8 [€àâáäã]
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	20-Feb-2006	
+#		- derived from older scripts by by A. Romano, A. Schiller
+#
+# ============================================================================
+# USAGE:	xfst -s LEX.fst -l ThisFile
+# ============================================================================
+
+define LEX
+
+define MARK	[ %+lex | %+guessed ];
+
+# ----------------------------------------------------------------------------
+# identify tags and characters
+read regex LEX ;
+
+single char sigma net
+define SIG
+
+# morphological features (starting with +)
+read regex SIG & [ %+ ?+ ];
+multi char sigma net
+define TAG
+
+# boundary symbols, diacritics (starting with ^)
+read regex SIG & [ %^ ?+ ];
+multi char sigma net
+define DIAC
+
+define CHAR	?  - [TAG|DIAC];
+
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+
+define BD	DBD | CBD | SPC ;
+
+# ----------------------------------------------------------------------------
+echo >>> define stem classes
+
+define AnyStem	[CHAR|DIAC]+ ;
+define AnyTAG	[TAG|DIAC]* ;
+
+define PREFIX	?* DIAC ;
+
+#! Parts-of-speech having a complexe connotation being used as adverbial 
+#! connectors: come, dove, quando (The last two should have a possible 
+#! analysis as RelAdv when allowing a rewriting with "nel posto in cui", 
+#! "nel momento in cui" respectively).
+
+define ConnAdv		[ c o m e | d o v e | q u a n d o ] ;
+
+define AdvStem		AnyStem - ConnAdv ;
+define PronStem		AnyStem - [ {che} | {chi} | {cui} ];
+define DemStem		AnyStem - {stesso} ;
+define ConjStem		AnyStem - {che} ;
+
+define AuxStem		[ {avere} | {essere} ]; 
+define VerbStem		AnyStem - AuxStem ;
+
+# ----------------------------------------------------------------------------
+#  categories sets
+
+define SG	TAG* & $[ %+Sg | %+SP ] ;
+define PL	TAG* & $[ %+Pl | %+SP ] ;
+
+
+define VFIN	[ %+PresInd | %+ImpInd | %+FutInd | %+Perf 
+		| %+PresSubj | %+ImpSubj | %+Cond ] TAG* ;
+
+define CLIT	TAG* [ DBD | CBD ] ?* ;	
+	
+
+# ----------------------------------------------------------------------------
+echo >>> define mappings
+
+
+regex [
+
+# ----------------------------------------------------------------------------
+# ADJECTIVES
+# ----------------------------------------------------------------------------
+
+  AnyStem %+Adj SG		(MARK) "+hmm_ADJSG":0
+| AnyStem %+Adj PL		(MARK) "+hmm_ADJPL":0
+
+# only "ex":
+| AnyStem %+Adj %+WordPart	(MARK) "+hmm_ADJEX":0
+
+# ----------------------------------------------------------------------------
+# ADVERBS
+#
+#! All traditional adverbs (sempre, qui etc.) and those coming from 
+#! adjectives by the suffixation -mente (tradizionalmente, involontariamente). 
+#! All those parts-of-speech traditionally labeled adverbs which instead act 
+#! as adverbial conjunctions or relative adverbs (come, dove etc.) have a tag
+#! CONNADV (see below).
+#
+# ----------------------------------------------------------------------------
+
+| ConnAdv %+Adv AnyTAG		(MARK) "+hmm_CONNADV":0
+| AdvStem %+Adv CLIT		(MARK) "+hmm_ADV":0
+| AdvStem [AnyTAG & $%+Adv ] 	(MARK) "+hmm_ADV":0
+
+
+# ----------------------------------------------------------------------------
+# NOUNS
+#
+#! All nouns. No use to keep separate months' and days' nouns from other nouns.
+
+| (PREFIX) AnyStem %+Noun SG		(MARK) "+hmm_NSG":0
+| (PREFIX) AnyStem %+Noun PL		(MARK) "+hmm_NPL":0
+
+#! Titles really work as nouns, even when abbreviated
+| AnyStem %+Title SG		(MARK) "+hmm_NSG":0
+| AnyStem %+Title PL		(MARK) "+hmm_NPL":0
+
+# ----------------------------------------------------------------------------
+# PROPER NAMES
+
+#! All proper names (Given, Family, Place, City, River,...) tagged as PROP 
+#! because they really act in the same way except for determinant 
+#! specification properties which allow: 
+#! il Carducci, la Mariuccia, il Salento, il Tevere but not *il Milano.
+
+| AnyStem %+Prop AnyTAG		(MARK) "+hmm_PROP":0
+
+# ----------------------------------------------------------------------------
+# VERBS
+#
+#! Avere and essere are verbs with auxiliar or purely verbal function.
+#! "ho fame";
+#! "ho divorato il mio pasto avidamente";
+#! "li ho divorati tutti"; "le ho divorate tutte";
+#! "sono un cannibale";
+#! "sono partito"; "siamo partiti"
+#! It would be suitable to deal in a different way with essere and avere.
+#! Anyway here only a tag has been temporarily chosen.
+#!
+#! In the VAUXF there are all the finite verbal-auxiliar forms:
+#! Perfect Indicative: avesti, fosti,...
+#! Future Indicative: avrai, sarai,...
+#! Present Conditional: avrei, sarei,...
+#! Present indicative: hai, sei,...
+#!  no with CLIT 
+#! Imperfect Indicative: avevi, eri,...
+#!  with CLIT useful only in a few cases in learned formules and archaic 
+#!  expressions: "avevasi", "eransi levati nottetempo"
+#! Present Subjonctive: (che io) abbia, (che noi) siamo,...
+#!  with CLIT very seldom useful (only in a few cases in archaic expressions:
+#!  "siasi")
+#! Imperfect Subjonctive: avessi, fossimo,...
+#!
+#! In the VAUXINF or GER or P or PR PAST there are:
+#! Infinitive verbs: "avere", "essere"
+#!  commonly widespread with CLIT: "averti", "essersi"
+#! Present Gerund: "avendo", "essendo"
+#!  commonly widespread with CLIT: "essendosene", "avendosi"
+#! Past Participles: "avuto/a/i/e", "stato/a/i/e"
+#!  commonly widespread with CLIT: "avutolo", "*statomi"
+#! Present Participles: "avente/a/i/e", "essente/a/i/e"
+#!  hard to find with CLIT => no VAUXPRPARTSG/PL_CLIT 
+#!
+#! Imperative: abbi, sii,...
+#!  commonly widespread with CLIT: "abbiatemi sempre nel cuore", 
+#!  "siatemi fedeli"
+
+| AuxStem %+Verb %+Inf TAG*		(MARK) "+hmm_VAUXINF":0
+| AuxStem %+Verb %+Inf CLIT		(MARK) "+hmm_VAUXINF_CLIT":0
+
+| AuxStem %+Verb %+Gerund TAG*		(MARK) "+hmm_VAUXGER":0
+| AuxStem %+Verb %+Gerund CLIT		(MARK) "+hmm_VAUXGER_CLIT":0
+
+| AuxStem %+Verb VFIN TAG*		(MARK) "+hmm_VAUXF":0
+| AuxStem %+Verb VFIN CLIT		(MARK) "+hmm_VAUXF_CLIT":0
+
+| AuxStem %+Verb %+Impv TAG*		(MARK) "+hmm_VAUXIMP":0
+| AuxStem %+Verb %+Impv CLIT		(MARK) "+hmm_VAUXIMP_CLIT":0
+
+| AuxStem %+Verb %+PresPart SG		(MARK) "+hmm_VAUXPRSG":0
+| AuxStem %+Verb %+PresPart PL		(MARK) "+hmm_VAUXPRPL":0
+| AuxStem %+Verb %+PresPart SG CLIT	(MARK) "+hmm_VAUXPRSG_CLIT":0
+| AuxStem %+Verb %+PresPart PL CLIT	(MARK) "+hmm_VAUXPRPL_CLIT":0
+
+| AuxStem %+Verb %+PastPart SG		(MARK) "+hmm_VAUXPPSG":0
+| AuxStem %+Verb %+PastPart PL		(MARK) "+hmm_VAUXPPPL":0
+| AuxStem %+Verb %+PastPart SG CLIT	(MARK) "+hmm_VAUXPPSG_CLIT":0
+| AuxStem %+Verb %+PastPart PL CLIT	(MARK) "+hmm_VAUXPPPL_CLIT":0
+
+
+| VerbStem %+Verb %+Inf TAG*		(MARK) "+hmm_VINF":0
+| VerbStem %+Verb %+Inf CLIT		(MARK) "+hmm_VINF_CLIT":0
+
+| VerbStem %+Verb %+Gerund TAG*		(MARK) "+hmm_VGER":0
+| VerbStem %+Verb %+Gerund CLIT		(MARK) "+hmm_VGER_CLIT":0
+
+| VerbStem %+Verb VFIN TAG*		(MARK) "+hmm_VF":0
+| VerbStem %+Verb VFIN CLIT		(MARK) "+hmm_VF_CLIT":0
+
+| VerbStem %+Verb %+Impv TAG*		(MARK) "+hmm_VIMP":0
+| VerbStem %+Verb %+Impv CLIT		(MARK) "+hmm_VIMP_CLIT":0
+
+| VerbStem %+Verb %+PresPart SG		(MARK) "+hmm_VPRSG":0
+| VerbStem %+Verb %+PresPart PL		(MARK) "+hmm_VPRPL":0
+| VerbStem %+Verb %+PresPart SG CLIT	(MARK) "+hmm_VPRSG_CLIT":0
+| VerbStem %+Verb %+PresPart PL CLIT	(MARK) "+hmm_VPRPL_CLIT":0
+
+| VerbStem %+Verb %+PastPart SG		(MARK) "+hmm_VPPSG":0
+| VerbStem %+Verb %+PastPart PL		(MARK) "+hmm_VPPPL":0
+| VerbStem %+Verb %+PastPart SG CLIT	(MARK) "+hmm_VPPSG_CLIT":0
+| VerbStem %+Verb %+PastPart PL CLIT	(MARK) "+hmm_VPPPL_CLIT":0
+
+
+# ----------------------------------------------------------------------------
+# PRONOUNS, DETERMINERS
+
+#! tutto/a/i/e before determiner: "tutte le volte", "tutti questi anni"
+| AnyStem %+PreDet TAG*			(MARK) "+hmm_PREDET":0
+
+#! Articles and demostrative determinants have the same distribution and act 
+#! similarly in determining nouns: "la stoffa", "una stoffa", "quella stoffa", 
+#! "il mio cane", "questo mio cane", "le molte volte", "quelle molte volte", 
+
+| AnyStem %+Det SG			(MARK) "+hmm_DETSG":0
+| AnyStem %+Det PL			(MARK) "+hmm_DETPL":0
+| AnyStem %+Art SG			(MARK) "+hmm_DETSG":0
+| AnyStem %+Art PL			(MARK) "+hmm_DETPL":0
+
+#! Quantifier. Just for qualunque, qualsivoglia, qualsiasi, qualche 
+#! which are not declinable. Perhaps they could be better tagged with a 
+#! confusion set QUANTSG-QUANTPL reduced by the number contraints of the 
+#! noun following it.
+| AnyStem %+Quant TAG*			(MARK) "+hmm_QUANT":0
+
+#! Quantifiers which even stand as pronouns (molti, alcuni,...)
+| AnyStem %+QuantPron SG		(MARK) [ "+hmm_QUANTSG" | "+hmm_PRONINDSG" ]:0
+| AnyStem %+QuantPron PL		(MARK) [ "+hmm_QUANTPL" | "+hmm_PRONINDPL" ]:0
+
+#! As the other atonic forms which can attach to verbs as enclitic or can 
+#! preceed it as not-attached proclitic, the partitive "ne" is labeled 
+#! CLIT in both cases
+
+| AnyStem %+Pron %+Ne TAG*		(MARK) "+hmm_CLIT":0
+
+#! CLIT when directly attached to the verb as proclitic 
+#! (even if with a blankspace); 
+#! e.g.: "la vita mi deprime".
+#! CLIT can be an accusative, a dative pronoun or an adverb.
+#! PRECLIT when preceeding another clitic:
+#! 1. The PRECLIT is always a dative pronoun or an adverb;
+#! 2. A morphological change affects a CLIT when in PRECLIT position
+#! (ci andiamo -> ce ne andiamo)
+#! this tag may be useful in the disambiguization.
+
+| AnyStem %+Pron TAG* %+Aton [TAG - %+Preclit]* (CLIT)	(MARK) "+hmm_CLIT":0
+| AnyStem %+Pron TAG* %+Aton TAG* %+Preclit		(MARK) "+hmm_PRECLIT":0
+
+
+#! All the tonic forms of the Accusative and Reflexive Pronouns 
+#! PRONSG & PRONPL take care of those which are not-attached to verb and which 
+#! take part in complement definition 
+#! (per lui, a te, me (of "guarda me, non lui!"))
+
+| AnyStem %+Pron %+Acc %+Ton SG		(MARK) "+hmm_PRONSG":0
+| AnyStem %+Pron %+Acc %+Ton PL		(MARK) "+hmm_PRONPL":0
+#! The only one: sé
+| AnyStem %+Pron %+Refl %+Ton TAG*	(MARK) "+hmm_PRON":0
+
+#! Personal pronouns in subject position: 
+#! io, tu, lui, lei, egli, ella, esso, essa, noi, voi, loro, essi, esse.
+| AnyStem %+Pron %+Nom SG		(MARK) "+hmm_PRONSG":0
+| AnyStem %+Pron %+Nom PL		(MARK) "+hmm_PRONPL":0
+
+
+#! All the Demonstratives: ciò, colui,...
+| DemStem %+Pron %+Dem SG 		(MARK) "+hmm_DEMSG":0
+| DemStem %+Pron %+Dem PL 		(MARK) "+hmm_DEMPL":0
+
+#| {stesso} %+Pron %+Dem SG		(MARK) "+hmm_ADJSG":0
+#| {stesso} %+Pron %+Dem PL		(MARK) "+hmm_ADJSG":0
+
+| {stesso} %+Pron %+Dem SG		(MARK) "+hmm_DEMSG":0
+| {stesso} %+Pron %+Dem PL		(MARK) "+hmm_DEMSG":0
+
+#! Interrogative pronouns: quale, quanto; quali, quante.
+#! Knowing that the analysis as INTPRON for "che" is hindered by the usage 
+#! of the brutal label CONNCHE, the plural form for the SP one is only 
+#! "qual" that is very seldom employed with plural.
+| PronStem %+Pron %+Interrog SG 	(MARK) "+hmm_PRONINTSG":0
+| PronStem %+Pron %+Interrog PL 	(MARK) "+hmm_PRONINTPL":0
+
+#! Very unclear class of pronouns. Perhaps get a better MorphAnalysis 
+#! before to go on.
+| PronStem %+Pron %+Indef SG 		(MARK) "+hmm_PRONINDSG":0
+| PronStem %+Pron %+Indef PL 		(MARK) "+hmm_PRONINDPL":0
+
+#! Relative pronouns: quale, cui (che being CONNCHE).
+| PronStem %+Pron %+Rel SG 		(MARK) "+hmm_PRONRELSG":0
+| PronStem %+Pron %+Rel PL 		(MARK) "+hmm_PRONRELPL":0
+| {cui} %+Pron %+Rel TAG*		(MARK) "+hmm_PRONREL":0
+
+#! Possessive pronouns: 
+#!  mio/a, tuo/a, suo/a, nostro/a, vostro/a, loro
+#!  miei/mie, tuoi/tue, suoi/sue, nostri/e, vostri/e, loro.
+#! Also used when in determining position.
+| AnyStem %+Pron %+Poss SG		(MARK) "+hmm_POSSSG":0
+| AnyStem %+Pron %+Poss PL		(MARK) "+hmm_POSSPL":0
+
+| {che} %+Pron TAG*			(MARK) "+hmm_CONNCHE":0
+| {chi} %+Pron TAG*			(MARK) "+hmm_CONNCHI":0
+
+# ----------------------------------------------------------------------------
+# NUMERALS
+#
+#! Ordinals syntactically act as nouns or adjectives: 
+#! "io sono il dodicesimo concorrente" "è arrivato il settimo";
+#! cardinals could be seen as quantifiers ("dieci cani", "in cinque minuti") 
+#! or pronouns ("sono venuti in dieci", "il Consiglio dei sette").
+
+## CHANGED TAGS for digits	(AS@15/11/99)
+
+| AnyStem TAG* %+Ord SG			(MARK) "+hmm_ORDSG":0
+| AnyStem TAG* %+Ord PL			(MARK) "+hmm_ORDPL":0
+
+| AnyStem %+Num %+Card TAG*		(MARK) [ "+hmm_QUANTPL" | "+hmm_PRONINDPL" ]:0	## ???
+
+| AnyStem %+Dig [TAG - %+Ord]*		(MARK) "+hmm_DIG":0
+
+
+# ----------------------------------------------------------------------------
+# CONJUNCTIONS
+#
+#! Traditional conjunction: e, o, poiché,...
+| ConjStem %+Conj TAG*			(MARK) "+hmm_CONJ":0
+| {che} %+Conj TAG*			(MARK) "+hmm_CONNCHE":0
+
+| AnyStem %+PreConj TAG*		(MARK) "+hmm_PRECONJ":0
+
+# ----------------------------------------------------------------------------
+# PREPOSITIONS
+#
+| AnyStem %+Prep TAG*			(MARK)	"+hmm_PREP":0
+
+| AnyStem %+Prep CBD AnyStem %+Art SG	(MARK) "+hmm_PREPARTSG":0
+| AnyStem %+Prep CBD AnyStem %+Art PL	(MARK) "+hmm_PREPARTPL":0
+
+| AnyStem %+PrePrep TAG*		(MARK) "+hmm_PREPREP":0
+
+# ----------------------------------------------------------------------------
+# OTHER:
+#
+| AnyStem %+Initial			(MARK) "+hmm_PROP":0
+#! An uppercase followed by a period is in most cases a Given name.
+#! This category belongs syntactically to the nouns' one with a special 
+#! behaviour in terms of determination rules.
+
+| AnyStem %+For				(MARK) "+hmm_PROP":0
+# Just to improve the recognition rate on foreign titles and closed 
+# classes elements without analyzing them grammatically
+
+| AnyStem [%+Symbol|%+Let]		(MARK) "+hmm_LET":0
+#! This is not a syntactical category. LET should be better replaced by a tag 
+#! that states the likely noun-behaviour of letters: 
+#! "rimando al punto b di queste note"
+
+| AnyStem %+Item			(MARK) "+hmm_ITEM":0
+#! This is not a syntactical category but no other possibilities is immediate
+
+| AnyStem %+Meas			(MARK) [ "+hmm_NSG" | "+hmm_NPL" ]:0
+| AnyStem (%+Symbol) %+Curr		(MARK) [ "+hmm_NSG" | "+hmm_NPL" ]:0
+# Abbreviated measures and currencies are often defined by a number 
+# (e. g. 10m as in "ho camminato per 10m" = "ho camminato per dieci metri")
+# or they are straightforwardly used as nouns.
+
+# Punctuations
+| AnyStem [%+Sgml|%+Punct] %+Sent	(MARK) "+SENT":0		# never change the tag "+SENT" !
+| AnyStem %+Punct %+Comma		(MARK) "+hmm_CM":0
+| AnyStem %+Punct 
+	[ TAG - [%+Sent|%+Comma]]*	(MARK) "+hmm_PUNCT":0
+
+# other
+| AnyStem %+Interj TAG* (CLIT)		(MARK) "+hmm_INTERJ":0
+| AnyStem %+Onom AnyTAG			(MARK) "+hmm_INTERJ":0
+#! All the onomatopeic forms and interjections often happen before a "!". 
+#! We assume here the same tag INTERJ for both of them even though the 
+#! distribution of the first ones could be as Noun: 
+# "il coccodè della gallina".
+
+
+];
+
+define MAP
+
+# apply mapping
+
+read regex MAP .o. LEX ;
+
+

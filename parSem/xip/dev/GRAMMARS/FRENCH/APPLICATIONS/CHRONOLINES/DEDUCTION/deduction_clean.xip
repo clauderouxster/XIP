@@ -1,0 +1,75 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//! CH Mai 2011 - fichier permettant de faire des rectifications des erreurs
+//! de tempester2 pour grammaire temporelle
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+
+// Creation de la relation HEAD qui facilite ensuite les calculs
+| NP#1{?*,#2[last]} |
+HEAD(#2,#1)
+
+| PP#1{?*,NP#2} |
+if ( HEAD(#3,#2) )
+HEAD(#3,#1)
+
+// AB 2011.11.23 pourquoi ce n'était pas fait pour les verbes?
+| FV#1{?*,#2[last]} |
+HEAD(#2,#1)
+
+| IV#1{?*,#2[last]} |
+HEAD(#2,#1)
+
+| GV#1{?*,#2[last]} |
+HEAD(#2,#1)
+
+// Recup des modifs générales pour  ALADIN
+// RELATION ATTRIB entre sujet d'une copule et l'attribut du sujet
+if ( SUBJ(#1[copule],#2) & OBJ[spred](#1,#3) )
+	ATTRIB(#2,#3)
+
+
+// Manque lien quand ellipse
+// eg "Sorti le [T+3J], pas de lien entre ppart et date
+| verb#1[start], NP[tempexpr]{?*,noun#2[last]} |
+if ( ~VMOD(#1,#2) )
+   VMOD(#1,#2),
+   TEMPLINK(#1,#2) .
+
+
+// On réalise plusieurs ponctions lombaires avec résultats négatifs pour les bactéries
+// dans ce cas bactéries est rattaché au verbe. On va également rattacher au plus pres
+if ( OBJ(#1,#4[noun]) & VMOD(#1,#2[noun]) & VMOD(#1,#3[noun]) & #4 < #2 & #2 < #3 &
+   ~NMOD(#2,#3) )
+NMOD(#2,#3)
+
+// dans la meme veine
+// retrouver des arguments pour un processus infectieux
+// processus seulement attache a "retrouver" on attache egalement au nom le 
+// plus pres a gauche
+if ( OBJ(#1,#2[noun]) & VMOD(#1,#3[noun]) & #2 < #3 & ~NMOD(#2,#3) )
+ NMOD(#2,#3)
+
+
+
+// attachment
+//V PP+[malgre:~], PP[malgré], PP+ dans ce cas les derniers PP sont attachés au noyau de PP[malgré]
+if ( VMOD(#1,#2) & PREPOBJ(#2,?[prep,lemme:malgré]) & ^VMOD(#1,#3) 
+     & #1 < #2 & #2 < #3 )
+~
+   
+
+// Probleme lié au rajout de la tournure "se dire" + ppart
+// Dans ce cas, le lien entre "se dire" et le "ppart" n'est pas fait
+// rajout ici
+| SC{?*,FV{?*,verb#1[last,lemme:"se dire"]}}, #2[verb,partpas] |
+ if ( ^$1(#1,#3) )
+  $1(#2,#3)
+
+
+

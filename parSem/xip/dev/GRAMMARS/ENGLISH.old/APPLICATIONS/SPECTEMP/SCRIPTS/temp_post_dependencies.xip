@@ -1,0 +1,212 @@
+
+
+
+
+/////////////////////////////
+// THE FOLLOWING RULES BUILD USEFUL INTERPRETATIONS
+//   -- EITHER FOR TEMPORAL DEPENDENCIES OR FOR SEPARATE APPLICATIONS 
+//                 (need the interpretation of tempexpr apart from the event)
+/////////////////////////////
+Marker:
+
+
+
+
+// Treated in marking_temp_first ??
+// add c_anchor with temporal relation to prepositions
+//   if they have not
+1> prep#1[temp_rel], 
+	where(add_temporal_relation(#1)).
+
+
+
+// in 2006
+2> PP#3[c_dur=~]{prep#1[temp_rel], NP#2[date,c_dur=~]}, 
+	where(merge_anchor_date_and_date(#1, #2, #3)).
+
+// in this year
+//   {this year} is both c_dur and c_anchor, but with a prep, the PP is only c_anchor
+//  (just remove the feature c_dur, the rule for "in recent years" will perform the interpretation)
+2> PP#3[c_anchor]{prep#1[temp_rel], NP#2[c_anchor, c_dur, c_dur=~]}.
+
+
+
+// in 2 weeks
+//  (remove temp_level and date entry if it was ambiguous with a time for example (10 hours))
+2> PP#3[date:~]{prep#1[temp_rel,form:~ffor], NP#2[c_dur, temp_level=~]}, 
+	where(merge_anchor_date_and_duration(#1, #2, #3) &
+		del_entries(#2, "DATE")).
+// in recent years
+2> PP#3{prep#1[temp_rel], NP#2[c_anchor, c_dur:~]}, 
+	where(merge_anchor_dates(#1, #2, #3)).
+
+// in 3 nights
+//   in this case the precedent rule is also triggered (and creates an anchor_date)
+//   if temp_rel not during + set
+//   then no c_set any more
+//   c_dur added to avoid on Sunday nights
+2> PP#3[c_set=~]{prep#1[temp_rel, temp_rel:~during], NP#2[c_dur,c_set, c_set=~, date=+]},
+	where(set_to_date(#2)).
+
+// on Tuesdays
+// during + SET
+2> PP#2{prep#1[temp_rel, temp_rel:during], NP#1[c_set]},
+	where(copy(#1, #2)).
+
+
+
+// NP{Four days} of campaign adv{later}, the general came
+//   relation between came and "four days later"
+3> NP#7[c_dur], PP#3[form:fof], ?*, ADV#4[temp_rel, terminal],
+	where (TEMP(#5_MAIN, #4) & HEAD(#6_H3, #3) & TEMP(#6_H3, #7) &
+		merge_anchor_date_and_duration(#4, #7, #4)).
+
+
+
+// {two years ago} {yesterday}
+// 2 years ago in two days
+//   don't add any interpretation if the second element (#2) has stand_alone
+//     this means that we don't want an extra interpretation in the expression
+//      stands by it-self.
+3> ADV#3[tempexpr,c_anchor]{#1[tempexpr, c_anchor, c_dur:~], #2[tempexpr, c_anchor, stand_alone:~]},
+	where(merge_anchor_dates(#1, #2, #3)).
+
+// {two years} {before} {yesterday}
+3> ADV#4[tempexpr:+,mwe:+,c_anchor:+]{#1[tempexpr, c_dur], BG#2[temp_rel], #3[tempexpr, c_anchor, date:~, stand_alone:~]},
+	where(merge_anchor_date_and_duration(#2, #1, #1) & merge_anchor_dates(#1, #3, #4)).
+
+
+4> ADV#1[tempexpr, t_mod:exact,c_anchor],
+	where(add_mod_explicit(#1, #1, "exact", "ANCHOR")).
+
+
+
+// DURATION + PREP + C_ANCHOR
+// two years from now
+4> ADV#3[tempexpr,c_anchor]{#2[noun, c_dur], PP#1[c_anchor, time_span:~]{prep[temp_rel:~during], ?*, ?[tempexpr]}},
+	where(merge_anchor_date_and_duration(#1, #2, #3)).
+
+
+
+// DURATION + DATE
+// a beautiful day of October
+//    (see chunk_temp for the same phrase)
+//5> NP#3[tempexpr,c_anchor]{NP#1[tempexpr,c_dur, c_dur=~], PP#2[form:fof, c_anchor, c_set:~]},
+//	where(merge_anchor_date_and_duration(#2, #1, #3)).
+//5> PP#3[tempexpr,c_anchor]{PP#1[tempexpr,c_dur, c_dur=~]{prep#5[temp_rel], ?*, #4[c_dur, c_dur=~]}, PP#2[form:fof, c_anchor]},
+//	where(merge_anchor_date_and_duration(#2, #4, #4) & 
+//		add_temporal_relation(#5) & 
+//		merge_anchor_dates(#5, #4, #3)).
+
+
+
+// DURATION + SET
+// the first six months of each year
+//    (see chunk_temp for the same phrase)
+//5> NP#3[tempexpr,c_anchor]{NP#1[tempexpr,c_dur, c_dur=~], PP#2[form:fof, c_set]},
+//	where(copy(#1, #3, "DURATION") & copy(#2, #3, "SET")).
+
+
+// C_ANCHOR as a noun modifier
+//   it is a duration !
+// last 2 year war...
+5> NP#3{?*, #1[noun, c_anchor, tempexpr]{?*, #4[tempexpr, c_dur]}, ?*, #2[noun]},
+	where(HEAD(#2, #3) & TEMP(#2, #1) & inverse_anchor_date_relation(#1)).
+
+
+// SET + DATE
+// some Tuesdays in October, 1999
+// some days in 2000
+//    (see chunk_temp for the same phrases)
+//30> NP#3[tempexpr,mwe,c_set]{#1[tempexpr,c_set], #2[tempexpr,date,c_anchor:~]},
+//	where(merge_set_and_date(#1, #2, #3)).
+//30> NP#3[tempexpr,mwe,c_set]{#1[tempexpr,c_set], #2[tempexpr,date,c_anchor:~]},
+//	where(merge_set_and_date(#1, #2, #3)).
+
+
+
+
+// ABOUT, NEARLY, MORE THAN + C_ANCHORs
+//   "exactly in two days"
+6> ADV#3[tempexpr, c_anchor]{#1[t_mod], PP#2[tempexpr,c_anchor]},
+	where(add_mod(#2, #1, #3, "ANCHOR")).
+
+
+// two years from September...  
+// not when temp_rel = during (two years in September must stay separate) 
+// not when the PP is built from a duration (two weeks in two days)
+// "some Tuesdays in 2006" is also treated here. That's why we propagate the feature c_set
+7> ADV[tempexpr,mwe,c_anchor,t_ambiguous_analysis] {#2[noun, tempexpr, c_dur], PP#1[c_dur:~,temp_rel:~during, tempexpr,c_anchor]},
+	where(merge_anchor_date_and_duration(#1, #2, #0)).
+
+
+
+
+DependencyRules:
+
+
+
+
+////////////////
+// TEMPEVAL
+
+// first position tempexpr is linked to the next verb
+//| #1[tempexpr,start] |
+//	if (key_exists(#1) & ~Mother(#1, #3[tempexpr]) & ~TEMP(?, #1) & 
+//		MAIN(#2))
+//	TEMP(#2, #1).
+
+
+//| #1[tempexpr,start] |
+//	if (key_exists(#1) & ~Mother(#1, #3[tempexpr]) & ^TEMP(#2, #1) & 
+//		MAIN(#2) &
+//		TEMP(?, #4) & Descendant(#4, #1))
+//	~.
+
+
+//| #1[tempexpr] |
+//	if (key_exists(#1) & ~(TEMP(?, #1) | ORDER(?, #1) | ORDER(#1, ?)))
+//		TEMP(##Verb, #1).
+//
+//| #1[tempexpr] |
+//	if ((TEMP(?, #1) | ORDER(?, #1) | ORDER(#1, ?)) & ^TEMP(?[fictivenode], #2) & Descendant(#2, #1))
+//		~.
+//
+//| #1[tempexpr] |
+//	if ((TEMP[fictivenode:~](?, #1) | ORDER(?, #1) | ORDER(#1, ?)) & ^TEMP(?[fictivenode], #2) & Descendant(#1, #2))
+//		~.
+//
+// FIN TEMPEVAL
+////////////////
+
+
+
+
+
+// Reference time from a tempexpr to another
+// e.g. : Monday at 10 PM
+//   "at 10PM" has "Monday" as a reference time
+//  This is the case if the granularity of the first tempexpr (10 PM) 
+//    is lower than the one of the second tempexpr (Monday)
+//   and if both tempexpr are TEMPed to the same event
+if (TEMP(#1, #2[temp_level,c_dur:~]) & TEMP(#1, #3[temp_level]) &
+	(#2[c_anchor] || #2[date]) & (#3[c_anchor] || #3[date]) &
+	granularity_lt(#2, #3))
+		RT[date=+](#3, #2).
+
+
+
+//OpenMarkup:
+// nettoyage des variables a chaque nouvelle balise DOC
+//100> print("TESTETSESTETSETSETSETSETSETSET");
+//100> if(@_current(DOC)->test()){cleanalllemmas;print("nettoyage variables \n");}
+
+
+Script:
+
+#@rulespace=english.temporality.close
+
+//10> print("EEEEEEEEEEEEEEEEEEEEEEEEEE");
+10> close_dict(@pathname, @sentencenumber, temp_dict);
+//10> print_xip_dict(temp_dict);
+

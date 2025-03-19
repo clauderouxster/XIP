@@ -1,0 +1,297 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyViperPostProcessing.xip                           !
+//!   Date       : 2013/May                                                    !
+//!   Author     : Nuno Mamede & Jorge Baptista                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Computes dependencies using Viper information                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+// ATENÇÃO : ESTAS REGRAS TÊM DE SER MOVIDAS PARA OUTRO FICHEIRO (MAIS CEDO)
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// Echo complement                                                              //
+//////////////////////////////////////////////////////////////////////////////////
+// "Echo" complements are characteristic of "reciprocal" constructions.         //
+// They have the general structure <um> <PREP> <outro> and result from the      //
+// reduction of coordinated sentences, where the arguments of the predicate     //
+// appear in symmetric positions:                                               //
+// "O Pedro e o João ofereceram livros um ao outro"                             //
+//   <-- "O Pedro ofereceu livros ao João e o João ofereceu livros ao Pedro"    //
+//                                                                              //
+// (The subjects of each coordinated sentence are coordinated in the subject    //
+// position of the first verb; the coordinate conjunction and the 2nd verb are  //
+// zeroed; the repeated nouns are reduced to the pronouns "um" and "o outro",   //
+// which have anaphoric status, in symmetric correspondence, that is,           //
+// the <um> pronoun refers to the second coordinated NP, while the <outro>      //
+// pronoun refers to the first coordinated NP; the preposition introducing      //
+// the verb complement is kept between the pronouns; the pronoun <outro> is     //
+// determined by definite article.)                                             //
+//                                                                              //
+// The syntactic function of the complement is duplicated for the echo          //
+// complement:                                                                  //
+// CINDIR(ofereceram,um)                                                        //
+// CINDIR(ofereceram,outro)                                                     //
+//                                                                              //
+// The semantic roles of the complement are duplicated for the echo complement: //
+// EVENT_RECIPIENT(ofereceram,um)                                               //
+// EVENT_RECIPIENT(ofereceram,outro)                                            //
+//                                                                              //
+// NOTE: Though a PRED dependency exist for <outro> there is none of <um>;      //
+//     confirm this is not required for the SR extraction.                      //
+//                                                                              //
+//////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Detects echo complement                                                    //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A Ana e a Maria conversaram uma em casa da outra --> Outra[echo]
+
+
+////////////////////////////////////////
+// 1- Changing the previous dependencies in order to capture 
+//    the echo complement when this is restructured after a PP:
+//            uma [na casa]pp da outra
+////////////////////////////////////////
+
+// Example: A Ana e a Maria comem uma na casa da outra
+//
+|NP{#3[lemma:um]}, PP#5{prep, art*, ?}, PP#1{?*, #2[lemma:outro]}|
+ if ( HEAD(#6,#5) & ^QUANTD(#6,#3) & MOD(#7,#6) & MOD(#6,#2) )
+   QUANTD(#2,#3), MOD[post=+](#7,#2).
+
+|NP{#3[lemma:um]}, PP#5{prep, art*, ?}, PP#1{?*, #2[lemma:outro]}|
+ if ( HEAD(#6,#5) & QUANTD(#2,#3) & MOD(#7,#6) & MOD(#7,#2) & ^MOD[post](#6,#2) )
+   ~
+
+
+// Example: O Pedro e o João falaram um do ataque do outro
+//
+|NP{#3[lemma:um]}, PP#5{prep, art*, ?}, PP#1{?*, #2[lemma:outro]}|
+ if ( HEAD(#6,#5) & ^QUANTD(#6,#3) & CDIR(#7,#6) & MOD(#6,#2) )
+   QUANTD(#2,#3), MOD[post=+](#7,#2).
+
+|NP{#3[lemma:um]}, PP#5{prep, art*, ?}, PP#1{?*, #2[lemma:outro]}|
+ if ( HEAD(#6,#5) & QUANTD(#2,#3) & CDIR(#7,#6) & MOD(#7,#2) & ^MOD[post](#6,#2) )
+   ~
+
+
+
+////////////////////////////////////////
+// 2 - detecting echo complement
+////////////////////////////////////////
+
+
+// Example: O Pedro e o João basearam a sua argumentação nos textos um do outro  --> Outra[echo]
+//
+| NP#6;PP#6, NP{#3[lemma:um]}, PP{?*, #1[lemma:outro,echo:~,echo=+]}|
+ if ( HEAD(#2[ref:~],#6) & ^MOD[post](?,#1) & QUANTD(#1,#3) & PREPD(#1,#4[lemma:de]) )
+  MOD(#2,#1),
+  DUMMY(#4).
+
+
+// Example: mas como a vingança de uns sobre os outros  --> Outra[echo]
+//
+| NP#6, PP{prep[lemma:de],#3[lemma:um]}, PP{#4, ?*, #1[lemma:outro,echo:~,echo=+]}|
+ if ( HEAD(#2[ref:~],#6) & MOD[post](#2,#1) & MOD[post](#2,#3) & QUANTD(#1,#3) )
+  DUMMY(#4).
+
+
+// Example: A Ana e a Maria falaram uma à outra         --> Outra[echo]
+// Example: A Ana e a Maria conversaram uma com a outra --> Outra[echo]
+// Example: A Ana e a Maria tinham falado uma à outra   --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( ( MOD[POST](#2[verb],#1) || MOD[POST](#2[pastpart],#1) ) & 
+      QUANTD(#1,#3[lemma:um]) & ~PREPD(#3,?) & ~CDIR[post](#2,#5[ref]) &
+      ( PREPD(#1,#4[lemma:a])     || PREPD(#1,#4[lemma:com])  || PREPD(#1,#4[lemma:contra]) || 
+        PREPD(#1,#4[lemma:em])    || PREPD(#1,#4[lemma:para]) || PREPD(#1,#4[lemma:por])    || 
+        PREPD(#1,#4[lemma:sobre]) || PREPD(#1,#4[preploc])
+      )
+    )
+  DUMMY(#4).
+
+
+//PREDSUBJ
+// Example: A Ana e a Maria estão uma ao lado da outra --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( ^PREDSUBJ(#2,#1) & QUANTD(#1,#3[lemma:um]) & PREPD(#1,#4[preploc]) )
+  PREDSUBJ(#2,#4),
+  COMPL[post=+](#4,#1),
+  COMPL[post=+](#4,#3),
+  DUMMY(#4).
+
+
+//PREDSUBJ
+// Example: A Ana e a Maria estão contentes uma com a outra --> Outra[echo]
+//
+|AP#5, NP{#3[lemma:um]}, PP#1{?*, #2[lemma:outro,echo:~,echo=+]}|
+ if ( PREDSUBJ(?,#6) & HEAD(#6,#5) & QUANTD(#2,#3) & PREPD(#2,#4))
+  MOD[post=+](#6,#3),
+  MOD[post=+](#6,#2),
+  DUMMY(#4).
+
+
+//PREDSUBJ and PREP-SPLITTED-&-preploc
+// Example: A Ana e a Maria estão ao pé uma da outra --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( PREDSUBJ(#2,#4) & PREPD(#3[lemma:um],#4[preploc,split]) & ^MOD(#4,#3)
+      (PREPD(#1,?[lemma:de]) || PREPD(#1,?[lemma:a]) || PREPD(#1,?[lemma:com]) )
+    )
+  COMPL(#4,#1),
+  DUMMY(#4).
+
+
+//PREDSUBJ
+// Example: A Ana e a Maria são muito amigas uma da outra --> Outra[echo]
+//
+|NP#5, NP{#3[lemma:um]}, PP#1{?*, #2[lemma:outro,echo:~,echo=+]}|
+ if ( PREDSUBJ(?,#6[ref:~]) & HEAD(#6,#5) & QUANTD(#2,#3) & PREPD(#2,#4))
+  MOD[post=+](#6,#3),
+  MOD[post=+](#6,#2),
+  DUMMY(#4).
+
+
+//PREDSUBJ + reflex
+// Example: O Pedro e o João parecem-se um com o outro. --> Outra[echo]
+//
+//|NP#5, NP{#3[lemma:um]}, PP#1{?*, #2[lemma:outro,echo:~,echo=+]}|
+// if ( PREDSUBJ(?,#6[ref]) & HEAD(#6,#5) & QUANTD(#2,#3) & PREPD(#2,#4))
+//  MOD[post=+](#6,#3),
+//  MOD[post=+](#6,#2),
+//  DUMMY(#4).
+
+
+//CDIR (a CDIR is generated, but it should not)
+// Example: A Ana e a Maria comem em casa uma da outra         --> Outra[echo]
+// Example: A Ana e a Maria tinham comido em casa uma da outra --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( ( ^CDIR[POST](#2[verb],#1) || ^CDIR[POST](#2[pastpart],#1) ) & 
+      QUANTD(#1,#3[lemma:um]) & PREPD(#1,#4[lemma:de]) &
+      MOD(#2,#5) & #2<#5 & #5<#3
+    )
+  MOD[POST=+](#5,#1),
+  DUMMY(#4).
+
+
+//CDIR (a CDIR is generated, but it should not)
+// Example: A Ana e a Maria gostam uma da outra         --> Outra[echo]
+// Example: A Ana e a Maria tinham gostado uma da outra --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( ( ^CDIR[POST](#2[verb],#1) || ^CDIR[POST](#2[pastpart],#1) ) & 
+      QUANTD(#1,#3[lemma:um]) & PREPD(#1,#4[lemma:de]) )
+  MOD[POST=+](#2,#1),
+  DUMMY(#4).
+
+// PREP SPLITTED
+// Example: O Pedro colocou os livros ao pé um do outro --> Outro[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( QUANTD(#1,#3[lemma:um]) & PREPD(#3[lemma:um],#4[split]) &
+      (PREPD(#1,?[lemma:de]) || PREPD(#1,?[lemma:a]) || PREPD(#1,?[lemma:com]) )
+    )
+  DUMMY(#4).
+
+//CDIR + REFLEX
+// Example: A Ana e a Maria aproveitaram-se uma da outra --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( (CDIR[POST](#2[verb],?[ref]) || CDIR[POST](#2[pastpart],?[ref])) &
+      QUANTD(#1,#3[lemma:um])  &
+      ( PREPD(#1,#4[lemma:a])  || PREPD(#1,#4[lemma:com]) || PREPD(#1,#4[lemma:de]) ||
+        PREPD(#1,#4[lemma:em]) || PREPD(#1,#4[lemma:por]) || PREPD(#1,#4[preploc]) )
+    )
+  DUMMY(#4).
+
+
+//AP
+// Example: A Ana e a Maria são muito amigas uma da outra --> Outra[echo]
+//
+|AP#5, NP{#3[lemma:um]}, PP#1{?*, #2[lemma:outro,echo:~,echo=+]}|
+ if ( HEAD(#6,#5) & QUANTD(#2,#3) & PREPD(#2,#4))
+  MOD[post=+](#6,#3),
+  MOD[post=+](#6,#2),
+  DUMMY(#4).
+
+
+// Example: passando a doença de uns para os outros  --> Outra[echo]
+//
+|#1[lemma:outro,echo:~,echo=+]|
+ if ( (CDIR[POST](#2[verb],#5[ref:~]) || CDIR[POST](#2[pastpart],#5[ref:~])) &
+      QUANTD(#1,#3[lemma:um]) & ^MOD[POST](#5,#3) & MOD[POST](#2,#1) & PREPD(#1,#4) & PREPD(#3,?[lemma:de]) )
+  MOD(#2,#3),
+  DUMMY(#4).
+
+
+// Example: Peritas umas contra as outras  --> Outra[echo]
+//
+| NP#6;PP#6, NP{#3[lemma:um]}, PP{?*, #1[lemma:outro,echo:~,echo=+]}|
+ if ( HEAD(#2[ref:~],#6) & ~MOD[post](?,#1) & QUANTD(#1,#3) & PREPD(#1,#4) )
+  MOD(#2,#1),
+  DUMMY(#4).
+
+
+
+
+// Os dois factos estão relacionados entre si --> si[echo]
+//
+|PP{?[lemma:entre],#1[surface:si,echo:~,echo=+]}| ~
+
+
+////////////////////////////////////////////////////////////////////////////////
+// 3 - Corrects ATTRIBs e MODs introduced/changed by echo complement          //
+////////////////////////////////////////////////////////////////////////////////
+
+//PREDSUBJ and PREP SPLITTED
+// Example: O Pedro e o João estão um ao lado do outro:  
+//         *ATTRIB(Pedro,outro) -> ATTRIB(Pedro,ao lado de)
+//         *ATTRIB(João,outro)  -> ATTRIB(João,ao lado de)
+if ( PREDSUBJ(#2,#1) & ^ATTRIB(#3,#4[echo]) & #1~:#4)
+  ATTRIB(#3,#1).
+
+// "Echo-PP"s should modify the verb and not CDIR/PP
+// Example: O Pedro e o João bateram com o martelo um no outro
+//            *MOD(martelo,outro) -> MOD(bateram,outro)
+//
+if ( ($1(#2[verb],#1) || $1(#2[pastpart],#1) ) & VDOMAIN(?,#2) &
+     ^MOD(#1,#3[echo]) & PREPD(#3,#4[lemma:~de]) & ~PREDSUBJ(#2,?) )
+  MOD(#2,#3).
+
+// Example: O Pedro e o João bateram com o martelo um no outro
+//            *MOD(martelo,um)
+//
+if ( ^QUANTD(?,#1) & QUANTD(?[echo],#1) )
+  ~
+
+
+////////////////////////////////////////////////////////////////////////////////
+// 4 - Processes the first part echo complement                               //
+////////////////////////////////////////////////////////////////////////////////
+
+// Replicates dependencies associated with the "other" complement to the "um" 
+// complement
+if ( $1[!features:!](#2,#1[lemma:outro,echo]) & QUANTD(#1,#3[lemma:um]) & ~$1(#2,#3) )
+  $1(#2,#3).

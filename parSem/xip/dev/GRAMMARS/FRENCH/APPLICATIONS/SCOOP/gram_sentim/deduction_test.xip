@@ -1,0 +1,506 @@
+Variables:
+
+string _lemmemulti## ;
+
+
+// reprise des regles par CB
+Script:
+
+if ( OBJ(#1[val:+], #2[objval:+,fem])){
+	_lemmemulti##1 = #1[lemme] + "_la_" + #2[lemme] ;
+	}
+
+if ( OBJ(#1[val:+], #2[objval:+,masc])){
+	_lemmemulti##1 = #1[lemme] + "_le_" + #2[lemme] ;
+	}
+
+Déduction:
+
+
+
+//if ( OBJ(#1[verb],#2[verb]) )
+//   SELECT(#1,#2) 
+
+//if ( VMOD(#1[verb],#2[verb]) & PREPOBJ(#2,#3))
+  // SELECT(#1,#3,#2)
+
+//if (OBJ(#1[verb],#2[noun]) | DEEPOBJ(#1[verb],#2[noun]) )
+  // SELECTOBJ(#1,#2)
+
+|NOUN#1[hashtag]|
+     HASHTAG(#1) 
+
+|NOUN#1[tweetuser]|
+     TWEETUSER(#1) 
+
+//|NOUN#1[url:~,mwe:~,hashtag:~,tweetuser:~]|
+   // NOM(#1)
+
+//|NP#2{?*,NOUN#1[url:~,mwe:~,hashtag:~,tweetuser:~]}|
+  //  GN(#2)
+
+//|ADJ#1|
+ //      GADJ(#1)
+
+//|VERB#1[aux:~]|
+//        GVERB(#1)
+
+//|ADV#1|
+ //       GADV(#1)
+
+//|NOUN#1[url:~,mwe:~,guessed]|
+  //   SELECT(#1)
+
+|#1[url:~,mwe:~,det:~,prep:~,pron:~,terminal,punct:~,num:~]|
+    SELECT(#1)
+
+// *******************NEGATION LEXICALE****************
+// prepositions
+   |#1[positive,positive=~,negative=+,changed=+]|
+	if ( PREPOBJ(#1,#2[lexneg]))
+	~
+
+   |#1[negative,negative=~,positive=+,changed:~]|
+	if ( PREPOBJ(#1,#2[lexneg]))
+        ~
+
+// *******************FIN NEGATION LEXICALE****************
+
+// ARG1: pred; ARG2: CIBLE, Arg3 O-HOLDER
+
+// c'est un plaisir de manger ==> manger est un plaisir
+
+if ( OBJ[spred](#2[copule,cond:~],#1[!sentiment:!,sents]) & (  ADJMOD(#1,#3[verb,inf]) | NMOD(#1,#3[verb,inf])))
+	SENTIMENT[appreciation = +](#1,#3,##OPINION-HOLDER)
+
+// Copules : il est beau, c'est joli, il est devenu beau etc
+
+if (	 OBJ[spred: +](#2[copule], #1[ sents : +, !sentiment:!]) & ~PREPOBJ(#1,#4[lexneg]) & ~ADJMOD(#1,?[lexneg]) 
+	& SUBJ[imperso:~](#2, #3[sents : ~])  )
+	SENTIMENT[appreciation = +]( #1, #3,##OPINION-HOLDER)
+
+
+if (	 VMOD[posit1  : +](#2[lemme : être], #1[ sents : +,  !sentiment:!] ) 
+	& SUBJ[imperso:~](#2, #3[sents : ~]) & ~SENTIMENT(#1,?,?) )
+	SENTIMENT[appreciation = +]( #1, #3,##OPINION-HOLDER)
+
+
+if ( OBJ[spred: +](#2[copule], #1[ sents : +, positive]) & ADJMOD(#1,?[lexneg])  	& SUBJ[imperso:~](#2, #3[sents : ~]) & ~SENTIMENT(#1,?) )
+        SENTIMENT[appreciation = +,negative=+]( #1, #3,##OPINION-HOLDER)
+
+if ( OBJ[spred: +](#2[copule], #1[ sents : +, negative ]) & ADJMOD(#1,?[lexneg])  	& SUBJ[imperso:~](#2, #3[sents : ~]) & ~SENTIMENT(#1,?) )
+        SENTIMENT[appreciation = +,positive=+]( #1, #3,##OPINION-HOLDER)
+
+// attributs de l'objet: je le pense sympathique
+
+if (  OBJ[spred: +](#2[copule2], #1[ sents : +, !sentiment:!]) &
+	OBJ(#2,#3) &
+	SUBJ(#2,#4) )
+	SENTIMENT[appreciation = +]( #1, #3,#4)
+
+// c'est le meilleur OBJ-SPRED au niveau du AP
+
+ |#1{?*,#2[sents,!sentiment:!]}|
+	if ( OBJ[spred](#3[copule,cond:~],#1) & SUBJ[imperso:~](#3, #4[sents : ~]) & ~SENTIMENT(#2,?,?))
+	SENTIMENT[appreciation = +]( #2,#4,##OPINION-HOLDER)
+
+//impersonnelles
+// il est bon que tu viennes (que tu viennes est bon : non traité )
+
+if (SUBJ[imperso](#1,#2) & OBJ[spred](#1,#3[!sentiment:!]) & DEEPSUBJ[propque](#1,#4) )
+	SENTIMENT[appreciation = +]( #3, #4,##OPINION-HOLDER)
+
+// C'est joli
+
+if ( SUBJ[imperso](#1[copule],#2[lemme:"ce"]) & OBJ[spred](#1,#3[sents : +, !sentiment:!]) & ~SENTIMENT(?,#3,?))
+	SENTIMENT[appreciation = +]( #3, #2,##OPINION-HOLDER)
+
+
+// Difficile à lire 
+
+|IV{prep[lemme:"à"],verb#2[inf]}|
+	if (ADJMOD(#1[sents,!sentiment:!],#2) & ~SENTIMENT(#1,?,?) )
+	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+//**************************************************************************
+// objets et sujets
+//**************************************************************************
+
+
+// ************sujets cibles de l'opnion
+
+
+
+//le chat me deplait
+
+// je suis fasciné par le chat
+if(	( SUBJ[passive:~](#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) | DEEPSUBJ(#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2))
+	& ( OBJ(#1, #3[pron : +, acc : +]) | VMOD(#1, #3[pron : +, dat : +]) | DEEPOBJ(#1, #3[pron : +, nom : +]) | OBJ(#1, #3[humain:+])  | DEEPOBJ(#1, #3[humain:+])) & ~COREF[rel](?,#2) )
+SENTIMENT[appreciation = +](#1,#2,#3)
+
+//objet non humain
+if(	( SUBJ[passive:~](#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) | DEEPSUBJ(#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) )
+	& ( DEEPOBJ(#1, #3[pron : +, nom : +]) | OBJ(#1, #3[humain:~])  | DEEPOBJ(#1, #3[humain:~])) & ~COREF[rel](?,#2) & ~SENTIMENT(#1,#2,?) )
+SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+//le chat deplait
+if(	 SUBJ[passive:~](#1[expression:~,verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) |        
+	& ( ~OBJ(#1, ?) &  ~VMOD(#1, ?) ) )
+SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+// Décus par XX
+
+if ( DEEPSUBJ(#1[expression:~,verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) & ~OBJ(#1, ?) )
+   SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+
+if(	SUBJ[passive:~](#1[expression,verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) 	&  ~OBJ(#1, ?)  )
+SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+if(	SUBJ[passive:~](#1[expression,verb : +,  exp_obj : ~, topic_subj : +, !sentiment:!], #2)  )
+SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+
+
+
+if(	SUBJ[passive:~](#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) 
+	& ( ~OBJ(#1, ?) &  VMOD(#1, #7[adv]) ) )
+        SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+// la pluie affecte la fete
+
+if(	SUBJ[passive:~](#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!], #2) 
+	& ( OBJ(#1,#3)  ) & ~SENTIMENT(#1,?,?))
+	SENTIMENT[appreciation = +](#1,#3,##OPINION-HOLDER)
+
+// je suis fasciné
+
+if ( DEEPOBJ(#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!, topic_mod:~], #3[pron : +, nom : +]) & ~DEEPSUBJ(#1,?))
+	SENTIMENT[appreciation = +](#1,##OPINION-TARGET,#3)
+
+if ( DEEPOBJ(#1[verb : +,  exp_obj : +, topic_subj : +, !sentiment:!, topic_mod], #3[pron : +, nom : +]) & ~DEEPSUBJ(#1,?) & ~VMOD(#1,?))
+	SENTIMENT[appreciation = +](#1,##OPINION-TARGET,#3)
+
+// l'histoire est bien tournée+partpas
+
+if (DEEPOBJ(#1[partpas,sentiment:~],#2) & ( VMOD(#1,#3[adv,lemme:"bien"]) | VMOD(#1,#3[adv,positive]) ) ) 
+      SENTIMENT[positive=+, appreciation=+](#2,#1,##OPINION-HOLDER)
+
+// construction a verbe support
+
+if (SUBJ(#1[verb,support],#2) & OBJ(#1,#3[ !sentiment:!,sents]))
+	SENTIMENT[appreciation = +](#3,#2,##OPINION-HOLDER)
+
+//il a tort
+if (SUBJ(#1[lemme:"avoir"],#2) & OBJ(#1,#3[support_avoir:+, !sentiment:!,Nsent]) & ~NMOD(#3,?)  & ~SENTIMENT(#3,#2,?))
+	SENTIMENT[appreciation = +](#3,#2,##OPINION-HOLDER)
+
+// il a honte de lui
+
+if (SUBJ(#1[lemme:"avoir"],#2) & OBJ(#1,#3[support_avoir:+, !sentiment:!,Nsent]) & NMOD(#3,#4) & ~SENTIMENT(#3,#4,?))
+   	SENTIMENT[appreciation = +](#3,#4,##OPINION-HOLDER)
+
+//********objets cibles
+
+//if (	(SUBJ(#1[verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2[humain : +]) 
+//	 | SUBJ(#1[ verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2[pron : +]))
+//	& OBJ(#1,#3) & ~COREF[rel](?,#2))
+//	SENTIMENT[appreciation = +](#1,#3,#2)
+
+if 	(SUBJ(#1[verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2) 
+	& OBJ(#1,#3) & ~COREF[rel](?,#2))
+	SENTIMENT[appreciation = +](#1,#3,#2)
+
+
+if ( DEEPSUBJ(#1[verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2[humain : +])
+     & DEEPOBJ(#1,#3))
+	SENTIMENT[appreciation = +](#1,#3,#2)
+
+if (  DEEPOBJ(#1[verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment],#2) & ~DEEPSUBJ(#1,?))
+	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+// j'adore sans complement
+
+if ( ( SUBJ(#1[verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2[humain : +]) |
+	| SUBJ(#1[ verb: +, exp_subj : +, topic_obj : +, !sentiment:!, cond: ~,sentiment], #2[pron : +, nom : +]) )
+	& ~OBJ(#1,?) & ~SENTIMENT(#1,#2,?) )
+	SENTIMENT[appreciation = +](#1,##OPINION-TARGET,#2)
+
+if (  ( OBJ(#1[ !sentiment:!, topic_subj:+,cond: ~,sentiment],#2) | DEEPOBJ(#1[ !sentiment:!, cond: ~,sentiment],#2)) & ~SUBJ(#1,?)  )
+	SENTIMENT[appreciation = +](#1,##OPINION-TARGET,##OPINION-HOLDER)
+
+if (  ( OBJ(#1[ !sentiment:!, topic_obj:+,cond: ~,sentiment],#2) | DEEPOBJ(#1[ !sentiment:!, cond: ~,sentiment],#2)) & ~SUBJ(#1,?)  )
+	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+// *** VMOD CIBLES 
+// avec "de"
+
+if ( SUBJ[passive:~](#1[verb: +, exp_subj : +, topic_mod : +, !sentiment:!, cond: ~, sfde,sentiment],#2 ) & VMOD(#1,#3) & PREPOBJ(#3, #4[lemme:"de"] ))
+	SENTIMENT[appreciation = +]( #1, #3,  ##OPINION-HOLDER)
+
+//avec "avec"
+
+if ( SUBJ(#1[verb: +, exp_subj : +, topic_mod : +, !sentiment:!, cond: ~,sentiment],#2 ) & VMOD(#1,#3) & PREPOBJ(#3, #4[lemme:"avec"] ))
+	SENTIMENT[appreciation = +]( #1, #3,  ##OPINION-HOLDER)
+
+// passive
+
+if ( SUBJ[passive](#1[verb: +, exp_subj : +, topic_mod : +, !sentiment:!, cond: ~,sentiment],#2 ) & VMOD(#1,#3) & PREPOBJ(#3, #4[lemme:"de"] ))
+	SENTIMENT[appreciation = +]( #1, #3,  #2)
+
+
+
+//***********modifieurs adjectivaux
+
+// avce complements
+
+// mentiion speciale a XXX
+
+if (NMOD[posit1](#1[noun,sents,!sentiment:!, topic_mod_a:+],#2) & PREPOBJ(#2,#3[lemme:"à"]) )
+   	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+if (NMOD[posit1](#1[noun,sents,!sentiment:!, topic_mod_de:+],#2) &PREPOBJ(#2,#3[lemme:"de"]) )
+   	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+if (NMOD[posit1](#1[noun,sents,!sentiment:!, topic_mod_pour:+],#2) & PREPOBJ(#2,#3[lemme:"pour"]) )
+   	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+// adjmod avec complement
+
+if (ADJMOD(#1[sents,!sentiment:!, topic_mod_de:+],#2) & &PREPOBJ(#2,#3[lemme:"de"]) )
+   SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+
+// un roman très bien écrit
+
+|AP#1{ADV#4[!sentiment:!,sents];ADVP{ADV+,ADV#4[!sentiment:!,sents]},ADJ[sentiment:~]}|
+	if ( NMOD[posit1](#2,#3) & ADJMOD(#3,#4) )
+	SENTIMENT[appreciation = +](#1,#2,##OPINION-HOLDER)
+
+
+//une jolie fille
+
+if ( NMOD(#3[no-sents : ~], #4[adj : +,  sents : +, !sentiment:!]) & ~ADJMOD(#4,#2[lexneg]))
+SENTIMENT[appreciation = +](#4, #3, ##OPINION-HOLDER).
+
+if ( NMOD(#3[no-sents : ~], #4[adj : +,  positive : +]) & ADJMOD(#4,#2[lexneg]))
+SENTIMENT[appreciation = +,negative=+](#4, #3, ##OPINION-HOLDER).
+
+if ( NMOD(#3[no-sents : ~], #4[adj : +,  negative : +]) & ADJMOD(#4,#2[lexneg]))
+SENTIMENT[appreciation = +,positive=+](#4, #3, ##OPINION-HOLDER).
+
+// un excellent repas 
+
+if ( NMOD(#4[adj : +,  sents : +, !sentiment:!],#3[no-sents : ~])
+)
+SENTIMENT[appreciation = +](#4, #3, ##OPINION-HOLDER).
+
+
+//un livre bien surestimé
+
+if ( NMOD(#3[no-sents : ~], #4[verb,partpas : +, !sentiment:!,sentiment])
+)
+SENTIMENT[appreciation = +](#4, #3, ##OPINION-HOLDER).
+
+// une imprimante de qualité
+if ( NMOD(#1[sents:~],#2[!sentiment:!,sents,adj:~,verb:~]) & ~SENTIMENT(#2, #1, ?) & ~NMOD(#2,#3[negative]))
+	SENTIMENT[appreciation = +](#2, #1, ##OPINION-HOLDER)
+
+// une imprimate de bonne qualité
+
+//|NP#5{?*,#3}|
+//if(^SENTIMENT[!traits:!](#4[adj],#3,#6) & NMOD(#1[noun],#3[noun]))
+//	SENTIMENT(#5,#1,#6)
+	
+
+// un moment fascinant 
+/if (NMOD(#1,#2[!sentiment:!,sents,adj]) & ~SENTIMENT(#2,#1,?))
+	SENTIMENT(#2,#1,##OPINION-HOLDER)\
+
+// la plus belle des manieres
+
+|AP#1{ADV[lemme:"plus"],ADJ#3[positive]}|
+if ( NMOD(#1,#2) )
+   SENTIMENT[positive=+](#1,#2,##OPINION-HOLDER)
+
+|AP#1{ADV[lemme:"moins"],ADJ#3[positive]}|
+if ( NMOD(#1,#2) )
+   SENTIMENT[negative=+](#1,#2,##OPINION-HOLDER)
+
+
+// un endroit  à déconseiller
+
+if (NMOD(#1,#2[inf,sents,!sentiment:!]) & PREPOBJ(#2,#3[lemme:"à"]))
+   SENTIMENT(#2,#1,##OPINION-HOLDER)
+
+//verbes
+
+// cela vaut le detour
+
+if ( OBJ(#1[val:+], #2[objval:+]) & SUBJ(#1,#3))
+SENTIMENT[appreciation = +, positive = +](#1, #3, ##OPINION-HOLDER)
+
+
+if ( OBJ(#1[val:+], #2[objval:+]) & ~SUBJ(#1,?))
+SENTIMENT[appreciation = +, positive = +](#1, ##OPINION-TARGET, ##OPINION-HOLDER)
+
+
+
+// *** Cas des adverbes
+
+if (VMOD(#1[sentiment:~,copule:~,aux:~],#2[adv,sents, !sentiment:!]) & ~SENTIMENT(#2,?,?))
+	SENTIMENT[appreciation = +](#2, #1, ##OPINION-HOLDER)
+
+
+//***********modifieurs prepositionels de noms
+// X n'est pas |a la hauteur de xxx
+
+|SC{?*,FV{?*,#1}},ADV*,PP{prep#3[lemme:"à la hauteur de"],?*}|
+if ( SUBJ(#1[copule],#2) & NEGAT(#1) )
+   SENTIMENT[negative=+,appreciation=+,changed=+](#3, #2, ##OPINION-HOLDER)
+   
+
+// amour pour, coup de foudre pour
+
+if (NMOD(#1[!sentiment:!, sents , poursn],#2) & PREPOBJ(#2,#3[lemme:"pour"]))
+	SENTIMENT[appreciation = +](#1, #2, ##OPINION-HOLDER)
+
+
+// mensonge de X
+if (NMOD(#1[!sentiment:!,sents, desn],#2) & PREPOBJ(#2,#3[lemme:"de"]))
+	SENTIMENT[appreciation = +](#1, #2, ##OPINION-HOLDER)
+
+
+// une imprimante de bonne qualité : faux
+
+/|NP#4{?*,#2[last]}|
+if ( NMOD(#1[pron:~],#2) & PREPOBJ(#2,?) & NMOD(#2,#3) & ^SENTIMENT[!traits:!](#3,#2,#5)) 
+	SENTIMENT(#4,#1,#5)\
+
+
+// peut-etre trop general
+ if (	NMOD(#1[ sents : +,  !sentiment:!, desn : ~], #2[adj : ~, adv : ~, no-sents : ~]) 
+ )
+SENTIMENT[appreciation = +]( #1, #2,  ##OPINION-HOLDER).
+
+
+// conseils et recommandations
+
+// je conseille ce livre
+
+|NP{?*,#2[last]};PRON#2[clit]|
+if (OBJ(#1[conseil:+],#2) & SUBJ(#1,#3))
+	SENTIMENT[positive=+,appreciation = +](#1,#2,#3).
+
+|NP{?*,#2[last]};PRON#2[clit]|
+if (OBJ(#1[conseil:-],#2) & SUBJ(#1,#3))
+	SENTIMENT[negative=+,appreciation = +](#1,#2,#3).
+
+if (SUBJ(#1[conseil:+],#2) & ~OBJ(#1,#3) )
+   SENTIMENT[positive=+,appreciation = +](#1,##OPINION-TARGET,#2).
+
+if (SUBJ(#1[conseil:-],#2) & ~OBJ(#1,#3) )
+   SENTIMENT[negative=+,appreciation = +](#1,##OPINION-TARGET,#2).
+
+
+// ce livre est à conseiller
+
+if (VMOD(#1,#2[conseil:+,inf]) & SUBJ(#1,#3))
+	SENTIMENT[positive=+,appreciation = +](#2,#3,##OPINION-HOLDER).
+
+if (VMOD(#1,#2[conseil:-,inf]) & SUBJ(#1,#3))
+	SENTIMENT[negative=+,appreciation = +](#2,#3,##OPINION-HOLDER).
+
+// je conseille de lire/jeter/acheter ce livre
+
+// VMOD
+// décu de ...
+
+if ( VMOD(#1[!sentiment:!,sentiment,partpas],#2[adv:~]) & ~SENTIMENT(#1,?[noun],?))
+    SENTIMENT[appreciation = +]( #1, #2, ##OPINION-HOLDER )
+ 
+
+//########### TWEETS
+//if (PREPOBJ(#1,#2[lemme:"avec"]) & (PERSONNE(#1) | ORG(#2)) )
+  //                   SENTIMENT[positive=+,appreciation=+](#2,#1,##OPINION-HOLDER)            
+
+
+
+// ***********REGLE DOMAINES : LIVRES ***************************************
+
+if (SUBJ[imperso](#1[lemme:"falloir"],?) & VLINK(#1,#2[conseil-imp]) & OBJ(#2,#3))
+		SENTIMENT[positive=+,appreciation=+](#2,#3,##OPINION-HOLDER)
+
+//***********IN CASE NO RELATION**********************************************
+
+// bien écrit
+
+|AP#1{ADV#4[!sentiment:!,sents],ADJ[sentiment:~]}}|
+	if (~SENTIMENT(#1,?,?) & ~SENTIMENT(?,#1,?) )
+	SENTIMENT(#1,##OPINION-TARGET,##OPINION-HOLDER)
+
+//ex Magnifique !
+	|#1[sents,sentiment, !sentiment:!]{?*,#2}|
+if (~SENTIMENT(#1,?,?) & ~SENTIMENT(?,#1,?) & ~ADJMOD(?,#1[adv]) & ~ADJMOD(#2,?))
+	SENTIMENT(#1,##OPINION-TARGET,##OPINION-HOLDER)
+
+|#1[sents,sentiment, !sentiment:!]|
+	if (~SENTIMENT(#1,?,?) & ~SENTIMENT(?,#1,?)& ~ADJMOD(?,#1[adv]) )
+	SENTIMENT(#1,##OPINION-TARGET,##OPINION-HOLDER)
+
+
+	|#1[sents:~,nsent:~,sentiment, !sentiment:!]|
+if (~SENTIMENT(#1,?,?) & ~SENTIMENT(?,#1,?) & ~ADJMOD(?,#1[adv]) )
+	SENTIMENT(#1,##OPINION-TARGET,##OPINION-HOLDER)
+
+
+
+//****************************************************************************
+// ***************INVERSION DE POLARITE **************************************
+//****************************************************************************
+
+// *** cas de la negation lexicale : peut a nouveau etre modifier a cause
+// de la negation syntaxique
+
+
+if (^SENTIMENT[!traits:!,negative,changedlexneg:~](#1,#2,#3) & $1(#4[lexneg],#1) & ~NEGAT(#4))
+	SENTIMENT[positive=+,negative=~,changedlexneg=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,positive,changedlexneg:~](#1,#2,#3)& $1(#4[lexneg],#1) & ~NEGAT(#4) )
+	SENTIMENT[positive=~,negative=+,changedlexneg=+](#1,#2,#3)
+
+
+//**** TEST POUR LA NEGAT #1 est  toujours le predicat porteur du sentiment
+
+if (^SENTIMENT[!traits:!,negative,changed:~](#1,#2,#3) & NEGAT(#1[changed:~]))
+	SENTIMENT[positive=+,negative=~,changed=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,positive,changed:~](#1,#2,#3) & NEGAT(#1[changed:~]))
+	SENTIMENT[positive=~,negative=+,changed=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,negative,changed:~](#1[lexneg],#2,#3))
+	SENTIMENT[positive=+,negative=~,changed=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,positive,changed:~](#1[lexneg],#2,#3))
+	SENTIMENT[positive=~,negative=+,changed=+](#1,#2,#3)
+
+
+// ce livre n'a pas de longueurs
+
+if (^SENTIMENT[!traits:!,negative,changed:~](#1,#2,#3) & NEGAT(#1[changed:~]))
+	SENTIMENT[positive=+,negative=~,changed=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,positive,changed:~](#1,#2,#3) & NEGAT(#1[changed:~]))
+	SENTIMENT[negative=+,positive=~,changed=+](#1,#2,#3)
+
+
+// lorsque la negation porte sur la target
+// ** a VALIDER
+
+
+if (^SENTIMENT[!traits:!,negative,changed:~](#1,#2,#3) & NEGAT(#2))
+	SENTIMENT[positive=+,negative=~,changed=+](#1,#2,#3)
+
+if (^SENTIMENT[!traits:!,positive,changed:~](#1,#2,#3) & NEGAT(#2))
+	SENTIMENT[negative=+,positive=~,changed=+](#1,#2,#3)
+
+

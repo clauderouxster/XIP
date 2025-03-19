@@ -1,0 +1,190 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	named_entities.xip
+//! Content:	dependency rules for the named entities
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//!
+//! Created: 	24-Apr-2008
+//! Updated: 	30-Oct-2009
+//!
+//! ENCODING:	UTF-8	[€àâáäã]
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+// ---------------------------------------------------------------------
+// LOCATIONS (1)
+// ---------------------------------------------------------------------
+//:: Er kommt aus Strumpfingen und lebt in München
+//-> LOC_TOWN_REGION(Strumpfingen)		// guessed
+//-> LOC_TOWN(München)			// lexicalised
+
+| pp{ prep[p_loc], np#1 } |
+if (HEAD(#1,#2[proper,is_loc,!loc_type:!]) )
+	LOC(#2). 
+
+| pp{ prep[p_loc,det:~], np#1 } |
+if (HEAD(#1,#2[proper,guessed,is_loc:~]) & ~DETERM(#2,#3) )
+	LOC[town=+,region=+](#2). 
+
+// ---------------------------------------------------------------------
+// PERSON NAMES
+// ---------------------------------------------------------------------
+//:: Herr Paris und Frau Holland besuchen Präsident Hamburg.
+//-> PERSON_MAN(Herr Paris)
+//-> PERSON_WOMAN(Frau Holland)
+//-> PERSON_MAN(Hamburg)
+//-> POSTMOD_APP(Präsident,Hamburg)
+
+// note: exclude names such as "Montag" unless they are in a safe context
+//:: Herr Montag kommt am Dienstag.
+//-> PERSON(Herr Montag)
+//-> DATE_DAY(Dienstag)
+
+// (a) person names identified by local rules (which added the feature "name")
+//:: Herr Graf; Georg Handschuh; Minister Kohl
+| np#1 |
+if (HEAD(#1,#2[name,!person_type:!,title:~]) & ~DATE(#2) & ~LOC(#2) )
+	PERSON(#2).
+
+// (b) unambiguous simple names
+//:: Peter; Goethe
+| np#1 |
+if (HEAD(#1,#2[is_person,common:~,!person_type:!]) & ~DATE(#2) & ~LOC(#2) )
+	PERSON(#2).
+
+// (c) last names that are ambiguous with common nouns, but were identified earlier in the text
+//:: Herr Mann schreibt über Herrn Müller. Der Roman von Mann handelt von Müller.
+//Note: Without the first sentence, no person name is identified in the second one!
+| np#1 |
+if (HEAD(#1,#2[is_person,!person_type:!]) & lastname##2:1 & ~DATE(#2) & ~LOC(#2) )
+	PERSON(#2).
+
+//:: Bischof sagt, dass ..  	//-> PERSON(Bischof)
+//!: so sagte Bischof Maier
+| np#1 |
+if (HEAD(#1,#2[noun,!person_type:!]) & SUBJ(#3[v_say],#2) & ~DETERM(#2,#4) & ~NMOD[app](#2,#5))
+	PERSON(#2).
+
+
+// 
+// DEMONYMS
+//:: ein Franzose und viele Chinesen
+| np#1 |
+if (HEAD(#1,#2[noun,proper:~,prop_part:~,is_loc,!loc_type:!]) )
+	PERSON[demonym=+](#2).
+
+//:: Zwei Schweden und drei Sachsen
+//-> PERSON_DEMONYM_COUNTRY(Schweden), PERSON_DEMONYM_STATE(Sachsen)
+//:! Schweden und Sachsen sind Länder
+//-> LOC_COUNTRY(Schweden), LOC_STATE(Sachsen)
+| np#1 |
+if (HEAD(#1,#2[noun,prop_part:~,is_loc,!loc_type:!]) & NMOD[card](#2,#3) )
+	PERSON[demonym=+](#2).
+
+//:: Die Schweden und Sachsen
+//-> PERSON_DEMONYM_COUNTRY(Schweden), PERSON_DEMONYM_STATE(Sachsen)
+//:! Schweden und Sachsen sind Länder
+//-> LOC_COUNTRY(Schweden), LOC_STATE(Sachsen)
+| np#1 |
+if (HEAD(#1,#2[noun,pl,common,prop_part:~,is_loc,!loc_type:!]) & DETERM(#2,#3) )
+	PERSON[demonym=+](#2).
+
+if (COORD(#1,#,#2[noun,prop_part:~,is_loc,!loc_type:!]) & PERSON[demonym](#1) )
+	PERSON[demonym=+](#2) 
+
+
+// some corrections for proper names
+
+
+//: der Vertrag tritt in Kraft
+//	CHECK !!!!
+| pp{ prep[lemma:in], np#1 } |
+if (HEAD(#1,#2[common]) & ^PERSON(#2) )
+	~.
+
+
+if (^PERSON[demonym:~](#1[common]) & DETERM(#1,#2 ) )
+	~.
+
+
+
+// ** TO DO **
+// - identify criteria to distinguish common nouns and person names
+
+// ---------------------------------------------------------------------
+// LOCATIONS (2)
+// ---------------------------------------------------------------------
+//| np#1[is_masc] |
+//if (HEAD(#1,#2[proper,is_loc,!loc_type:!]) & ~PERSON(#2) & #2<masc,is_loc> )
+//	LOC(#2) .
+//
+//| np#1[is_fem] |
+//if (HEAD(#1,#2[proper,is_loc,!loc_type:!]) & ~PERSON(#2) & #2<fem,is_loc>) 
+//	LOC(#2) .
+//
+//| np#1[is_neut] |
+//if (HEAD(#1,#2[proper,is_loc,!loc_type:!]) & ~PERSON(#2) & #2<neut,is_loc>)
+//	LOC(#2) .
+
+| np#1 |
+if (HEAD(#1,#2[proper,is_loc,!loc_type:!]) & ~PERSON(#2) )
+	LOC(#2) .
+
+
+//:: Der Flughafen Köln-Bonn
+if (NMOD[app](#1[premod,is_loc,!loc_type:!],#2) )
+	LOC(#2).
+
+
+// #### TO DO 
+// ----------------------------------------------------------------------
+// ORGANISATION NAMES
+//
+
+| np#1 |
+if (HEAD(#1,#2[proper,orggrp,!org_type:!]) & ~PERSON(#2) )
+	ORG(#2).
+
+// ----------------------------------------------------------------------
+// ARTEFACT NAMES
+//
+
+| np#1 |
+if (HEAD(#1,#2[proper,artgrp,!art_type:!]) & ~PERSON(#2) )
+	ARTEFACT(#2).
+
+
+// ---------------------------------------------------------------------
+// CLEANUP 
+
+
+if (^PERSON[lastname,firstname](#1))
+	PERSON[lastname=~,firstname=~](#1).
+
+if (^PERSON[man,woman](#1))
+	PERSON[man=~,woman=~](#1).
+
+// die Maiers
+if (^PERSON[lastname](#1[pl]) & DETERM(#1,#2[def,pl]) )
+	PERSON[group=+](#1).
+
+
+if (^LOC(#1) & ORG[loc](#1)) 
+	~.
+
+// remove redundant "loc" feature (it is already in the name)
+if (^LOC[loc](#1))
+	LOC[loc=~](#1).
+
+
+// ---------------------------------------------------------------------
+// ELIMINATE DUPLICATES
+
+if ( ^$1(#1) & $1(#1) )
+	~.

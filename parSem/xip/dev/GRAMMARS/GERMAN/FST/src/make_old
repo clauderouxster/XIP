@@ -1,0 +1,169 @@
+# -------------------------------------------------------------------------
+# Xerox Research Center Europe - Grenoble
+#
+# Copyright (C)  Xerox Corporation
+#
+# -------------------------------------------------------------------------
+# TYPE:		makefile 
+# CONTENT:	FST and HMM files for XIP grammar (version 1)
+# AUTHOR:	Anne Schiller
+# DATE:		27-Jul-2005
+# UPDATED:	04-Sep-2006	(create separate makefile for old version)
+# -------------------------------------------------------------------------
+# USAGE: 	gmake
+# -------------------------------------------------------------------------
+# tools for Linux
+FST = fst -utf8 -q -e "set quit-on-fail on"
+ECHO = echo -e
+
+
+LINGDATA =	/home/schiller/LINGDATA/ger2
+
+# HMM table
+HMMTXT =	$(LINGDATA)/hmm/data/hmm-std-1-def
+
+# directory with lexicon files
+LEXDIR =	$(LINGDATA)/lex/data
+
+
+AUX = ../aux
+DATA = ../data
+
+TARGET = 	$(DATA)/tok.fst \
+		$(DATA)/lookup_v1.txt \
+		$(DATA)/lookup_v1_abs.txt \
+		$(DATA)/v1-lexicon.fst \
+		$(DATA)/v1-guesser.fst \
+		$(DATA)/v1-filter-pref.fst \
+		$(DATA)/v1-filter-cpd.fst \
+		$(DATA)/v1-mark-lex.fst \
+		$(DATA)/v1-mark-guess.fst \
+		$(DATA)/v1-mark-open.fst \
+		$(DATA)/v1-norm-std.fst \
+		$(DATA)/v1-norm-allcap-std.fst \
+		$(DATA)/v1-norm-umlaut.fst \
+		$(DATA)/v1-html.fst \
+		$(DATA)/v1-open4hmm.fst \
+		$(DATA)/v1-tagmap4xip.fst \
+		$(DATA)/v1-map_xip.fst \
+		$(DATA)/v1-map4xip.fst \
+		$(DATA)/v1-ranking4xip.fst \
+		$(DATA)/v1-add-lex.fst \
+		$(DATA)/hmm4xip.txt
+
+
+# ==========================================================================
+# TARGETS
+default:	$(TARGET)
+
+clean:	
+		rm -f $(TARGET)
+		rm -f $(AUX)/*.*
+
+
+
+# ==========================================================================
+# tokenizer transducer 
+# ==========================================================================
+$(DATA)/tok.fst:	tok-abbr.xfst \
+			tok-basic.xfst \
+			tok-mwe.xfst \
+			tok-stapler.xfst
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)  -l tok-abbr.xfst \
+		 -l tok-basic.xfst \
+		 -l tok-mwe.xfst \
+		 -l tok-stapler.xfst \
+		 -e "optimize net" \
+		 -e "save stack $@" -stop
+
+# ==========================================================================
+# HMM table
+# .. with additional prefix "hmm_" to HMM tags
+# (in order to avoid conflicts with lower case feature names)
+
+$(DATA)/hmm4xip.txt: 	$(HMMTXT) \
+			add_hmm.awk
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@gawk -f add_hmm.awk < $< > $@
+
+
+# ==========================================================================
+# lookup script
+$(DATA)/lookup%.txt:	lookup%.txt
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@cp $< $@
+
+
+# lookup script with absolute path
+FSTDIR = $(PWD:/src=/data)
+$(DATA)/lookup%_abs.txt:	lookup%.txt
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	gawk '{sub(/\$$FST/,"$(FSTDIR)");print}' < $< > $@
+
+
+
+$(DATA)/v1-map_xip.fst:	map_xip.xfst \
+			$(AUX)/v1-multi-chars.fst
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST) -s $(AUX)/v1-multi-chars.fst \
+		-l map_xip.xfst \
+		-e "save stack $@" -stop
+
+
+
+# copy from default language ressources
+$(DATA)/v1-lexicon.fst: 	$(LEXDIR)/lex-0.fst
+	@$(ECHO) "\n------------- copying $@ from $<------------------\n"
+	@cp $< $@ 
+
+$(DATA)/v1-guesser.fst: 	$(LEXDIR)/lex-0.fst
+	@$(ECHO) "\n------------- copying $@ from $<------------------\n"
+	@cp $< $@ 
+
+$(DATA)/v1-filter-%.fst: 	$(LEXDIR)/filter-%.fst
+	@$(ECHO) "\n------------- copying $@ from $<------------------\n"
+	@cp $< $@ 
+
+$(DATA)/v1-norm-%.fst: 		$(LEXDIR)/norm-%.fst
+	@$(ECHO) "\n------------- copying $@ from $<------------------\n"
+	@cp $< $@ 
+
+$(DATA)/v1-mark-%.fst: 		$(LEXDIR)/mark-%.fst
+	@$(ECHO) "\n------------- copying $@ from $<------------------\n"
+	@cp $< $@ 
+
+
+# othre FSTs for usage with XIP
+
+$(DATA)/v1-%.fst: 	%.xfst
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST)	-l $< \
+	     	-e "save stack $@" -stop
+
+
+
+
+## -------------------------------------------------------------------------
+## intermediate files
+## -------------------------------------------------------------------------
+
+$(AUX)/v1-multi-chars.fst:	$(DATA)/v1-lexicon.fst \
+				$(DATA)/v1-guesser.fst \
+				$(DATA)/v1-open4hmm.fst
+	@$(ECHO) "\n------------- updating $@ ------------------\n"
+	@$(FST) -s $(DATA)/v1-lexicon.fst -e "unopt net" \
+		-e "single char sigma net" \
+		-s $(DATA)/v1-guesser.fst  -e "unopt net" \
+		-e "single char sigma net" \
+		-e "union net" \
+		-s $(DATA)/v1-open4hmm.fst  -e "unopt net" \
+		-e "single char sigma net" \
+		-e "union net" \
+		-e "save stack $@" -stop
+
+
+
+
+
+

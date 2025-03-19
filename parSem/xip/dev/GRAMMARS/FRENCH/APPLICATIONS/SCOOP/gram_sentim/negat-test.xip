@@ -1,0 +1,204 @@
+// corrections for negation and other stuff
+
+Déduction:
+
+// ****************CORRECTIONS*******************************
+
+//il a mal ete relu
+
+if (VLINK(#1,#2) & AUXIL(#2,#1) & ^VMOD(#1,#3))
+	VMOD(#2,#3)
+
+// C'est ==> C' impersonel
+
+|SC{NP{PRON#1[lemme:"ce"]},FV{?*,VERB#2[lemme:"être",p3]}}|
+	if (^SUBJ(#2,#1))
+	SUBJ[imperso=+](#2,#1)
+
+// constructions avec attribut de l'objet:
+// je le sais gentil, je trouve pierre sympa
+// trop ambigu dans le cas du NP je trouve la voiture 
+// traitable dans le cas du pronom
+
+|SC{?*,FV{pron#[acc],verb#2[copule2]}},AP{?*,#1[last]}|
+	if (OBJ(#2,#3))
+	OBJ[spred=+](#2,#1)
+
+
+
+ //la chose que j' ai regretté . OBJ(regretté, que) ==> OBJ(regretté, chose)
+
+| NP{?*,#1[last :+]}, ?*, SC{BG[first : +]{#2[ conjque : +]}, ?*, FV{?*, #3[last : +]}}| 
+	if(^OBJ(#3, #2) & COREF(#1, #2)) 	OBJ(#3_VERB, #1_SUBJ).
+
+//****************************************************************
+//*************NEGATION ******************************************
+//****************************************************************
+
+// c'est loin d'être
+
+|IV{prep[lemme:"loin de"],verb#1[lemme:"être"]}|
+        NEGAT(#1)
+
+if (VMOD(#1[verb,last],#2[lemme:"pas"]) & ~NEGAT(#1))
+          NEGAT(#1)
+
+//mal aimable
+if (ADJMOD(#1,#2[adv,lemme:"mal"]))
+   NEGAT(#1)
+
+if (ADJMOD(#1,#2[adv,lemme:"non"]))
+   NEGAT(#1)
+// ne pas s'attendre a des merveilles 
+
+if ( NEGAT(#1[lemme:"attendre"]) & VMOD[posit1](#1,#2))
+   NEGAT(#2)
+
+// j'ai aimé rien 
+
+if ( OBJ(#1[positive],#2[lemme:"rien"]) )
+   NEGAT(#1)
+
+if ( OBJ(#1[negative],#2[lemme:"rien"]) )
+   NEGAT(#1)
+
+
+
+// jamais content
+
+|AP{ADV[lemme:"jamais"],?*,ADJ#1[last]}|
+        NEGAT(#1)
+
+|AP{ADV[lemme:"peu"],?*,ADJ#1[last]}|
+        NEGAT(#1)
+// aucune valeur
+
+if (DETERM[quant](#1,#2[lemme:"aucun"]) & ~PREPOBJ(#1,#3[lexneg]))
+   NEGAT(#1)
+   
+// sans etre ennuyeyx
+
+if (OBJ[spred](#1,#2) & PREPOBJ(#1,#3[lemme:"sans"]))
+   NEGAT(#2)
+
+// sans espoir
+
+//if (PREPOBJ(#1,#3[lemme:"sans"]))
+ //    NEGAT(#1)
+
+// rien de joli 
+
+if (NMOD(#1[lemme:"rien"],#2[lemme:~"tout"]) )
+    NEGAT(#2)
+
+// rarement juste
+
+|AP{ADV[lemme:"rarement"],ADJ#2}|
+        NEGAT(#2)
+
+if (VMOD(#1,#2[lemme:"rarement"]) )
+   NEGAT(#1)
+
+// on remplace la négation des auxiliaires par celle du verbe.
+// je ne suis pas venu. ==> NEGAT(venu)
+
+if (^NEGAT(#1) &  AUXIL(#2, #1) & AUXIL(#3,#2) & ~NEGAT(#3))
+	NEGAT(#3).
+
+if(^NEGAT(#1) & AUXIL(#2, #1) & ~NEGAT(#2)) 
+NEGAT(#2).
+
+// pas bien
+
+if (NEGAT(#1) & VMOD(#1,#2[adv,lemme:~"pas"]))
+	NEGAT(#2)
+
+// attributs 
+
+// il n'est pas bon
+
+|AP{?*,#2}|
+if(NEGAT(#1[copule]) & OBJ[spred : +](#1, #2) & ~NEGAT(#2) ) NEGAT(#2).
+ 
+// il n'est pas médecin 
+|NP{?*[adj:~],#2}|
+if(NEGAT(#1[copule]) & OBJ[spred : +](#1, #2) & ~NEGAT(#2) ) NEGAT(#2).
+
+// ce n'est pas une jolie fille: la negation porte sur "jolie" et pas fille
+
+|NP{?*,AP{?*,#2[adj,last]},noun#3}|
+	if(NEGAT(#1[copule]) & OBJ[spred : +](#1, #3) & ~NEGAT(#2) ) NEGAT(#2).
+
+// ce n'est pas une fille sympathique : negation sur sympathique 
+// attention : ce n'est pas une voiture rose : negation sur rose ou voiture 
+
+|NP{?*,noun#3}|
+	if(NEGAT(#1[copule]) & OBJ[spred : +](#1, #3) & NMOD[posit1](#3,#2[sents]) & ~NEGAT(#2) ) NEGAT(#2)
+
+
+// il ne faut pas lire
+
+if (VLINK(#1,#2) & NEGAT(#1))
+	NEGAT(#2)
+
+// pas joli
+
+if ( ADJMOD(#1,#2[lemme:"pas"]) & ~NEGAT(#1))
+	NEGAT(#1)
+
+// pas/adv de + noun
+
+|?[verb:~,lemme:~"ou"],ADV[lemme:"pas"],PP{?*,NP{?*#1[last]}}|
+        if (~NEGAT(#1))
+        NEGAT(#1)
+
+if ( ADVMOD(#3,#2[lemme:"pas"]) &  ADJMOD(#1[changed:~],#3)  & ~NEGAT(#1))
+	NEGAT(#1)
+
+if ( ADVMOD(#3,#2[lemme:"pas"]) &  ADVMOD(#4,#3) &  ADJMOD(#1[changed:~],#4)  & ~NEGAT(#1))
+	NEGAT(#1)
+
+
+// il n'y a pas de longueurs
+
+
+
+
+if ( NEGAT(#1[support]) & OBJ(#1,#2) )
+	NEGAT(#2)
+
+// ni ZZZ
+
+
+|COORD[lemme:"ni"],adv*,PP{?*,NP{?*,#1[last]}}|
+	NEGAT(#1)
+
+|COORD[lemme:"ni"],adv*,NP{?*,#1[last]}|
+	NEGAT(#1)
+
+
+// negation lexicale
+
+// loin d'etre vulgaire
+
+
+|PP{prep[lemme:"loin de"],NP{?*,#1[lemme:"être",last]}}, AP{?*,ADJ#2}|
+	if (NMOD(#1,#2))
+	NEGAT(#2)
+
+
+//pas top
+
+|?[verb:~,lemme:~"ou"],ADV[lemme:"pas"],NP{?*,noun#1[last]}|
+        if (~NEGAT(#1))
+        NEGAT(#1)
+
+//vous votez pas
+
+if ( VMOD[posit1](#1[verb],#2[lemme:"pas"]) & ~NEGAT(#1))
+   NEGAT(#1)
+
+
+|FV{?*,#1[last]},ADV[lemme:"pas"]| 
+        if (~NEGAT(#1))
+        NEGAT(#1)

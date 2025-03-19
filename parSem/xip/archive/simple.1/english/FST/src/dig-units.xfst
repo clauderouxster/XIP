@@ -1,0 +1,434 @@
+# ============================================================================
+# CONTENT:      measure units
+#
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      10-Mar-2006
+# ============================================================================
+# USAGE:        xfst -l [ThisFile]
+# ============================================================================
+
+# SOURCES:	http://www.bipm.org/en/si (The International System of Units)
+# 
+#		http://physics.nist.gov/cuu/Units/outside.html
+#		http://ts.nist.gov/ts/htdocs/230/235/appxc/appxc.htm
+
+
+# ------------------------------------------------------------------------------
+# BASIC DEFINITIONS
+# ------------------------------------------------------------------------------
+# white space
+define WS	%  ;
+
+# decimal separator
+define DOT	%. ;
+define COMMA	%, ;
+define SEPDEC	DOT | COMMA ;
+
+# define dash (for decimals)
+define DASH	%- ;
+
+
+# plus/minus signs
+define SIGN	[
+  "\u002B"	# PLUS SIGN
+| "\u002D"	# HYPHEN-MINUS
+| "\u00B1"	# PLUS-MINUS SIGN
+| "\u2212"	# MINUS SIGN
+| "\u2213"	# MINUS-OR-PLUS SIGN
+];
+
+# digits
+define DIGIT	%0|1|2|3|4|5|6|7|8|9 ;
+
+# superscripts
+define S2	[ 2 | "\u00B2"	] ; 		# SUPERSCRIPT TWO
+define S3	[ 3 | "\u00B3"	] ;		# SUPERSCRIPT THREE
+define M1	[ {-1} | "\u207B"  "\u00B9" ];	#  SUPERSCRIPT MINUS + SUPERSCRIPT ONE
+
+define PER	%/ ;
+define TMS0	[ %*		# star
+		| "\u00B7"	# MIDDLE DOT
+		| "\u00D7"	# MULTIPLICATION SIGN
+		];
+
+define TMS	(WS (TMS0 (WS))) ; # N*m or Nm or N * m or N m
+
+define LP	%( ;		# left parenthesis
+define RP	%) ;		# right parenthesis
+
+
+# -------------------------------------------------------------------------
+# define numerals used for amounts
+
+# unsigned cardinals with thousands separator 
+# e.g. 	12,000,000
+define CARDCOMMA	DIGIT (DIGIT (DIGIT)) [COMMA DIGIT^3]+ ;
+define CARDDOT		DIGIT (DIGIT (DIGIT)) [DOT DIGIT^3]+ ;
+define CARDSPACE	DIGIT (DIGIT (DIGIT)) [WS  DIGIT^3]+ ;
+
+# unsigned cardinal
+define DIGCARD	[DIGIT+|CARDCOMMA|CARDDOT|CARDSPACE];
+
+# unsigned decimal number
+define DIGDEC	[
+  [DIGIT+|CARDCOMMA]	DOT 	DIGIT+	#	12,345.00	
+| [DIGIT+|CARDDOT] 	COMMA	DIGIT+	#	12.345,00
+| [DIGIT+|CARDSPACE]	SEPDEC 	DIGIT+	#	12 345,00 or 12 345.00
+| [DIGIT+|CARDSPACE]	SEPDEC 	DASH	#	12 345,- or 12 345.-
+|			SEPDEC 	DIGIT+	#	.123 or ,123
+|		DASH  	SEPDEC 	DIGIT+	#	-.123 or -,123
+];
+
+
+define AMOUNT	(SIGN) [ DIGCARD|DIGDEC ];
+
+# ------------------------------------------------------------------------------
+# UNIT NAMES AND SYMBOLS
+# ------------------------------------------------------------------------------
+
+# prefixes for multiples
+
+define PREFIX [
+  {yocto} 	: y		# = 10^-24
+| {zepto} 	: z		# = 10^-21
+| {atto}	: a		# = 10^-18
+| {femto}	: f		# = 10^-15
+| {pico} 	: p		# = 10^-12
+| {nano}	: n		# = 10^-9
+| {micro}	: "\u00B5"	# = 10^-6	# MICRO SIGN
+| {milli} 	: m		# = 10^-3
+| {centi}	: c		# = 10^-2
+| {deci}	: d		# = 10^-1
+
+| {hecto}	: h		# = 10^2 	  	
+| {kilo}	: k		# = 10^3
+| {mega}	: M		# = 10^6 	  	
+| {giga}	: G		# = 10^9 	  	
+| {tera}	: T		# = 10^12 	  	
+| {peta}	: P		# = 10^15 	  
+| {exa}		: E		# = 10^18 	  	
+| {zetta}	: Z		# = 10^21 	  	
+| {yotta}	: Y		# = 10^24 	  	
+
+# not standard but used:
+| {deka} 	: {da}		# = 10^1  	
+| {deka} 	: {dk}		# = 10^1  	
+| {kilo}	: K		# = 10^3	## should be only k, but K is often used 
+| {micro}	: u		# = 103		## if micro symbol not available ...
+];
+
+# abbreviation only:
+
+define PRF	PREFIX.l ;
+
+
+# ------------------------------------------------------------------------------
+#  SI units (http://www.bipm.org/en/si/si_brochure/chapter2/2-1/)
+
+define UNITNAME (PREFIX) [
+# basic units (http://www.bipm.org/en/si/si_brochure/chapter2/2-1/)
+  {metre} 	: m 		# length
+| {gram}	: g		# mass 		## basic unit is kg
+| {second}	: s		# time
+| {ampere}	: A		# electric current
+| {kelvin}	: K		# thermodynamic temperature
+| {mole}	: {mol}		# amount of substance
+| {candela}	: {cd}		# luminous intensity
+
+# derived unites with new names (http://www.bipm.org/en/si/si_brochure/chapter2/2-2/2-2-2.html)
+| {radian}	: {rad}		# plane angle
+| {steradian}	: {sr}		# solid angle
+| {hertz}	: {Hz}		# frequency
+| {newton}	: {N}		# force
+| {pascal}	: {Pa}		# pressure, stress
+| {joule}	: {J}		# energy, work, quantity of heat
+| {watt}	: {W}		# power, radiant flux
+| {coulomb}	: {C}		# electric charge, quantity of electricity
+| {volt}	: {V}		# electric potential difference, electromotive force
+| {farad}	: {F}		# capacitance
+| {ohm}		: "\u2126"	# OHM SIGN{capital omega}		# electric resistance
+| {siemens}	: {S}		# electric conductance
+| {weber}	: {Wb}		# magnetic flux
+| {tesla}	: {T}		# magnetic flux density
+| {henry}	: {H}		# inductance
+| {Celsius}	: {°C}		# Celsius temperature	# should be: "degree Celsius"
+| {Celsius}	: "\u2103"	# DEGREE CELSIUS
+| {lumen}	: {lm}		# luminous flux
+| {lux}		: {lx}		# illuminance
+| {becquerel}	: {Bq}		# activity (referred to a radionuclide)
+| {gray}	: {Gy}		# absorbed dose
+| {sievert}	: {Sv}		# organ equivalent dose
+| {katal}	: {kat}		# catalytic activity
+
+# not standard:
+| {ohm}		: {ohm}		# should be omega sign, but not available in ISO-88501
+| {ohm}		: "\u03A9"	# GREEK CAPITAL LETTER OMEGA
+| {hertz}	: {hz}		# should be uppercase
+
+# more http://physics.nist.gov/cuu/Units/outside.html
+| {liter}	: {L}		# liquid volume
+| {liter}	: {l}		# liquid volume
+| {bar}		: {bar}		#
+| {bel}		: {B} 		#
+| {electronvolt}: {eV}		#
+| {atomic mass unit}	: {u}	#
+| {astronomical unit}	: {ua}	#
+| {Ångström}	: {Å}		#
+| {ångström}	: {Å}		#
+| {angström}	: {Å}		#
+| {curie}	: {Ci}		#
+| {roentgen}	: {R}		#
+| {röntgen}	: {R}		#
+
+# more from http://en.wikipedia.org/wiki/Centimetre_gram_second_system_of_units
+| {barye}	: {Ba}		# unit of pressure.
+| {dyne} 	: {dyn}		# unit of force
+| {erg}				# unit of energy and mechanical work
+| {gauss}	: {G}		# magnetic flux density or magnetic induction
+| {franklin}	: {Fr}		# unit of electrical charge
+| {maxwell}	: {Mx}		# magnetic flux
+| {oersted}	: {Oe}		# unit of magnetic field strength (or magnetic induction)
+| {poise}	: {P}		# unit of dynamic viscosity
+| {statcoulomb}	: {statC}	# unit of electrical charge
+| {statvolt}	: {statV}	# unit of voltage and electrical potential
+
+| {torr}	 		# non-SI unit of pressure
+| {réaumur}	: {°Ré}		# unit of temperature
+];
+
+# without prefix
+
+define UNITMORE [
+# from http://physics.nist.gov/cuu/Units/outside.html)
+  {degree}  	: {°}		# angle
+| {minute}	: {'}		# angle
+| {second}	: {''}		# angle
+| {ton}		: {t}		# mass
+| {neper}	: {Np}		# 
+| {calorie}	: {cal}		# energy
+
+!| {are}		: {a}		# area
+| {hectare}	: {ha}		# area
+| {barn}	: {b}		# area
+| {rem}		: {rem}		#
+
+# more
+| {Fahrenheit}	: "\u2109"	# DEGREE FAHRENHEIT
+| {degree}	: {deg}		# degree
+| {mach}	: {Ma}
+
+# computing
+| {bit}		: b 
+| {byte}	: B
+| {point}	: {pt}
+| {pixel}	: {px}
+| {baud}	: {bd}
+
+];
+
+
+
+# ------------------------------------------------------------------------------ 
+define TIMENAME [
+  PREFIX [ {second}	: s ]
+
+# not standard but used:
+| {second}	: {sec}
+| {minute}	: {min}
+| {hour}	: {h}
+| {day}		: {d}
+];
+
+define TIME 	TIMENAME.l | {hour} ;
+
+# ------------------------------------------------------------------------------ 
+# derived units
+# only abbreviations are defined, not the full names
+
+define UNITS (PRF) [
+# from http://www.bipm.org/en/si/si_brochure/chapter2/2-2/2-2-1.html
+  m S2					# m²		area
+| m S3					# m³		volume
+| m PER TIME				# m/s		speed, velocity
+| m PER (PRF) s S2			# m/s²		acceleration 	
+| m M1					# m⁻¹		wavenumber (reciprocal metre)
+| 1 PER m				# 1/m		wavenumber (reciprocal metre)
+| g PER (PRF) m S3			# g/m³		density, mass density
+| m S3 PER (PRF) g			# m³/g		specific volume
+| A PER (PRF) m S2			# A/m²		current density
+| A PER (PRF) m				# A/m		magnetic field strength
+| m o l PER (PRF) m S3			# mol/m³	concentration
+| c d PER (PRF) m S2			# cd/m²		luminance
+
+
+# from http://www.bipm.org/en/si/si_brochure/chapter2/2-2/2-2-2.html
+
+
+| N PER (PRF) m S2			# N/m²		pressure, stress	
+| N TMS (PRF) m				# N m		energy, work		
+| J PER (PRF) s				# J/s		power, radiant flux	
+| s TMS (PRF) A				# s A		electric charge		
+| W PER (PRF) A				# W/A		electric potential difference
+| C PER (PRF) V				# C/V		capacitance		
+| V PER (PRF) A				# V/A		electric resistance	
+| A PER (PRF) V				# A/V		electric conductance	
+| V TMS (PRF) s				# V s		magnetic flux		
+| W b PER (PRF) m S2			# Wb/m²		magnetic flux density	
+| W b PER (PRF) A			# Wb/A		inductance		
+| c d TMS (PRF) s r			# cd sr		luminous flux		
+| l m PER (PRF) m S2			# lm/m²		illuminance		
+| J PER (PRF) g				# J/g		absorbed dose		
+
+| P a TMS (PRF) s			# Pa s		dynamic viscosity	
+| N PER (PRF) m				# N/m		surface tension		
+| r a d PER (PRF) s			# rad/s		angular velocity	
+| r a d PER (PRF) s S2			# rad/s²	angular acceleration	
+| W PER (PRF) m S2			# W/m²		heat flux density, irradiance
+| J PER (PRF) K				# J/K		heat capacity, entropy	
+| J PER LP (PRF) g TMS (PRF) K RP	# J/(g K)	specific heat capacity [with parentheses]	
+| J PER (PRF) g TMS0 K			# J/g*K		specific heat capacity	
+| J PER (PRF) g				# J/g		specific energy		
+| W PER LP (PRF) m TMS (PRF) K RP	# W/(m K)	thermal conductivity [with parentheses]
+| W PER (PRF) m TMS0 (PRF) K		# W/m*K		thermal conductivity	
+| J PER (PRF) m S3			# J/m³		energy density		
+| V PER (PRF) m				# V/m		electric field strength	
+| C PER (PRF) m S3			# C/m³		electric charge density	
+| C PER (PRF) m S2			# C/m²		electric flux density	
+| F PER (PRF) m				# F/m		permittivity		
+| H PER (PRF) m				# H/m		permeability		
+| J PER (PRF) m o l			# J/mol		molar energy		
+| J PER LP (PRF) m o l TMS (PRF) K RP	# J/(mol K)	molar entropy	[with parentheses]
+| J PER (PRF) m o l TMS0 K		# J/mol*K	molar entropy		
+| C PER (PRF) g				# C/g		exposure
+| G y PER (PRF) s			# Gy/s		absorbed dose rate	
+| W PER (PRF) s r			# W/sr		radiant intensity	
+| W PER LP (PRF) m S2 TMS (PRF) s r RP	# W/(m² sr)	radiance [with parentheses]	
+| W PER (PRF) m S2 TMS0 s r		# W/m²*sr	radiance		
+| k a t PER (PRF) m S3			# kat/m³	catalytic concentration	
+];
+
+# ------------------------------------------------------------------------------ 
+# British/US Units
+# http://ts.nist.gov/ts/htdocs/230/235/appxc/appxc.htm
+
+define SQUARE  [ {square} : [{sq} (DOT)] ] ( WS ) ;
+define CUBIC   [ {cubic}  : [{cb} (DOT)] ] ( WS ) ;
+
+define LENGTH [
+	  {inch} 	: {in}
+	| {foot} 	: {ft}
+	| {yard} 	: {yd}
+	| {rod}  	: {rd}
+	| {furlong}	: {fur}
+	| {mile}	: {mi}
+	| {link}	: {li}
+	| {chain}	: {ch}
+	| (PREFIX) [ {meter}:m ] 
+];
+
+define BUNIT [
+  LENGTH 
+| [ {square} : [{sq} (DOT)] ] (WS) LENGTH 	# area
+| [ {cubic}  : [{cb} (DOT)] ] (WS) LENGTH	# volume
+| LENGTH WS [ {squared} : [{sq} (DOT)] ]	# area
+| LENGTH WS [ {cubed}   : [{cb} (DOT)] ]	# volume
+
+| {acre}			# area
+| {gill}	: {gi}		# liquid volume
+| {pint}	: {pi}		# liquid volume
+| {quart}	: {qt}		# liquid volume
+| {gallon}	: {gal}		# liquid volume
+| {peck}	: {pk}		# dry volume
+| {bushel}	: {bu}		# dry volume
+| {grain}	: {gr}		# mass
+| {dram}	: {dr}		# mass
+| {ounce}	: {oz}		# mass
+| {pound }	: {lb}		# mass
+| {hundredweight} : {cwt}	# mass
+| {pennyweight}	: {dwt}		# mass
+| {light-year}	: {lt-yr}	# length
+| {light year}	: {lt-yr}	# length
+
+| {second}	: {sec}
+| {minute}	: {min}
+| {hour}	: [h (r) ]
+| {day}		: {d}
+
+# more
+| {teaspoon}	: {tsp}
+| {tablespoon}	: [ {tbs} (p) ]	
+| {horsepower}	: [h (DOT) p]  (%-:0 {hour}:h)
+| (PREFIX) [{gramme} : {gr}]
+] ;
+
+define BUNITPL  [
+	[ BUNIT.u  0:{+s} ] 
+.o. 	{foot+s} -> {feet} 
+.o. 	s -> {es} || [ s | x | z | c h ] %+ _ 
+.o. 	%+ -> 0
+]  ;
+
+
+define BMORE [
+  (k (DOT)) m (DOT) p (DOT) TIME	# speed
+| (k (DOT)) m (DOT) p (DOT) g		# miles per gallon
+| M (DOT) P (DOT) H		# miles per hour
+| B (DOT) T (DOT) U		# British Thermal Unit
+
+| {ppi}				# points/pixels per inch
+
+# from old analyzer:
+| {cc}				# == ccm ?
+#| {k}				# = kg ???
+#| {kc}				# = ??
+| {ma}				# = mach ???
+
+]; 
+
+
+# ------------------------------------------------------------------------------
+# define categories
+
+define FULLNAMES	UNITNAME | TIMENAME | UNITMORE ;
+
+
+define ABBRNAMES	[ FULLNAMES | BUNIT ]  ;	
+
+define SYMBOLS 		[ UNITS | BMORE | ABBRNAMES.l ] ;
+
+
+# abbreviated units
+define SHORTUNITS 	[
+  SYMBOLS (DOT)		%+Symbol:0 %+Meas:0 %+Abbr:0	# dot is not standard !!
+| AMOUNT (WS) SYMBOLS	%+Dig:0 %+Meas:0 %+Abbr:0
+];
+
+# full words
+define NOUNUNITS	[ 
+	FULLNAMES.u	%+Noun:0 %+Unit:0 %+SP:0
+|	BUNIT.u		%+Noun:0 %+Sg:0 %+Unit:0
+|	BUNITPL		%+Noun:0 %+Pl:0 %+Unit:0
+];
+
+
+# ----------------------------------------------------------------------------------------------
+# add genitive 's
+#	dollar's 	-> dollar's
+# 	dollars's 	-> dollars'
+#	
+
+define GENRULE [
+	s -> 0 || [ s | x | z ] %+Gen %' _ 
+.o.	%+Gen -> 0
+];
+
+ 
+define NOUNGEN [ NOUNUNITS %+Gen 0:{'s} ] .o. GENRULE ;
+
+
+
+read regex [ SHORTUNITS | NOUNUNITS | NOUNGEN ];
+

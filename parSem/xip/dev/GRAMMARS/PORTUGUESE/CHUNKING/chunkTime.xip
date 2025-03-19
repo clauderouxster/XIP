@@ -1,0 +1,341 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunkTime.xip                                               !
+//!   Date       : MArch 2008                                                  !
+//!   Author     : Caroline Hagege                                             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   ADDITION CHUNKING FOR COMPLEX TEMPORAL EXPRESSIONS.                      !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+//==============================================================================
+//==============================================================================
+// Propagates features to the header nodes
+//==============================================================================
+//==============================================================================
+
+// Marking constituents in order to be able to construct the rules
+// PP or NP which head is a weekday will have feature weekday
+| PP[weekday=+]{prep[lemma:de], ?[weekday]} | ~
+| NP[weekday=+]{?[weekday]} | ~
+| NP[part_of_day=+]{?[part_of_day]} | ~
+
+// PP which head is a part of day will have feature part of day
+// CH restriction added to have a correct tagging of expression
+// durante a tarde...
+// AQUI PB....
+| PP[part_of_day=+]{prep[lemma:~durante], (art[def];art[indef];?[dem]), ?[part_of_day]} | ~
+
+// PP which head is a time measure will have feature time_meas
+| PP[time_meas=+]{prep, (art[def];art[indef];?[dem]), ?[time_meas]} | ~
+
+// hoje + advtimetemp
+// already constructed as ADVP by chunker
+| advp[tipo_tempref=enun,ref-simult=+,advtimetemp=+]{adv[tipo_tempref:enun,timeval:0,timeref:+], adv[advtimetemp]{prep}} | ~
+
+
+
+
+// Example: por  5 anos
+// CH changed the example which was not appropriated
+| PP[time=+,time_meas=+]{prep, noun{num, ?*, ?[time_meas]}} | ~
+
+// Example: por muitos anos
+// CH change exaple which was not appropriated
+| PP[time=+,time_meas=+]{prep, num;?[dem];?[q3];?[indef:+], ?*, ?[time_meas]} | ~
+
+// PP which head is a time measure will have feature time
+| PP[time=+,tipo_tempref=disc]{prep, (art[def];art[indef];?[dem]), ?[time,tipo_tempref:disc]} | ~
+| PP[time=+,tipo_tempref=enun]{prep, (art[def];art[indef];?[dem]), ?[time,tipo_tempref:enun]} | ~
+
+// PP/ADVP which head is a adverb tref_enunc will have feature tref_enunc
+| PP[tipo_tempref=enun,ref-before=+] {prep[lemma:de], ?[tipo_tempref:enun,ref-before,last]} | ~
+| PP[tipo_tempref=enun,ref-simult=+] {prep[lemma:de], ?[tipo_tempref:enun,ref-simult,last]} | ~
+| PP[tipo_tempref=enun,ref-after=+]  {prep[lemma:de], ?[tipo_tempref:enun,ref-after,last]}  | ~
+| PP[tipo_tempref=enun]              {prep[lemma:de], ?[tipo_tempref:enun,last]}            | ~
+
+| ADVP[tipo_tempref=enun,ref-before=+] {prep[lemma:de], ?[tipo_tempref:enun,ref-before,last]} | ~
+| ADVP[tipo_tempref=enun,ref-simult=+] {prep[lemma:de], ?[tipo_tempref:enun,ref-simult,last]} | ~
+| ADVP[tipo_tempref=enun,ref-after=+]  {prep[lemma:de], ?[tipo_tempref:enun,ref-after,last]}  | ~
+| ADVP[tipo_tempref=enun]              {prep[lemma:de], ?[tipo_tempref:enun,last]}            | ~
+
+| ADVP[tipo_tempref=disc,ref-after=+]  {prep[lemma:de], ?[tipo_tempref:disc,ref-after,last]}  | ~
+| ADVP[tipo_tempref=disc,ref-before=+] {prep[lemma:de], ?[tipo_tempref:disc,ref-before,last]} | ~
+| ADVP[tipo_tempref=disc,ref-simult=+] {prep[lemma:de], ?[tipo_tempref:disc,ref-simult,last]} | ~
+| ADVP[tipo_tempref=disc]              {prep[lemma:de], ?[tipo_tempref:disc,last]}            | ~
+
+// PP which head is a absolut date will have feature tipo_tempref:absolut
+| PP[tipo_tempref=absolut]{prep[lemma:de], ?*, ?[date,tipo_tempref:absolut,last]} | ~
+
+// PP which head is a time_focus will have feature time_focus
+| PP[time_focus=+]{prep, ?*, ?[time_focus,last]} | ~
+// CH - duplicated rule - commented| PP[time_focus=+]{prep, ?+, ?[time_focus,last]} | ~
+
+
+// NP which head is a time_focus will have feature time_focus
+| NP[time_focus=+]{ ?*, ?[time_focus,last]} | ~
+// desde meio  (NJM)
+| PP[time_focus=+]{prep, ?[lemma:meio,time_focus,last]} | ~
+
+// advp which head is a lonely adverb bearing feature advtimetemp, also have this feature
+| ADVP[advtimetemp=+]       {adv[first,last,advtimetemp]} | ~
+| ADVP[tipo_tempref=enun]   {adv[first,last,tipo_tempref:enun]}  | ~
+| ADVP[tipo_tempref=disc]   {adv[first,last,tipo_tempref:disc]}   | ~
+
+
+// Example: (pleno) dia (útil) (NJM)
+// XEROX other segmentation
+| PP[time=+,tipo_tempref=enun]{prep, ?*, ?[lemma:"dia"], ?[lemma:"útil"]} | ~
+
+
+// Example: entre o fim da manhã e início da tarde
+| PP[interval=+]{prep[lemma:entre]} | ~
+
+
+// Example: ao fim a manhã e início da tarde
+| AP[not_alone=+,tipo_tempref=disc,ref-before=+]{?*, ?[last,not_alone,tipo_tempref:disc,timeref:-]} | ~
+| AP[not_alone=+,tipo_tempref=disc,ref-simult=+]{?*, ?[last,not_alone,tipo_tempref:disc,timeref:0]} | ~
+| AP[not_alone=+,tipo_tempref=disc,ref-after=+]{?*,  ?[last,not_alone,tipo_tempref:disc,timeref:+]} | ~
+
+| AP[not_alone=+,tipo_tempref=enun,ref-before=+]{?*, ?[last,not_alone,tipo_tempref:enun,timeref:-]} | ~
+| AP[not_alone=+,tipo_tempref=enun,ref-simult=+]{?*, ?[last,not_alone,tipo_tempref:enun,timeref:0]} | ~
+| AP[not_alone=+,tipo_tempref=enun,ref-after=+]{?*,  ?[last,not_alone,tipo_tempref:enun,timeref:+]} | ~
+
+// Example: no dia corrente
+// CH - problem when word as corrente is used as head in an expression like
+// ligar as correntes da actualidade. Here "corrente" is a feminine noun.
+// partially treated in desamb_spec.
+| ?[time=+,tipo_tempref=disc, ref-before=+]{?*, ?[tipo_tempref:disc,timeref:-]} | ~
+| ?[time=+,tipo_tempref=disc, ref-simult=+]{?*, ?[tipo_tempref:disc,timeref:0]} | ~
+| ?[time=+,tipo_tempref=disc, ref-after=+] {?*, ?[tipo_tempref:disc,timeref:+]}| ~
+
+// Example: no dia seguinte
+| ?[time=+,tipo_tempref=enun, ref-before=+]{?*, ?[tipo_tempref:enun,timeref:-,last]} | ~
+| ?[time=+,tipo_tempref=enun, ref-simult=+]{?*, ?[tipo_tempref:enun,timeref:+,timeval:0,last]} | ~
+| ?[time=+,tipo_tempref=enun, ref-after=+] {?*, ?[tipo_tempref:enun,timeref:+,timeval:~0,last]}| ~
+
+// Example: depois de as duas de a manhã de ontem
+| PP[hora=+,tipo_tempref=enun,ref-before=+]{?*,?[last,hora,ref-before,tipo_tempref:enun]} | ~
+| PP[hora=+,tipo_tempref=enun,ref-simult=+]{?*,?[last,hora,ref-after, tipo_tempref:enun]} | ~
+| PP[hora=+,tipo_tempref=enun,ref-after=+] {?*,?[last,hora,ref-after, tipo_tempref:enun]} | ~
+
+// Example: do feriado
+| PP[one_day=+]      {?*,?[one_day]} | ~
+| PP[several_days=+] {?*,?[several_days]} | ~
+| PP[weekday=+]      {?*,?[weekday]} | ~
+| PP[monthday=+]     {?*,?[monthday,date=+,last,tipo_tempref:~disc,tipo_tempref:~enun]} | ~
+
+// Example: pouco
+| ADVP[advnum=+]{?[advnum]}     | ~
+| ADVP[advsupra=+]{?[advsupra]} | ~
+| ADVP[advinfra=+]{?[advinfra]} | ~
+| ADVP[advfuzzy=+]{?[advfuzzy]} | ~
+| ADVP[advexact=+]{?[advexact]} | ~
+| ADVP[duration=+]{?[duration]} | ~
+
+// Example: 3 dias
+| NP[time=+]{noun[time]} | ~
+
+// Example: no primeiro dia
+// CH This is not an absolut date !!!! - ERROR see LGTime.xip
+| PP[time=+]{?*,noun[last,time,date,uncertain:~,tipo_tempref:disc]} | ~
+| NP[time=+]{?*,noun[last,time,date,uncertain:~]} | ~
+
+// Example: em pleno dia de Natal
+| NP{?*,noun[time,ref-simult=+]{prep[lemma:em],?[lemma:pleno]}} | ~
+
+// Example: Até ao último dia
+| PP[ref-before=+,ref-simult=+,ref-after=~]{prep[lemma:"até"], prep[lemma:"a"]} | ~
+| PP[ref-before=~,ref-simult=+,ref-after=+]{prep[lemma:desde]} | ~
+
+// Example: Até agora
+| ADVP[ref-before=+,ref-simult=+,ref-after=~]{adv[lemma:até]} | ~
+| ADVP[ref-before=~,ref-simult=+,ref-after=+]{prep[lemma:desde]} | ~
+
+// Example: dentro de 5 dias
+| PP[time=+,ref-after=+,tipo_tempref=enun]{prep[lemma:"dentro_de"], ?*, ?[last,time,quant,hora:~]} | ~
+
+// Example: dentro de 5 minutos
+| PP[hora=+]{prep[lemma:"dentro de"], ?*, num[hora]} | ~
+
+
+// Example: no último dia depois do Natal
+| PP[ref-after=+]{?*,noun{?*,noun[last,part_of_day]}};NP[ref-after=+]{?*,noun[last,part_of_day]}, PP{prep[lemma:"depois_de"]} | ~
+
+// Example: no último dia antes do Natal
+| PP[ref-before=+]{?*,noun{?*,noun[last,part_of_day]}};NP[ref-before=+]{?*,noun[last,part_of_day]}, PP{prep[lemma:"antes_de"]} | ~
+
+
+// Pass feature month to PP that are only made by a monthname.
+| PP[time=+,month=+]{prep,noun[last,month]}| ~
+
+
+
+Sequence:
+//==============================================================================
+//==============================================================================
+// Agregates nodes (one single entity on HAREM II)
+//==============================================================================
+//==============================================================================
+
+// Creating big temporal expressions that have to be considered as a whole (according time directives)
+// operates after temporal Local grammars and after chunking
+//
+// Example: durante toda a tarde de ontem
+1> PP[time=+, duration=+] @= PP[time,duration,part_of_day];ADVP[duration], PP[tipo_tempref:enun].
+
+// Example: durante toda a tarde de sexta-feira
+1> PP[time=+, duration=+] @= PP[time,duration,part_of_day];ADVP[duration], PP[weekday] .
+
+// Example: durante toda a tarde de 25 de Abril de 2008
+1> PP[time=+,duration=+]  @= PP[time,duration];ADVP[duration], ?[tipo_tempref:absolut].
+
+// Example: nas vésperas do dia 22
+2> PP[time=+,tipo_tempref=absolut] = PP[tipo_tempref:disc], PP[tipo_tempref:absolut];PP[monthday].
+2> PP[time=+,tipo_tempref=absolut] = PP[tipo_tempref:enun], PP[tipo_tempref:absolut];PP[monthday].
+
+
+
+// Example: entre o fim da manhã e o início da tarde
+3> PP[time=+,date=+,interval=+] @= PP[interval], (PP[part_of_day]), CONJ[lemma:e], NP[part_of_day], (PP[weekday];PP[tipo_tempref:enun]).
+3> PP[time=+,date=+,interval=+] @= PP[interval], (PP[part_of_day]), CONJ[lemma:e], NP[time_focus];PP[time_focus], PP[part_of_day], (PP[weekday];PP[tipo_tempref:enun]).
+
+
+
+// Combination temporal adverbial + DE + day;absolut-date
+//
+// Example: pela tarde de sexta-feira
+5> PP[time=+,tipo_tempref=enun] @= advp[advtimetemp,tipo_tempref:~enun], (PP[time_focus]), advp[advtimetemp], (PP[weekday];?[part_of_day]).
+
+// Example: ontem da parte da manhã
+5> PP[time=+,tipo_tempref=enun] @= advp[advtimetemp,tipo_tempref:~enun], (PP[time_focus];advp[advtimetemp];PP[weekday];?[part_of_day])+.
+
+// Example: por altura dos anos 80
+5> PP[time=+,tipo_tempref=enun] @= advp[advtimetemp,tipo_tempref:~enun], PP[tipo_tempref:absolut,time].
+
+// Example: na altura do ano
+5> PP[time=+,tipo_tempref=enun] @= advp[advtimetemp,tipo_tempref:~enun], PP[time_meas].
+
+
+// Combination temporal adverbial + DE + day;absolut-date
+//
+// Example: pela tarde de sexta-feira
+7> PP[time=+,tipo_tempref=enun] @= advp[advtimetemp,tipo_tempref:~enun], (punct[comma]), PP[weekday];PP[part_of_day].
+
+// Combination PP[time_focus], part_of_day
+//
+// Example: no final da tarde (de sexta-feira;de 25 de Abril)
+7> PP[time=+,date=+,tipo_tempref=absolut] @= PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:absolut], ((punct[comma]), ?[weekday]).
+7> PP[time=+,date=+,tipo_tempref=absolut] @= (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:absolut], ((punct[comma]), ?[weekday]).
+
+
+// Example: entre o fim da manhã de ontem
+9> PP[time=+,date=+,tipo_tempref=enun,ref-before=+,ref-simult=+]  = PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:enun,ref-before,ref-simult];ADVP[tipo_tempref:enun,ref-before,ref-simult].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-before=+]               = PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:enun,ref-before];ADVP[tipo_tempref:enun,ref-before].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-before=+,ref-simult=+]  = (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:enun,ref-before,ref-simult];ADVP[tipo_tempref:enun,ref-before,ref-simult].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-before=+]               = (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:enun,ref-before];ADVP[tipo_tempref:enun,ref-before].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-after=+,ref-simult=+]   = PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:enun,ref-after,ref-simult];ADVP[tipo_tempref:enun,ref-after,ref-simult].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-after=+]                = PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:enun,ref-after];ADVP[tipo_tempref:enun,ref-after].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-after=+,ref-simult=+]   = (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:enun,ref-after,ref-simult];ADVP[tipo_tempref:enun,ref-after,ref-simult].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-after=+]                = (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:enun,ref-after];ADVP[tipo_tempref:enun,ref-after].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-simult=+]  = PP[time_focus],  (PP[part_of_day]), PP[tipo_tempref:enun,ref-simult];ADVP[tipo_tempref:enun,ref-simult].
+9> PP[time=+,date=+,tipo_tempref=enun,ref-simult=+]  = (PP[time_focus]), PP[part_of_day],  PP[tipo_tempref:enun,ref-simult];ADVP[tipo_tempref:enun,ref-simult].
+
+// Example: entre o fim da manhã
+9> PP[time=+,date=+,tipo_tempref=enun] @= PP[time_focus],  (PP[part_of_day]), PP[weekday];PP[tipo_tempref:enun];ADVP[tipo_tempref:enun].
+9> PP[time=+,date=+,tipo_tempref=enun] @= PP[time_focus],   PP[part_of_day], (PP[weekday];PP[tipo_tempref:enun];ADVP[tipo_tempref:enun]).
+9> PP[time=+,date=+,tipo_tempref=enun] @= (PP[time_focus]), PP[part_of_day],  PP[weekday];PP[tipo_tempref:enun];ADVP[tipo_tempref:enun].
+
+
+// temp + seguinte;anterior;próximo
+10> PP[time=+,date=+,tipo_tempref=disc,ref-after=+]  = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:disc,ref-after].
+10> PP[time=+,date=+,tipo_tempref=disc,ref-before=+] = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:disc,ref-before].
+10> PP[time=+,date=+,tipo_tempref=disc,ref-simult=+] = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:disc,ref-simult].
+
+10> PP[time=+,date=+,tipo_tempref=enun,ref-after=+]  = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:enun,ref-after].
+10> PP[time=+,date=+,tipo_tempref=enun,ref-before=+] = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:enun,ref-before].
+10> PP[time=+,date=+,tipo_tempref=enun,ref-simult=+] = PP[time_focus];PP[part_of_day];PP[time_meas], AP[not_alone,tipo_tempref:enun,ref-simult].
+
+
+// Example: desde o princípio de século
+11> PP[time=+,date=+,tipo_tempref=enun,ref-before=+,ref-simult=+] = PP[time_focus,ref-before,ref-simult],   PP[time_meas].
+11> PP[time=+,date=+,tipo_tempref=enun,ref-after=+,ref-simult=+]  = PP[time_focus,ref-after,ref-simult],    PP[time_meas].
+11> PP[time=+,date=+,tipo_tempref=enun,ref-before=+,ref-simult:~] = PP[time_focus,ref-before,ref-simult:~], PP[time_meas].
+11> PP[time=+,date=+,tipo_tempref=enun,ref-after=+,ref-simult:~]  = PP[time_focus,ref-after,ref-simult:~],  PP[time_meas].
+11> PP[time=+,date=+,tipo_tempref=enun,ref-simult=+]              = PP[time_focus,ref-simult],              PP[time_meas].
+
+// Pouco depois das duas da manhã de ontem
+// Pouco antes das duas da manhã de ontem
+// "logo", "ainda" e "só" foi excluído unicamente por causa do HAREM II
+13> ADVP[time=+,hora=+,tipo_tempref=enun,ref-before=+] = ADVP[advquant];ADVP[lemma:bem];ADVP[lemma:imediatamente];ADVP[lemma:impreterivelmente];ADVP[neg,NE_forbiden:~], 
+                                                         PP[hora,ref-before,tipo_tempref:enun].
+13> ADVP[time=+,hora=+,tipo_tempref=enun,ref-after=+]  = ADVP[advquant];ADVP[lemma:bem];ADVP[lemma:imediatamente];ADVP[lemma:impreterivelmente];ADVP[neg,NE_forbiden:~], 
+                                                         PP[hora,ref-after,tipo_tempref:enun].
+
+
+// Example: na véspera do feriado
+13> PP[time=+,tipo_tempref=enun,ref-before=+] = PP[time,tipo_tempref:enun,ref-before], PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=enun,ref-after=+]  = PP[time,tipo_tempref:enun,ref-after],  PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=enun,ref-simult=+] = PP[time,tipo_tempref:enun,ref-simult], PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=enun]              = PP[time,tipo_tempref:enun],            PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+
+13> PP[time=+,tipo_tempref=disc,ref-before=+] = PP[time,tipo_tempref:disc,ref-before], PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=disc,ref-after=+]  = PP[time,tipo_tempref:disc,ref-after],  PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=disc,ref-simult=+] = PP[time,tipo_tempref:disc,ref-simult], PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+13> PP[time=+,tipo_tempref=disc]              = PP[time,tipo_tempref:disc],            PP[one_day];PP[tipo_tempref:absolut];PP[weekday];PP[monthday].
+
+// Example: três dias depois do Natal
+13> PP[time=+,tipo_tempref=disc,ref-before=+] @= NP[time,part_of_day:~];PP[time,part_of_day:~], PP[one_day,ref-before];PP[several_days,ref-before], (AP[time,tipo_tempref:enun]).
+13> PP[time=+,tipo_tempref=disc,ref-after=+]  @= NP[time,part_of_day:~];PP[time,part_of_day:~], PP[one_day,ref-after]; PP[several_days,ref-after],  (AP[time,tipo_tempref:enun]).
+13> PP[time=+,tipo_tempref=disc,ref-simult=+] @= NP[time,part_of_day:~];PP[time,part_of_day:~], PP[one_day,ref-simult];PP[several_days,ref-simult], (AP[time,tipo_tempref:enun]).
+13> PP[time=+,tipo_tempref=disc]              @= NP[time,part_of_day:~];PP[time,part_of_day:~], PP[one_day];PP[several_days],                       (AP[time,tipo_tempref:enun]).
+
+
+// CH - restriction added in order to avoid 
+// "durante a tarde" as an interval
+//14> pp[time=+,date=+,interval=+]    @= (pp[time_focus]), PP[part_of_day,duration:~], (PP[weekday,duration:~];PP[tref-enunc,duration:~]).
+
+// CH added, no inicio da manha de sexta-feira, 25 de Abril de 2005
+// It is only one expression
+14> advp[time=+,date=+,tipo_tempref=absolut] @= adv[advtimetemp], punct[comma], noun[time,tipo_tempref:absolut] .
+
+// na tarde de Natal
+14> pp[time=+,date=+,tipo_tempref=enun] @= pp[part_of_day], pp[one_day] .
+
+// HAREMRUN
+// em Abril desse ano/ do ano passado
+14> pp[time=+,date=+,tipo_tempref=absolut] @= pp[month], pp[tipo_tempref:enun] .
+
+// HAREMRUN
+// em 15 Dezembro do ano passado.
+14> pp[time=+,date=+,tipo_tempref=absolut] @= pp[tipo_tempref:absolut], pp[tipo_tempref:enun] .
+
+// HAREMRUN
+// no fim do ano passado.
+14> pp[time=+,dat=+,tipo_tempref=enun,ref-simult=+] @= pp[time_focus], pp[tipo_tempref:enun,ref-simult:+] .
+14> pp[time=+,dat=+,tipo_tempref=enun,ref-before=+] @= pp[time_focus], pp[tipo_tempref:enun,ref-before:+] .
+14> pp[time=+,dat=+,tipo_tempref=enun,ref-after=+] @= pp[time_focus], pp[tipo_tempref:enun,ref-after:+] .
+
+
+
+// Xerox Specific because of bad tokenization of "por volta de"
+
+reshuffling:
+
+16> pp#1[lemma:"por volta"]{#2,#3}, pp{prep#4,#5,#6[last,hora]} = 
+	pp{#2,#3,#4,#5,#6} . 
+
+// no inicio da noite de sexta-feira
+// no inicio da noite de 25 de Abril
+// no inicio da noite de sexta-feira, 25 de Abril de 2008
+
+16> advp{adv#1[first,last,advtimetemp]}, punct#2[comma], np[tipo_tempref:absolut]{#3[noun,first,last]} = advp[date,tipo_tempref=absolut]{#1,#2,#3} .
+

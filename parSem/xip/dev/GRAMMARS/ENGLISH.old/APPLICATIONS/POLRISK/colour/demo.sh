@@ -1,0 +1,7 @@
+./colorPR.sh ../corpus/demo3juillet.txt
+
+firefox file:///home/sandor/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/POLRISK/colour/tmp/demo.html &
+
+
+
+

@@ -1,0 +1,188 @@
+Variables:
+// variables for the abstracts
+
+int _reconsider=0; 
+int _firstextension1=0;
+int _firstextension2=0;
+int _firstextension=0;
+int _firstnew1=0;
+int _firstnew=0;
+int _next1=0;
+int _next=0;
+int _split1=0;
+int _split=0;
+
+int _PMID=0;
+int pmid$;
+
+DependencyRules:
+@_current(PMID)->Assign(_PMID);
+
+Script:
+
+iftest (BKDEP$1(#1,#2)) { 
+	pmid$1=_PMID; 
+} 
+iftest (BKDEP$1(#1)) { 
+	pmid$1=_PMID; 
+} 
+//iftest (SUBJMAT$1(#1)) { 
+//	pmid$1=_PMID; 
+//} 
+//iftest (LEVEL$1(#1)) { 
+//	pmid$1=_PMID; 
+//} 
+iftest (NEGSENT$1(#1)) { 
+	pmid$1=_PMID; 
+} 
+//iftest (NEGWORD$1(#1)) { 
+//	pmid$1=_PMID; 
+//} 
+iftest (SUMMARY$1(#1)) {
+	pmid$1=_PMID; 
+} 
+iftest (SUMMARY$1(#1,#2)) { 
+	pmid$1=_PMID; 
+} 
+iftest (IMPSUMMARY$1(#1)) { 
+	pmid$1=_PMID; 
+} 
+iftest (IMPSENT$1(#1)) { 
+	pmid$1=_PMID; 
+} 
+iftest (LOGIC$1(#1)) { 
+	pmid$1=_PMID; 
+} 
+
+//iftest (EVAL$1(#1)) { 
+//	pmid$1=_PMID; 
+//} 
+
+
+//Script:
+
+
+iftest(@_xtd(PMID)->Test()) { _reconsider=0; _firstextension=0; _firstextension1=0;  _firstextension2=0; _firstnew1=0; _firstnew=0; _next1=0; _next=0; _split1=0; _split=0; }
+
+
+// _reconsider
+
+iftest ( $1[title,negative](#1)) { _reconsider=1; }
+//iftest ( SUMMARY[title,contrast](#1)) { _reconsider=1; }
+iftest ( $1[lastsent,negative](#1)) { _reconsider=1; }
+//iftest ( SUMMARY[lastsent,contrast](#1)) { _reconsider=1; }
+
+//iftest ( $1[contrast](#1)) { _reconsider=1; }
+
+// first/extension
+
+iftest ( $1[oldstat](#1) ) { _firstextension=1; }
+
+iftest ( $1[old](#1) ) { _firstextension1=1; }
+
+iftest ( $1[nostat](#1) ) { _firstextension1=1; }
+
+iftest ( _firstextension1:1 & $1[lastsent,postat](#1) ) { _firstextension=1; }
+
+iftest ( _firstextension1:1 & $1[lastsent,stat](#1) ) { _firstextension=1; }
+
+iftest ( _firstextension1:1 & $1[contribution](#1) ) { _firstextension=1; }
+
+iftest ( IMPSENT[weakcontr](#1) ) { _firstextension2=1; }
+
+iftest ( IMPSENT[contr](#1) ) { _firstextension2=1; }
+
+
+
+
+// first/new
+
+iftest ( $1[title,novstat](#1) ) { _firstnew=1; }
+iftest ( IMPSUMMARY[first,lastsent](#1) ) { _firstnew=1; }
+iftest ( IMPSUMMARY[novstat,lastsent](#1) ) { _firstnew=1; }
+iftest ( $1[firstnew](#1) ) { _firstnew=1; }
+iftest ( $1[first,lastsent](#1) ) { _firstnew=1; }
+
+iftest ( SUMMARY[novstat,lastsent](#1) ) { _firstnew1=1; }
+iftest ( LOGIC[novstat,weak:~](#1) ) { _firstnew1=1; }
+iftest ( _firstnew1:1 & $1[vis](#1) ) { _firstnew=1; }
+
+//split1
+iftest ( IMPSENT[contrast](#1) ) { _split=1; }
+iftest ( IMPSUMMARY[contrast,negative:~](#1) ) { _split=1; }
+
+
+//// next
+
+iftest ( IMPSENT[vis,postat:~,future:~,novstat:~,contrast:~](#1) ) { _next1=1; }
+iftest ( IMPSUMMARY[vis,postat:~,future:~,novstat:~,contrast:~](#1) ) { _next1=1; }
+
+iftest ( _next1:1 & $1[postat,lastsent,contrast:~](#1) ) { _next=1; }
+iftest ( _next1:1 & $1[future,lastsent,contrast:~](#1) ) { _next=1; }
+iftest ( _next1:1 & $1[novstat,lastsent,contrast:~](#1) ) { _next=1; }
+
+// split2
+
+iftest ( LOGIC[weak:~](#1) ) { _split1=1; }
+iftest ( $1[logic,weak:~](#1) ) { _split1=1; }
+iftest ( $1[negative](#1) ) { _split1=1; }
+iftest ( _split1:1 & $1[postat,lastsent](#1) ) { _split=1; }
+
+///////////////////////////
+
+// first/extension
+
+iftest ( _firstextension1:1 & $1[lastsent:~,postat](#1) ) { _firstextension=1; }
+
+iftest ( _firstextension2:1 & $1[contribution](#1) ) { _firstextension=1; }
+
+
+// first/new
+
+iftest ( IMPSUMMARY[first,lastsent:~](#1) ) { _firstnew=1; }
+iftest ( IMPSUMMARY[novstat,lastsent:~](#1) ) { _firstnew=1; }
+iftest ( $1[first,lastsent:~](#1) ) { _firstnew=1; }
+
+iftest ( SUMMARY[novstat,lastsent:~](#1) ) { _firstnew1=1; }
+iftest ( _firstnew1:1 & $1[vis](#1) ) { _firstnew=1; }
+
+// next
+
+iftest ( _next1:1 & $1[postat,lastsent:~](#1) ) { _next=1; }
+iftest ( _next1:1 & $1[future,lastsent:~](#1) ) { _next=1; }
+iftest ( _next1:1 & $1[novstat,lastsent:~](#1) ) { _next=1; }
+
+// split
+
+iftest ( _split1:1 & $1[postat,lastsent:~](#1) ) { _split=1; }
+
+
+
+
+
+
+
+final:
+
+iftest ( _reconsider:1) { 
+	_print("PMID:"+_PMID+"  ***Abstract type: reconsider***\n"); 
+}
+
+iftest ( _firstextension:1) {
+	_print("PMID:"+_PMID+"  ***Abstract type: first/extension***\n");
+}
+
+iftest ( _firstnew:1) {
+	_print("PMID:"+_PMID+"  ***Abstract type: first/new***\n");
+}
+
+iftest ( _next:1) {
+	_print("PMID:"+_PMID+"  ***Abstract type: next***\n");
+}
+
+iftest ( _split:1) {
+	_print("PMID:"+_PMID+"  ***Abstract type: split***\n");
+}
+
+
+

@@ -1,0 +1,122 @@
+POS:
+
+PROD = [movie-related=+].
+
+Functions:
+
+COORDAND,
+COORDBUT,
+COORDNOR,
+COORDOR,
+JUSTNOUN,
+JUSTADJ,
+FILTRE-NP,
+FILTRE-ADJ,
+REJECTED,
+FILTRE-NOUN,
+FILTRE-NOUN2,
+FILTRE-NOUN3,
+FILTRE-NOUN4,
+FILTRE-VERBE.
+
+DependencyRules:
+
+|#1[adj]|
+        JUSTADJ(#1)
+
+// coordination of adjectives
+ 
+
+// elements rejected
+
+|ADJ#1[reject=+]{?*,?[lemme:"old"]}|
+   ~	
+
+|ADJ#1[reject=+,lemme:"%?+year"]|
+   ~
+
+|NADJ#1[reject=+]{?*,verb[lemme:"base"]}|
+   ~	
+
+|NADJ#1[reject=+]{?*,verb[lemme:"load"]}|
+   ~
+
+|ADJ#1[reject=+]{ADJ{DIG,?*},?*}|
+	~
+
+|ADJ#1[reject=+,lemme:~"amaze",vprog]|
+	~
+
+|ADJ#1[lemme:"outstand",vprog, reject=~]|
+	~
+
+|?#1[lemme:"black",reject=+]|
+	~
+
+|?#1[lemme:"numerous",reject=+]|
+	~
+
+|#1[reject]|
+	REJECTED(#1)	
+
+// filtre
+
+if ( ( SUBJ-N(#1,#2[lemme:"I"]) | EXPERIENCER(#1,#2[lemme:"I"]))  & 
+     ( OBJ-N(#1,#3[printer-related]) | CONTENT(#1,#3[printer-related])) )
+	FILTRE-VERBE(#2,#1,#3)
+
+
+if ( MOD[pre](#1[proper:~,noun],#2[printer-related]) | ( MOD[post](#1[proper:~,noun],#2[printer-related]) & PREPD(#1,#3[lemme:"of"])))
+	FILTRE-NOUN2(#1,##PROD[lemme=PRINTERRELATED])
+
+if ( ATTRIB(#1[printer-assoc],#2[lemme:"good"]) | ATTRIB(#1[printer-assoc],#2[lemme:"bad"]))
+	FILTRE-NOUN3(#1).
+
+|NP#1|
+	if(HEAD(#2[proper:~,guess:~,pron:~,let:~,punct:~,dig:~,product:~,time:~,tempexpr:~],#1))
+	FILTRE-NOUN4(#2)
+
+//|NOUN#1[noun,adj:~,date:~,num:~,guess:~,tempexpr:~,proper:~,mwe:~,url:~,email:~,let:~,maj:~,lemme:~"yes"]|
+//	JUSTNOUN(#1).
+
+//|NP#1{?*[dig:~],NOUN[noun,last,adj:~,date:~,num:~,guess:~,tempexpr:~,proper:~,mwe:~,url:~,email:~,let:~,maj:~,lemme:~"yes"]}|
+//	FILTRE-NP(#1)
+	
+
+//|ADJ#2|
+//if ( ATTRIB(#1[printer-related],#2[adj,partpas:~,guess:~,country:~,time:~,tem//pexpr:~,mwe:~,color:~,reject:~,maj:~]) | 
+//    (ATTRIB(#1,#2[adj,guess:~,partpas:~,country:~,time:~,tempexpr:~,mwe:~,col//or:~,reject:~,maj:~]) & PRODUCT(#1)) & ~REJECTED(#2) )
+//	FILTRE-ADJ(#1,#2)
+
+
+//|ADJ#2|
+//if ( MOD[pre](#1[printer-related],#2[adj,guess:~,partpas:~,country:~,time:~,t//empexpr:~,mwe:~,color:~,reject:~,maj:~]) | 
+//   ( MOD[pre](#1,#2[adj,guess:~,country:~,time:~,partpas:~,tempexpr:~,mwe:~,c//olor:~,reject:~,maj:~]) &  PRODUCT(#1)) & ~REJECTED(#2)  )
+//	FILTRE-ADJ(#1,#2)
+
+|ADJ#2|
+if ( ATTRIB(#1[movie-related],#2[adj,partpas:~,guess:~,country:~,time:~,tempexpr:~,mwe:~,color:~,reject:~,maj:~]) | 
+    (ATTRIB(#1,#2[adj,guess:~,partpas:~,country:~,time:~,tempexpr:~,mwe:~,color:~,reject:~,maj:~]) & PRODUCT(#1)) & ~REJECTED(#2) )
+	FILTRE-ADJ(##PROD[lemme=MOVIERRELATED],#2)
+
+
+
+|ADJ#2|
+if ( MOD[pre](#1[movie-related],#2[adj,guess:~,partpas:~,country:~,time:~,tempexpr:~,mwe:~,color:~,reject:~,maj:~]) | 
+  ( MOD[pre](#1,#2[adj,guess:~,country:~,time:~,partpas:~,tempexpr:~,mwe:~,color:~,reject:~,maj:~]) &  PRODUCT(#1)) & ~REJECTED(#2)  )
+	FILTRE-ADJ(##PROD[lemme=MOVIERRELATED],#2)
+
+
+//if ( ATTRIB(#1[movie-related],#2[noun,guess:~,time:~,tempexpr:~]))
+//	FILTRE-NOUN(##PROD[lemme=PRINTERRELATED],#2)
+
+//if ( MOD[post](#2[noun,guess:~],#1[movie-related]) & PREPD(#1,#3[lemme:"of"]))
+//	FILTRE-NOUN(##PROD[lemme=PRINTERRELATED],#2)
+
+if (^FILTRE-ADJ(#1,#2) & NEGAT(#2))
+	FILTRE-ADJ[neg=+](#1,#2)
+
+
+//if ( MOD[post](#2,#1) & PRODUCT(#1) & PREPD(#1,#3[lemme:"of"]))
+//	FILTRE-NOUN(##PROD[lemme=PRINTER],#2)
+//

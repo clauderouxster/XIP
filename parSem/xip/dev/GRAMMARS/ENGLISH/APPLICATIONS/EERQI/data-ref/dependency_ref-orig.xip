@@ -1,0 +1,785 @@
+DependencyRules:
+
+// The_SCOPE:+ Classic_GENERAL:+_SCOPE:+ system
+
+| #1[maj,start:~,scope,general=~] | ~
+| #1[maj,start:~,scope,relation=~] | ~
+| #1[maj,start:~,scope,mental=~] | ~
+| #1[maj,start:~,scope,art=~] | ~
+
+// DATE(1987) -> REFNUMBER
+
+| ?[refpar,form:fopar], NP{#1[dig]}, ?[refpar,form:fcpar] |
+if ( DATE(#1) )
+	REFNUMBER(#1).
+
+
+//| TOP#1{ ?+ } |
+//        SENT(#1).
+
+// Mark sentences having REFNUMBERs as citation
+
+| TOP#1{ ?+ } |
+if ( REFNUMBER(#2) )
+	REFSENT(#1).
+
+| TOP#1{ ?+ } |
+        SENT(#1).
+
+if ( ^REFSENT(#1) & $1[selfref](#2,#3) )
+	REFSENT[selfref=+](#1).
+
+if ( ^REFSENT(#1) & ( $1(#2[selfref],#3) | $1(#2,#3[selfref])) )
+	REFSENT[selfref=+](#1).
+
+//own
+
+if ( ^$1(#1[deict,timefact:~],#2[art]) | ^$1(#1[art],#2[deict,timefact:~]) )
+	$1[own=+](#1,#2).
+
+if ( ^$1(#1[deict,timefact:~,form:~fthis,form:~fhere],#2[mental]) | ^$1(#1[mental],#2[deict,timefact:~,form:~fthis,form:~fhere]) )
+	$1[own=+](#1,#2).
+
+if ( ^$1(#1[deict,timefact:~,form:~fthis,form:~fhere],#2[scope]) | ^$1(#1[scope],#2[deict,timefact:~,form:~fthis,form:~fhere]) )
+	$1[own=+](#1,#2).
+
+// mark deictdep
+
+if ( ^$1[own](#1,#2) )
+	$1[deictdep=+](#1,#2).
+
+if ( ^$1(#1[deictdep],#2) |  ^$1(#1,#2[deictdep]) )
+	$1[deictdep=+](#1,#2).
+
+Script:
+// propagation:
+
+iftest ( $1[own](#1,#2) ) { #1[deictdep=+] ; #2[deictdep=+] ; }
+
+iftest ( $1[deictdep](#1,#2) ) { #1[deictdep=+] ; #2[deictdep=+] ; }
+
+
+// priority to self reference
+
+iftest ( ^$1[selfref](#1,#2) ) { #1[deict=~,deictdep=~,other=+] ; }
+
+iftest ( ^$1[selfref](#1,#2) ) { #2[deict=~,deictdep=~,other=+] ; }
+
+DependencyRules:
+
+if ( ^$1[selfref](#1,#2) )
+	$1[deictdep=~,deict=~,other=+](#1,#2).
+
+Script:
+
+// add features to words in special dependencies
+// relationwscope
+
+iftest ( $1(#1[relationwscope],#2[scope,scopefromlex]) ) { #1[relation=+,rf=+] ; }
+
+iftest ( $1(#1[scope,scopefromlex],#2[relationwscope]) ) { #2[relation=+,rf=+] ; }
+
+// relationwdeict
+
+iftest ( $1(#1[relationwdeict],#2[deict,relationfromlex]) ) { #1[relation=+,rf=+] ; }
+
+iftest ( $1(#1[deict,relationfromlex],#2[relationwdeict]) ) { #2[relation=+,rf=+] ; }
+
+// compwdeict
+
+iftest ( $1(#1[compwdeict],#2[deict,deictfromlex]) ) { #1[comp=+,rf=+] ; }
+
+iftest ( $1(#1[deict,deictfromlex],#2[compwdeict]) ) { #2[comp=+,rf=+] ; }
+
+// we present a different method
+
+iftest ( $1[own](#1,#2) & $2(#3[compwdeict],#4) & ( $3(#4,#1) | $3(#4,#2) | $3(#1,#4) | $3(#2,#4) ) ) { #3[comp=+,rf=+] ; }
+
+iftest ( $1[own](#1,#2) & $2(#3[compwdeict],#4) & ( $3(#3,#1) | $3(#3,#2) | $3(#1,#3) | $3(#2,#3) ) ) { #3[comp=+,rf=+] ; }
+
+iftest ( $1[own](#1,#2) & $2(#3,#4[compwdeict]) & ( $3(#4,#1) | $3(#4,#1) | $3(#1,#4) | $3(#2,#4) ) ) { #4[comp=+,rf=+] ; }
+
+iftest ( $1[own](#1,#2) & $2(#3,#4[compwdeict]) & ( $3(#3,#1) | $3(#3,#1) | $3(#1,#3) | $3(#2,#3) ) ) { #4[comp=+,rf=+] ; }
+
+//brain areas activated in our study were different from those of Damasio et al.
+
+iftest ( NUCL(#1,#2[compwdeict]) ) { #2[comp=+,rf=+] ; }
+
+
+
+DependencyRules:
+
+//other
+
+if ( ^$1(#1[otherdep],#2[vikef_feat]) | ^$1(#1[vikef_feat],#2[otherdep]) )
+	^$1[other=+](#1,#2).
+
+
+if ( ^$1(#1[other],#2[vikef_feat]) | ^$1(#1[vikef_feat],#2[other]) )
+	^$1[other=+](#1,#2).
+
+
+
+// give priority to deictdep
+
+if ( ^$1(#1[otherdep,old:~],#2[deictdep,old:~]) | ^$1(#1[deictdep,old:~],#2[otherdep,old:~]) )
+	^$1[other=~](#1,#2).
+
+if ( ^$1(#1[other,old:~],#2[deictdep,old:~]) | ^$1(#1[deictdep,old:~],#2[other,old:~]) )
+	^$1[other=~](#1,#2).
+
+
+Script:
+
+iftest ( $1[other](#1,#2) ) { #1[otherdep=+] ; #2[otherdep=+] ; }
+
+DependencyRules:
+
+if ( ^$1(#1[otherdep],#2[vikef_feat]) | ^$1(#1[vikef_feat],#2[otherdep]) )
+	^$1[other=+](#1,#2).
+
+
+
+// lemma 3. below[unary] shows (below is not in a depenendecy with anything)
+
+| #1[deict,unary] |
+	LIXO(#1).
+
+| #1[art] |
+if ( LIXO(#2) )
+	DEP[own=+](#1,#2)
+
+| #1[mental] |
+if ( LIXO(#2) )
+	DEP[own=+](#1,#2)
+
+if ( ^LIXO(#1) )
+	~.
+
+
+//BUILD:
+// either deict or relation should have a dependency mental/scope/art or they should be in depency with each other:
+//own + relation
+//deict + (relation + mental/scope/art)
+//deict + relation
+
+//if ( ^$1(#1[relation],#2[mental]) | ^$1(#1[mental],#2[relation]) )
+//	$1[relationdep=+](#1,#2).
+
+if ( ^$1(#1[relation],#2[scope]) | ^$1(#1[scope],#2[relation]) )
+	$1[relationdep=+](#1,#2).
+
+if ( ^$1(#1[relation],#2[art]) | ^$1(#1[art],#2[relation]) )
+	$1[relationdep=+](#1,#2).
+
+// mark relations with deict: we use method
+
+if ( ^$1[relationdep](#1[deictdep],#2[wown:~]) | ^$1[relationdep](#1[wown:~],#2[deictdep]) )
+	$1[relationdep=+,deictdep=+](#1,#2).
+
+if ( ^$1(#1[deict],#2[relation]) | ^$1(#2[relation],#1[deict]) )
+	$1[build=+](#1,#2).
+
+if ( ^$1(#1[deictdep],#2[relation]) | ^$1(#2[relation],#1[deictdep]) )
+	$1[build=+](#1,#2).
+
+if ( ^$1[own](#1,#2[relation]) | ^$1[own](#2[relation],#1) )
+	$1[build=+](#1,#2).
+
+// this rule has to be reviewd:)
+//if ( $1[own](#1,#2) & $2[relationdep,deictdep](#3,#4) )
+//	DEP[build=+](#1,#2,#3,#4).
+
+//A super peer architecture [6, 7] might be a good choice because it allows us 
+
+
+
+// relsent + relationdep
+
+//if ( ^$1[relationdep,other](#1,#2) & RELSENT(#3) )
+//	$1[build=+](#1,#2).
+
+//if ( $2(#3[art,past:~,partpas:~],#4[deict]) & ^$1[relationdep,other](#1,#2) )
+//	$1[build=+](#1,#2).        
+
+//if ( $2(#3[deict],#4[art,past:~,partpas:~]) & ^$1[relationdep,other](#1,#2) )
+//	$1[build=+](#1,#2).        
+
+// use a similar formalisation like we do -> compar
+
+if ( ^REFSENT(#1) & $1[build](#2,#3) )
+	REFSENT[build=+](#1).
+
+
+if ( ^REFSENT(#1) & $1[build](#2,#3,#4,#5) )
+	REFSENT[build=+](#1).
+
+
+// also does not count in a relation dep without an own dep
+
+if ( ^$1[relationdep](#2[wown],#3) | ^$1[relationdep](#2,#3[wown]) )
+	$1[relationdep=~](#2,#3).
+
+
+
+// mark the kind of relationship btw own work and the other work
+
+
+if ( REFSENT[build](#1) & $1[relationdep,deictdep](#2[relation],#3) & REFNUMBER(#4) & ~BUILD(#2,#4) )
+	BUILD(#2,#4).
+
+if ( REFSENT[build](#1) & $1[relationdep,deictdep](#2,#3[relation]) & REFNUMBER(#4) & ~BUILD(#3,#4) )
+	BUILD(#3,#4).
+
+
+if ( REFSENT[build](#1) & $1[build](#2[relation],#3) & REFNUMBER(#4) & ~BUILD(#2,#4) )
+	BUILD(#2,#4).
+
+if ( REFSENT[build](#1) & $1[build](#2,#3[relation]) & REFNUMBER(#4) & ~BUILD(#3,#4) )
+	BUILD(#3,#4).
+
+
+
+
+if ( ^SENT(#1) & $1[build](#2,#3) )
+	SENT[build=+](#1).
+
+
+if ( ^SENT(#1) & $1[build](#2,#3,#4,#5) )
+	SENT[build=+](#1).
+
+// BUILDOTHER
+
+if ( ^REFSENT[build:~](#1) & $1[relationdep,other](#2,#3) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~](#1) & $1[other](#2,#3[relation]) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~](#1) & $1[other](#2[relation],#3) )
+	REFSENT[buildother=+](#1).
+
+//has been employed+RELATIONDEP_OTHER(employed_RELATION,6)
+
+if ( ^REFSENT[build:~](#1) & $1(#2[general],#3[relation,partpas]) & $2[other](#3[relation,partpas],#4) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~](#1) & $1(#2[general],#3[relation,partpas]) & $2[other](#4,#3[relation,partpas]) )
+	REFSENT[buildother=+](#1).
+
+//if ( ^SENT[build:~](#1) & $1[relationdep](#2,#3) )
+//	SENT[buildother=+](#1).
+
+// these rules were added after the first set of rules for buildother. They seem to be relevant now
+
+if ( ^REFSENT[build:~,buildother:~](#1) & $1(#2[relation],#3[scope]) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~,buildother:~](#1) & $1(#2[relation],#3[art]) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~,buildother:~](#1) & $1(#2[scope],#3[relation]) )
+	REFSENT[buildother=+](#1).
+
+if ( ^REFSENT[build:~,buildother:~](#1) & $1(#2[art],#3[relation]) )
+	REFSENT[buildother=+](#1).
+
+
+/////////////////////
+//BKG:
+/////////////////////
+
+
+// knowledge not specific to the paper, but sg that should be known in order to have a context, no mention of the paper that cites
+// general[many,often,general_time(pesent,past,emerging)] + knowledge[mental,scope,art]/product[project,programme]
+// general existence[is,has,exist] + knowledge[mental,scope,art]/product[project,programme]
+
+
+if ( ^$1[tempstat](#1[future:~],#2[future:~]) )
+	$1[bkg=+](#1,#2).
+
+if ( ^$1[nostat](#1[gb],#2[gb]) )
+	$1[bkg=+](#1,#2).
+
+
+//Semantic Gossiping is a method
+//SUBJ_OTHER_BKG(is_OTHERDEP:+_GENERAL:+_MENTAL:+,Gossiping_FORDEP2:+_OTHERDEP:+_OTHER:+_SCOPE:+)
+//NUCL_OTHER(is_OTHERDEP:+_GENERAL:+_MENTAL:+,method_FORDEP8:+_OTHERDEP:+_SCOPE:+)
+
+if ( ^SUBJ[other](#1,#2) & NUCL(#1,#3[scope]) )
+	SUBJ[bkg=+](#1,#2).
+
+if ( SUBJ[other](#1,#2) & ^NUCL(#1,#3[scope]) )
+	NUCL[bkg=+](#1,#3).
+
+// is an area of research
+
+if ( ^NUCL[other](#1[form:fbe],#2[scope,scopefromlex]) | ^NUCL(#1[otherdep,form:fbe],#2[scope,scopefromlex]) | ^NUCL(#1[form:fbe],#2[scope,scopefromlex,otherdep]) )
+	NUCL[bkg=+](#1,#2).
+
+// Many other possible approaches to negotiation exist 
+
+if ( ^$1(#1[form_vikef:fexist,vprog:~],#2[scope]) | ^$1(#1[scope],#2[form_vikef:fexist,vprog:~]) )
+	$1[bkg=+](#1,#2).
+
+if ( ^$1(#1[incr],#2[scope]) | ^$1(#1[scope],#2[incr]) )
+	$1[bkg=+](#1,#2).
+
+
+
+
+// There is evidence that 
+// NUCL(is_GENERAL:+,evidence_SCOPE:+)
+
+if ( ^NUCL(#1[form_vikef:fthereis],#2[scope,scopefromlex] ) )
+	NUCL[bkg=+](#1,#2).
+
+if ( ^NUCL(#1[form_vikef:fthereis],#2[mental,mentalfromlex] ) )
+	NUCL[bkg=+](#1,#2).
+
+// Research on semantic overlay networks has recently received a lot of attention
+
+if ( ^SUBJ-N(#1,#2[scope,scopefromlex]) & NUCL(#3[form:fhave],#1) )
+	SUBJ-N[bkg=+](#1,#2).
+
+if ( ^SUBJ(#1,#2[scope,scopefromlex]) & NUCL(#3[form:fhave],#1) )
+	SUBJ[bkg=+](#1,#2).
+
+// Topics here range from ...
+
+if ( ^SUBJ-N(#1[general,form:~fbe,form:~fhave],#2[scope,scopefromlex]) )
+	SUBJ-N[bkg=+](#1,#2).
+
+
+if ( ^SUBJ(#1[general,form:~fbe,form:~fhave],#2[scope,scopefromlex]) )
+	SUBJ[bkg=+](#1,#2).
+
+// Many thesauri are historically based on
+
+if ( SUBJ(#1,#2[scope]) & ^$1(#2[scope],#3[general,form:~fbe,form:~fhave]) & #1~:#3 )
+	$1[bkg=+](#2,#3).
+
+if ( SUBJ-N(#1,#2[scope]) & ^$1(#2[scope],#3[general,form:~fbe,form:~fhave]) & #1~:#3 )
+	$1[bkg=+](#2,#3).
+
+// Fuzzy clustering, an explorative signal processing method [2, 3], allows
+
+| #3[forapposition] |
+if (^SUBJ(#1,#2[fordep14]) )
+	SUBJ[bkg=+](#1,#2).
+
+// in most works
+ 
+if ( ^$1(#1[scope,other],#2[general,timefact:~]) & PREPD(#1[scope,other],#3[form:fin]) )
+	$1[bkg=+](#1,#2).
+
+// Intrinsic optical imaging ( OI ) discriminates focal activations
+
+if ( ^SUBJ(#1,#2[vprog]) & OBJ(#1,#3[pl]) & PRESENT(#1) & ~MOD[post](#2,#4) )
+	SUBJ[bkg=+](#1,#2).
+
+// Generally, exploratory data analysis is performed 
+
+| #1[general,adv] |
+if ( ^SUBJ(#2[fordep15],#3[fromlex]) )
+	SUBJ[bkg=+](#2,#3).
+
+
+// Recent progress in neuro-imaging technologies
+
+if ( ^$1(#1[scope],#2[general]) & $2(#1[scope],#3) & PREPD(#3,#4[form:fin]) )
+	$1[bkg=+](#1,#2). 
+
+// followed by others in the AI community
+
+// SUBJ-N_RELATIONDEP_OTHER(followed_RELATION:+_OTHERDEP:+,others_OTHERDEP:+_OTHER:+_SCOPE:+)
+
+if ( ^SUBJ(#1[rf],#2[actor]) )
+	SUBJ[bkg=+](#1,#2).
+
+if ( ^SUBJ-N(#1[actor],#2[rf]) )
+	SUBJ[bkg=+](#1,#2).
+
+// have brought scientists to the view 
+
+// RESULT(brought,view_SCOPE:+)
+// OBJ(brought,scientists_OTHER:+_SCOPE:+)
+
+if ( $1(#1,#2[scope]) & ^$2(#1,#3[actor]) )
+	$2[bkg=+](#1,#3).
+
+
+// In the concept-based approach [7], concepts are interrelated
+
+if ( ^PREPD(#1[scope,other,scopefromlex],#2[form:fin]) & SUBJ(#3,#4[scope,scopefromlex]) )
+	PREPD[bkg=+](#1,#2).
+
+if ( ^PREPD(#1[scope,other,scopefromlex],#2[form:fby]) & SUBJ(#3,#4[scope,scopefromlex]) )
+	PREPD[bkg=+](#1,#2).
+
+
+// 1990s -> general
+
+if ( ^DATE(#1[guess,date]) )
+	DATE[bkg=+](#1).
+
+// This region is known 
+
+//NUCL(is_GENERAL:+_MENTAL:+,known_MENTAL:+)
+
+//if ( ^$1(#1[know],#2[general]) | ^$1(#1[general],#2[know] ) )
+//	$1[bkg=+](#1,#2).
+
+if ( ^NUCL(#1[general],#2[know]) )
+	NUCL[bkg=+](#1,#2).
+
+// the question is often asked
+
+if ( ^$1(#1[mental,form:~fbe,form:~fhave],#2[general,form:~fbe,form:~fhave]) | ^$1(#1[general,form:~fbe,form:~fhave],#2[mental,form:~fbe,form:~fhave]) )
+	$1[bkg=+](#1,#2).
+
+if ( ^$1(#1[scope,scopefromlex],#2[general,form:~fbe,form:~fhave,verb]) | ^$1(#1[general,form:~fbe,form:~fhave,verb],#2[scope,scopefromlex]) )
+	$1[bkg=+](#1,#2).
+
+// [3, 4] have all been shown 
+
+if ( SUBJ[other](#1[form:fhave],#2[scope]) & NUCL(#1[form:fhave],#3[form:fbe]) & NUCL(#3[form:fbe],#4[mental,fromlex]) )
+	DEP[bkg=+](#2,#4).
+
+if ( SUBJ[deictdep:~](#1[form:fhave],#2[scope]) & NUCL(#1[form:fhave],#3[form:fbe]) & NUCL(#3[form:fbe],#4[relation]) )
+	DEP[bkg=+](#2,#4).
+
+// exception: an algorithm has been
+
+if ( ^DEP[bkg](#2,#4) & DETD(#2[fromlex:~,sg],#5[indef]) )
+	DEP[bkg=~](#2,#4).
+
+// is based on the principles
+
+if ( NUCL(#1[form:fbe],#2[relation]) & ^MOD(#2[relation],#3[scope,scopefromlex]) )
+	MOD[bkg=+](#2,#3).
+
+// knowledge comes from studies
+
+//if ( ^SUBJ[deictdep:~](#1[relation,pres,good:~],#2[scope,scopefromlex]) & $1[deictdep:~](#1[relation,pres,good:~],#3[scope,scopefromlex]) )
+//	SUBJ[bkg=+](#1,#2).
+
+//if ( ^SUBJ[deictdep:~](#1[relation,pres,good:~],#2[mental,mentalfromlex]) & $1[deictdep:~](#1[relation,pres,good:~],#3[scope,scopefromlex]) )
+//	SUBJ[bkg=+](#1,#2).
+
+if ( ^SUBJ[deictdep:~](#1[relation,pres,good:~],#2[scope,scopefromlex]) )
+	SUBJ[bkg=+](#1,#2).
+
+if ( ^SUBJ[deictdep:~](#1[relation,pres,good:~],#2[mental,mentalfromlex]) )
+	SUBJ[bkg=+](#1,#2).
+
+// is frequently based
+
+if ( ^$1(#1[relation],#2[general,form:~fbe,form:~fhave]) | ^$1(#1[general,form:~fbe,form:~fhave],#2[relation]) )
+	$1[bkg=+](#1,#2).
+
+// In the EEG quasi - stationary segments investigators saw the reflection 
+
+if ( ^$1(#1[actor],#2[mental]) | ^$1(#1[mental],#2[actor]) )
+	$1[bkg=+](#1,#2).
+
+// other studies indicate
+
+//SUBJ-N(indicate_MENTAL:+,studies_SCOPE:+)
+
+if ( ^SUBJ(#1[mentalfromlex,mental,general:~,relation:~],#2[scope,scopefromlex,pl]) )
+	SUBJ [bkg=+](#1,#2).
+
+
+if ( ^SUBJ-N(#1[mentalfromlex,mental,general:~,relation:~],#2[scope,scopefromlex,pl]) )
+	SUBJ-N [bkg=+](#1,#2).
+
+
+// Damasio , H. et al. demonstrated
+
+if ( ^SUBJ(#1[mental,genwhensubj,form:~fhave,form:~fbe],#2[deict:~,deictdep:~,scope]) )
+	SUBJ[bkg=+](#1,#2).
+
+// has been shown
+
+//NUCL(been_GENERAL:+,disputed)
+//NUCL(has_GENERAL:+,been_GENERAL:+)
+
+if ( NUCL(#1[form:fhave],#2[form:fbe]) & ^NUCL(#2[form:fbe],#3[mental,mentalfromlex]) )
+	NUCL[bkg=+](#2,#3).
+
+// deficits reported in lesion studies [1]
+
+if ( ^MOD(#1[mental,partpas],#2[scope,scopefromlex,otherdep]) & OBJ-N(#[mental,partpas]1,#3[scope]) )
+	MOD[bkg=+](#1,#2).
+
+// FIRST
+
+// Klein and Fensel [8] were the first
+
+if ( SUBJ(#1[form:fbe],#2[other]) & $1(#1[form:fbe],#3[lemme:first]) )
+	DEP[first=+,bkg=+](#2,#3).
+
+if ( SUBJ(#1[form:fbe],#2[other]) & $1(#1[form:fbe],#3[lemme:one,ord]) )
+	DEP[first=+,bkg=+](#2,#3).
+
+// The first steps towards introducing
+
+// MOD(steps,introducing_MENTAL:+)
+//QUANTD(steps,first)
+
+
+if ( $1(#1,#2[mental]) & $2(#1,#3[lemme:one,ord]) )
+	DEP[first=+,bkg=+](#2,#3).
+
+// first proposed by
+
+if ( ^$1(#1[lemme:first],#2[mental]) )
+	$1[first=+,bkg=+](#1,#2).
+
+// not bkg : a recent study
+
+if ( ^$1[bkg](#1[art],#2) & DETD(#1,#3[indef,sg]) )
+	$1[bkg=~](#1,#2).
+
+if ( ^$1[bkg](#2,#1[art]) & DETD(#1,#3[indef,sg]) )
+	$1[bkg=~](#1,#2).
+
+if ( ^$1[bkg](#1[scope,scopefromlex:~],#2) & DETD(#1,#3[indef,sg]) )
+	$1[bkg=~](#1,#2).
+
+if ( ^$1[bkg](#2,#1[scope,scopefromlex:~]) & DETD(#1,#3[indef,sg]) )
+	$1[bkg=~](#1,#2).
+
+// not bkg: deict
+
+if ( ^$1[deictdep,bkg](#1,#2) | ^$1[bkg](#1[deictdep],#2) ^$1[bkg](#1,#2[deictdep]) )
+	$1[bkg=~](#1,#2).
+
+if ( ^$1[deictdep,first](#1,#2) )
+	$1[first=~](#1,#2).
+
+// was, were studied
+
+if ( ^NUCL[bkg](#1[form:fbe,past],#2) )
+	NUCL[bkg=~](#1,#2) 
+
+
+// refsent[bkg]
+
+if ( $1[bkg](#1,#2) & ^REFSENT[build:~](#3) )
+	REFSENT[bkg=+](#3).
+
+if ( $1[bkg](#1) & ^REFSENT[build:~](#3) )
+	REFSENT[bkg=+](#3).
+
+if ( $1[first](#1,#2) & ^REFSENT[bkg](#3) )
+	REFSENT[first=+](#3).
+
+
+// ASSESSMENT
+
+//other author wrote good thing
+
+if ( ^$1[other](#1[good],#2[scope,narrowscope:~]) | ^$1[other](#1[scope,narrowscope:~],#2[good]) )
+	$1[credit=+](#1,#2).
+
+//if ( ^$1[other](#1[good],#2[relation]) | ^$1[other](#1[relation],#2[good]) )
+//	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[good],#2[art,otherdep,rf]) | ^$1(#1[art,otherdep,rf],#2[good]) )
+	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[good],#2[otherdep,rf]) | ^$1(#1[otherdep,rf],#2[good]) )
+	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[good],#2[other,rf]) | ^$1(#1[other,rf],#2[good]) )
+	$1[credit=+](#1,#2).
+
+// has become a reliable method
+
+if ( $1[bkg](#1,#2) & ^$2(#2,#3[good]) )
+	$2[credit=+](#2,#3).
+
+// criticism
+
+if ( ^$1[other](#1[bad],#2[scope,narrowscope:~]) | ^$1[other](#1[scope,narrowscope:~],#2[bad]) )
+	$1[credit=+](#1,#2).
+
+//if ( ^$1(#1[bad],#2[relation]) | ^$1(#1[relation],#2[bad]) )
+//	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[bad],#2[art,otherdep,rf]) | ^$1(#1[art,otherdep,rf],#2[bad]) )
+	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[bad],#2[otherdep,rf]) | ^$1(#1[otherdep,rf],#2[bad]) )
+	$1[credit=+](#1,#2).
+
+if ( ^$1(#1[bad],#2[other,rf]) | ^$1(#1[other,rf],#2[bad]) )
+	$1[credit=+](#1,#2).
+
+
+// refsent[credit]
+
+// several credit words
+
+| #1[good] |
+	DEP[credit=+](#1).
+
+if ( ^REFSENT(#1) & DEP[credit](#2) & DEP[credit](#3) & #2~:#3 )
+	REFSENT[credit=+](#1).
+
+if ( ^SENT(#1) & DEP[credit](#2) & DEP[credit](#3) & #2~:#3 )
+	SENT[credit=+](#1).
+
+if ( DEP[credit](#1) )
+	~.
+
+if ( ^REFSENT(#1) & $1[credit](#2,#3) )
+	REFSENT[credit=+](#1).
+
+if ( ^SENT(#1) & $1[credit](#2,#3) )
+	SENT[credit=+](#1).
+
+
+
+
+// COMPAR
+
+// own work is compared 
+// deict+art/scope/mental+comparative
+// we provide more sophisticated capabilities
+
+// more sophisticated capabilities -> (sophisticated,more) & (capabilities,sophisticated)
+
+
+//SUBJ_OWN(provide_DEICTDEP:+_MENTAL:+,we_DEICT:+)
+//OBJ-N(provide_DEICTDEP:+_MENTAL:+,capabilities)
+
+if ( ^$1(#1[rf],#2[comp]) | ^$1(#1[comp],#2[rf] ) )
+//if ( ^$1(#1[vikef_feat],#2[comp]) | ^$1(#1[comp],#2[vikef_feat] ) )
+	$1[compar=+](#1,#2).
+
+if ( ^$1[compar](#1[comp],#2[comp]) )
+	$1[compar=~](#1,#2).
+
+
+// same class is defined - class is not vikef_feat
+
+if ( $1(#1[mental],#2) & ^$2(#2,#3[comp]) )
+	^$2[compar=+](#2,#3).
+
+
+if ( ^$1(#1[deictdep,rf],#2[comp]) | ^$1(#1[comp],#2[deictdep,rf]) | ^$1[deictdep](#1[comp],#2[rf] ) | ^$1[deictdep](#1[rf],#2[comp] ) )
+	$1[compar=+,deictdep=+](#1,#2).
+
+
+if ( ^$1[compar](#1[deictdep,rf,comp:~],#2) | ^$1[compar](#1,#2[deictdep,rf,comp:~]) )
+	$1[deictdep=+](#1,#2).
+
+// Chen et al. [ 1 ] also worked on
+
+if ( $1[other](#1,#2) & ^$2(#3[also],#4[mental]) )
+	$2[compar=+](#3,#4).
+
+if ( $1[other](#1,#2) & ^$2(#3[mental],#4[also]) )
+	$2[compar=+](#3,#4).
+
+// Our prior work ... in this work
+
+if (^$1[selfref](#1,#2) & $2[deict](#3,#4) )
+	$1[compar=+](#1,#2).
+
+// Instead of adopting the relational model [2], we describe 
+
+if ( $1[contr](#1,#2) & ^$2[deict](#3,#4) )
+	$2[compar=+](#3,#4).
+
+| #1[lemme:instead_of] |
+if ( ^$1[deict](#2,#3) )
+	$1[compar=+](#2,#3).
+
+// exception relation+compar
+
+if ( ^$1[compar](#1[relation],#2) | ^$1[compar](#1,#2[relation]))
+	$1[compar=~](#1,#2).
+
+// exception we compar
+
+if ( ^SUBJ(#1[form_vikef:fcompar],#2[deictfromlex]) )
+	SUBJ[compar=~](#1,#2).
+
+if ( ^SUBJ-N(#1[form_vikef:fcompar],#2[deictfromlex]) )
+	SUBJ-N[compar=~](#1,#2).
+
+// our comparison
+
+if ( ^DETD(#1[form_vikef:fcomparison],#2[deictfromlex]) )
+	DETD[compar=~](#1,#2).
+
+
+// compar sentences
+
+// our approach ... does not rely ... such as TrackBack [18]
+
+//There must be a deictfromlex in COMPAR sentences
+
+
+| #5[deictfromlex] |
+if ( ^REFSENT(#1) & $1(#2[form:fnot],#3) & SUBJ-N[deictdep](#3,#4[scope]) )
+	REFSENT[compar=+](#1).	
+
+| #4[deictfromlex] |
+if ( ^REFSENT(#1) & $1[compar,deictdep](#2,#3) )
+	REFSENT[compar=+](#1).
+
+| #4[deictfromlex] |
+if ( ^SENT(#1) & $1[compar,deictdep](#2,#3) )
+	SENT[compar=+](#1).
+
+if ( ^REFSENT(#1) & $1[compar](#2,#3) & $2[own](#4,#5) )
+	REFSENT[compar=+](#1).
+
+if ( ^SENT(#1) & $1[compar](#2,#3) & $2[own](#4,#5) )
+	SENT[compar=+](#1).
+
+if ( ^REFSENT[compar:~](#1) & ( $1[compar,other](#2,#3) | $1[compar](#2[otherdep],#3) | $1[compar](#2,#3[otherdep]) ) )
+	REFSENT[comparother=+](#1).
+
+if ( ^SENT[compar:~](#1) & ( $1[compar,other](#2,#3) | $1[compar](#2[otherdep],#3) | $1[compar](#2,#3[otherdep]) ) )
+	SENT[comparother=+](#1).
+
+// use a similar formalisation like we do -> compar - no good
+//MOD_DEICTDEP_COMPAR(formalisation_OTHERDEP:+_DEICT:+_SCOPE:+,similar_DEICTDEP:+_COMP:+)
+//OBJ_RELATIONDEP_DEICTDEP_BUILD(formalisation_OTHERDEP:+_DEICT:+_SCOPE:+,use_FORDEP9:+_RELATION:+_DEICTDEP:+_OTHER:+)
+
+//if ( $1[compar](#1,#2[comp]) & $2[build](#1,#3[relation]) & ^$3[build,compar](#4) )
+//	$3[build=~](#4).
+
+// METHOD
+
+if ( ^SUBJ[relationdep:~](#1[form:~fbe,form:~fhave,form:~fdo,aux:~,general:~,mental:~,art:~],#2[scope,art:~,other] ) )
+	SUBJ[method=+](#1,#2).
+
+if ( ^SUBJ[relationdep:~](#1[form:~fbe,form:~fhave,form:~fdo,aux:~,general:~,mental:~,art:~],#2[scope,art:~,otherdep] ) )
+	SUBJ[method=+](#1,#2).
+
+if ( ^SUBJ-N[relationdep:~](#1[form:~fbe,form:~fhave,form:~fdo,aux:~,general:~,mental:~,art:~],#2[scope,art:~,other] ) )
+	SUBJ-N[method=+](#1,#2).
+
+if ( ^SUBJ-N[relationdep:~](#1[form:~fbe,form:~fhave,form:~fdo,aux:~,general:~,mental:~,art:~],#2[scope,art:~,otherdep] ) )
+	SUBJ-N[method=+](#1,#2).
+
+if ( ^SENT(#1) & $1[method](#2,#3) )
+	SENT[method=+](#1).
+
+if ( ^REFSENT(#1) & $1[method](#2,#3) )
+	REFSENT[method=+](#1).
+
+
+// TEST sentences
+
+if ( $1[test](#1,#2) & ^REFSENT(#3) )
+	REFSENT[test=+](#3).
+
+

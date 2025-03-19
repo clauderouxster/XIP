@@ -1,0 +1,590 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : chunker.xip                                                 !
+//!   Date       : 2006/March                                                  !
+//!   Author     : Nuno Mamede                                                 !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Based on a previous version developed by Caroline Hagege at Xerox        !
+//!   Research Centre Europe - Grenoble Laboratory.                            !
+//!                                                                            !
+//!  The Chunks are buit in the following order:    NP                         !
+//!                                                 ADVP                       !
+//!                                                 VASP                       !
+//!                                                 VMOD                       !
+//!                                                 VTEMP                      !
+//!                                                                            !
+//!                                     file2       VASP (2nd stage)           !
+//!                                                 VPP                        !
+//!                                                 VCOP                       !
+//!                                                 VCPART                     !
+//!                                                 VGER                       !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                 AP                         !
+//!                                                 NP (2nd stage)             !
+//!                                                                            !
+//!                                     file3       PP                         !
+//!                                                 VCPART (2nd stage)         !
+//!                                                 AP (2nd stage)             !
+//!                                                 AP (2nd stage)             !
+//!                                                                            !
+//!                            file: chunckVB       VASP (3nd stage)           !
+//!                                                 VMOD (3nd stage)           !
+//!                                                 VTEMP (3nd stage)          !
+//!                                                 VASP (4nd stage)           !
+//!                                                 VPP (2nd stage)            !
+//!                                                 VCOP (3nd stage)           !
+//!                                                 VCPART (3nd stage)         !
+//!                                                 VGER (3nd stage)           !
+//!                                                 VINF (3nd stage)           !
+//!                                                 PP                         !
+//!                                                 SC                         !
+//!                                                 VINF                       !
+//!                                                 VF                         !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// NP - NOMINAL CHUNK (first stage)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+//ATENÇÂO:
+//
+// 1- Tirar a restrição do t-meas:~ pois o que é específico do tempo já foi executado
+//    anteriormente nas gramáticas locais do tempo e dos números
+
+// 2- actualizar as regras quando os fraccionários forem correctamente identificados e agregados
+
+//========================================================
+// NP with a nominal determiner (constructed with a numeral and a noun[SEM-unitype])
+//========================================================
+
+// Example: (aproximadamente) ENTRE um quarto (de (um) litro) E 3 quartos de litro
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~]),
+                                     ?[lemma:e], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~]).
+
+// Example: (aproximadamente) DE um quarto (de (um) litro) A 3 quartos de litro
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~]),
+                                ?[surface:a], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~]).
+
+
+// Example: (aproximadamente) ENTRE três (litros) e meio E 20 litros (e dois quartos).
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art;?[dem]), num, (?[SEM-unitype,t-meas:~]), conj[lemma:e], num[frac];?[lemma:meio],
+                                     ?[lemma:e], (art;?[dem]), num, ?[SEM-unitype,t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+// Example: (aproximadamente) DE três (litros) e meio A 20 litros (e dois quartos).
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art;?[dem]), num, (?[SEM-unitype,t-meas:~]), conj[lemma:e], num[frac];?[lemma:meio],
+                                     ?[lemma:a], (art;?[dem]), num, ?[SEM-unitype,t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+// Example: (aproximadamente) ENTRE três ((de) litros) E 10 (de) litros.
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], art[lemma:um];num[time:~], ((prep[lemma:de]), ?[SEM-unitype,t-meas:~]),
+                                     ?[lemma:e], art[lemma:um];num[time:~], (prep[lemma:de]), ?[SEM-unitype,t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+// Example: (aproximadamente) DE três ((de) litros) A 10 (de) litros.
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de],  art[lemma:um];num[time:~], ((prep[lemma:de]), ?[SEM-unitype,t-meas:~]),
+                   ?[surface:a], art[lemma:um];num[time:~], (prep[lemma:de]), ?[SEM-unitype,t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+// Example: (aproximadamente) (ENTRE) 3 A 10 dias.
+//
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), (?[lemma:entre]), art[lemma:um];num, ((prep[lemma:de]), ?[SEM-unitype,t-meas]),
+                                     prep[lemma:a], art[lemma:um];num, ?[SEM-unitype,t-meas], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+// Example: (aproximadamente) ENTRE 3 E 10 dias.
+//
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:entre], art[lemma:um];num, ((prep[lemma:de]), ?[SEM-unitype,t-meas]),
+                                     ?[lemma:e], art[lemma:um];num, ?[SEM-unitype,t-meas], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+// Example: (aproximadamente) de 2 a 3 dias.
+//
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:de],  art[lemma:um];num[t-year:~], ((prep[lemma:de]), ?[SEM-unitype, t-meas, t-year:~]),
+                   ?[surface:a], art[lemma:um];num, (prep[lemma:de]), ?[SEM-unitype,t-meas], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) ENTRE um quarto de laranjas e 3 quartos de uma laranja
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun#1[t-meas:~]),
+                                     ?[lemma:e], (art[lemma:um]), num[frac], (prep[lemma:de],  art[lemma:um];art[lemma:o]), noun#2[t-meas:~],
+                   where(#1[lemma]::#2[lemma]).
+
+//ANDREIA, 2011/07/20
+// Example: (aproximadamente) ENTRE um quarto de século E 3 quartos de (um) século
+//
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:entre], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun#1[t-meas]),
+																?[lemma:e];?[lemma:a], (art[lemma:um]), num[frac], (prep[lemma:de],  (?[lemma:um];art[lemma:0])), noun#2[t-meas],
+												where(#1[lemma]::#2[lemma]).
+				
+				
+				
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) DE um quarto de laranjas A 3 quartos de uma laranja
+//
+//ANDREIA, por vezes, a última laranja é um adjetivo
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun#1[t-meas:~]),
+                                ?[surface:a], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun#2[t-meas:~]),
+                   where(#1[lemma]::#2[lemma]).
+
+
+				
+//ANDREIA, 2011/07/20
+// Example: (aproximadamente) DE um quarto de século A 3 quartos de um século
+2> NP[quant=+, time=+, t-duration-interval=+] @=
+             (adv[advnum]), ?[lemma:de],
+             (art[lemma:um]), num[frac],
+             (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun#1[t-meas]),
+             ?[surface:a],
+             (art[lemma:um]), num[frac],
+             (prep[lemma:de], (?[lemma:um];art[lemma:o]), noun#2[t-meas]),
+             where(#1[lemma]::#2[lemma]).
+
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) ENTRE (as) duas laranjas e meia E 3 laranjas (e meia)
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art;?[dem]), num, noun#1[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]),
+                                     ?[lemma:e], (art;?[dem]), num, noun#2[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]),
+                   where(#1[lemma]::#2[lemma]).
+				
+//ANDREIA, 2011/07/21
+// Example: (aproximadamente) ENTRE (as) duas semanas e meia E 3 semanas (e meia)
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:entre], (art;?[dem]), num, noun#1[t-meas], (conj[lemma:e], num[frac];?[lemma:meio]),
+													   ?[lemma:e];?[lemma:a], (art;?[dem]), num, noun#2[t-meas], (conj[lemma:e], num[frac];?[lemma:meio]),
+										where(#1[lemma]::#2[lemma]).
+				
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) DE duas laranjas e meia A 3 laranjas (e meia)
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art;?[dem]), num, noun#1[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]),
+                                  ?[lemma:a], (art;?[dem]), num, noun#2[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]),
+                   where(#1[lemma]::#2[lemma]).
+
+//ANDREIA, 2011/07/21
+// Example: (aproximadamente) DE duas semanas e meia A 3 semanas (e meia)
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:de], (art;?[dem]), num, noun#1[t-meas], (conj[lemma:e], num[frac];?[lemma:meio]),
+														?[lemma:a], (art;?[dem]), num, noun#2[t-meas], (conj[lemma:e], num[frac];?[lemma:meio]),
+										where(#1[lemma]::#2[lemma]).
+
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) ENTRE um quarto E 3 quartos de uma laranja
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art[lemma:um]), num[frac],
+                                     ?[lemma:e], (art[lemma:um]), num[frac], (prep[lemma:de], art[lemma:um];art[lemma:o]), noun[t-meas:~].
+									
+
+//ANDREIA, 2011/07/21
+// Example: (aproximadamente) ENTRE um quarto E 3 quartos de um século
+//
+2> NP[quant=+, time=+, t-duration-interval=+] @= (adv[advnum]), ?[lemma:entre], (art[lemma:um]), num[frac],
+														?[lemma:e], (art[lemma:um]), num[frac], (prep[lemma:de], ?[lemma:um];art[lemma:o]), noun[t-meas].									
+									
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) DE um quarto A 3 quartos de uma laranja
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art[lemma:um]), num[frac],
+                                ?[surface:a], (art[lemma:um]), num[frac], (prep[lemma:de], (art[lemma:um];art[lemma:o]), noun[t-meas:~]).
+
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) ENTRE as duas e meia E 3 laranjas (e meia)
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], (art;?[dem]), num,
+                                     ?[lemma:e], (art;?[dem]), num, noun[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) DE duas e meia A 3 laranjas (e meia)
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], (art;?[dem]), num,
+                                  ?[lemma:a], (art;?[dem]), num, noun[t-meas:~], (conj[lemma:e], num[frac];?[lemma:meio]).
+
+
+
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) DE duas A 3 (e meia).
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:de], art[lemma:um];num[time:~],
+                                ?[surface:a], art[lemma:um];num[time:~].
+
+//NJM+JB, 2011/05/16
+// Example: (aproximadamente) ENTRE duas E 3 (e meia).
+//
+2> NP[quant=+] @= (adv[advnum]), ?[lemma:entre], art[lemma:um];num[time:~],
+                                   ?[surface:e], art[lemma:um];num[time:~].
+
+
+
+
+
+//=======================================================================
+// NP constructed with a numeral and a prep[lemma:de] + noun[SEM-unitype]
+//=======================================================================
+
+// Example: (aproximadamente) dois quintos de litro
+// Example: (aproximadamente) um quinto de um litro
+// Example: (aproximadamente) um quinto de um litro
+//
+4> NP[quant=+] = (adv[advnum]), (?[indef4]), (art[lemma:um]), num[frac], prep[lemma:de], (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~].
+
+
+//=======================================================================
+// NP constructed with a numeral with two parts + noun[SEM-unitype]
+//=======================================================================
+// Example: dois litros e meio
+// Example: um litro e meio
+// Example: dois euros e 50 cêntimos
+//
+//CH, 2007/06/06 regras modificadas para dar conta deos seguintes exemplos
+// Example: as duas canecas e meia
+// Example: estas duas canecas e meia
+//
+//NJM, 2012/03/30 removida a restrição de não poder ser aplicado a unidades temporais
+// Example: nos últimos dois anos e meio
+//
+6> NP[quant=+] @= (adv[advnum]), (art), (?[dem];adj[ord])*, num, ?#1[SEM-unitype], ((conj[lemma:e]), num[t-focus=~], ?#2[SEM-unitype,t-meas:~];?[lemma:meio,t-focus=~])*, where(#1[SEM-unitype]::#2[SEM-unitype]).
+6> NP[quant=+] @= (adv[advnum]), art[lemma:um],                  ?#1[SEM-unitype], ((conj[lemma:e]), num[t-focus=~], ?#2[SEM-unitype,t-meas:~];?[lemma:meio,t-focus=~])*, where(#1[SEM-unitype]::#2[SEM-unitype]).
+
+6> NP[quant=+] @= (adv[advnum]), (art), (?[dem];adj[ord])*, num, ?[SEM-unitype], conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~], ((prep[lemma:de]), (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~];?[lemma:meio,t-focus=~]).
+6> NP[quant=+] @= (adv[advnum]), art[lemma:um],     ?[SEM-unitype], conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~], ((prep[lemma:de]), (art[lemma:um];art[lemma:o]), ?[SEM-unitype,t-meas:~]).
+
+6> NP[quant=+] @= (adv[advnum]), (art), (?[dem];adj[ord])*, num, ?[SEM-unitype,t-meas:~], (conj[lemma:e], num[t-focus=~], (prep[lemma:de]), (art[lemma:um];art[lemma:o]), ?[SEM-unitype,frac];?[lemma:meio,t-focus=~]).
+
+//  Example: no último metro e meio
+6> NP[quant=+] @= (adv[advnum]), (art), ?[dem];adj[ord],   num*, ?[SEM-unitype], conj[lemma:e], (num[t-focus=~]), (prep[lemma:de]), (art[lemma:um];art[lemma:o]), ?[SEM-unitype,frac];?[lemma:meio,t-focus=~].
+
+6> NP[quant=+] @= (adv[advnum]), art[lemma:um],     ?[SEM-unitype], (conj[lemma:e], num, (prep[lemma:de]), (art[lemma:um];art[lemma:o]), ?[SEM-unitype,frac];?[lemma:meio,t-focus=~]).
+
+
+
+
+
+
+
+
+
+// Example: (aproximadamente) as duas canecas (e meia)
+// Example: (aproximadamente) estas duas canecas (e meia)
+// Example: (aproximadamente) dois milhões de litros
+// Example: (aproximadamente) dois litros (e meio)
+// Example: (aproximadamente) várias dezenas de litros
+//
+8> NP[quant=+] @= (adv[advnum];?[todo]), (art), (?[dem];adj[ord])*, (?[indef4]), num, ((prep[lemma:de]), (art[lemma:um];art[lemma:o])), ?[SEM-unitype,t-meas:~,time:~], (conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~]).
+
+
+// Example: (aproximadamente) vários metros
+//
+//8> NP @= (adv[advnum]), (art;?[dem]), (?[indef4]), ?[SEM-unitype]. //next two rules substitute this one ?????
+8> NP @= (adv[advnum];?[todo]),  art;?[dem];adj[ord],  (AP;adj;pastpart;?[indef1]), (?[indef4]), (AP;adj;pastpart;?[indef1]), ?[SEM-unitype].
+8> NP @= (adv[advnum];?[todo]), (art;?[dem];adj[ord]), (AP;adj;pastpart;?[indef1]),  ?[indef4],  (AP;adj;pastpart;?[indef1]), ?[SEM-unitype].
+
+
+// Example: (aproximadamente) um litro (e meio)
+//
+8> NP[quant=+] @= (adv[advnum];?[todo]), art[lemma:um], (AP;adj;pastpart;?[indef1]), ((prep[lemma:de]), (art[lemma:um];art[lemma:o])), ?[SEM-unitype,t-meas:~,time:~], (conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~]).
+
+//NJM+JB, 2011/06/20 - resultados errados "paguei uma multa de €200", exemplo errado
+//
+// Example: (aproximadamente) dezenas    [ele compra aproximadamente dezenas de livros por ano]
+//
+//8> NP[quant=+] @= (adv[advnum]), (AP;adj;pastpart;?[indef1]), ((prep[lemma:de]), (art[lemma:um];art[lemma:o])), ?[SEM-unitype,t-meas:~,time:~].
+
+// Example: (aproximadamente) Ph 5
+//
+10> NP[quant=+] = (adv[advfuzzy,advnum];?[todo]), ?[SEM-unitype,t-meas:~], num.
+
+
+//NJM+JB, 2010/02/05
+//
+// Example: Este seu sexto romance
+// Example: O seu sexto romance
+11> NP @= (?[todo]), art;?[dem];adj[ord], ?[poss], num, (AP;adj;pastpart), noun.
+
+//NJM+JB, 2009/06/29
+//NJM+JB, 2011/05/16 - Added de frac option at the end of the
+// ATENÇÃO: Não se percebe bem o porquê da restrição de não poder ser uma unidade de tempo...
+//
+// Example: (aproximadamente) duas laranjas (e meia)
+// Example: (só) tantas laranjas
+// Example: (aproximadamente) uma laranja (e meia)
+//
+12> NP @= (adv[advnum];?[todo]), (art), (?[dem];adj[ord])*, (?[indef1])*,           num[t-data-string:~], (AP;adj;pastpart;?[indef1])*, noun[SEM-unitype:~,t-meas:~,time:~], (conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~]).
+
+//NJM+JB, 2013/06/16 - Added the restriction on gender and number
+12> NP @= (adv[advnum];?[todo]),#1[indef1],art#2[lemma:um], (AP;adj;pastpart;?[indef1])*, noun[SEM-unitype:~,t-meas:~,time:~], (conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~]),
+where(#2[number]::#1[number] & #2[gender]::#1[gender]).
+
+12> NP @= (adv[advnum];?[todo]), art[lemma:um], (AP;adj;pastpart;?[indef1])*, noun[SEM-unitype:~,t-meas:~,time:~], (conj[lemma:e], num[frac,t-focus=~];?[lemma:meio,t-focus=~]).
+
+
+// Example: estas formidáveis 3 belas laranja
+13> NP @= (adv[advnum];?[todo]), (art), (?[dem];adj[ord])*, (AP;adj;pastpart;?[indef1])*,           num[t-data-string:~], (AP;adj;pastpart;?[indef1])*, noun[SEM-unitype:~,t-meas:~,time:~].
+
+
+//NJM+JB, 2010/04/05
+//
+// Example: [só os 3 mil] foram ao cinema
+// Example: comprei [apenas 3]
+//
+14> NP[quant=+] @= (adv[advnum];?[todo]), (art), (?[dem];adj[ord])*, num[t-data-string:~] | ?[pron:~,noun:~,adj:~,SEM-unitype:~,t-meas:~,time:~] |.
+14> NP[quant=+] @= (adv[advnum];?[todo]), art[lemma:um]     | ?[pron:~,noun:~,adj:~,SEM-unitype:~,t-meas:~,time:~] |.
+
+14> NP[quant=+] @= (adv[advnum];?[todo]), (art), (?[dem];adj[ord])*, num[t-data-string:~,end].
+14> NP[quant=+] @= (adv[advnum];?[todo]), art[lemma:um,end].
+
+
+// compound mesasure (adds feature: measother)
+// Example: 9m x 6m
+//
+16> NP[quant=+, SEM-volume=+] = NP[quant], ?[lemma:x], NP[quant], ?[lemma:x], NP[quant].
+16> NP[quant=+, SEM-area=+]   = NP[quant], ?[lemma:x], NP[quant].
+
+
+//NJM, 2011/07/13
+//NJM, 2012/10/16 - added wright context to avoid its use in: "um homem de 25 anos roubou"
+//
+// Example: [de 2008]NP sexta-feira
+//
+16> NP[time=+,t-year=+]  = prep[lemma:de], num[t-year] |?[t-meas:~]|.
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ADVP - ADVERBIAL CHUNK
+//
+// more work is needed here!! se Ph.D work [Hagège 2000]
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//NJM+JB, 2011/01/18
+// Example: O Pedro disse (muito) CLARA, INEQUÍVOCA E SUCINTAMENTE que ....
+// Example: O Pedro disse (muito) CLARA E SUCINTAMENTE que ....
+//
+17> ADVP @= ~|?[noun,fem,sg]|
+             ((adv[advquant];adv[advcomp];adv[neg])*, adv[reducedmorph], punct[comma])+,
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[reducedmorph],
+             conj[lemma:e];conj[lemma:ou],
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[surface:"%c+mente"].
+
+17> ADVP @= ~|?[noun,fem,sg]|
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[reducedmorph],
+            conj[lemma:e];conj[lemma:ou];conj[lemma:mas],
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[surface:"%c+mente"].
+
+//NJM+JB, 2012/04/10
+// When there is a [noun,fem,sg] but the end of the sentence is near!
+//
+// Example: O Pedro leu a revista calma, lenta e atentamente.
+// Example: O Pedro leu a revista lenta e atentamente.
+//
+
+17> ADVP @= |?[noun,fem,sg]|
+             ((adv[advquant];adv[advcomp];adv[neg])*, adv[reducedmorph], punct[comma])+,
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[reducedmorph],
+             conj[lemma:e];conj[lemma:ou],
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[surface:"%c+mente",end].
+
+17> ADVP @= |?[noun,fem,sg]|
+             ((adv[advquant];adv[advcomp];adv[neg])*, adv[reducedmorph], punct[comma])+,
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[reducedmorph],
+             conj[lemma:e];conj[lemma:ou],
+             (adv[advquant];adv[advcomp];adv[neg]),
+             adv[surface:"%c+mente"]
+            |punct[end]|.
+
+17> ADVP @= |?[noun,fem,sg]|
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[reducedmorph],
+            conj[lemma:e];conj[lemma:ou];conj[lemma:mas],
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[surface:"%c+mente",end].
+
+17> ADVP @= |?[noun,fem,sg]|
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[reducedmorph],
+            conj[lemma:e];conj[lemma:ou];conj[lemma:mas],
+            (adv[advquant];adv[advcomp];adv[neg])*,
+            adv[surface:"%c+mente"]
+            |punct[end]|.
+
+
+// Example: (ainda;muito) mais
+// Example: [ainda]ADVP [assim]ADVP
+//
+18> ADVP @= adv[notjoinadvp:~,notjoinnextadvp:~],
+            adv*[notjoinadvp:~,notjoinnextadvp:~],
+            adv[advcomp,notjoinadvp:~,notjoinnextadvp:~],
+            (adv[surface:"%c+mente",notjoinadvp:~]).
+
+// Example: informar PREVIAMENTE o ministro
+// Example: * O Pedro [praticamente não] leu ...
+//
+18> ADVP @= (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            adv[notjoinadvp:~,neg:~].
+
+18> ADVP @= (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            (adv[notjoinadvp:~,notjoinnextadvp:~]),
+            adv.
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// VC - VERBAL CHAIN
+//
+////////////////////////////////////////////////////////////////////////////////
+
+
+//========================================================
+// VASP - verbo que auxilia verbos introduzindo traços aspectuais
+//        [first stage]
+//========================================================
+// Example: Estar a ponto de
+// Example: Estar ao ponto de
+23> VASP[incoat=+] = ?[lemma:estar], advp*;pron*, ?[surface:"a ponto de"] |verb[inf]|.
+
+//NJM+JB, 2012/10/24
+//
+// Example: Chegar a ponto de
+// Example: Chegar ao ponto de
+23> VASP[incoat=+] = ?[lemma:chegar], advp*;pron*, ?[lemma:"a ponto de"] |verb[inf]|.
+
+// Example: Estar prestes a
+23> VASP[incoat=+] = ?[lemma:estar], advp*;pron*, ?[surface:"prestes a"] |verb[inf]|.
+
+
+
+//========================================================
+// VMOD = verbo que auxilia verbos introduzindo traços de modalidade
+//========================================================
+// Example: DEVIA ter PODIDO avançar
+// Example: DEVIA ter avançado
+//
+30> VMOD[deont=+]             = ?[deInfDeo],      advp*;pron*, ?[lemma:de]  |pron*, advp*, verb[inf]|.
+30> VMOD[deont=+,imperfect=+] = ?[deInfDeoImpf],  advp*;pron*, ?[lemma:de]  |pron*, advp*, verb[inf]|.
+30> VMOD[deont=+]             = ?[noInfDeo]                                 |pron*, advp*, verb[inf]|.
+30> VMOD[deont=+,impessoal=+] = ?[queInfDeoImps], advp*;pron*, ?[lemma:que] |pron*, advp*, verb[inf]|.
+30> VMOD[obrig=+]             = ?[deInfObr],      advp*;pron*, ?[lemma:de]  |pron*, advp*, verb[inf]|.
+30> VMOD[obrig=+]             = ?[queInfObr],     advp*;pron*, ?[lemma:que] |pron*, advp*, verb[inf]|.
+30> VMOD[irreal=+]            = ?[emInfIrreal],   advp*;pron*, ?[lemma:em]  |pron*, advp*, verb[inf]|.
+30> VMOD[irreal=+]            = ?[deInfIrreal],   advp*;pron*, ?[lemma:de]  |pron*, advp*, verb[inf]|.
+30> VMOD[irreal=+]            = ?[aInfIrreal],    advp*;pron*, ?[lemma:a]   |pron*, advp*, verb[inf]|.
+30> VMOD[irreal=+]            = ?[noInfIrreal]                              |pron*, advp*, verb[inf]|.
+30> VMOD[real=+]              = ?[aInfReal],      advp*;pron*, ?[lemma:a]   |pron*, advp*, verb[inf]|.
+30> VMOD[imperative=+]        = ?[deInfImp],      advp*;pron*, ?[lemma:de]  |pron*, advp*, verb[inf]|.
+
+//NJM+JB, 2010/12/30
+// Example: TEVE, EFECTIVAMENTE, DE acordar
+//
+31> VMOD[deont=+]             = ?[deInfDeo],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |pron*, advp*, verb[inf]|.
+31> VMOD[deont=+,imperfect=+] = ?[deInfDeoImpf],  ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |pron*, advp*, verb[inf]|.
+31> VMOD[deont=+,impessoal=+] = ?[queInfDeoImps], ?[comma], (advp;pron)+, ?[comma], ?[lemma:que] |pron*, advp*, verb[inf]|.
+31> VMOD[obrig=+]             = ?[deInfObr],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |pron*, advp*, verb[inf]|.
+31> VMOD[obrig=+]             = ?[queInfObr],     ?[comma], (advp;pron)+, ?[comma], ?[lemma:que] |pron*, advp*, verb[inf]|.
+31> VMOD[irreal=+]            = ?[emInfIrreal],   ?[comma], (advp;pron)+, ?[comma], ?[lemma:em]  |pron*, advp*, verb[inf]|.
+31> VMOD[irreal=+]            = ?[deInfIrreal],   ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |pron*, advp*, verb[inf]|.
+31> VMOD[irreal=+]            = ?[aInfIrreal],    ?[comma], (advp;pron)+, ?[comma], ?[lemma:a]   |pron*, advp*, verb[inf]|.
+31> VMOD[real=+]              = ?[aInfReal],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:a]   |pron*, advp*, verb[inf]|.
+31> VMOD[imperative=+]        = ?[deInfImp],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |pron*, advp*, verb[inf]|.
+
+//NJM+JB, 2010/12/30
+// Example: TEVE DE, efectivamente, acordar
+//
+32> VMOD[deont=+]             = ?[deInfDeo],      advp*;pron*, ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[deont=+,imperfect=+] = ?[deInfDeoImpf],  advp*;pron*, ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[deont=+]             = ?[noInfDeo]                                 |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[deont=+,impessoal=+] = ?[queInfDeoImps], advp*;pron*, ?[lemma:que] |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[obrig=+]             = ?[deInfObr],      advp*;pron*, ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[obrig=+]             = ?[queInfObr],     advp*;pron*, ?[lemma:que] |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[irreal=+]            = ?[emInfIrreal],   advp*;pron*, ?[lemma:em]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[irreal=+]            = ?[deInfIrreal],   advp*;pron*, ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[irreal=+]            = ?[aInfIrreal],    advp*;pron*, ?[lemma:a]   |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[irreal=+]            = ?[noInfIrreal]                              |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[real=+]              = ?[aInfReal],      advp*;pron*, ?[lemma:a]   |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+32> VMOD[imperative=+]        = ?[deInfImp],      advp*;pron*, ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+
+//NJM+JB, 2010/12/30
+// Example: TEVE, EFECTIVAMENTE, DE não acordar
+//
+33> VMOD[deont=+]             = ?[deInfDeo],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[deont=+,imperfect=+] = ?[deInfDeoImpf],  ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[deont=+,impessoal=+] = ?[queInfDeoImps], ?[comma], (advp;pron)+, ?[comma], ?[lemma:que] |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[obrig=+]             = ?[deInfObr],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[obrig=+]             = ?[queInfObr],     ?[comma], (advp;pron)+, ?[comma], ?[lemma:que] |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[irreal=+]            = ?[emInfIrreal],   ?[comma], (advp;pron)+, ?[comma], ?[lemma:em]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[irreal=+]            = ?[deInfIrreal],   ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[irreal=+]            = ?[aInfIrreal],    ?[comma], (advp;pron)+, ?[comma], ?[lemma:a]   |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[real=+]              = ?[aInfReal],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:a]   |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+33> VMOD[imperative=+]        = ?[deInfImp],      ?[comma], (advp;pron)+, ?[comma], ?[lemma:de]  |?[comma], (pron;advp)+, ?[comma], verb[inf]|.
+
+
+//========================================================
+// VTEMP = verbo que auxilia verbos introduzindo traços temporais
+//========================================================
+// Example: devia TER podido avançar
+// Example: podia TER sido lida
+//
+40> VTEMP[pass=+] = ?[noPpPas]                               |pron*, advp*, pastpart[masc,sg];pastpart[cop];vmod|.
+40> VTEMP[futu=+] = ?[noInfFut]                              |pron*, advp*, verb[inf];vmod|.
+40> VTEMP[futu=+] = ?[aInfFut], advp*;pron*, ?[surface:a]    |pron*, advp*, verb[inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: devia TER, efectivamente, podido avançar
+// Example: podia TER, efectivamente, sido lida
+41> VTEMP[pass=+] = ?[noPpPas]                               |?[comma], (pron;advp)+, ?[comma], pastpart[masc,sg];pastpart[cop];vmod|.
+41> VTEMP[futu=+] = ?[noInfFut]                              |?[comma], (pron;advp)+, ?[comma], verb[inf];vmod|.
+41> VTEMP[futu=+] = ?[aInfFut], advp*;pron*, ?[surface:a]    |?[comma], (pron;advp)+, ?[comma], verb[inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: teve de IR, LENTAMENTE, A nadar até à margem
+//
+42> VTEMP[futu=+] = ?[aInfFut], ?[comma], (advp;pron)+, ?[comma], ?[surface:a]  |pron*, advp*, verb[inf];vmod|.
+
+//NJM+JB, 2010/12/30
+// Example: vai, efectivamente, a, realmente, lavar
+//
+43> VTEMP[futu=+] = ?[aInfFut], ?[comma], (advp;pron)+, ?[comma], ?[surface:a]  |?[comma], (pron;advp)+, ?[comma], verb[inf];vmod|.

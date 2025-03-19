@@ -1,0 +1,192 @@
+# ============================================================================
+# CONTENT:	 check lexicon files
+# 
+# LANGUAGE:	 ENGLISH
+#
+# AUTHOR:	 A. Schiller
+#
+# CREATED:	 04-Jan-2006
+# ============================================================================
+# USAGE:	 xfst  -s "LEX.fst" -l [ThisFile]
+# ============================================================================
+
+echo >>> ALPHABET:
+print sigma
+
+define LEX
+
+# --------------------------------------------------
+define CAT 	[ %+Adj
+		| %+Adv 
+		| %+Noun
+		| %+Prop 
+
+		| %+Det | %+Pron | %+PronDet | %+Quant
+		| %+Conj 
+		| %+Prep
+		| %+Verb | %+Aux | %+Modal 
+		| %+Ptcl	
+
+		| %+Num
+		| %+Dig
+		| %+Symbol
+		| %+Punct
+		];
+	
+define PART	[ %+Postmod	# post-modifier
+		| %+Premod	# pre-modifier
+		| %+Head	# head word  			"County"
+		];
+
+define NUM	[ %+Sg | %+Pl | %+SP ];
+define GEND	[ %+Masc | %+Fem | %+MF ];
+define PERS	[ %+P1 | %+P2 | %+P3 ];
+define DEGR	[ %+Pos | %+Comp | %+Sup | %+Neg ];
+
+define MORPH	NUM | GEND | PERS | DEGR ;
+
+
+define MISC	[ %+Abbr	# abbreviation 			"etc.", "i.e."
+		| %+Acron	# Acronym 			"USA", "UNESCO"
+		| %+Elid
+		| %+Clitic
+		];
+
+define CASE	[ %+Gen		# genitive, possessive		"Peter's"
+		| %+Nom		# nominative
+		| %+Obl		# oblique (object)
+		| %+Refl	# reflexive
+		];
+
+define GEO 	[ %+Continent	#
+		| %+Country	# country/nation of the world
+		| %+UsaState	# state of the USA
+		| %+State	# state/province of other country
+		| %+County	# county of GB
+		| %+Region	# other region (not further classified)
+		| %+City	#
+		| %+River	#
+		| %+Loc		# location (in general)
+		| %+Place	# unclassified place name (from original analyser)
+		| %+Demonym	# inhabitant (noun or adjective)
+		];
+
+define PROP	[ %+Day		# day of week		"Sunday"
+		| %+Month	# month of year		"April"
+		| %+Title	# person title		"Dr.", "President", "PhD"
+		| %+Firstname	#	
+		| %+Lastname	#
+		| %+Fullname	#
+		| %+Celeb	# celebrity, famous
+
+		| %+Bus		# business organisation
+		| %+Inst	# institution (school, university, ...)
+		| %+Org		# organisation (political party, ...)
+		| %+Product	# product name
+
+		| %+Event
+		| %+Law
+		| %+Doc
+		| %+Relig
+		];
+
+define TYPE	[ %+Conn	# connective
+		| %+Def		# definite
+		| %+Dem		# demonstrative
+		| %+Indef	# indefinite
+		| %+Pers	# personal (pronoun)
+		| %+Poss	# possessive
+		| %+Rel		# relative (pronoun)
+		| %+Recip	# reciprocal		"each other"
+		| %+Wh		# interrogative (or relative)
+		| %+VPart	# verb particle		"[come] in"
+		];
+
+define CTYPE	[ %+Coord	# coordination
+		| %+Sub		# subordination
+		];
+
+define VFORM	[ %+PPres
+		| %+PPast
+		| %+Inf
+		| %+Imp
+		];
+
+define TENSE	[ %+Pres
+		| %+Past
+		];
+define VPERS	[ %+1sg | %+2sg | %+3sg | %+Pl | %+Non3sg ];
+
+define PTCL	[ %+Infto ];
+
+define NUMERAL	[ %+Card | %+Ord | %+Fract | %+Dec | %+Rom ];
+
+define SYMBOL	[ %+Meas | %+Unit | %+Curr | %+Percent | %+DlrAmt 
+		| %+Month | %+Day | %+Date | %+Time | %+Year | %+ShortYear
+		| %+DMY | %+MDY | %+YMD 
+		| %+Quote | %+Comma | %+Sent | %+Dash | %+Hyphen | %+Paren 
+		| %+Slash | %+Semicolon | %+Colon | %+Apst
+		| %+RightSpace | %+LeftSpace ];
+
+define MARK	[ %+lex1 | %+lex2 | %+lex3 | %+guessed ];
+
+define TAG	[ CAT | PART | MORPH | MISC | GEO | TYPE | CTYPE 
+		| TENSE | VFORM | VPERS | PTCL 
+		| NUMERAL | SYMBOL | MARK];
+
+define CONTEXT	[ RC | LC | EOT | BOT ];
+
+define CHAR	\[TAG|CONTEXT] ;
+
+ 
+
+# ======================================================================
+# define well-formed sequences
+
+define SEQ [
+
+# adjectives
+  %+Adj [GEO]* (MISC) [DEGR|VFORM]
+
+# nouns
+| %+Noun [GEO|SYMBOL|NUMERAL]* (MISC) (NUM) (CASE)
+
+# proper names
+| %+Prop [GEO|PROP]* (PART) (GEND) (MISC) (NUM) (CASE)
+
+# pronouns
+| [ %+Pron | %+Det | %+PronDet ] (TYPE) (DEGR) (NUM) (CASE)
+| %+Pron %+Pers PERS NUM [CASE]*
+
+| %+Quant (MISC) (DEGR) (NUM)
+
+# Adverbs
+| %+Adv [TYPE|DEGR]*
+
+# conjunctions, prepositions 
+| %+Conj CTYPE (MISC)
+| %+Prep (MISC)
+
+# verbs
+| %+Verb [ TENSE (VPERS) | VFORM (MISC) ]
+| [ %+Aux | %+Modal ] [ TENSE (VPERS) (%+Neg|%+Elid)  | VFORM ]
+
+# particles
+| %+Ptcl PTCL 
+
+# numeral
+|[%+Num|%+Dig] [SYMBOL|NUMERAL]*  (MISC)
+
+# Symbols
+| %+Symbol SYMBOL* (MISC)
+| %+Punct SYMBOL* [ CONTEXT CHAR*]*
+
+];
+
+
+# check ...
+
+
+define CORRECT 	[ CHAR* SEQ (MARK) ];
+
+read regex ~[CORRECT] .o. LEX ;

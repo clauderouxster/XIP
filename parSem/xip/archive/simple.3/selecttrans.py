@@ -1,0 +1,5 @@
+# -*- coding: utf-8 -*-
+
+translationgraphes=[[u'0_utar 1_signetad 2_lokeiagas 3_beiag', u'under~ar sign~tad place~iagas be~iag', u'english'], [u'0_likvejetan 1_drinkeiag', u'enivrer~iag avec~ar de~ar likvejetan', u'francais'], [u'0_treno 1_treno 2_reiag', u'egeno boneno reiag', u'ALL'], [u'0_akveta 1__likveje_fluaje_fluideje_likvejetan 2__be_este_beiag', u'akveta likvejetan beiag', u'ALL'], [u'0_vineta 1__likveje_fluaje_fluideje_likvejetan 2__be_este_beiag', u'vineta likvejetan beiag', u'ALL'], [u'0_biereta 1__likveje_fluaje_fluideje_likvejetan 2__be_este_beiag', u'biereta likvejetan beiag', u'ALL'], [u'0_funteta 1_adar 2_mondetad', u'funteta adisars mondetad', u'ALL'], [u'0__hu_home_vire_huma 1__starte_ekpafe_forveture_ekfunktsio_ekire_forire_starteiagas 2__rayte_kapable_pove_rayteiag', u'huma forireiagas poveiag', u'ALL'], [u'0_likvejetan 1_drinkedeiag', u'boire~iag de~ar likvejetan', u'francais'], [u'0_tucosenseca 1_tabuleteta', u'touch~ca tablet~ta', u'english']]
+ontologies={'timege': ['angore'], 'akve': ['likveje'], 'vine': ['likveje'], 'biere': ['likveje']}
+ontologyheads={'re': True, 'likveje': True, 'angore': True}

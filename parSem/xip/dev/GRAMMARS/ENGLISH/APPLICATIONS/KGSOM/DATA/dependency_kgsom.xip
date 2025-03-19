@@ -1,0 +1,499 @@
+Script:
+
+iftest ( @_xtd.title->Test() ) { print ("<title>\n"); }
+iftest ( @_xtd.body->Test() ) { print ("<question>\n"); }
+iftest ( @_xtd.solution->Test() ) { print ("<solution>\n"); }
+
+
+DependencyRules:
+
+
+///////////////// Mark every sentence \\\\\\\\\\\\\\
+
+| TOP#1 |
+  SENT(#1).
+
+
+///////////////// New dependencies \\\\\\\\\\\\\\
+
+//The web browser data is not remembered / saved .
+//SUBJ_PRE(is,data)
+//NUCL_VLINK_PASSIVE(is,remembered)
+
+if ( SUBJ(#1,#2) & NUCL[vlink,passive](#1,#3) )
+   SUBJ-N(#3,#2).
+
+/////////////////////////////////////////
+/////////////////  TERM  \\\\\\\\\\\\\\\\
+/////////////////////////////////////////
+
+
+// tags
+
+| #1[tag,term=+] |
+  ~.
+
+// list of devices
+//MOD_POST(list,devices_TERM:+)
+//PREPD(devices,of)
+
+| #1[term=+,tag:~] |
+if ( MOD[post](#1,#2[term]) & PREPD(#2,#3[lemme:of]) )
+   ~.
+
+| #1[term,dsw=+] |
+if ( ~TERM(#1) )
+    TERM(#1).
+
+| #1[tag,term] |
+if ( ^TERM(#1) )
+   TERM[tag=+](#1).
+
+///////////////////////////////////////////
+/////////////////  ACTION  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////
+
+//Unable to send an email.
+//OBJ_POST(send,email)
+
+| #1[action=+,dsw=+] |
+if ( OBJ[sentence:~,infinit:~](#1[verb],#2[term,tag]) )
+   ACTION(#1).
+
+//'No SIM inserted' message appears in the notifications bar.
+//SUBJ-N_PRE(inserted,SIM)
+
+| #1[action=+,dsw=+] |
+if ( SUBJ-N[pre](#1[verb,partpas],#2[term,tag]) )
+   ACTION(#1).
+
+//I can't connect to wifi
+//RESULT_POST(connect,wifi)
+
+| #1[action=+,dsw=+] |
+if ( RESULT(#1[verb],#2[term,tag]) )
+   ACTION(#1).
+
+//// not action \\\\
+
+//ACTION(have_DSW:+)
+
+| #1[noaction,dsw=~,action=~] |
+if ( ^ACTION(#1) )
+   ~.
+
+///////////////////////////////////////////////////////////
+/////////////////  dsw that is not ACTION  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////
+
+//personal hotspot won't work , it says go onto the o2 website for a set up guide .
+//SUBJ-N_PRE(work,hotspot[term])
+
+| #1[dsw=+] |
+if ( SUBJ-N(#1,#2[term]) )
+   ~.
+
+////////////////////////////////////////////
+////////////////////////////////////////////
+/////////////////  ANOMALY  \\\\\\\\\\\\\\\\
+////////////////////////////////////////////
+////////////////////////////////////////////
+
+// TERM & BAD || CONTR + CIRC
+// TERM & BAD || ALEATORY
+// TERM & BAD || TITLE
+// TERM & BAD & APPEARANCE
+// TERM & INTENT
+// CONTR + CIRC || CONTR || TERM
+
+
+////////////////////////////////////////
+/////////////////  BAD  \\\\\\\\\\\\\\\\
+////////////////////////////////////////
+
+| #1[auxnot,bad=+] |
+  ~.
+
+//// contextual BAD \\\\
+
+//Every time I quite Mail or reboot my computer, all of my mail accounts are gone and I'm prompted to reconfigure my accounts (6 of them).
+//SUBJATTR(accounts,gone)
+
+| #2[bad=+] |
+if ( SUBJATTR(#1,#2[surface:gone]) )
+   ~.
+
+//An iPhone has been detected, but it could not be identified properly
+//NUCL_VLINK_MODAL(could,be)
+//SUBJ_PRE(could,it)
+//MOD_NEG(identified,not_BAD:+)
+//NFV{not_BAD:+ be identified}
+
+| ?{#1[bad], #2[bad=+], #3[verb,last,bad=+]} |
+   ~.
+
+| ?{#1[bad], #3[verb,last,bad=+]} |
+   ~.
+
+//my internet is still not working even after I paid my bill yesterday.
+//NFV{still not_BAD:+ working}
+
+| ?{#1, #2[bad], #3[verb,last,bad=+]} |
+   ~.
+
+//NUCL_VLINK_PROGRESS(is,working_BAD:+)
+
+
+| #1[bad=+] |
+if ( NUCL[vlink,progress](#1,#2[bad]) )
+   ~.
+
+
+//I can't connect to wifi
+//NUCL_VLINK_MODAL(can't_BAD:+,connect)
+
+| #2[bad=+] |
+if ( NUCL[vlink,modal](#1[bad],#2[dsw]) )
+   ~.
+
+
+//// "not" is not BAD if the SUBJ of the verb is "I"
+//Also, I do not prefer to install any paid software and would like to use build in features if possible.
+
+//SUBJ_PRE(do,I)
+//NUCL_VLINK_INSIST(do,prefer)
+//MOD_NEG(prefer,not_BAD:+)
+
+| #4[bad=~,nobad=+] |
+if ( SUBJ(#1,#2) & NUCL[vlink,insist](#1,#3) & MOD[neg](#3,#4) )
+   ~.
+
+
+//NUCL_VLINK_INSIST(don't,appear)
+//NEGAT(appear)
+// except: he SUBJ of the BAD verb is a "I"
+//SUBJ_PRE(do,I)
+//NUCL_VLINK_INSIST(do,prefer)
+
+| #2[bad=+,nobad:~] |
+if ( NUCL[vlink,insist](#1,#2) & NEGAT(#2) & SUBJ(#1,#3[perspron:~]) )
+   ~.
+
+| #1[bad=~,nobad=+] |
+if ( NUCL[vlink,insist](#1,#2) & NEGAT(#2) & SUBJ(#1,#3[perspron]) )
+   ~.
+
+| #2[afterbad=~,nobad=+] |
+if ( NUCL[vlink,insist](#1[bad:~],#2) & NEGAT(#2) & SUBJ(#1,#3[perspron]) )
+   ~.
+
+
+// In some settings the screen may be illuminated, but the keyboard is not well- lit and hard to see, so I'd really like the backlight to turn on.
+
+//QUALIF(keyboard,well_AFTERBAD:+)
+
+| #1[adj,afterbad,bad=+,nobad:~] |
+  ~.
+
+//The hard disk is full.
+//ATTRIB(hard disk,full)
+
+| #1[lemme:full,bad=+,nobad:~] |
+if ( ATTRIB(#1[term],#2) )
+   ~.
+
+//'Error 1004 please try again later' message appears.
+//SUBJ_PRE(appears,message)
+
+| #1[bad=+,dsw=+] |
+if ( $1(#1[badwterm],#2[dsw]) )
+   ~.
+
+| #1[bad=+,dsw=+,nobad:~] |
+if ( $1(#1[dsw],#2[badwterm]) )
+   ~.
+
+//I'm fine using any of the tools that ship with the system and any software I already own (like WireTap) but would rather not go out and buy more software.
+//IV{rather not_BAD:+ go_BAD:+}
+
+| ?{#1[lemme:rather], ?[bad=~,nobad=+], ?[bad=~,nobad=+] } |
+  ~.
+
+
+
+///////////////////////////////////////////////////////////
+/////////////////  TERM & BAD = BATDTHING  \\\\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////
+
+if ( ^$1[appos:~,sentence:~,temp_rel:~](#1[dsw],#2[bad,nobad:~]) | ^$1[appos:~,sentence:~,temp_rel:~](#1[bad,nobad:~],#2[dsw]) )
+   $1[badthing=+](#1,#2).
+
+
+////////////////////////////////////////
+//////////////// ALEATORY \\\\\\\\\\\\\\
+////////////////////////////////////////
+
+//// CONTR + CIRC \\\\
+
+// but/yet/though[contrmark] +  when(ever)/now/still/today[circmark]
+
+//// CONTR \\\\
+
+| #1[contrmark] |
+if ( ~WORD[contrmark:~](#1) )
+    WORD[contrmark=+](#1).
+
+//// CIRC \\\\
+
+| #1[circmark] |
+if ( ~WORD[circmark:~](#1) )
+    WORD[circmark=+](#1).
+
+//// ALEATORY \\\\
+
+//// CIRC + CONTR \\\\
+
+| #2[aleatory=+] |
+if ( WORD[contrmark](#1) & WORD[circmark](#2)  )
+    ~.
+
+// aleatory
+
+//In some settings the screen may be illuminated, but the keyboard is not well- lit and hard to see, so I'd really like the backlight to turn on.
+//QUANTD(settings,some)
+//TERM(settings)
+
+
+| #1[aleatory=+] |
+if ( QUANTD(#1,#2[lemme:some]) )
+    ~.
+
+//For some reason, Image Capture doesn't always update the list of devices after I plug in my iPhone.
+//MOD_PRE(update_BAD:+,always)
+
+
+| #1[aleatory=+] |
+if ( $1(#1[bad],#2[lemme:always]) )
+   ~.
+
+//// when + ing \\\\
+
+//BG{when} GV{playing}
+
+| bg{#1[lemme:when]}, gv{#2[aleatory=+]} |
+    ~.
+
+//When GV{using}
+| #1[lemme:when], gv{#2[aleatory=+]} |
+    ~.
+
+
+//Sometimes restarting Image Capture works, and sometimes it does not.
+
+| #1[aleatory] |
+  WORD[aleatory=+](#1).
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = ALEATORY + BADTHING \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+
+if ( WORD[aleatory](#2) & ^SENT(#3) & $1[badthing](#1,#4) )
+   ANOMALY[aleatory=+](#3).
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = BADTHING (STRONGBAD) \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+if ( ^SENT(#3) & $1[badthing](#1[strongbad],#4) )
+   ANOMALY[strong=+](#3).
+
+if ( ^SENT(#3) & $1[badthing](#1,#4[strongbad]) )
+   ANOMALY[strong=+](#3).
+
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = ALEATORY + ALEATORY \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+if ( WORD[aleatory](#1) & WORD[aleatory](#2) & ^SENT(#3) & TERM(#4) )
+   ANOMALY[aleatory=+](#3).
+
+//I sent it to Samung and they just did a software update and sent it back to me a couple days ago , and it still power cycles
+//, and NP{it} still 
+
+| #1[comma], #2[lemme:and] |
+if ( WORD[contrmark](#3[lemme:still]) & #2 < #3 & ^SENT(#4) )
+   ANOMALY[aleatory=+](#4).
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = ALEATORY + TERM_SUBJ \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+//However, when I wake the computer from sleep and the login prompt appears, the keyboard backlight turns on.
+//WORD_CONTRMARK(However)
+//WORD_ALEATORY(when)
+//SUBJ_ALEATORY_PRE(turns,backlight)
+
+
+if ( WORD(#5[contrmark]) & WORD[aleatory](#1) & ^SENT(#3) & SUBJ(#2,#4) & TERM(#4) & #5 < #1 )
+   ANOMALY[aleatory=+](#3).
+
+if ( WORD(#5[contrmark]) & WORD[aleatory](#1) & ANOMALY[aleatory](#3) & ^SUBJ(#2,#4[lemme:~it]) & TERM(#4) & #5 < #1 )
+   SUBJ[aleatory=+](#2,#4).
+
+
+//Today I tried to use the iTunes-cover screensaver (for the first time), but my screen (and the preview area in the system preferences) simply stays black, nothing else happens.
+//CONNECTOR_SUBORD(stays_BAD:+,but)
+
+if ( CONNECTOR(#1[bad],#2[contrmark]) & ^SENT(#3) )
+   ANOMALY[aleatory=+](#3).
+
+//For some reason Adobe Bridge is opening on login, even though my Login Items shows that it is unchecked.
+
+| #1[aleatory]{?[lemme:for], ?[lemme:some], ?[lemme:reason]} | 
+if ( ^SENT(#2) & WORD(#3[contrmark]) )
+   ANOMALY[aleatory=+](#2).
+
+
+
+//////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = TITLE + BADTHING \\\\\\\\\\\\\\
+//////////////////////////////////////////////////////////////
+
+
+if ( @_xtd.title->Test() & $1[badthing](#1,#2) & ^SENT(#3) )
+   ANOMALY(#3).
+   
+/
+| #1[bad] |
+if ( @_xtd.title->Test() & TERM(#2) & ^SENT(#3) )
+   ANOMALY[proba=+](#3).
+\
+
+
+
+///////////////////////////////////////////////////////////////////////
+//////////////// ANOMALIE = CONTR before BADTHING + GOOD \\\\\\\\\\\\\\
+///////////////////////////////////////////////////////////////////////
+
+/
+//hey my galaxy s 3 has an amazing screen but it's so dim is there anything i can do about that ?
+
+//WORD_CONTRMARK(but)
+//ATTRIB_BADTHING(it,dim_BAD:+)
+
+| #5[good] |
+if ( WORD[contrmark](#1) & $1[badthing](#2,#3) & #1 < #2 & ^SENT(#4) )
+   ANOMALY[contrmark=+](#4).
+\
+
+//Silence:
+//After purchasing a new computer (Mac Mini w/Lion) and migrating my settings from old one (Macbook Pro w/Snow Leopard), the system shortcuts for beginning- of-line and end-of-line text navigation commands (Cmd-left/right arrow) just don't work anymore, anywhere.
+//Every time I quite Mail or reboot my computer, all of my mail accounts are gone and I'm prompted to reconfigure my accounts (6 of them).
+//For some reason Adobe Bridge is opening on login, even though my Login Items shows that it is unchecked.
+//I ask because the number of charge cycles displayed for my MacBook Air is greater than the number of days I have owned the computer, and I certainly have not used it every day, nor charged and then used the battery more than once a day.
+//It is taking up a bunch of space and I want it gone!
+
+
+////////////////////////////////////////////
+////////////////////////////////////////////
+/////////////////  QUESTION  \\\\\\\\\\\\\\\
+////////////////////////////////////////////
+////////////////////////////////////////////
+
+/////////////////////////////////////////////////
+/////////////////  question mark  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+
+| #2[form:fquest,end] |
+if ( ^SENT(#1) )
+   QUESTION(#1).
+
+| #2[form:fquest,end] |
+if ( ^ANOMALY(#1) )
+   QUESTION[anomaly=+](#1).
+
+// if there is no question mark
+
+//What is the cheapest way to get windows running on a Mac
+/
+| #2[wh,start] |
+if ( ^SENT(#1) )
+   QUESTION(#1).
+
+| #2[wh,start] |
+if ( ^ANOMALY(#1) )
+   QUESTION[anomaly=+](#1).
+\
+// I wonder
+//SUBJ-N_PRE(wonder,I)
+
+
+if ( SUBJ-N(#1[lemme:wonder],#2[lemme:I]) & ^SENT(#3) )
+   QUESTION(#3).
+   
+if ( SUBJ-N(#1[lemme:wonder],#2[lemme:I]) & ^ANOMALY(#3) )
+   QUESTION[anomaly=+](#3).
+   
+
+
+/////////////////////////////////////////////////
+/////////////////  how to question  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+| #1[lemme:how] |
+if ( ^QUESTION(#2) )
+   QUESTION[howto=+](#2).
+
+/////////////////////////////////////////////////
+/////////////////  specification  \\\\\\\\\\\\\\\
+/////////////////////////////////////////////////
+
+if ( ^QUESTION[howto:~](#1) )
+   QUESTION[specification=+](#1).
+
+//////////////////////////////////////////////////////
+/////////////////  implicit questions  \\\\\\\\\\\\\\\
+//////////////////////////////////////////////////////
+
+//I'm looking for a FREE chat client that supports Windows Live network (Messenger) and is designed for iPad.
+//I'd like to not only open all these documents but also to continue writing mathematical documents the same way I'm used to on Windows.
+//I can't find an answer to this one here or elsewhere, so here goes.
+
+
+//////////////// label TITLE \\\\\\\\\\\\\\\\\\
+
+if (@_xtd.title->Test() & ^ANOMALY(#1) )
+   ANOMALY[posttitle=+](#1)
+
+if (@_xtd.title->Test() & ^QUESTION(#1) )
+   QUESTION[posttitle=+](#1)
+
+if (@_xtd.title->Test() & ^SENT(#1) )
+   SENT[posttitle=+](#1)
+
+/////////////// ANOMALY, QUESTION: LABEL titles and questions only \\\\\\\\\\\\\\   
+
+if (@_xtd.solution->Test() & ^ACTION(#1) )
+   ~.
+
+if (@_xtd.solution->Test() & ^ANOMALY(#1) )
+   ~.
+
+if (@_xtd.solution->Test() & ^$1[badthing](#1,#2) )
+   $1[badthing=~](#1,#2).
+
+if (@_xtd.solution->Test() & ^QUESTION(#1) )
+   ~.
+
+///////////////////////
+
+// it shouldn't be returned as TERM
+
+
+if ( ^TERM(#1[pron]) )
+   ~.

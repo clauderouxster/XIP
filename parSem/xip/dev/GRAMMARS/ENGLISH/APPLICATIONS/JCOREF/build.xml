@@ -1,0 +1,88 @@
+<project name="" default="test" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}/../../../../../../common" />
+<import file="${common.dir}/taskExt.xml" />
+
+<property name="java_debug"    		value="off" />
+<property name="java_optimize" 		value="on" />
+<property name="java_deprecation"  	value="on" />
+<property name="log.level"		value="verbose" />
+<property name="output"			location="${basedir}/output" />
+<property name="input"			location="${basedir}/input" />
+<property name="jxip.jar"		location="${basedir}/../../../../java/dist/jxipPy.jar" />
+<property name="wordNet.jar"		location="${basedir}/lib_ext/jwnl.jar" />
+<property name="commons-logging.jar"	location="${basedir}/lib_ext/commons-logging.jar" />
+<property name="utilities.jar"		location="${basedir}/lib_ext/utilities.jar" />
+<property name="jcoref.jar"		location="${basedir}/dist/jcoref.jar" />
+<property name="root_xip.dir"		location="${basedir}/../../.." />
+<property name="build.classes.dir"	location="${basedir}/build" />
+<property name="gram"			location="${basedir}/GRM/coref.grm" />
+
+<target name="test" depends="jar"  >
+	 <java classname="jcoref.Main" fork="true" failonerror="true"  maxmemory="256m">
+	 	<classpath>
+			<!--
+			<pathelement path="${basedir}/build"/>
+			-->
+			<pathelement path="${jcoref.jar}"/>
+			<pathelement path="${jxip.jar}"/>
+			<pathelement location="${wordNet.jar}"/>
+			<pathelement location="${commons-logging.jar}"/>
+			<pathelement location="${utilities.jar}"/>
+	 	</classpath>
+		<arg value="${gram}"/>
+		<arg value="/opt/ParSem/Corpora/ENGLISH/REUTERSEXPANDED"/>
+	</java>
+</target>
+
+<target name="jar" depends="compile" description="build the jar for jcoref">
+	<echo message=" --------- build the jar: ${jcoref.jar} --------" />
+	<mkdir dir="${basedir}/dist" />
+	<delete file="${jcoref.jar}" />
+        <jar jarfile="${jcoref.jar}" update="no" >
+		<fileset dir="${build.classes.dir}" 
+			excludes="">
+		</fileset>
+		<manifest>
+			<attribute name="Built-By" value="${user.name}"/>
+			<attribute name="Main-class" value="jcoref.Main"/>
+			<attribute name="Class-path" value="."/>
+		</manifest>
+		<zipfileset src="${wordNet.jar}"/>
+		<zipfileset src="${commons-logging.jar}"/>
+		<zipfileset src="${utilities.jar}"/>
+        </jar>
+    </target>
+
+<!-- compile java source file -->
+<target name="compile" depends="init" description="java compilation">
+	<echo message=" -------------------- Compiling Java files -------------------------" />
+	<javac srcdir="${basedir}" 
+		destdir="build" 
+		debug="${java_debug}" 
+		deprecation="${java_deprecation}"
+		optimize="${java_optimize}"
+		>
+		<classpath>
+			<pathelement path="${jxip.jar}"/>
+			<pathelement location="${wordNet.jar}"/>
+			<pathelement location="${commons-logging.jar}"/>
+			<pathelement location="${utilities.jar}"/>
+		</classpath>
+	</javac>
+</target>
+
+<target name="init" depends="">
+	<mkdir dir="build" />
+</target>
+
+<target name="clean" depends="" >
+	<delete dir="build" />
+</target>
+
+</project>
+

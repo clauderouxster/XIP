@@ -1,0 +1,220 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-event_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// This file creates the EVENT dependency using following dependencies : CORE, COORDINATE, SRC, and optionaly INFO-SOURCE and INFO-DATE.
+//EVENT(speaker, drive, core, actor, target, location, time)
+// factuality (factual, possible, counter-factual) is a feature of the dependency EVENT.
+// Every CORE corresponds to only one EVENT, unless many speakers express different opinions of the factuality of this event.
+
+// When a core has many coordinates of the same type, we don't want many EVENT to be created. Therefore a new COORDINATE is created, whose lemma is a concatenation of the coordinates that have the same type : very Core has only one COORDINATE of each type (marked with 'unique') that will be used for the EVENT. Yet the COORDINATEs that don't have this feature are kept, because they are usefull for highlighting (they have the offsets), and for the java programm. 
+//  COORDINATE[actor](Core,A), COORDINATE[actor](Core, B) 
+// =>COORDINATE[actor](Core,A), COORDINATE[actor](Core, B), COORDINATE[actor, unique](Core, A+B)
+// COORDINATE[actor](Core,A)
+// => COORDINATE[actor, unique](Core,A)
+
+
+Variables:
+string lemme1;
+
+DependencyRules:
+
+// 1. traitement des coordonnées : on rassemble dans une même dependance COORDINATE les coordonnées de même type ayant le même noyau en premier argument
+//COORDINATE[actor](Core,A), COORDINATE[actor](Core, B) => COORDINATE[actor](Core, A+B)
+
+if (COORDINATE[actor](#1,#2) & COORDINATE[actor](#1,#3) & COORDINATE[actor](#1,#4) & COORDINATE[actor](#1,#5)  & ~DONE[actor](#1,#2) & ~DONE[actor](#1,#3) & ~DONE[actor](#1,#4)  & ~DONE[actor](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	COORDINATE[actor=+, merged=+](#1,##noun[lemme=lemme1]), DONE[actor=+](#1,#2), DONE[actor=+](#1,#3), DONE[actor=+](#1,#4), DONE[actor=+](#1,#5)
+
+if (COORDINATE[actor](#1,#2) & COORDINATE[actor](#1,#3) & COORDINATE[actor](#1,#4)  & ~DONE[actor](#1,#2) & ~DONE[actor](#1,#3) & ~DONE[actor](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	COORDINATE[actor=+, merged=+](#1,##noun[lemme=lemme1]), DONE[actor=+](#1,#2), DONE[actor=+](#1,#3), DONE[actor=+](#1,#4)
+
+if (COORDINATE[actor](#1,#2) & COORDINATE[actor](#1,#3) & ~DONE[actor](#1,#2) & ~DONE[actor](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	COORDINATE[actor=+, merged=+](#1,##noun[lemme=lemme1]), DONE[actor=+](#1,#2), DONE[actor=+](#1,#3)
+
+
+if (COORDINATE[target](#1,#2) & COORDINATE[target](#1,#3) & COORDINATE[target](#1,#4) & COORDINATE[target](#1,#5)  & ~DONE[target](#1,#2) & ~DONE[target](#1,#3) & ~DONE[target](#1,#4)  & ~DONE[target](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	COORDINATE[target=+, merged=+](#1,##noun[lemme=lemme1]), DONE[target=+](#1,#2), DONE[target=+](#1,#3), DONE[target=+](#1,#4), DONE[target=+](#1,#5)
+
+if (COORDINATE[target](#1,#2) & COORDINATE[target](#1,#3) & COORDINATE[target](#1,#4)  & ~DONE[target](#1,#2) & ~DONE[target](#1,#3) & ~DONE[target](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	COORDINATE[target=+, merged=+](#1,##noun[lemme=lemme1]), DONE[target=+](#1,#2), DONE[target=+](#1,#3), DONE[target=+](#1,#4)
+
+if (COORDINATE[target](#1,#2) & COORDINATE[target](#1,#3) & ~DONE[target](#1,#2) & ~DONE[target](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	COORDINATE[target=+, merged=+](#1,##noun[lemme=lemme1]), DONE[target=+](#1,#2), DONE[target=+](#1,#3)
+
+
+if (SRC[factual](#1,#2) & SRC[factual](#1,#3) & SRC[factual](#1,#4) & SRC[factual](#1,#5)  & ~DONE[factual](#1,#2) & ~DONE[factual](#1,#3) & ~DONE[factual](#1,#4)  & ~DONE[factual](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	SRC[factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[factual=+](#1,#2), DONE[factual=+](#1,#3), DONE[factual=+](#1,#4), DONE[factual=+](#1,#5)
+
+if (SRC[factual](#1,#2) & SRC[factual](#1,#3) & SRC[factual](#1,#4)  & ~DONE[factual](#1,#2) & ~DONE[factual](#1,#3) & ~DONE[factual](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	SRC[factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[factual=+](#1,#2), DONE[factual=+](#1,#3), DONE[factual=+](#1,#4)
+
+if (SRC[factual](#1,#2) & SRC[factual](#1,#3) & ~DONE[factual](#1,#2) & ~DONE[factual](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	SRC[factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[factual=+](#1,#2), DONE[factual=+](#1,#3)
+
+
+if (COORDINATE[loc-pr](#1,#2) & COORDINATE[loc-pr](#1,#3) & COORDINATE[loc-pr](#1,#4) & COORDINATE[loc-pr](#1,#5)  & ~DONE[loc-pr](#1,#2) & ~DONE[loc-pr](#1,#3) & ~DONE[loc-pr](#1,#4)  & ~DONE[loc-pr](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	COORDINATE[loc-pr=+, merged=+](#1,##noun[lemme=lemme1]), DONE[loc-pr=+](#1,#2), DONE[loc-pr=+](#1,#3), DONE[loc-pr=+](#1,#4), DONE[loc-pr=+](#1,#5)
+
+if (COORDINATE[loc-pr](#1,#2) & COORDINATE[loc-pr](#1,#3) & COORDINATE[loc-pr](#1,#4)  & ~DONE[loc-pr](#1,#2) & ~DONE[loc-pr](#1,#3) & ~DONE[loc-pr](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	COORDINATE[loc-pr=+, merged=+](#1,##noun[lemme=lemme1]), DONE[loc-pr=+](#1,#2), DONE[loc-pr=+](#1,#3), DONE[loc-pr=+](#1,#4)
+
+if (COORDINATE[loc-pr](#1,#2) & COORDINATE[loc-pr](#1,#3) & ~DONE[loc-pr](#1,#2) & ~DONE[loc-pr](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	COORDINATE[loc-pr=+, merged=+](#1,##noun[lemme=lemme1]), DONE[loc-pr=+](#1,#2), DONE[loc-pr=+](#1,#3)
+
+
+if (SRC[counter-factual](#1,#2) & SRC[counter-factual](#1,#3) & SRC[counter-factual](#1,#4) & SRC[counter-factual](#1,#5)  & ~DONE[counter-factual](#1,#2) & ~DONE[counter-factual](#1,#3) & ~DONE[counter-factual](#1,#4)  & ~DONE[counter-factual](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	SRC[counter-factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[counter-factual=+](#1,#2), DONE[counter-factual=+](#1,#3), DONE[counter-factual=+](#1,#4), DONE[counter-factual=+](#1,#5)
+
+if (SRC[counter-factual](#1,#2) & SRC[counter-factual](#1,#3) & SRC[counter-factual](#1,#4)  & ~DONE[counter-factual](#1,#2) & ~DONE[counter-factual](#1,#3) & ~DONE[counter-factual](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	SRC[counter-factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[counter-factual=+](#1,#2), DONE[counter-factual=+](#1,#3), DONE[counter-factual=+](#1,#4)
+
+if (SRC[counter-factual](#1,#2) & SRC[counter-factual](#1,#3) & ~DONE[counter-factual](#1,#2) & ~DONE[counter-factual](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	SRC[counter-factual=+, merged=+](#1,##noun[lemme=lemme1]), DONE[counter-factual=+](#1,#2), DONE[counter-factual=+](#1,#3)
+
+
+
+if (SRC[possible](#1,#2) & SRC[possible](#1,#3) & SRC[possible](#1,#4) & SRC[possible](#1,#5)  & ~DONE[possible](#1,#2) & ~DONE[possible](#1,#3) & ~DONE[possible](#1,#4)  & ~DONE[possible](#1,#5) & #2<#3 & #3<#4 & #4<#5 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface]+"; "+#5[surface])
+	SRC[possible=+, merged=+](#1,##noun[lemme=lemme1]), DONE[possible=+](#1,#2), DONE[possible=+](#1,#3), DONE[possible=+](#1,#4), DONE[possible=+](#1,#5)
+
+if (SRC[possible](#1,#2) & SRC[possible](#1,#3) & SRC[possible](#1,#4)  & ~DONE[possible](#1,#2) & ~DONE[possible](#1,#3) & ~DONE[possible](#1,#4)  & #2<#3 & #3<#4 & lemme1=#2[surface]+"; "+#3[surface]+"; "+#4[surface])
+	SRC[possible=+, merged=+](#1,##noun[lemme=lemme1]), DONE[possible=+](#1,#2), DONE[possible=+](#1,#3), DONE[possible=+](#1,#4)
+
+if (SRC[possible](#1,#2) & SRC[possible](#1,#3) & ~DONE[possible](#1,#2) & ~DONE[possible](#1,#3)  & #2<#3 & lemme1=#2[surface]+"; "+#3[surface])
+	SRC[possible=+, merged=+](#1,##noun[lemme=lemme1]), DONE[possible=+](#1,#2), DONE[possible=+](#1,#3)
+
+	
+
+// on marque d'un trait unique les COORDINATE qui seront utiles pour construire les EVENTs : il doit y en avoir une seule parmi les coordonnées de même type.
+// S'il y en a plusieurs:
+// COORDINATE[actor](Core,A), COORDINATE[actor](Core, B), COORDINATE[actor](Core, A+B)
+//=> COORDINATE[actor](Core,A), COORDINATE[actor](Core, B), COORDINATE[actor, unique](Core, A+B)
+// S'il n'y en a qu'une:
+// COORDINATE[actor](Core,A) =>  COORDINATE[actor, unique](Core,A)
+ 
+if (^COORDINATE[actor](#1,#2) & ~DONE[actor](#1,#2))
+	COORDINATE[unique=+](#1,#2)
+
+if (^COORDINATE[target](#1,#2) & ~DONE[target](#1,#2))
+	COORDINATE[unique=+](#1,#2)
+
+if (^COORDINATE[loc-pr](#1,#2) & ~DONE[loc-pr](#1,#2))
+	COORDINATE[unique=+](#1,#2)
+
+if (^SRC[factual](#1,#2) & ~DONE[factual](#1,#2))
+	SRC[unique=+](#1,#2)
+
+if (^SRC[counter-factual](#1,#2) & ~DONE[counter-factual](#1,#2))
+	SRC[unique=+](#1,#2)
+
+if (^SRC[possible](#1,#2) & ~DONE[possible](#1,#2))
+	SRC[unique=+](#1,#2)
+
+
+if (^DONE(#1,#2))
+	~
+
+
+
+// 2. construction des EVENT
+
+// Create the EVENT (political event) dependency that contains an actor and a core
+
+//actor and core
+if ( COORDINATE[actor, unique](#1,#2) & CORE(#1))
+	EVENT(#1,#2).
+
+if ( CORE(#1) & ~COORDINATE[actor](#1,?) )
+	EVENT(#1,##noun[lemme=0]).
+
+//target
+if ( EVENT(#1,#2) & COORDINATE[target, unique](#1,#3) )
+	EVENT(#1,#2,#3).
+
+if ( EVENT(#1,#2) & ~COORDINATE[target](#1,?) )
+	EVENT(#1,#2,##noun[lemme=0]).
+
+if (^EVENT(#1,#2))
+	~
+
+
+
+//EVENT drive
+if( ^EVENT(#1,#2,#3) & CORE-DRIVE(#4,#1))
+	EVENT(#4,#1,#2,#3)
+
+if( ^EVENT(#1,#2,#3) & ~CORE-DRIVE(?,#1))
+	EVENT(##noun[lemme=-],#1,#2,#3)
+
+//factuality
+
+if ( ^EVENT(#4,#1,#2,#3) & SRC[possible, unique](#1,#5))
+	EVENT[possible=+](#5,#4,#1,#2,#3)
+
+if ( ^EVENT(#4,#1,#2,#3) & SRC[factual, unique](#1,#5))
+	EVENT[factual=+](#5,#4,#1,#2,#3)
+
+if ( ^EVENT(#4,#1,#2,#3) & SRC[counter-factual, unique](#1,#5))
+	EVENT[counter-factual=+](#5,#4,#1,#2,#3)
+
+
+
+// plusieurs sources exprimées
+if (EVENT(#5,#4,#1,#2,#3) & SRC[possible, unique](#1,#6) & #5~:#6)
+	EVENT[possible=+](#6,#4,#1,#2,#3)
+
+if (EVENT(#5,#4,#1,#2,#3) & SRC[factual, unique](#1,#6) & #5~:#6)
+	EVENT[factual=+](#6,#4,#1,#2,#3)
+
+if (EVENT(#5,#4,#1,#2,#3) & SRC[counter-factual, unique](#1,#6) & #5~:#6)
+	EVENT[counter-factual=+](#6,#4,#1,#2,#3)
+
+
+//information - topic
+if ( ^EVENT(#6,#4,#1,#2,#3) & CORE[information, other:~](#1))
+	EVENT[information=+](#6,#4,#1,#2,#3)
+
+if ( ^EVENT(#6,#4,#1,#2,#3) & CORE[topic](#1))
+	EVENT[topic=+](#6,#4,#1,#2,#3)
+
+if ( ^EVENT(#6,#4,#1,#2,#3) & CORE[main](#1))
+	EVENT[main=+](#6,#4,#1,#2,#3)
+
+if ( ^EVENT(#6,#4,#1,#2,#3) & CORE[annex](#1))
+	EVENT[annex=+](#6,#4,#1,#2,#3)
+
+
+//location
+if( ^EVENT(#5,#4,#1,#2,#3) & COORDINATE[loc-pr, unique](#1,#6))
+	EVENT(#5,#4,#1,#2,#3,#6)
+
+if( ^EVENT(#5,#4,#1,#2,#3) & ~COORDINATE[loc-pr](#1,?))
+	EVENT(#5,#4,#1,#2,#3,##noun[lemme=0])
+
+//time
+
+if( ^EVENT(#5,#4,#1,#2,#3,#6) & COORDINATE[time](#1,#7))
+	EVENT(#5,#4,#1,#2,#3,#6,#7)
+
+if( ^EVENT(#5,#4,#1,#2,#3,#6) & ~COORDINATE[time](#1,?))
+	EVENT(#5,#4,#1,#2,#3,#6,##noun[lemme=0])
+
+
+
+
+// ajout des informations sur la source extérieure : journal ou auteur et date de publication
+// si ces informations ne sont pas présentes (par exemple si prend en entrée du txt), le lemme sera 0
+//if (^EVENT(#1,#2,#3,#4,#5,#6,#7) & INFOSOURCE(#8))
+//	EVENT(#1,#2,#3,#4,#5,#6,#7,#8)
+//if (^EVENT(#1,#2,#3,#4,#5,#6,#7,#8) & INFODATE(#9))
+//	EVENT(#1,#2,#3,#4,#5,#6,#7,#8,#9)
+

@@ -1,0 +1,218 @@
+# ============================================================================
+# CONTENT:	(x)fst script for basic tokenizer FST (no multi-words)
+#
+# LANGUAGE:	PORTUGUESE
+# CHARENCODING: UTF-8
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	29-Jun-1999
+# UPDATED:	14-Mar-2005
+# UPDATED:	03-Aug-2006	converted to UTF-8
+#
+# ============================================================================
+# USAGE:	xfst -s [AbbrFST] -l [ThisFile]
+# ============================================================================
+
+define ABBR
+
+# ---------------------------------------------------------------------
+echo >>> define token separator symbol
+define TS	"*TS*" ;
+
+echo >>> define internal markers
+define LFT	"<*" ;
+define RGT	"*>" ;
+
+define ANY	\[TS] ;
+define ANY1	\[TS|LFT|RGT] ;
+
+define INPUT	ANY1* ;
+
+# ---------------------------------------------------------------------
+echo >>> define white space
+define SPACE [
+  "\u0020" 	# SPACE
+| "\u0009"  	# HORIZONTAL TABULATION
+| "\u000A"  	# LINE FEED
+| "\u000D" 	# CARRIAGE RETURN
+| "\u00A0" 	# NO-BREAK SPACE
+];
+
+
+# ---------------------------------------------------------------------
+echo >>> define single symbols
+define SINGLE [
+  "\u0021"	# !	EXCLAMATION MARK
+| "\u0022"	# "	QUOTATION MARK
+| "\u0028"	# (	LEFT PARENTHESIS
+| "\u0029"	# )	RIGHT PARENTHESIS
+| "\u003C"	# <	LESS-THAN SIGN
+| "\u003E"	# >	GREATER-THAN SIGN
+| "\u003F"	# ?	QUESTION MARK
+| "\u005B"	# [	LEFT SQUARE BRACKET
+| "\u005D"	# ]	RIGHT SQUARE BRACKET
+| "\u007B"	# {	LEFT CURLY BRACKET
+| "\u007D"	# }	RIGHT CURLY BRACKET
+| "\u00A1"	# ¡	INVERTED EXCLAMATION MARK
+#| "\u00A4"	# ¤	CURRENCY SIGN
+| "\u00AB"	# «	LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+| "\u00B7"	# ·	MIDDLE DOT
+| "\u00BB"	# »	RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+| "\u00BF"	# ¿	INVERTED QUESTION MARK
+| "\u2014"	# (--)	EM DASH						## was: \x97
+| "\u201C" 	# (``)	LEFT DOUBLE QUOTATION MARK			## was: \x93
+| "\u201D"	# ('')	RIGHT DOUBLE QUOTATION MARK			## was: \x94
+| "\u201E"	# (,,)	DOUBLE LOW-9 QUOTATION MARK			## was: \x84
+| "\u2022"	# (*)	BULLET						## was: \x95
+| "\u2026"	# (...)	HORIZONTAL ELLIPSIS				## was: \x85
+| "\u2039" 	# (<)	SINGLE LEFT-POINTING ANGLE QUOTATION MARK	## was: \x8B
+| "\u203A"	# (>)	SINGLE RIGHT-POINTING ANGLE QUOTATION MARK	## was: \x9B
+];
+
+
+# ---------------------------------------------------------------------
+echo >>> define boundary symbols
+define BOUND [
+  "\u0027"	# '	APOSTROPHE
+| "\u0060"	# `	GRAVE ACCENT
+| "\u00B4"	# ´	ACUTE ACCENT
+#| "\u00B8"	# ¸	CEDILLA
+| "\u2018" 	# (`)	LEFT SINGLE QUOTATION MARK			## was: \x91
+| "\u2019" 	# (')	RIGHT SINGLE QUOTATION MARK			## was: \x92
+];
+
+# ---------------------------------------------------------------------
+echo >>> define QUOTES
+
+define LQUOTE [
+  "\u0060"	# `	GRAVE ACCENT
+| "\u2018" 	# (`)	LEFT SINGLE QUOTATION MARK			## was: \x91
+];
+
+define RQUOTE [
+  "\u0027"	# '	APOSTROPHE
+| "\u00B4"	# ´	ACUTE ACCENT
+| "\u2019" 	# (')	RIGHT SINGLE QUOTATION MARK			## was: \x92
+];
+
+
+define QUOTE	RQUOTE | LQUOTE ;
+
+# ---------------------------------------------------------------------
+echo >>> define right boundary symbols
+define RIGHT [
+
+  "\u002C"	# ,	COMMA
+| "\u002E"	# .	FULL STOP
+| "\u003A"	# :	COLON
+| "\u003B"	# ;	SEMICOLON
+| "\u201A" 	# (,)	SINGLE LOW-9 QUOTATION MARK			## was: \x82
+];
+
+# ---------------------------------------------------------------------
+echo >>> alphanumeric symbols (ie. anything else!)
+
+define ALPHA	ANY - [RIGHT|BOUND|SINGLE|SPACE];
+
+# ---------------------------------------------------------------------
+echo >>> define special tokens
+read regex
+[
+  "\u0027" (TS) "\u0027"	# ''
+| "\u002C" (TS) "\u002C"	# ,,
+| "\u0060" (TS) "\u0060"	# ``
+| "\u00B4" (TS) "\u00B4"	# ´´
+| "\u00B8" (TS) "\u00B8"	# ¸¸
+| "\u2018" (TS) "\u2018"	# (``)
+| "\u2019" (TS) "\u2019"	# ('')
+| "\u201A" (TS) "\u201A"	# (,,) 
+| %. [ (TS) %. ]+
+| %- [ (TS) %- ]+ 
+];
+define SPEC
+
+
+define SYMBOL 	ALPHA | BOUND | RIGHT | SINGLE  ;	# anything but white space
+
+define BOUND2	[ BOUND | RIGHT ] ;
+
+# ---------------------------------------------------------------------
+echo >>> build minimal tokenizer
+
+define BD	[ SPACE | TS | .#. ] ;
+
+regex
+[
+INPUT
+
+# insert token separator before SPACES
+.o.	[..] -> TS || SYMBOL _ SPACE 
+
+# insert token separator at end of file
+.o.	[..] -> TS || SYMBOL _ .#.	
+
+# insert token separator around single symbols
+.o.	[..] -> TS ||	SYMBOL _ [ SINGLE | SPEC ]
+.o.	[..] -> TS ||   [ SINGLE | SPEC ] _ SYMBOL
+
+# insert token separator before boundaries
+.o.	[..] ->	TS ||	SYMBOL _ BOUND2 [ BOUND2 | SPACE | TS ]
+
+# insert token separator after boundaries
+.o.	[..] ->	TS ||	[ BOUND | SPACE | TS | .#. ] BOUND _ SYMBOL
+
+# remove token separator in special symbols
+.o.	SPEC @-> LFT ... RGT 
+.o.	TS -> 0 || LFT [ANY1|TS]* _ [ANY1|TS]* RGT
+.o.	[LFT|RGT] -> 0
+];
+
+
+define TOK
+
+
+
+
+# =============================================================
+echo >>> remove token boundary before/after some quotes
+
+define Digit	[ %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ];
+define YEAR     [ Digit Digit ];
+
+read regex
+[
+  TOK 
+.o. [ TS -> 0 || BD QUOTE _ [ YEAR ] BD ]
+];
+define TOK
+
+
+# ----------------------------------------------------------------------
+echo >>> remove token boundary in abbreviations
+
+regex	[ ABBR .o. [ %. -> 0 || _ .#. ] ].2 ;
+define ABBR
+
+define CTXT	[ BD ABBR ];
+
+read regex
+ TOK 
+  .o. [ TS -> 0  || CTXT  _ %.  ]
+  .o. [ [..] -> TS || CTXT %. _ %. ] ;
+define TOK
+
+# =============================================================
+echo >>> remove white space:
+read regex   TOK .o.  [ [SPACE]+ @-> 0 || [ .#. | TS ] _ ] ;
+
+# =============================================================
+echo >>> replace token boundary by new line
+substitute symbol "\n" for  "*TS*"
+
+echo >>> eliminate auxiliary symbols
+substitute symbol ? for "<*"
+substitute symbol ? for "*>"
+
+echo >>> invert net
+invert net

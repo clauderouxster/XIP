@@ -1,0 +1,368 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP grammar
+//!   filename   : entity_dependencies_postsyntax.xip
+//!   Date       : 04/08/2003
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+DependencyRules:
+
+// >>>>>>>>>>>>>EXTRACTIONS 
+
+// We try to extract NPs for which
+// Heads are entities, and then mark them 
+// with the same tag 
+// ex : Cult film American film director Quentin Tarentino is a person 
+
+// Marking simple NP[det noun] like the Nixon 
+//SIMPLE allow to rule out some
+//undesirable analysis
+
+
+
+|NP#1{DET#3,NOUN#2[last]}| 
+        SIMPLE(#1)
+
+|NP#1{AP#2{ADJ#3[lemme:next_to]}}|
+         SIMPLE(#1)
+
+|NP#1{AP#2{ADV#3}}|
+         SIMPLE(#1)
+
+|NP#1{NOUN#1[proper],part[last]}|
+         SIMPLE(#1)
+ 
+|NP#1{ADV,NOUN#1[proper],part[last]}|
+         SIMPLE(#1)
+
+|NP#1{AP#2{NADJ#3[hmm_verb,prof:~]},NOUN#4[last]}|
+        SIMPLE(#1)
+
+|NP#1{AP#2{ADJ#3[partpas]},NOUN#4[last]}|
+        SIMPLE(#1)
+
+|NP#1{AP#2{ADJ#3[lemme:ago]},NOUN#4[last]}|
+        SIMPLE(#1)
+
+|NP#1{AP#2{ADJ#3[lemme:only]},NOUN#4[last]}|
+        SIMPLE(#1)
+
+|NP#1{QUANT[start]}|
+        SIMPLE(#1)
+
+|NP#1{AP#2{ADJ#3[modloc:~]},NOUN#4[last,place]}|
+        SIMPLE(#1)
+
+|NP#1{AP{ADJ[quant]},NOUN#2[last]}|
+         SIMPLE(#1) 
+
+|NP#1{AP{NADJ{ADJ[quant]}},NOUN#2[last]}|
+         SIMPLE(#1) 
+
+
+// THE NP MARKING  
+|NP#1{?+[comma:~,indef:~,partpas:~,hmm_verb:~,vprog:~,hmm_vpap:~,dig:~,punct:~],NOUN#2[cr:~,cr2:~,firstname:~]}|
+ if(PERSON(#2) & HEAD(#2,#1) & ~SIMPLE(#1) & ~PERSON(#1))
+       PERSON(#1)
+
+|NP#1{?+[comma:~,dig:~,indef:~,partpas:~,hmm_verb:~,hmm_vpap:~,punct:~],NOUN#2[cr:~,cr2:~]{NOUN[prof:+]}}|
+ if(PERSON(#2) & HEAD(#2,#1) & ~SIMPLE(#1) & ~PERSON(#1))
+       PERSON(#1)
+#toto
+|NP#1{?[dig:~,hmm_verb:~,comma:~,indef:~,partpas:~,vprog:~,part:~],NOUN#2[cr:~,cr2:~]{?*,NOUN#3}}|
+        if(PERSON(#2)& HEAD(#3,#1)& ~SIMPLE(#1)  & ~PERSON(#1))
+          PERSON(#1)
+
+
+
+|NP#1{AP#3{?[adj,first,last]},NOUN#2[last]}|
+        if(LOCORG(#2) & ~SIMPLE(#1))
+        LOCORG(#1)
+
+|NP#1[tutu:+]|
+LIXO(#1)
+
+// With parts
+
+|NP#1{NOUN#3[proper],PART,NOUN#2[person]}|
+        if(~PERSON(#1))
+        PERSON(#1)
+
+
+|NP#1{NOUN#2[proper],PART,NOUN[last,locpost]}|
+        LOCATION(#1)
+
+//|NP#1{?*,NOUN#2[person,org:~],PART,noun[last,org,place:~]}|
+//        if(ORGANISATION(#3))
+//         ORGANISATION(#1)
+
+//|NP#1{?*,NOUN#2[person,org:~],PART,NOUN#3[last,bus]}|
+//        if(ORGANISATION(#3))
+ //        ORGANISATION(#1)
+
+//|NP#1{?*,NOUN#2[celeb,org:~],PART,noun#3[last,org]}|
+//        if(ORGANISATION(#3))
+//         ORGANISATION(#1)
+
+//|NP#1{?*,NOUN#2[celeb,org:~],PART,noun[last,bus]}|
+//           if(ORGANISATION(#3))
+ //        ORGANISATION(#1)
+
+|NP#1{NOUN#2[place,first],?*[maj],noun[last,orghead]}|
+         ORGANISATION(#1)
+
+|NP#1{NOUN#2[person],part,noun[last,orghead]}|
+         ORGANISATION(#1)
+
+
+|NP#1{NOUN#2[celeb,person:~],part,noun[last,orghead]}|
+         ORGANISATION(#1)
+
+
+|NP#1{NOUN#2,PART,NOUN#3}|
+        if( ORGANISATION(#2) &  ORGANISATION(#3))
+        ORGANISATION(#1)
+
+|NP#1{NOUN#2,PART,NOUN#3[orghead]}|
+        if( ORGANISATION(#2) )
+        ORGANISATION(#1)
+
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(PERSON(#2) & LOCORG(#3))
+        LOCORG(#1)
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(LOCORG(#2) & ORGANISATION(#3))
+        ORGANISATION(#1)
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(LOCORG(#2) & LOCATION(#3))
+        LOCORG(#1)
+
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(LOCORG(#2) & LOCORG(#3))
+        LOCORG(#1)
+
+//=========== A TEST ============
+
+if(SUBJATTR(#1,#2) & PERSON(#1))
+        LIXO(#1,#2)
+
+// VIKEF
+
+// RELATIONS FOR VIKEF 
+
+
+|NP#1{NOUN#2[person],dig#3}|
+        PERS-AFFILNUM(#2,#3)
+
+|NP{?*,dig#2[rom:~,dec:~],noun#3[org],?*}|
+        ORG-AFFILNUM(#3,#2)
+
+|NP{?*,dig#2[rom:~,dec:~],noun#3[bus],?*}|
+        ORG-AFFILNUM(#3,#2)
+
+Script:
+
+|NOUN#1[lemme:"biography"]|
+        {_BIO=1;}
+
+ //comptage pers
+//at least one
+
+// No author after Abstract//
+|NADJ#1[lemme:"abstract"]|
+        {_ABST=1;}
+
+
+if(PERSON(#1))
+        {_NBPERS=1;}
+
+ //comptage org
+
+if(ORGANISATION(#1) & _NBORG:0)
+        {_NBORG=_NBORG+1; ORGA=#1[lemme];}
+
+if(ORG-AFFILNUM(#1,#2))
+        {_NBORGAFFIL=1;} //marqueur de la premiere affilitiation rencontree
+                        // Condition imperative : il faut trouver une affiliation
+
+if(PERSON(#1) & _NBORG:0)
+        {addstring(auth,#1[lemme]);}  //liste des personnes avant passage sur ORG --> auteurs
+
+//if(ORGANISATION(#1) & _NBORG:1){
+  //      for(i=0;i<auth;i=i+1)
+  //      { _print(auth[i]) ; }}
+
+
+DependencyRules:
+
+
+
+// Crado
+
+|NP{?*,noun[email:+],dig#1[rom:~]},NP{noun#2}|
+         ORG-AFFILNUM(#2,#1)
+
+//if(_NBORGAFFIL:0 & PERSON(#1) & _BIO:0 & _ABST:0) //BIO:0 : on ne se trouve pas dans une biographie
+//        AUTHOR(#1)
+
+// Si on a vu au moins une personne
+// et que l'on a pas encore rencontré d'organisations
+// on se trouve dans l'entete avant les affiliations
+// heuristique : les personnes sont alors les auteurs de 
+// l'article (attention : pas d'org dans le titre !!!)
+
+//if(PERSON(#1) & _NBORG:0 & ~AUTHOR(#1) & _BIO:0 & _ABST:0 )
+//         AUTHOR(#1)
+// 1ere organisation rencontrée = organisation
+// d'affiliation . Attention doit etre en tete de syntagme
+
+if(ORGANISATION(#1[start])  & ORGA:#1[lemme] & ~ORG-AFFILNUM(#1,#2))
+       AFFIL-ORG(#1)
+
+
+
+
+//+++++++++++++++++++++++++FIN VIKEF 
+
+/ need to remove duplicates\
+
+|NP#1{?*,NOUN#2}|
+        if(PERSON(#1) & ^PERSON(#2))
+        ~
+
+|NP#1{?*,NOUN#2}|
+        if(AUTHOR(#1) & ^AUTHOR(#2))
+        ~
+
+if(AUTHOR(#1) & ^PERSON(#1))
+        ~
+
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(LOCORG(#2) & ^LOCORG(#3))
+        ~
+
+|NP#1{NOUN#2[proper],PART,NOUN[last,locpost]}|
+      if(LOCATION(#1) & ^PERSON(#2))
+        ~
+
+//|NP#1{?*,NOUN#2[person],PART,NOUN#3[last,org]}|
+ //        if(^PERSON(#2) & ORGANISATION(#1))
+ //       ~
+
+//|NP#1{?*,NOUN#2[person],PART,NOUN#3[last,org]}|
+ //        if(^ORGANISATION(#3) & ORGANISATION(#1))
+ //       ~
+
+|NP#1{AP#3{?[adj,first,last]},NOUN#2[last]}|
+        if(^LOCORG(#2) & LOCORG(#1))
+        ~
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^LOCORG(#2) & LOCORG(#1))
+        ~
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^LOCATION(#3) & LOCORG(#1))
+        ~
+
+|NP#1{NOUN#2[place,first],?*,NOUN[last,orghead]}|
+         if(ORGANISATION(#1) & ^LOCORG(#2))
+        ~
+
+|NP#1{NOUN#2[place,first],?*,NOUN[last,orghead]}|
+         if(ORGANISATION(#1) & ^LOCATION(#2))
+        ~
+
+|NP#1{NOUN#2,PART,NOUN#3}|
+        if( ^ORGANISATION(#2)  & ORGANISATION(#1))
+         ~
+|NP#1{NOUN#2,PART,NOUN#3}|
+        if( ^ORGANISATION(#3)  & ORGANISATION(#1))
+         ~
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^LOCORG(#2) & ORGANISATION(#1))
+        ~
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^ORGANISATION(#3) & ORGANISATION(#1))
+        ~
+
+
+//|NP#1{NOUN#2,PART,NOUN#3[last]}|
+//        if(PERSON(#2) & ^ORGANISATION(#3))
+ //       ~
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(PERSON(#2) & ^LOCORG(#3))
+        ~
+
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^PERSON(#2) & ORGANISATION(#1))
+        ~
+        
+|NP#1{NOUN#2,PART,NOUN#3[last]}|
+        if(^PERSON(#2) & LOCORG(#1))
+        ~
+
+|NP#1{?*,NOUN#2}|
+if (PERSON(#1) & ^PERSON(#2))
+        ~
+
+|NP#1{?*,NOUN#2}|
+        if (PERSON(#1) & ^LOCORG(#2))
+        ~
+
+|NP#1{?*,NOUN#2}|
+        if (PERSON(#1) & ^ORGANISATION(#2))
+        ~
+
+|NP#1{NOUN#2,NOUN#3}|
+        if  (PERSON(#1) & ^ORGANISATION(#2))
+        ~
+
+|NP#1{NOUN#2}|
+        if  (PERSON(#1) & ^ORGANISATION(#2))
+        ~
+
+|NP#1{?*,AP{NADJ{NOUN#2}}}|
+        if(^LOCORG(#2) & PERSON(#1))
+        ~
+
+|NOUN#1{NOUN#2,?*}|
+        if (EVENT(#1) & ^AUTHOR(#2))
+        ~
+//idem for location ?
+
+/|NP#1{?*,NOUN#2}|
+ if(LOCATION(#2) & HEAD(#2,#1))
+       LOCATION(#1)\
+
+
+/ need to remove duplicates\
+
+
+/|NP#1{?*,NOUN#2}|
+if (LOCATION(#1) & ^LOCATION(#2))
+        ~\
+        
+        
+        
+        
+
+
+
+
+

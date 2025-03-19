@@ -1,0 +1,369 @@
+use("kifliblinear");
+
+loadin(_paths[1]+_sep+"dictionaries2.kif");
+
+liblinear pred(_paths[1]+_sep+"model_test_categories");
+
+string path = '/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/GRMFILES/scoop-restaurant.grm';
+parser p(path);
+
+vector v;
+vector cats;
+vector terms;
+istreemap categories={0:"food",1:"price",2:"service",3:"ambience",4:"anecdotes/miscellaneous"};
+sstreemap sentcat;
+string cat;
+sitreemap allwordsinstring;
+treemap problabel;
+
+vector Categories;
+vector Terms;
+map offsetbeg;
+map offsetend;
+map CategSentiment;
+map TermSentiment;
+
+string rule=@"
+
+script:
+
+|#1[punct:~,url:~,terminal,conj:~,det:~]|{
+     storewords(#1);
+}
+if(FOOD$2(#1)){
+     getdeps($2);
+}
+
+if(SERVICE$3(#1)){
+     getdeps($3);
+}
+
+if(AMBIENCE$4(#1)){
+     getdeps($4);
+}
+
+if(PRICE$5(#1)){
+     getdeps($5);
+}
+
+if(OPINION-ON-ASPECT-CATEGORY$6(#1)){
+     getdeps($6);
+}
+
+if(OPINION-ON-ASPECT-TERM$7(#1)){
+     getdeps($7);
+     getdependencies($7);
+}
+"@;
+p.addendum(rule,true);
+
+function storewords(node n){
+     string s=n.lemma().lower();
+     if(allwordsinstring.test(s)==true){
+          allwordsinstring[s] ++;
+     }
+     else if (allwordsinstring.test(s)==false){
+          allwordsinstring[s]=1;
+     }
+}
+
+function storemultiwords(node n){
+     string s  = n.lemma().lower();
+     svector sv = s.tokenize();
+     for(s in sv){
+          if(allwordsinstring.test(s)==true)
+               allwordsinstring[s] ++;
+          else if (allwordsinstring.test(s)==false){
+               allwordsinstring[s]=1;
+          }
+     }
+}
+
+function storemultiwords(node n, dependency d){
+     string depname = d.name().lower();
+     string s  = n.lemma().lower() + " " + depname.lower();
+     svector sv = s.tokenize();
+     for(s in sv){
+          if(allwordsinstring.test(s)==true)
+               allwordsinstring[s] ++;
+          else if (allwordsinstring.test(s)==false){
+               allwordsinstring[s]=1;
+          }
+     }
+}
+
+function getdeps(dependency d){
+     if(d.name()=="FOOD" || d.name()=="SERVICE" || d.name()=="AMBIENCE" || d.name()=="PRICE"){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.surface();
+          println(s1 + " ---- " + d.name().lower());
+          //	storemultiwords(n1,d);
+          storemultiwords(n1);
+          } else if  (d.name()=="OPINION-ON-ASPECT-CATEGORY" || d.name()=="OPINION-ON-ASPECT-TERM"){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.surface();
+          println(s1 + " ---- ");
+          storemultiwords(n1);
+     }
+}
+
+function getdependencies(dependency d){
+     if(d.name()=="OPINION-ON-ASPECT-CATEGORY"){
+          vector v1 = d.parameters();
+          node n1 = v1[0];
+          string s1 = n1.surface();
+          Categories.push(n1);
+          if(d.feature("NEGATIVE","+")==1)
+               CategSentiment[s1] = "NEGATIVE";
+          elif(d.feature("POSITIVE","+")==1)
+               CategSentiment[s1] = "POSITIVE";
+          elif(d.feature("CONFLICT","+")==1)
+               CategSentiment[s1] = "CONFLICT";
+          elif(d.feature("NEUTRAL","+")==1)
+               CategSentiment[s1] = "NEUTRAL";
+          println("Category is ", n1.surface(), d.features(),"--->", CategSentiment[s1]);
+     }
+     if(d.name()=="OPINION-ON-ASPECT-TERM"){
+          vector v2 = d.parameters();
+          node n2 = v2[0];
+          string s2 = n2.surface();
+          int left,right;
+          n2.offset(left,right);
+          Terms.push(n2);
+
+          if(d.feature("NEGATIVE","+")==1)
+               TermSentiment[s2] = ["NEGATIVE",left,right];
+          elif(d.feature("POSITIVE","+")==1)
+               TermSentiment[s2] = ["POSITIVE",left,right];
+          elif(d.feature("CONFLICT","+")==1)
+               TermSentiment[s2] = ["CONFLICT",left,right];
+          elif(d.feature("NEUTRAL","+")==1)
+               TermSentiment[s2] = ["NEUTRAL",left,right];
+          println("Term is ", n2.surface(), d.features(),"--->", TermSentiment[s2]);
+     }
+}
+
+function readXml(xml n, self s){
+     if(n.name()=="text"){
+          v.push(n);
+     }
+     elif(n.name()=="aspectCategories"){
+          cats.push(n);
+     }
+     elif(n.name()=="aspectTerms"){
+          terms.push(n);
+     }
+}
+
+function choosecategoriesversion1(vector probs, vector labels,float threshold){
+     println(probs + " " + labels);
+     int i=0;
+     for(i=0;i<probs.size();i++){
+          if(probs[i]>threshold)
+               problabel[probs[i]]=labels[i];
+     }
+}
+
+function choosecategoriesversion2(vector probs, vector labels,float threshold){
+     println(probs + " " + labels);
+     int i=0;
+     map probslabelsunsorted;
+     for(i=0; i<probs.size();i++) {
+          probslabelsunsorted[probs[i]] = labels[i];
+     }
+     println(probslabelsunsorted);
+     probs.sortfloat(false);
+     float difference;
+     // add the highest probability
+     problabel[probs[0]] = probslabelsunsorted[probs[0]];
+     // check to see if there should be other probabilities added and add them
+     for(i=1;i<probs.size()-1;i++){
+          if(problabel.test(probs[i-1])==true){
+               println("added " + probs[i-1]);
+               difference = probs[i-1] - probs[i];
+               if(difference<threshold){
+                    problabel[probs[i]] = probslabelsunsorted[probs[i]];
+               }
+          }
+     }
+     println(problabel);
+}
+
+function choosecategoriesversion3(vector probs, vector labels,float thresholdMaxDif, float thresholdMinDif){
+     println(probs + " " + labels);
+     int i=0;
+     map probslabelsunsorted;
+     for(i=0; i<probs.size();i++){
+          probslabelsunsorted[probs[i]] = labels[i];
+     }
+     println(probslabelsunsorted);
+     probs.sortfloat(false);
+     float difference;
+     // add the highest probability
+     problabel[probs[0]] = probslabelsunsorted[probs[0]];
+     // check to see if there should be other probabilities added and add them
+     for(i=1;i<probs.size()-1;i++){
+          if(problabel.test(probs[i-1])==true){
+               println("added " + probs[i-1]);
+               difference = probs[i-1] - probs[i];
+               if(difference<thresholdMaxDif && difference>thresholdMinDif){
+                    problabel[probs[i]] = probslabelsunsorted[probs[i]];
+               }
+          }
+     }
+     println(problabel);
+}
+
+function choosecategoriesversion4(vector probs, vector labels,float thresholdMaxDif, float thresholdMinValue){
+     println(probs + " " + labels);
+     int i=0;
+     map probslabelsunsorted;
+     for(i=0; i<probs.size();i++){
+          probslabelsunsorted[probs[i]] = labels[i];
+     }
+     println(probslabelsunsorted);
+     probs.sortfloat(false);
+     float difference;
+     // add the highest probability
+     problabel[probs[0]] = probslabelsunsorted[probs[0]];
+     // check to see if there should be other probabilities added and add them
+     for(i=1;i<probs.size()-1;i++){
+          if(problabel.test(probs[i-1])==true){
+               println("added " + probs[i-1]);
+               difference = probs[i-1] - probs[i];
+               if(difference<thresholdMaxDif && probs[i]>thresholdMinValue){
+                    problabel[probs[i]] = probslabelsunsorted[probs[i]];
+               }
+          }
+     }
+     println(problabel);
+}
+function predictionforstring(string str){
+     println("\nStarting prediction...");
+     //string str="The fish was quite fine, although in terms of the waiters, things were far worse.";
+     //svector wrds=str.tokenize().lower();
+     allwordsinstring.clear();
+     p.parse(str);
+     println("All words and their frequencies: " + allwordsinstring + "\n");
+
+     vector donnees;
+     fvector labels=[0];
+     iftreemap imd;
+
+     for (str in allwordsinstring) {
+          if (allthewords.test(str))
+               imd[allthewords[str]]=allwordsinstring[str];
+     }
+     donnees.push(imd);
+
+     vector reponse=pred.predict(donnees,true,true);
+     vector predictedclassresults = reponse[1];
+     int predictedclass = predictedclassresults[0];
+     sentcat[str] = categories[predictedclass];
+     cat = sentcat[str];
+     //  println(sentcat[str]);
+     println("Result of prediction...");
+     println(reponse);
+     map respprobs = reponse[1];
+     map resporder = reponse[0];
+     // ---------------------------------
+     // input parameters to choose the categories:
+     // vector of the probabilities  - respprobs.values()[0]
+     // vector holding the order of classes - resporder['labels']
+     // thresholds
+     // ---------------------------------
+
+     // set threshold = min probability value to be taken into account
+     choosecategoriesversion1(respprobs.values()[0], resporder['labels'], 0.3);
+     // set threshold = min difference between 2 probabilities
+     //   choosecategoriesversion2(respprobs.values()[0],resporder['labels'], 0.2);
+     // set thresholds min/max = min/max value of difference between 2 probabilities
+     //   choosecategoriesversion3(respprobs.values()[0], resporder['labels'], 0.5, 0.1);
+     // set thresholds = max value of difference between 2 probabilities, min probability value to be taken into account
+     //   choosecategoriesversion4(respprobs.values()[0], resporder['labels'], 0.9, 0.25);
+     //  println(donnees);
+}
+
+xmldoc inputXml with readXml;
+inputXml.load('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/Corpus/ABSA_TestData_PhaseA/ABSA_TestData_PhaseA/Restaurants_Test_Data_PhaseA.xml');
+//inputXml.load('/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/scripts_SemEval/Corpus/restaurants-trial.xml');
+//'/opt/ParSem/users/diana/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/Corpus/SemEval/Restaurants/Restaurants/Restaurants_Train_v2.xml');restaurants-trial.xml
+
+xml n;
+for(n in v){
+     if(n!=null){
+          string s;
+          s = n.content();
+          if(s!=null){
+               println("\n ----- \n");
+               println(s);
+               problabel.clear();
+               predictionforstring(s);
+
+               vector keys;
+               string CurrentKey;
+               string CurrentValue;
+               if(TermSentiment.size()>0){
+                    xml ParentNode = n.parent();
+                    xml sib;
+                    // add new child "aspectTerms"
+                    sib.new("aspectTerms");
+                    keys = TermSentiment.keys();
+                    for(CurrentKey in keys){
+                         // add new child "aspectTerm"
+                         xml sib2;
+                         sib2.new("aspectTerm");
+                         ssprimemap ssm;
+                         // add category
+                         ssm["term"] = CurrentKey;
+                         // add polarity
+                         CurrentValue = TermSentiment[CurrentKey][0].lower();
+                         ssm["polarity"] = CurrentValue;
+                         ssm["from"]=TermSentiment[CurrentKey][1] ;
+                         ssm["to"]=TermSentiment[CurrentKey][2] ;
+                         println(ssm);
+                         println("Term Key: ", CurrentKey, " Value: ", CurrentValue);
+                         sib2.properties(ssm);
+                         sib.child(sib2);
+                    }
+                    ParentNode.child(sib);
+                    Terms.clear();
+                    TermSentiment.clear();
+               }
+               if(problabel.size()>0){
+                    xml ParentNode = n.parent();
+                    xml sib;
+                    // add new child "aspectCategories"
+                    sib.new("aspectCategories");
+                    // add new child "aspectCategory" for each prob chosen
+                    float f;
+                    for(f in problabel.keys()){
+                         xml sib2;
+                         sib2.new("aspectCategory");
+                         ssmap ssm;
+                         // add category
+                         ssm["category"] = categories[problabel[f]];
+                         sib2.properties(ssm);
+                         sib.child(sib2);
+                         ParentNode.child(sib);
+                    }
+               }
+          }
+
+     }
+}
+
+xml c,t;
+for(c in cats){
+     c.delete();
+}
+for(t in terms){
+     t.delete();
+}
+
+string pthsave=_paths[1]+'/../Corpus/restaurants-test_categories_terms_diana_25032014.xml';
+inputXml.save(pthsave);
+inputXml.close();
+

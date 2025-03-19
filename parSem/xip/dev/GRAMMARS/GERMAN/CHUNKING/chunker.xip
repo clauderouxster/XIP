@@ -1,0 +1,158 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	chunker.xip
+//! Content:	chunking rules for the german XIP grammar (without HMM)
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller, Sigrid Maurel
+//!
+//! Created: 	17-Jan-2006
+//! Updated:	06-Sep-2006
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Chunker
+// -------------------------------------------------------------------------------------
+
+
+Sequence:
+
+// conjunctions
+// "Oma erlaubt sich ein Urteil, ohne dass sie weiß worum es geht."
+// "Oma war krank, so dass sie ins Krankenhaus eingeliefert werden musste."
+10> conj[subord=+] = conj[coord:~];adv, conj[coord:~].
+
+// --------------------------------------------------------------------------------------
+// simple APs
+
+// truncs
+// "Fehlercodes sind entweder 4- oder 5-stellige Nummern."
+11>  ap[agr:!] = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, adja. 
+
+// :: die AP{sich ausweitenden} Krawalle
+// :: die AP{sich rasch ausweitenden} Krawalle
+12> ap1[agr:!] = pron[refl], (adv;adjp)*, adja[noun:~, !decl:!, !agr:! ].
+
+// :: AP{sehr schnell fahrendes} Auto
+12> ap1[agr:!] = (adv;adjp)*, adja[noun:~, !decl:!, !agr:! ].
+
+// :: die AP{Vereinigten} Staaten
+12> ap1[agr:!] = (adv;adjp)*, adja[proper:+, !decl:!, !agr:!, !cap:!, !nadj:! ] | ?[noun:+] |.
+
+ 
+// coordinated APs 
+
+13> ap[agr:!] @= ap1[!agr:!,!decl:!], 
+	( (punct[comma];conj[coord] ), 
+	ap1[!agr:!,!decl:!] )*.
+
+
+Reshuffling: 
+// flatten AP structure
+15> ap1{?-#1} = #1.
+
+
+// --------------------------------------------------------------------------------------
+// simple NPs
+
+Sequence:
+
+// truncs
+// "Kopier-/Fax- und Systemgeräte"
+// "Über die Gesundheits- und die Unternehmenssteuerreform wollen die Spitzen von Union und SPD erst in einer Woche entscheiden."
+// "Man habe ausloten wollen, was auf Länder- und auf Bundesseite möglich sei."
+//20>  noun = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, (adv; ptcl), noun[!agr:!, !decl:! ]. 
+20>  noun = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, (adv; ptcl), (prep), (det[!agr:!, !decl:! ]), noun[!agr:!, !decl:! ]. 
+
+
+
+	
+// date
+21> noun[date=+,p3=+] @= num[ord,dig], noun[month,!agr:!,!decl:!], (num[card,dig]).
+
+
+// personal pronoun 
+22> np[agr:!] = pron[pers,!agr:!,!person:!].
+
+
+// other pronoun
+22> np[p3=+, agr:!]	= pron#1[pers:~, !rel:!, !agr:! ].
+
+
+
+// noun with adjective
+// evtl nur agr vom det durchgeben?
+// "die anderen blutdrucksenkenden Medikamente"
+22> np[p3=+, agr:!] = 	det#1[ !wh:+!, !agr:! ],
+	( num[ card, !agr:! ]; num[ ord, dig:+] ), (padj[!agr:!]),
+	( ap[ !agr:! ] ), 
+	noun#2[ !agr:!, symbol:~ ].
+
+// "die folgenden zwei Formate"
+22> np[p3=+, agr:!] = det#1[ !wh:+!, !agr:! ],
+	( ap[ !agr:! ] ), 
+	( num[ card, !agr:! ]; num[ ord, dig:+] ), 
+	noun#2[ !agr:!, symbol:~ ].
+
+22> np[p3=+, agr:!] =  num[ card, !agr:! ],  
+	 ( ap[ !agr:! ]), 
+	noun[ !agr:! ]. 
+
+
+22> np[p3=+, agr:!] =  (padj[!agr:!]), ( ap[ !agr:! ]), 
+	noun[ !agr:! ]. 
+
+
+// genitive (possessive)
+//
+//115> nmod = np[human,gen], noun[!agr:! ].
+
+// proper names 
+// layer number must be lower than "normal" nps, otherwise names are not more nouns but nps, and rule with 120 doesn't work!
+//120> np[human=+,p3=+, agr:!] = noun[firstname], noun[lastname, !agr:! ].
+
+
+25> np[human=+,p3=+, agr:!] = (det[!agr:!]), noun[firstname], (symbol[cap:+, init:+]; noun[firstname])*, (prep[lemma:von]), noun[lastname, !agr:! ].
+
+//*TODO*: handle ambiguous last or first names (e.g. "Mann", "Bauer", etc.)
+26> np[human=+,p3=+, agr:!] = noun[lastname,common:~,!agr:! ].
+26> np[human=+,p3=+, agr:!] = noun#2[firstname,common:~,!agr:! ].
+
+
+// nominalized adjectives
+// "der Grüne Hans-Christian Ströbele"
+// "Das Militär führte daraufhin Kommissionen ein, vor denen die Anschuldigungen verlesen werden und die Angeklagten Gelegenheit zur Aussage haben."
+26> np[p3=+, agr:!, nadj:!, cap:!] =  (det[ !wh:+!, !agr:! ]), (padj[!agr:!]), ap[!agr:!, cap:+, nadj:+] . 
+
+
+
+Sequence:
+// --------------------------------------------------------------------------------------
+// PPs
+30> pp = prep#1, np#2 . 	//4.9.: [pre:+]
+
+// "Diese könnte AB 2008 schrittweise eingeführt werden."
+30> pp = prep#1, num#2.	//4.9.: [pre:+]
+
+
+
+
+
+
+// truncated verbs
+// "Das Gerät über den Schalter an der rechten Seite des Geräts AUS- und wieder einschalten."
+40>  verb = (?[trunc], conj[coord];punct[comma];punct[lemma:\/])+, (adv), verb[!inf:!, !finite:!]. 
+
+// --------------------------------------------------------------------------------------
+// Infinitives
+41> infzu = ptcl[infzu:+], verb[inf:+, zu:~].
+41> infzu = verb[inf:+,zu:+].
+
+
+// --------------------------------------------------------------------------------------
+// finite verbs
+42> vfin =  verb#2[finite:+, !modal:!, !subjc:!, !indic:!, !nursubjc:!].
+

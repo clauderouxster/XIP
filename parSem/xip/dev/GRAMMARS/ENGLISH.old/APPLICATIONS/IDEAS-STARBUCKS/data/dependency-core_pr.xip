@@ -1,0 +1,215 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-core_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// 
+
+
+DependencyRules:
+
+
+
+/////////////////////////////////////////////////////
+// NOUNS
+/////////////////////////////////////////////////////
+
+
+// CORE-NOUN=nouns that are potentially cores of events. They are nouns that refer to an action. These nouns are either in derivational relationships with verbs or eneterd from the corpus with the feature [evnt]
+
+
+// noms issus d'une liste (principalement déverbaux)
+
+if ( HEAD2(#1[noun,evnt],#3NP) & ~CORE-NOUN(#1))
+	CORE-NOUN(#1).
+
+// noms que le contexte suffit à indiquer comme noms d'événement
+// sauf les noms de période et les adjectifs substantivés
+
+
+if ((SUBJ(#1[lemme:occur],#2[noun,noevnt:~]) | SUBJ-N(#1[lemme:occur],#2[noun,noevnt:~])) & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+if ((SUBJ(#1[lemme:happen],#2[noun,noevnt:~]) | SUBJ-N(#1[lemme:happen],#2[noun,noevnt:~])) & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+if ((SUBJ(#1[lemme:last],#2[noun,noevnt:~]) | SUBJ-N(#1[lemme:last],#2[noun,noevnt:~])) & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+if (PREPD(#1[noun,noevnt:~, tempexpr:~, time_span:~],?[lemme:during])& ~HEAD2(#1,#4[tempexpr])  & ~CORE-NOUN(#1))
+	CORE-NOUN(#1)
+
+// noms qui sont des événements dans certains contextes
+if ((OBJ(#1[sv],#2[noun,evnt_sv]) | OBJ-N(#1[sv],#2[noun,evnt_sv]) )  & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+if ((OBJ(#1[phase],#2[noun,evnt_sv]) | OBJ-N(#1[phase],#2[noun,evnt_sv])| SUBJ-N(#1[phase],#2[noun,evnt_sv]) )  & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+//nom qui a des événements pour arguments
+if ((OBJ(#1[noun],#2)| OBJ-N(#1[noun],#2) | SUBJ-N(#1[noun],#2)) & CORE(#2) & ~CORE-NOUN(#1))
+	CORE-NOUN(#1)
+
+// nom en association avec un verbe support
+if ((OBJ(#1[sv],#2[evnt_sv]) | OBJ-N(#1[sv],#2[evnt_sv]))  & ~CORE-NOUN(#2))
+	CORE-NOUN(#2)
+
+// cas particuliers
+// noms qui ne sont pas des événements dans certaines circonstances
+if (^CORE-NOUN(#1[lemme:installation]) & (~PREPD(#3,#2[form:fof]) | (PREPD(#3,#2[form:fof]) & ~LOCATION(#3) & ~LOCORG(#3))))
+	~ 
+
+if (^CORE-NOUN(#1[lemme:turn]) & PREPD(#1,#2[form:fin]))
+	~
+
+// noms qui sont des événements dans certaines circonstances
+
+if (^CORE-NOUN(#1[noevnt]))
+	~
+
+if (MOD(#1[lemme:division],#2) & PREPD(#2,#3[sc_pwithin]))
+	CORE-NOUN(#1)
+
+
+// inspectors are on standby
+// We don't want all prepositional complements of 'to be' to be COREs (to be in Iran), only those that have the feature beprep.. 
+if ( MOD[post](#1[cop],#2[beprep]) & PREPD(#2,?))
+	CORE-NOUN[attribute=+](#2)
+
+// eliminate shorter head
+
+if ( ^HEAD[prep_modif:~](#1,#2) & HEAD[prep_modif](#1,#3) )
+	~.
+
+
+/////////////////////////////////////////////////////
+// VERBS
+/////////////////////////////////////////////////////
+// Method: Definitions of COREs 2) Verbs a) non-finite 
+
+
+if (HEAD2(#1[verb],#2[verb]) & ~NUCL[vlink](#1,?) )
+	CORE-VERB(#1) 
+
+
+// create dependence CORE-VERB for verbs that are non-finite
+
+| iv{(?[form:finfto]), ?*, #1[verb]} |
+	CORE-VERB(#1).
+
+
+| iv{?[form:fnot], #1[verb]} |
+	CORE-VERB(#1).
+
+
+
+| ?[form:finfto], fv{#1[verb]} |
+	CORE-VERB(#1).
+
+| nfv{#2[lemme:be,inf], ?*, #1[last]} |
+	CORE-VERB(#1).
+
+
+| nfv{#2[lemme:have,inf], ?*, #1[last]} |
+	CORE-VERB(#1).
+
+
+| gv{#1} |
+	CORE-VERB(#1).
+
+
+|gv{#1,?*,#2}|
+	if (NUCL[vlink, passive](#1,#2) & ~CORE-VERB( #2))
+	CORE-VERB(#2).
+
+
+if ( NUCL[vlink,modal](#2,#1) & ~CORE-VERB(#1) )
+	CORE-VERB(#1).
+
+
+if ( MOD[post,pastpart](#1,#2) )
+	CORE-VERB(#2).
+
+
+// Method: Definitions of COREs 2) Verbs b) finite 
+
+
+| nfv{#2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,progress](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{#2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,perfect](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{#2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,passive](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,progress](#1,#2) )
+	CORE-VERB(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE-VERB(#2) & NUCL[vlink,perfect](#1,#2) )
+	CORE-VERB(#2).
+
+
+// auxiliaries are not CORE-VERB
+
+if ( NUCL[vlink,progress](#1,#2) | NUCL[vlink,perfect](#1,#2) | NUCL[vlink,passive](#1,#2) & ^CORE-VERB(#1) )
+	~.
+
+| fv{#1[form:fhave,inf:~]}, nfv{?+} |
+if ( ^CORE-VERB(#1) )
+	~.
+	
+| ?{?+, fv{#1[form:fdo,inf:~]}}, iv{?+} |
+if ( ^CORE-VERB(#1) )
+	~.
+
+//Don't hinder peace
+if (NUCL[insist](#1,#2) & ^CORE-VERB(#1))
+	~
+// are going to read
+if (NUCL[progress](#1,#2) & NUCL[vlink](#2,#3) & ^CORE-VERB(#2))
+	~
+
+
+// Method: CORE-ADJ
+
+if ( NUCL[subjcompl](#1,#2[adj]) )
+	CORE-ADJ(#2).
+
+// Method: all CORE-VERBs, CORE-NOUNs and CORE-ADJ are COREs
+if (CORE-VERB(#1) | CORE-NOUN(#1) | CORE-ADJ(#1))
+	CORE(#1)
+
+////marquage des COREs d'énonciation
+
+//saythat => say
+|#3[saythat, say=+]|
+if (CONNECTOR(#1,#2[form:fthat]) & EMBED(#1,#3))
+	~
+
+
+if (^CORE(#1[say]))
+	CORE [say=+](#1)
+

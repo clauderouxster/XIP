@@ -1,0 +1,43 @@
+# USAGE: fst -utf8  -l numbers.xfst -s LEX.fst
+
+define LEX 
+
+define LEX2	~$[%+NUM | %+Ord | {ième} %+InvGen ? %+Noun] .o. LEX;
+
+echo >>> map tags of numerals
+
+substitute symbol %+SG for %+Sg
+substitute symbol %+PL for %+Pl
+substitute symbol %+InvGen for %+MF
+
+define NUM
+
+
+define ORD	$%+Ord .o. NUM ;
+define CARD	$%+Card .o. NUM ;
+define TIME	$%+Time .o. NUM;
+define REST	NUM - [CARD|ORD] ;
+
+define ORDPL	$%+PL .o. ORD ;
+define ORDSG	ORD - ORDPL ;
+
+define NUM2 [ ORDSG %+Adj:0 %+ADJ%_SG:0 
+       	    | ORDPL %+Adj:0 %+ADJ%_PL:0 
+	    | CARD %+Noun:0 %+NUM:0
+#	    | TIME %+Adv:0 %+ADV:0
+	    | REST %+NUM:0
+	    ];
+
+
+echo >>> find ambiguities with lexicon
+read regex LEX2 .o. NUM2.l ;
+
+define AMBIG;
+
+echo >>> new FST
+
+read regex   NUM2 | AMBIG ;
+
+
+
+

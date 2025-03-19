@@ -1,0 +1,386 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency0.xip                                             !
+//!   Date       : 2007/March                                                  !
+//!   Author     : Nuno Mamede, João Loureiro                                  !
+//!   Revised by : Diogo Oliveira (2010/June)                                  !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating features that should be copied to the           !
+//!   mother node: curr                                                        !
+//!                time                                                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// COMPUTES SENTENCE TYPE
+/////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+/////////////////
+// Exclamative
+/////////////////
+
+//NJM+JB, 2011/12/02
+//Sentences with a single word and an exclamation point get the feature "sentExcl"
+//
+//Example: Bolas!
+//
+|TOP[sentExcl=+]{?, PUNCT[surface:"!",end]}|
+ ~
+
+//NJM+JB, 2011/12/02
+//Sentences with a single interjection word get the feature "sentExcl"
+//
+//Example: Hurra
+//
+|TOP[sentExcl=+]{?[interj,start,end]}|
+ ~
+
+//NJM+JB, 2011/12/02
+//Sentences with an interjection word followed by a punctuation get the feature "sentExcl"
+//
+//Example: Hurra
+//
+|TOP[sentExcl=+]{interj[start], punct[end]}|
+ ~
+
+//NJM+JB, 2011/12/02
+//Sentences ending in "qual quê"
+//
+//Example: ... qual quê.
+//
+|TOP[sentExcl=+]{?*, ?[surface:"qual"], ?[surface:"quê"], punct[end]}|
+ ~
+
+//NJM+JB, 2012/02/19
+//Sentence "afirmativo[.?]"
+//
+//Example: Afirmativo.
+//
+|TOP[sentExcl=+]{?[lemma:"afirmativo"], PUNCT[surface:"?",end];PUNCT[surface:".",end]}|
+ ~
+
+
+/////////////////
+// Interrogative
+/////////////////
+
+//NJM+JB, 2011/12/28
+//Sentences with a question mark at the end get the feature "sentInterr"
+//
+//Example: Quem foi D. Afonso Henriques?
+//
+|TOP[sentInterr=+]{?+, punct[quest,end]}|
+ ~
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// Atribuição de traços masc e fem
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//removes gender when the noun has both genders and is preceded by an article
+//|NP{art[masc], ?*, noun[last, masc, fem, fem=~]}| ~
+//|NP{art[fem], ?*, noun[last, masc, fem, masc=~]}| ~
+
+//Adds gender when the noun does not contain it and is preceded by an article
+|NP{art[masc], ?*, noun[last, masc:~, masc=+]}| ~
+|NP{art[fem],  ?*, noun[last,  fem:~,  fem=+]}| ~
+|NP{art[sg],   ?*, noun[last,   sg:~,   sg=+]}| ~
+|NP{art[pl],   ?*, noun[last,   pl:~,   pl=+]}| ~
+
+|PP{prep, art[masc], ?*, noun[last, masc:~, masc=+]}| ~
+|PP{prep, art[fem],  ?*, noun[last,  fem:~,  fem=+]}| ~
+|PP{prep, art[sg],   ?*, noun[last,   sg:~,   sg=+]}| ~
+|PP{prep, art[pl],   ?*, noun[last,   pl:~,   pl=+]}| ~
+
+
+//Atribuição aos NOUNs formados por outros nouns
+//NJM, 2010/03/26
+// Example: Manuel de Andrade -> noun[masc]{noun{Manuel}, ...}
+| noun[masc=+]{noun[masc]} | ~
+| noun[fem=+] {noun[fem]} | ~
+
+
+
+////////////////////////////////////////////////////////////
+// Copies the "fuzzy", "interval", and "frac" features to the
+// NP mother node
+////////////////////////////////////////////////////////////
+
+| num[SEM-fuzzy=+]{?*, num[SEM-fuzzy]} | ~
+| num[frac=+ ]{?*, ?[frac]} | ~
+| num[t-interval=+]{?*, num[t-interval]} | ~
+
+| noun[SEM-fuzzy=+]{?*, num[SEM-fuzzy]} | ~
+| noun[frac=+ ]{?*, ?[frac]} | ~
+
+| NP[SEM-fuzzy=+]{?*, num[SEM-fuzzy]} | ~
+| NP[frac=+ ]{?*, num[frac]} | ~
+| NP[t-interval=+]{?*, num[t-interval]} | ~
+
+| NP[SEM-fuzzy=+]{?*, noun[SEM-fuzzy]} | ~
+| NP[frac=+ ]{?*, noun[frac]} | ~
+
+////////////////////////////////////////////////////////////
+// Copies the "meas" to the noun mother node
+////////////////////////////////////////////////////////////
+
+| noun[frac=+]{?*[!SEM-unitype:!], ?[lemma:e],?[lemma:meio];?[frac]} | ~
+
+
+////////////////////////////////////////////////////////////
+// Atribuição de traços aos NPs de acordo
+// com o tipo da unidade de medida
+////////////////////////////////////////////////////////////
+
+// Example: 20 euros -> NP[curr]{20 euros}
+// Example: um euro e meio
+//
+| NP[curr=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-currency, SEM-unitype], (num)} | ~
+| NP[curr=+]{(?), (?[lemma:um]), ?[SEM-currency, SEM-unitype], (num)} | ~
+
+
+//DCO, 2010/06/22
+// Example: chegou aos 1,2 mil milhões de euros"
+| PP[curr=+]{?*, num, (?[lemma:de], (?[lemma:o])), ?[SEM-currency, SEM-unitype], (num)} | ~
+| PP[curr=+]{?*, (?[lemma:um]), ?[SEM-currency, SEM-unitype], (num)} | ~
+
+
+
+// Example: 20 dias -> NP[time]{20 dias}
+// Example: um dia e meio
+//
+| NP[time=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[time, SEM-unitype], (num)} | ~
+| NP[time=+]{(?), (?[lemma:um]), ?[time, SEM-unitype], (num)} | ~
+
+
+// Example: 20 metros -> NP[length]{20 metros}
+// Example: um metro e meio
+//
+| NP[SEM-length=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-length, SEM-unitype], (num)} | ~
+| NP[SEM-length=+]{(?), (?[lemma:um]), ?[SEM-length, SEM-unitype], (num)} | ~
+
+
+// Example: 20 gramas -> NP[mass]{20 gramas}
+//
+| NP[SEM-mass=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-mass, SEM-unitype], (num)} | ~
+| NP[SEM-mass=+]{(?), (?[lemma:um]), ?[SEM-mass, SEM-unitype], (num)} | ~
+
+
+// Example: 20 litros -> NP[volume]{20 litros}
+//
+| NP[SEM-volume=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-volume, SEM-unitype], (num)} | ~
+| NP[SEM-volume=+]{(?), (?[lemma:um]), ?[SEM-volume, SEM-unitype], (num)} | ~
+
+
+// Example: 100% -> NP[percentage]{100%}
+//
+| NP[SEM-percentage=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-percentage, SEM-unitype], (num)} | ~
+| NP[SEM-percentage=+]{(?), (?[lemma:um]), ?[SEM-percentage, SEM-unitype], (num)} | ~
+
+
+// Example: 20 metros quadrados -> NP[area]{20 metros quadrados}
+//
+| NP[SEM-area=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-area, SEM-unitype], (num)} | ~
+| NP[SEM-area=+]{(?), (?[lemma:um]), ?[SEM-area, SEM-unitype], (num)} | ~
+
+
+// Example: 20 ampéres -> NP[electcurrent]{20 ampéres}
+//
+| NP[SEM-electcurrent=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electcurrent, SEM-unitype], (num)} | ~
+| NP[SEM-electcurrent=+]{(?), (?[lemma:um]), ?[SEM-electcurrent, SEM-unitype], (num)} | ~
+
+
+// Example: 20 coulomb -> NP[electcharge]{20 coulomb}
+//
+| NP[SEM-electcharge=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electcharge, SEM-unitype], (num)} | ~
+| NP[SEM-electcharge=+]{(?), (?[lemma:um]), ?[SEM-electcharge, SEM-unitype], (num)} | ~
+
+
+// Example: 20 farad -> NP[electcapacitance]{20 farad}
+//
+| NP[SEM-electcapacitance=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electcapacitance, SEM-unitype], (num)} | ~
+| NP[SEM-electcapacitance=+]{(?), (?[lemma:um]), ?[SEM-electcapacitance, SEM-unitype], (num)} | ~
+
+
+// Example: 20 ohm -> NP[electresistance]{20 ohm}
+//
+| NP[SEM-electresistance=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electresistance, SEM-unitype], (num)} | ~
+| NP[SEM-electresistance=+]{(?), (?[lemma:um]), ?[SEM-electresistance, SEM-unitype], (num)} | ~
+
+
+// Example: 20 siemens -> NP[electconductance]{20 siemens}
+//
+| NP[SEM-electconductance=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electconductance, SEM-unitype], (num)} | ~
+| NP[SEM-electconductance=+]{(?), (?[lemma:um]), ?[SEM-electconductance, SEM-unitype], (num)} | ~
+
+
+// Example: 20 volt -> NP[electpotencial]{20 volt}
+//
+| NP[SEM-electpotencial=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-electpotencial, SEM-unitype], (num)} | ~
+| NP[SEM-electpotencial=+]{(?), (?[lemma:um]), ?[SEM-electpotencial, SEM-unitype], (num)} | ~
+
+
+// Example: 20 bar | atm | pascal -> NP[pressure]{20 bar | atm | pascal}
+//
+| NP[SEM-pressure=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-pressure, SEM-unitype], (num)} | ~
+| NP[SEM-pressure=+]{(?), (?[lemma:um]), ?[SEM-pressure, SEM-unitype], (num)} | ~
+
+
+// Example: 20 joules | calorias -> NP[energy]{20 joules | calorias}
+//
+| NP[SEM-energy=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-energy, SEM-unitype], (num)} | ~
+| NP[SEM-energy=+]{(?), (?[lemma:um]), ?[SEM-energy, SEM-unitype], (num)} | ~
+
+
+// Example: 20 kelvin | fahrenheit -> NP[temperature]{20 kelvin | fahrenheit}
+//
+| NP[SEM-temperature=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-temperature, SEM-unitype], (num)} | ~
+| NP[SEM-temperature=+]{(?), (?[lemma:um]), ?[SEM-temperature, SEM-unitype], (num)} | ~
+
+
+// Example: 20 candelas -> NP[luminointensity]{20 candelas}
+//
+| NP[SEM-luminointensity=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-luminointensity, SEM-unitype], (num)} | ~
+| NP[SEM-luminointensity=+]{(?), (?[lemma:um]), ?[SEM-luminointensity, SEM-unitype], (num)} | ~
+
+
+// Example: 20 lúmen -> NP[luminoflux]{20 lúmen}
+//
+| NP[SEM-luminoflux=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-luminoflux, SEM-unitype], (num)} | ~
+| NP[SEM-luminoflux=+]{(?), (?[lemma:um]), ?[SEM-luminoflux, SEM-unitype], (num)} | ~
+
+
+// Example: 20 lux -> NP[illuminance]{20 lux}
+//
+| NP[SEM-illuminance=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-illuminance, SEM-unitype], (num)} | ~
+| NP[SEM-illuminance=+]{(?), (?[lemma:um]), ?[SEM-illuminance, SEM-unitype], (num)} | ~
+
+
+// Example: 20 mol -> NP[substance]{20 mol}
+//
+| NP[SEM-substance=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-substance, SEM-unitype], (num)} | ~
+| NP[SEM-substance=+]{(?), (?[lemma:um]), ?[SEM-substance, SEM-unitype], (num)} | ~
+
+
+// Example: 20 newton -> NP[force]{20 newton}
+//
+| NP[SEM-force=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-force, SEM-unitype], (num)} | ~
+| NP[SEM-force=+]{(?), (?[lemma:um]), ?[SEM-force, SEM-unitype], (num)} | ~
+
+
+// Example: 20 rpm | nós | km/h -> NP[speed]{20 rpm | nós | km/h}
+//
+| NP[SEM-speed=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-speed, SEM-unitype], (num)} | ~
+| NP[SEM-speed=+]{(?), (?[lemma:um]), ?[SEM-speed, SEM-unitype], (num)} | ~
+
+
+// Example: 20 watt -> NP[power]{20 watt}
+//
+| NP[SEM-power=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-power, SEM-unitype], (num)} | ~
+| NP[SEM-power=+]{(?), (?[lemma:um]), ?[SEM-power, SEM-unitype], (num)} | ~
+
+
+// Example: 20 radianos -> NP[angle]{20 radianos}
+//
+| NP[SEM-angle=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-angle, SEM-unitype], (num)} | ~
+| NP[SEM-angle=+]{(?), (?[lemma:um]), ?[SEM-angle, SEM-unitype], (num)} | ~
+
+
+// Example: 20 bytes -> NP[infostorage]{20 bytes}
+//
+| NP[SEM-infostorage=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-infostorage, SEM-unitype], (num)} | ~
+| NP[SEM-infostorage=+]{(?), (?[lemma:um]), ?[SEM-infostorage, SEM-unitype], (num)} | ~
+
+
+// Example: 20 quilogramas por metro cúbico -> NP[density]{20 quilogramas por metro cúbico}
+//
+| NP[SEM-density=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-density, SEM-unitype], (num)} | ~
+| NP[SEM-density=+]{(?), (?[lemma:um]), ?[SEM-density, SEM-unitype], (num)} | ~
+
+
+// Example: 20 metros cúbicos por segundo -> NP[flowrate]{20 metros cúbicos por segundo}
+//
+| NP[SEM-flowrate=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-flowrate, SEM-unitype], (num)} | ~
+| NP[SEM-flowrate=+]{(?), (?[lemma:um]), ?[SEM-flowrate, SEM-unitype], (num)} | ~
+
+
+// Example: 20 quilogramas metro quadrado -> NP[inercia]{20 quilogramas metro quadrado}
+//
+| NP[SEM-inercia=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-inercia, SEM-unitype], (num)} | ~
+| NP[SEM-inercia=+]{(?), (?[lemma:um]), ?[SEM-inercia, SEM-unitype], (num)} | ~
+
+
+// Example: 20 quilogramas-força -> NP[massforce]{20 quilogramas-força}
+//
+| NP[SEM-massforce=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-massforce, SEM-unitype], (num)} | ~
+| NP[SEM-massforce=+]{(?), (?[lemma:um]), ?[SEM-massforce, SEM-unitype], (num)} | ~
+
+
+// Example: 20 khz -> NP[frequence]{20 khz}
+//
+| NP[SEM-frequence=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-frequence, SEM-unitype], (num)} | ~
+| NP[SEM-frequence=+]{(?), (?[lemma:um]), ?[SEM-frequence, SEM-unitype], (num)} | ~
+
+
+// Example:
+//
+| NP[SEM-measother=+]{(?), num, (?[lemma:de], (?[lemma:o])), ?[SEM-measother, SEM-unitype], (num)} | ~
+| NP[SEM-measother=+]{(?), (?[lemma:um]), ?[SEM-measother, SEM-unitype], (num)} | ~
+
+
+// Generic Quantities (ex.: 2 jogos -> num[quant, generic]{2}
+//
+| num[dig, quant=+, generic=+], noun[SEM-unitype:~,t-month:~] | ~
+
+
+
+
+////////////////////////////////////////////////////////////
+// Atribuição dos traços 'monument' e 'culture'           //
+// às localidades que também são obras de arte            //
+////////////////////////////////////////////////////////////
+
+// Example: Mosteiro dos Jerónimos -> NOUN[location, culture, monument]{Mosteiro dos Gerónimos}
+//
+| NOUN[location, culture=+, monument=+]{?[lemma:mosteiro], ?*} | ~
+
+// Example: Castelo de S. Jorge -> NOUN[location, culture, monument]{Castelo de S. Jorge}
+//
+| NOUN[location, culture=+, monument=+]{?[lemma:castelo], prep[lemma:de], ?*} | ~
+
+// Example: Palácio de Belém -> NOUN[location, culture, monument]{Palácio de Belém}
+//
+| NOUN[location, culture=+, monument=+]{?[lemma:palácio], ?*} | ~
+
+// Example: Torre de Belém -> NOUN[location, culture, monument]{Torre de Belém}
+//
+| NOUN[location, culture=+, monument=+]{?[lemma:torre], prep[lemma:de], ?*} | ~
+
+
+//////////////////////////////////////////////////////////////
+// Passa os traços 't-sentido' e 't-val' para dentro do nó  //
+//////////////////////////////////////////////////////////////
+
+// Example: depois de amanhã --> é necessário passar os traços para dentro do nó
+//                               porque este é um t-sentido composto por mais que
+//                               uma palavra (3).
+//
+| NOUN{?[lemma:"depois de"], ?[lemma:amanhã, t-sentido=after, t-val=2]} | ~
+

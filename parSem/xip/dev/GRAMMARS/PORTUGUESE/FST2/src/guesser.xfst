@@ -1,0 +1,410 @@
+# ============================================================================
+# CONTENT:      (x)fst script for morphological guesser
+#
+# LANGUAGE:     PORTUGUESE
+#
+# AUTHOR:       Anne Schiller, Caroline Hagege
+#
+# CREATED:      06-Aug-2001     (by A. Schiller)
+#               - simplified guesser by Caroline Hagege from Jan-1996
+#               - changed for morphological tags
+# UPDATED:	04-Aug-2006	AS: converted to UTF-8
+#
+# ============================================================================
+# USAGE:        xfst -utf8 -l ThisFile
+# ============================================================================
+
+! -------------------------------------------------------------------------
+! Character classes
+! -------------------------------------------------------------------------
+
+define Upp1	[A|B|C|Ç|D|E|F|G|H|I|J|K|L|M|N|Ñ|O|P|Q|R|S|T|U|V|W|X|Y|Z];
+define Upp2	[Ã|Ä|Á|À|É|È|Í|Ì|Î|Ó|Ò|Ö|Ú|Ù|Ü] ;
+define Upp	[ Upp1 | Upp2 ] ;
+
+define Low1	[a|b|c|ç|d|e|f|g|h|i|j|k|l|m|n|ñ|o|p|q|r|s|t|u|v|w|x|y|z];
+define Low2	[á|à|ä|ã|â| é|è|ë|ê| í|ì|î|ï| ó|ò|ô|ö|õ| ü|ú|ù|û];
+define Low	[ Low1 | Low2 ];
+
+define Char	[ Upp | Low ] ;
+
+define Cons1	[b|c|f|g|h|s|z];
+define notFD	[Low - [f|d] ];
+	
+#define LowConsR [b|c|d|f|g|l|m|n|p|r|s|t|v]
+
+#define UpConsR [B|C|D|F|G|L|M|N|P|R|S|T|V]
+
+#define Vow	[a|e|i|o|u]
+#define VowAcc	[â|é|í|ó|ú]
+
+
+define Dig	[%0|1|2|3|4|5|6|7|8|9] ;
+define Space 	" " ;
+
+define StemLow	Low* ;
+
+define StemUpp	Upp* ;
+
+define PrefLow	[Low+ %- ]+;
+# ------------------------------------------------------------------------------
+echo >>> define words classes
+
+define SP	[ %+Sg:0 | %+Pl:s ] ;
+define MF	[ %+Masc:o | %+Fem:a ] ;
+
+define SPes	[ %+Sg:0 | %+Pl:{es} ] ;
+
+# -------------------------------------------------------------------------
+echo >>> adverbs
+regex StemLow [
+  {mente}  			%+Adv:0
+];
+
+# -------------------------------------------------------------------------
+echo >>> adjectives
+regex (PrefLow) StemLow [
+  {ado}			%+Adj:%+ MF SP
+| {ário}		%+Adj:%+ MF SP
+| {ante}		%+Adj:0 %+MF:0 SP	# A.S. ??
+| {elo}			%+Adj:%+ MF SP
+| {ense}		%+Adj:0 %+MF:0 SP
+| {eo}			%+Adj:%+ MF SP
+| {fico}		%+Adj:%+ MF SP		# A.S. ??
+| {fobo}		%+Adj:%+ MF SP 
+| {forme}		%+Adj:0 %+MF:0 SP
+| {íaco}		%+Adj:%+ MF SP 
+| {ido}			%+Adj:%+ MF SP		# A.S. ??
+| {ista}		%+Adj:0 %+MF:0 SP
+| [ Low -[f|d] ] {iz}	%+Adj:0 %+MF:0 SPes
+| {lico}		%+Adj:%+ MF SP
+| {lógico}		%+Adj:%+ MF SP
+| {mico}		%+Adj:%+ MF SP
+| {nico}		%+Adj:%+ MF SP
+| {oco} 		%+Adj:%+ MF SP
+| {ófilo}		%+Adj:%+ MF SP
+| {olo}			%+Adj:%+ MF SP
+| {ório}		%+Adj:%+ MF SP
+| {oso}			%+Adj:%+ MF SP
+| {rico}		%+Adj:%+ MF SP
+| {tico}		%+Adj:%+ MF SP
+| {tivo}		%+Adj:%+ MF SP		# A.S. ??
+| {ulo}			%+Adj:%+ MF SP
+
+| {ès}			%+Adj:0 %+Masc:0 %+Sg:0
+| {ès}:{eses}		%+Adj:0 %+Masc:0 %+Pl:0
+| {ès}:{esa}		%+Adj:0 %+Fem:0 SP
+
+| Cons1 {ão}		%+Adj:0 %+Masc:0 %+Sg:0
+| Cons1 {ão}:{ões}	%+Adj:0 %+Masc:0 %+Pl:0
+| Cons1 ã o:0		%+Adj:0 %+Fem:0 %+Sg:0
+| Cons1 ã o:0 0:s	%+Adj:0 %+Fem:0 %+Pl:0
+
+| {al}			%+Adj:0 %+MF:0 %+Sg:0
+| {al}:{ais}		%+Adj:0 %+MF:0 %+Pl:0
+| {il}			%+Adj:0 %+MF:0 %+Sg:0
+| {il}:{is}		%+Adj:0 %+MF:0 %+Pl:0
+| {ol}			%+Adj:0 %+MF:0 %+Sg:0
+| {ol}:{óis}		%+Adj:0 %+MF:0 %+Pl:0
+| {ável}		%+Adj:0 %+MF:0 %+Sg:0		# e.g. improvável
+| {ável}:{áveis}	%+Adj:0 %+MF:0 %+Pl:0		# e.g. improvável:improváveis
+
+| {ador}		%+Adj:0 [ %+Masc:0 SPes | %+Fem:0 SP ]
+| {sor}			%+Adj:0 [ %+Masc:0 SPes | %+Fem:0 SP ]
+| {tor}			%+Adj:0 [ %+Masc:0 SPes | %+Fem:0 SP ]
+];
+define ADJ
+
+regex	[ ADJ .o. [ o -> 0 || _ %+ ] .o. [%+ -> 0] ];
+
+# -------------------------------------------------------------------------
+echo >>> nouns
+
+regex (PrefLow) StemLow
+[
+  {ada}			%+Noun:0 %+Fem:0 SP
+| {ado}			%+Noun:0 %+Masc:0 SP
+| {ador}		%+Noun:0 %+Masc:0 SPes
+| {ária}		%+Noun:0 %+Fem:0 SP
+| {ário}		%+Noun:0 %+Masc:0 SP
+| {agem}		%+Noun:0 %+Fem:0 %+Sg:0		# e.g. reportagem
+| {agem}:{agens}	%+Noun:0 %+Fem:0 %+Pl:0		# e.g. reportagem:reportagens
+| {al}			%+Noun:0 %+Masc:0 %+Sg:0
+| {al}:{ais}		%+Noun:0 %+Masc:0 %+Pl:0
+| {ancia}		%+Noun:0 %+Fem:0 SP
+| {ança}		%+Noun:0 %+Fem:0 SP
+| {aria}		%+Noun:0 %+Fem:0 SP
+| {ase}			%+Noun:0 %+Fem:0 SP
+| {ção}			%+Noun:0 %+Fem:0 %+Sg:0		# e.g. estimação
+| {ção}:{ções}		%+Noun:0 %+Fem:0 %+Pl:0		# e.g. estimação:estimações
+| Cons1 {ão}		%+Noun:0 %+MF:0 %+Sg:0
+| Cons1 {ão}:{ões}	%+Noun:0 %+MF:0 %+Pl:0
+| {ela}			%+Noun:0 %+Fem:0 SP
+| {ense}		%+Noun:0 %+MF:0 SP
+| {ença}		%+Noun:0 %+Fem:0 SP
+| {eo}			%+Noun:0 %+Masc:0 SP
+| {esa}			%+Noun:0 %+Fem:0 SP
+| {ese}			%+Noun:0 %+Fem:0 SP
+| {eza}			%+Noun:0 %+Fem:0 SP
+| {dade}		%+Noun:0 %+Fem:0 SP		#AS; eg. subsidiariedade
+| {fobia}		%+Noun:0 %+Fem:0 SP
+| {fobo}		%+Noun:0 %+Masc:0 SP		# e.g. agoráfobo(s)
+| {fobo}:{foba}		%+Noun:0 %+Fem:0 SP		# e.g. agoráfoba(s)
+| {grafia}		%+Noun:0 %+Fem:0 SP
+| {il}			%+Noun:0 %+Masc:0 %+Sg:0
+| {il}:{is}		%+Noun:0 %+Masc:0 %+Pl:0
+| {ise}			%+Noun:0 %+Fem:0 SP
+| {ismo}		%+Noun:0 %+masc:0 SP
+| {ista}		%+Noun:0 %+MF:0 SP
+| {íaco}		%+Noun:0 %+Masc:0 SP		# e.g. egipcíaco(s)
+| {íaco}:{íaca}		%+Noun:0 %+Fem:0 SP		# e.g. egipcíaca(s)
+| {lica}		%+Noun:0 %+Fem:0 SP
+| {lico}		%+Noun:0 %+Masc:0 SP
+| {logia}		%+Noun:0 %+Fem:0 SP
+| {mento}		%+Noun:0 %+Masc:0 SP
+| {metro}		%+Noun:0 %+Masc:0 SP
+| {mica}		%+Noun:0 %+Fem:0 SP
+| {nica}		%+Noun:0 %+Fem:0 SP
+| {nico}		%+Noun:0 %+Masc:0 SP
+| {oca}			%+Noun:0 %+Fem:0 SP
+| {ófila}		%+Noun:0 %+Fem:0 SP		# e.g. francófila(s)
+| {ófilo}		%+Noun:0 %+Masc:0 SP		# e.g. francófilo(s)
+| {ógrafo}		%+Noun:0 %+Masc:0 SP		# e.g. oceanógrafo(s)
+| {ol}			%+Noun:0 %+Masc:0 %+Sg:0
+| {ol}:{óis}		%+Noun:0 %+Masc:0 %+Pl:0
+| {ola}			%+Noun:0 %+Fem:0 SP
+| {ólogo}		%+Noun:0 %+Masc:0 SP		# e.g. biólogo(s)
+| {omia}		%+Noun:0 %+Fem:0 SP		# e.g. economia(s)
+| {oria}		%+Noun:0 %+Fem:0 SP	
+| {ória}		%+Noun:0 %+Fem:0 SP
+| {ório}		%+Noun:0 %+Masc:0 SP
+| {ose}			%+Noun:0 %+Fem:0 SP
+| {rama}		%+Noun:0 %+Fem:0 SP
+| {rico}		%+Noun:0 %+Masc:0 SP
+| {sfera}		%+Noun:0 %+Fem:0 SP
+| {sor}			%+Noun:0 %+Masc:0 SPes
+| {tia}			%+Noun:0 %+Fem:0 SP
+| {tico}		%+Noun:0 %+Masc:0 SP
+| {tica}		%+Noun:0 %+Fem:0 SP
+| {tor}			%+Noun:0 %+Masc:0 SPes
+| {tria}		%+Noun:0 %+Fem:0 SP
+| {ula}			%+Noun:0 %+Fem:0 SP
+| {xia}			%+Noun:0 %+Fem:0 SP
+];
+
+
+
+! Palavra que começa com uma maiúscula - Nome próprio
+
+# -------------------------------------------------------------------------
+echo >>> proper names, acronyms, etc.
+define PropStem	[ 
+	[Upp Low*] [(%-) Upp Low*]*
+|	Upp+  [%/|%-|%.|%'] [Char|Dig]+	
+| 	Upp+ Dig+
+
+#|	[ [Char|%.|Space]* & [Upp $[Space] Char] ]
+
+];
+
+define DigSep	[" "|%-|%/|%+|%*|%(|%)|%.|%,|%:] ;
+define DigStem	[Dig|DigSep]+ & $[Dig] ;
+
+define UnitStem	[n|m|c|d|k|M|K|G] [m|l|g|s] (2|3|%²|%³);
+
+define Hour	[ (%0) Dig | 1 Dig | 2 [%0|1|2|3|4] ];
+define Minute	[ [%0|1|2|3|4|5|6] Dig ];
+define Time	[ Hour [%.|%.] Minute " " [h|H]	];
+
+define ABBR	[Char+ %.] [Char+ %.]+ ;
+
+read regex	[
+	PropStem		%+Prop:0 %+Misc:0 %+MF:0 %+SP:0
+|	DigStem			%+Dig:0
+|	UnitStem		%+Meas:0 %+SP:0
+|	(Upp) Low Upp		%+Noun:0 %+MF:0 %+SP:0 %+Abbr:0
+|	ABBR			%+Noun:0 %+MF:0 %+SP:0 %+Abbr:0
+|	Time			%+Dig:0 %+Time:0
+];
+
+union net
+
+define GUESS1 
+
+define GUESS1  [GUESS1 "+#guess":0 ]; 
+
+
+# ============================================================================
+# "strong" guesses
+
+define PROF [
+#  {agente-de-} Char+ 		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0 
+#| {afinador-de-} Char+ 		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0 
+#| {apresentador-de-} Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {assistente-de-} Char+	%+Noun:0 %+Profession:0 %+MF:0 %+Sg:0
+#| {capitão-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {carpiteiro-de-} Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {chefe-de-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {comandante-de-} Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {dire} (c) {tor-de-} Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {empregado-de-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {engenheiro-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {fiscal-de-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {inspe} (c) {tor-de-}  Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {maquinista-de-} Char+	%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {motorista-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {operador-de-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+#| {técnico-de-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+
+  {guarda-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+| {médico-} Char+		%+Noun:0 %+Profession:0 %+Masc:0 %+Sg:0
+| {vice-} Char+			%+Noun:0 %+Profession:0 %+MF:0 %+Sg:0
+];
+
+define NAMES [
+   {Jean-} Upp Low+		%+Prop:0 %+Firstname:0 %+Masc:0 %+Sg:0
+];
+
+define GUESS2	[
+       PROF
+|      NAMES
+] "+#guess2":0 ;
+
+# -------------------------------------------------------------------------
+echo >>> combine ...
+
+read regex [ GUESS2 .p. GUESS1 ];
+
+exit
+
+
+#### TO DO ###
+
+
+define PRON1	[ [ l h | m | t ] [a|o] (s) ];
+define PRON2	[ [n|v] o %- l [o|a] (s) ];
+define PRON3	[{á}|{ão}|{ás}|{ei}|{eis}|{emos}|{ia}|{iam}|{íamos}|{ias}|{íeis}];
+
+
+define VPRON	[ %- [PRON1|PRON2] (%- PRON3) ] ;
+ 
+
+
+regex [
+
+
+
+! palavras com prefixo ex- sao nomes ou adjectivos
+	e x %- StemL 		[%+NSG:0 | %+NPL:0 | %+ADJSG:0 | %%+ADJPL:0 ] | 
+	E X %- StemU 		[%+NSG:0 | %+NPL:0 | %+ADJSG:0 | %%+ADJPL:0 ] | 
+
+
+! Verbos
+
+! verbos no  infinitivo. Nao consideramos os adjectivos ou nomes em ar (triangular, lagar) ou os infinitivos nominalizados
+
+	StemL [ a | i | e ] r				%+INF:0 | 
+	StemL [ a | i | e ] r %- Low Low (Low) (Low)	%+INFPRON:0 | 
+
+! participios passados e gerundios
+	StemL [ a | i ] d [ o | a ]			[%+VPP:0 | %+ADJSG:0] | 
+	StemL [ a | i ] d [ o | a ] s 			[%+VPP:0 | %+ADJPL:0] | 
+	StemL [ a | i | e ] n d o 			%+GER:0 | 
+	StemL [ a | i | e ] n d o %- Low Low (Low) (Low) 	%+GERPRON:0 | 
+
+
+! verbos conjugados
+
+! futuro simples
+! a terminacao -a|i|erei -a|e|iremos  so existem para verbos (FutInd) 
+! as terminaçoes -a|e|irá e -a|e|irás -a|e|irão existem para alguns nomes 
+! (poucos) e para FutInd.
+
+	StemL [ a | e | i ] r e i 		%+VERBF:0 | 
+	StemL [ a | e | i ] r á 		[%+VERBF:0 | %+NSG:0] | 
+	StemL [ a | e | i ] r á s 		[%+VERBF:0 | %+NPL:0] | 
+
+! nomes acabados em -emo no plural
+! Ex : remo nao considerados (dois casos no Dic Inv)
+	StemL [ a | e | i ] r e m o s 		%+VERBF:0 |  
+	StemL [ a | e | i ] r ã o 		[%+VERBF:0 | %+NSG:0] | 
+
+! imperfeito Indicativo
+! terminacao em -ava Nome (poucos ex: fava) ou Verbo
+
+	StemL a v a 				[%+VERBF:0 | %+NSG:0] | 
+	StemL a v a s 				[%+VERBF:0 | %+NPL:0] | 
+	StemL á v a m o s 			%+VERBF:0 | 
+	StemL í a m o s 			%+VERBF:0 | 
+
+! palavras acabadas em -am sao verbos no plural
+	StemL a m 				%+VERBF:0 | 
+
+! palavras acabadas em -em, mas nao em -a/ugem sao verbos no plural
+	StemL [ [Low - [ a | u ] ] Low | Low [ Low - g ] ] e m 	%+VERBF:0 | 
+
+
+! preterito perfeito simples
+! verbos do primeiro grupo 1a pessoa singula -ei Poucos nomes, nada de adjectivos
+! cuidado com as terminacoes em -arei
+
+	StemL [Low - [ a | e | i ]] [Low - r ] e i 	[%+VERBF:0 |  %+NSG:0] | 
+
+! primeiro grupo 3a pessoal singula -ou, so 3 nomes no dic inverso de 
+! resto verbos
+	StemL o u 				%+VERBF:0 | 
+
+
+! verbos do segundo grupo 3a pessoa do singular -iu. Um so nome (abiu) de resto 
+! verbo - partiu
+	StemL i u 				%+VERBF:0 | 
+
+! verbos do terceiro grupo 3a pessoa singular -eu. 
+! uma serie de nomes (41) *hebreu, judeu, ateu, ateneu etc.
+! 
+
+	StemL [b|c|f|g|h|j|l|m|p|r|s|v] e u 	%+VERBF:0 | 
+	StemL [ d | n | t ] e u 		[%+VERBF:0 |  %+NSG:0 | %+ADJSG:0 ] | 
+
+! plural
+	StemL e u s 				[%+NPL:0 | %+ADJPL:0] | 
+
+! verbos pronominais e com cliticos
+
+	StemL [Low - [a|e|i]] [Low - r] %- [s|m|t] e	%+VERBFPRON:0 | 
+	StemL [a|e|i] r %- [s|m|t] e 			%+INFPRON:0 | 
+	StemL [Low - [a|e|i]] [Low - r] %- 
+	      ([l|m|n]) (h) [e|o|a] (s) 		%+VERBFPRON:0 | 
+
+! pres ind 1a pessoa sing
+! todas as palavras acabadas em -o e que nao sao abrangidas pelas regras anteriores
+
+	StemL [Low - [ã|b|c|e|f|g|i|l|m|r|s|t]] o 	%+VERBF:0 | 	
+
+! todas as palavras acabadas em -bo mas nao em -fobo
+	StemL [ [Low - f] Low | Low [Low - o] ] b o	[%+VERBF:0 | %+NSG:0 ] | 
+
+! palavras com o prefixo anti- sao adjectivos. Uma excecao, antiquar
+! anti-constitucional anticonstitucional 
+	a n t i (%-) StemL 				%+ADJ:0 | 
+
+
+! palavras com o prefixo ex- (Nomes e adj)
+	e x %- StemL 					[%+ADJ:0 | %+NOUN:0 ] | 
+
+! palavras com o prefixo pro- (Nomes e adj) 
+	p r o %- StemL 					[%+ADJ:0 | %+NOUN:0 ] | 
+
+
+! Nomes de localidades (geograficos). Muitos destes nomes contem 
+! Vila, Santo, Santa, Castelo
+! Vila Real, Vila Nova, Sao Pedro do Sul, Sao Joao do Estoril, Santa Maria
+
+
+	V i l a %  StemL (%  StemL) (%  StemL)		%+NPROP:0 | 
+	S a n t [o | a] %  StemL (%  StemL) (%  StemL) 	%+NPROP:0 | 
+	S ã o %  StemL (%  StemL) (%  StemL)  		%+NPROP:0 | 
+	C a s t e l o %  StemL (%  StemL) (%  StemL) 	%+NPROP:0 |   
+
+
+END;

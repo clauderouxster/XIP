@@ -1,0 +1,126 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      basic rules for additional lexicon entries
+# 
+# LANGUAGE:     SPANISH
+#
+# AUTHOR:       A.Schiller
+#
+# CREATED:      27-May-2008
+#
+# ============================================================================
+# USAGE:        xfst -e "read lex LEX.lexc"  -l [ThisFile]
+# ============================================================================
+
+
+
+define LEX
+
+# apostrophe
+define APO [
+  "\u0027"	# [']	APOSTROPHE
+| "\u2018"	# [‘]	LEFT SINGLE QUOTATION MARK
+| "\u2019"	# [’]	RIGHT SINGLE QUOTATION MARK
+];
+
+
+# identify tags and markers
+read regex LEX ;
+single char sigma net
+define SIG
+read regex SIG & [%+ ?+ ];
+multi char sigma net
+define TAG
+
+define CHAR SIG & ? ;
+
+
+define MARKER 	"[*]" | "[-]"| "(-)" | "(.)" ;
+
+define LBD	[ "^]" ];	# lemma boundary
+define CBD	[ "^=" ];	# token boundary, e.g. alla::a+Prep^=lo+Art+Def+Fem+Sg
+
+define DEL	[ "^1" | "^2" ];	# deletion markers
+
+define SPEC	[ LBD | MARKER ] ;
+
+define VSimple	[a|e|i|o|u];
+define VAccent	[á|é|í|ó|ú];
+define Vowel	VSimple | VAccent ;
+
+define Cons	[b|c|d|f|g|h|j|k|l|m|n|ñ|p|q|r|s|t|v|w|x|y|z];
+
+
+# ==============================================================================
+read regex [
+	0 <- SPEC
+
+# optional hyphens
+.o.	%- <- [ "[-]" | "(-)" ]
+
+# optional dots
+.o.	%. <- "(.)"
+
+# ------------------------------------------------------------------------------
+.o.	LEX 
+
+# introduce lemma boundary for regular nouns/adjectives
+.o.	[..] -> LBD || CHAR _ %+NAdj | %+Adj | %+Noun  
+
+# ------------------------------------------------------------------------------
+# 
+# hyphen or space
+.o.	"[-]" -> [ %  | %- ]
+
+# hyphen or nothing
+.o.	"(-)" -> [ 0 | %- ]
+
+# optional dots
+.o.	"(.)" -> [ 0 | %. ]
+
+# basic deletion rules
+.o.	CHAR -> 0 	|| _ TAG* "^1"
+.o.	CHAR CHAR -> 0	|| _ TAG* "^2"
+.o. 	DEL -> 0 
+
+
+# regular adjective/noun inflection
+# feminine
+.o.	o -> a		|| _ LBD $%+Fem
+.o.	[..] -> a	|| Vowel Cons _ LBD $%+Fem
+
+# plural
+# italiano -> italianos; alamana -> alemanas; inglés -> ingleses
+.o.	[..] -> e s	|| Vowel Cons _ LBD $%+Pl
+.o.	[..] -> s	|| Vowel _ LBD $%+Pl
+
+# accent change
+# alemán -> alemana; inglés -> ingleses
+.o.	á -> a,
+	é -> e,
+	í -> i,
+	ó -> o,
+	ú -> u		|| _ Cons Vowel (Cons) LBD 
+
+
+# diminutives
+.o.	(i|í) a @-> {ita}	|| _ %+Prop $%+Dim # Julia -> Julita, Adela -> Adelita 
+.o.	(i|í) o @-> {ito}	|| _ %+Prop $%+Dim # Julio -> Julito, Pablo -> Pablito
+.o.	ó n -> {oncita}	|| _ %+Prop $%+Dim # León -> Leoncita
+.o.	a n -> {anito}	|| _ %+Prop $%+Dim # Juan -> Juanito
+
+
+
+# ----------------------------------------------------------------------
+# remove tags and markers
+.o.	[SPEC|TAG] -> 0
+
+	
+
+# for place names
+.o. 	{Sant} (->) S t || _ [o|a] [ %- | %  ]
+
+];
+
+
+

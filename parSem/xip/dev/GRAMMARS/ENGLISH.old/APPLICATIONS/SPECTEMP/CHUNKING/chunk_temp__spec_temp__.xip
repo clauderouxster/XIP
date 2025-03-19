@@ -1,0 +1,307 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar with temporal normalization
+//!   filename   : chunk_temp.xip
+//!   Date       : October 2006
+//!   Author     : Caroline Hagege
+//!   Comment	 : This file is meant to replace old version reshuffle_temp.xip
+//!		   construction of complex temporal expressions
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+Sequence:
+
+
+// ABOUT, NEARLY, MORE THAN + c_anchors
+//   "exactly in two days"
+//     other kinds are already treated in localgram_temp
+// not "around"
+// when there is a verb just before (second rule), check that the t_mod adv
+//   cannot be a particle of this verb (about)
+50> ADV[tempexpr:+, c_anchor:+] = 
+	~| verb | #1[t_mod:approx,p_around:~];#1[t_mod:exact], PP#2[tempexpr,c_anchor].
+50> ADV[tempexpr:+, c_anchor:+] = 
+	| verb#3 | #1[t_mod:approx,p_around:~];#1[t_mod:exact], PP#2[tempexpr,c_anchor],
+		where(~(#1[p_about]::#3[p_about])).
+//   if you want to merge both elements' interpretations, do it after the dependencies
+//     (for example, 'in' interpretation can be change between)
+//	where(merge_anchor_dates(#1, #2, #0)).
+
+
+
+
+
+
+// C_ANCHORs
+/////////////////////////
+// two years ago, 3 days later, ...
+// Rule 1 (now done in local_gram_temp)
+//5> ADV[tempexpr:+,mwe:+,c_dur:+,c_anchor:+] @= NP#1[c_dur], ?*, adv#2[temp_rel,temp_ref], ?*[tempexpr],
+//	where(merge_anchor_date_and_duration(#2, #1, #0)).
+
+
+// from now (on)
+// special because "now" can't be a noun (as yesterday, tomorrow...)
+6> PP[tempexpr:+,mwe:+,c_anchor:+] @= prep#1[temp_rel], adv#2[lemme:now], (prep[form:fon]),
+	where(merge_anchor_dates(#1, #2, #0)).
+
+
+
+// {two years ago} {yesterday}
+6> ADV[tempexpr:+,mwe:+,c_anchor:+,t_mod=exact] = 
+	#1[tempexpr, c_anchor, c_dur:~], #2[adv:~,c_dur:~,tempexpr,c_anchor,date:~, stand_alone:~],
+	where(has_value(#1, "ANCHOR")).
+// has_value distinguishes 'two years ago', that has a value (2Y) and must be chunked,
+//                    and 'earlier', that must not (must stand alone)
+// tempexpr_n:~ on #2 added to avoid too early attachment. Non full-tempexpr expressions must wait 
+//    the dependencies are calculated before being attached.
+// add mod EXACT because such expressions are necessarily exact (eg 2 years ago yesterday)
+// add adv:~ to avoid "two years ago after"
+// add c_dur:~ to avoid "today during 3 hours"
+//
+//   if you want to merge both anchor dates in the representation, do it after the dependencies
+//     (for example, 'in' interpretation can be change between)
+//	where(merge_anchor_dates(#1, #2, #0)).
+
+
+
+// {two years} {before} {yesterday}
+6> ADV[tempexpr:+,mwe:+,c_anchor:+,t_mod=exact] = ?[tempexpr, c_dur], BG[temp_rel], ?[tempexpr, c_anchor, date:~, stand_alone:~].
+//   if you want to merge them in the representation, do it after the dependencies
+//     (for example, 'in' interpretation can be change between)
+
+
+
+// two years after the hold-up, after September...
+// Rule 1bis
+//5> ADV[tempexpr:+,mwe:+,c_dur:+,c_anchor:+] = NP#1[c_dur], ?*, PP#2[temp_rel,temp_ref].
+
+// DURATION + PREP + C_ANCHOR
+// two years from now
+6> ADV[tempexpr:+,mwe:+,c_anchor:+] = #2[noun, tempexpr, c_dur], PP#1[temp_rel:~during, c_anchor, time_span:~],
+	where(key_exists(#1)).
+//   if you want to merge them in the representation, do it after the dependencies
+//     (for example, 'in' interpretation can be change between)
+//   add key_exists(#1) to avoid : Just over a month before the handover of authority, the president said
+
+// This file needs the previous application of marking_temp_first.xip
+
+
+// rule that applied previously in localdates and that makes "every + month" be a noun.
+// Don't touch this rule because can be useful for entities
+// either reshuffling in this case
+//2> NP{noun[tempexpr:+]{quant#1[lemme:every,first:+], noun#2[last:+,tempexpr:+]}}
+ //  = NP[tempexpr=+,c_set=+]{#1,#2}.
+// not translated because treated in localgram_temp.xip
+
+
+
+
+
+
+// adj[period], noun[tempexpr] - recent years
+// Added rule in localgram_temp.xip
+
+// for ADV NP[tempexpr]
+// e.g. for nearly forty years
+// XT done in localgram_temp (layer 50)
+//10> PP[tempexpr=+,t_relat=+] = prep[lemme:for], adv, NP[tempexpr] .
+
+// IN ADV NP[head est period:+]
+// e.g. in just|exactly a minute
+// XT done in localgram_temp (layer 50)
+//10> PP[tempexpr=+,t_relat=+] = prep[lemme:in], adv, NP[period] .
+
+// e.g. (AT) Three o'clock in the afternoon
+//  XT done in localdates, layer 16
+//10> NP[tempexpr=+,t_relat=+,hour=+] = NP[hour], PP[tempexpr:+] .
+//10> PP[tempexpr=+,t_relat=+,hour=+] = PP[hour], PP[tempexpr:+] .
+
+// (IN) the first quarter of 2003.
+// treated in local_dates
+//10> NP[tempexpr=+,t_relat=+] = NP[period], PP[tempexpr,form:fof] .
+//10> PP[tempexpr=+,t_relat=+] = PP[period], PP[tempexpr,form:fof] .
+
+// Friday at 8:00 pm
+// see localdates (Rule 200)
+//10> NP[tempexpr=+,hour=+,day=+] = NP[day], PP[form:fat,hour].
+//10> PP[tempexpr=+,hour=+,day=+] = PP[day], PP[form:fat,hour].
+
+// The third of October
+// see localdates (Rule 98)
+//10> NP[tempexpr=+,day=+] = NP[ord], PP[form:fof,tempexpr] .
+
+
+
+// DURATION + DATE
+// a beautiful day of October
+// the first six months of 2006.
+// c_set:~ to avoid "the first six months of each year" (see next rule).
+// interpretation done in temp_post_dependency
+//10> NP[tempexpr:+,c_anchor:+] = NP#1[tempexpr,c_dur], PP#2[form:fof, c_anchor, c_set:~].
+
+
+// DURATION + SET
+// the first six months of each year
+//10> NP[tempexpr:+,c_anchor:+] = NP#1[tempexpr,c_dur], PP#2[form:fof, c_set].
+
+
+
+// SET + DATE
+// some Tuesdays in October, 1999
+// some days in 2000
+// interpretation done in dependency_temp_before_link
+//10> NP[tempexpr:+,mwe:+,c_set:+] = #1[tempexpr,c_set], #2[tempexpr,date].
+//	where(merge_set_and_date(#1, #2, #0)).
+
+
+
+// Some Tuesdays in 1998
+//10> NP[tempexpr=+, day=+, c_set=+] = quant, NP[day], PP[year] .
+
+// From Monday to/till/until/through Wednesday
+// XT moved to dependency_tannier (Sequence)
+//10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], PP[form:fto];PP[form:ftill];PP[form:funtil];PP[form:fthrough] .
+// pb. si through est un adverbe
+// XT moved to dependency_tannier (Sequence)
+//10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], adv[lemme:through], NP[tempexpr] .
+
+// From Monday-Thursday
+// XT in localdates
+//10> NP[tempexpr=+,interval=+] = PP[form:ffrom,tempexpr], punct[form:fhyph], NP[tempexpr] .
+
+// Between Monday and Friday
+// XT moved to dependency_tannier (Sequence)
+10> NP[tempexpr=+,interval=+] = PP[form:fbetween,tempexpr], conj[lemme:and], NP[tempexpr] .
+
+
+
+
+// Sept, 23 - Oct, 5
+// XT in localgram_temp Layer 60
+//10> NP[tempexpr=+,interval=+] = NP[tempexpr], punct[form:fhyph], NP[tempexpr] .
+
+// (very) late last night
+// XT in localgram_temp Layer 50
+//10> NP[tempexpr=+,hasadv=+] = (adv), adv#1[t_mod], #2[c_anchor].
+
+// early in the morning
+// XT in localgram_temp Layer 50
+//10> NP[tempexpr=+,t_relat=+] = ?[adv,time], PP[tempexpr] .
+
+
+// next + mwe date - next 31 August
+// XT in localgram_temp Rule 19
+//10> NP[tempexpr=+,t_relat=+,day=+] = AP[t_relat,preperiod], NP[date] .
+
+
+// dig+period+prep+period
+// 20 days in July, 4 days in Summer.
+// XT interpreted automatically and chunked in dependency_tannier, Rule 11
+//15>NP[tempexpr=+,c_dur=+] = NP[firstdig,period], PP[tempexpr,form:fin] .
+
+
+// two weeks from next Tuesday
+// XT Same as previous one
+//15>NP[tempexpr=+,t_relat=+] = NP[firstdig,period], PP[tempexpr:+,t_relat:+,form:ffrom] .
+
+// the morning of January 2003
+// XT See localgram_temp, layer 20
+//15>PP[tempexpr=+,c_dur=+,posttime=+] = NP[tempexpr,posttime], PP[tempexpr,form:fof] .
+
+// In January of this year
+// XT See localdates, layer 25
+//15> PP[tempexpr=+,t_relat=+] = PP[tempexpr,period], PP[tempexpr,form:fof,period] .
+
+// In January this year (avoiding here to have frequencies like every year
+// XT See localdates, layer 25
+//15> PP[tempexpr=+,t_relat=+] = PP[tempexpr,period], NP[period:+,firstquant:~] .
+
+// January every year
+// XT interpreted automatically and chunked in dependency_tannier, Rule 15
+//15> NP[tempexpr=+,c_set=+] = NP[period], NP[firstquant,period] .
+//15> PP[tempexpr=+,c_set=+] = PP[period], NP[firstquant,period] .
+
+/// Joining 2 adjacents temporal expressions into a single one
+// 2nd NP is a freq:+, whole NP is a freq:+
+
+// Two days before yesterday (no quantifier that makes a frequency see below
+// See localgram_temp, Rule 10
+//15> NP[tempexpr=+,t_relat=+] = NP[tempexpr], NP[firstquant:~,tempexpr:+] .
+
+// Three days each week
+// See localgram_temp, Rule 50
+//15> NP[tempexpr=+,c_set=+] = NP[tempexpr], NP[firstquant] .
+
+// No example associated, but was in the former file
+// XT ??
+//15> NP[tempexpr=+] = NP[tempexpr:+], PP[tempexpr:+,interval:+] .
+
+// 4 days after September, 11
+// See localgram_temp, Rule 11
+//15> NP[tempexpr=+] = NP[tempexpr,period], PP[tempexpr:+,reftime:+] .
+
+
+//////////////////////////////////////////////////////////////
+// Building PPs from complex NP build in this file
+
+// complex NP expressions bearing feature hour can build an PP when preceeded by "at"
+//30> PP[tempexpr=+] = prep[form:fat], NP[tempexpr:+,hour:+] .
+
+// complex NP expressions bearing feautre day can build a PP when preceede by "on"
+//30> PP[tempexpr=+] = prep[form:fon], NP[tempexpr:+,day:+] .
+
+// Complex PP expressions containing time adverbial
+// e.g. until early in the morning - until early next century
+//30> PP[tempexpr=+] = prep[lemme:until]; prep[lemme:till], NP[tempexpr,hasadv] .
+
+// PP build from complex NP which head is a possttime
+// in the morning of October 2003
+//30> PP[tempexpr=+] = prep[form:fin], NP[tempexpr,posttime:+] .
+
+// PP build from complex NP with c_set 
+//30> PP[tempexpr=+,c_set=+,day:~] = prep[lemme:in], NP[tempexpr:+,c_set:+] .
+
+// at three o'clock January 5, 1993
+// PP build from PP[hour] + NP[day]
+// XT see localdates, layer 25
+//30> PP[tempexpr=+,hour=+, t_absolut=+] = PP[hour], NP[date] .
+
+
+// PERIOD + ADV compar
+// e.g. a day later - a week earlier
+// a day before
+//35> NP[tempexpr=+, t_relat=+] = NP[period], ADV[reftime:+]; ADV[time:+,compar:+] .
+
+// TEMPEXPR or TEMPEXPR
+// e.g. within days or weeks - during days and weeks.
+// XT treated in localdates, layer 20
+//35> NP[tempexpr=+, t_relat=+] = NP[tempexpr];PP[tempexpr], conj[coord], NP[tempexpr] |@ ?*[verb:~] | .
+
+
+
+// two years from September...  
+// not when temp_rel = during (two years in September must stay separate) 
+// not when temp_rel = starts_ or ends_with (two years from September must stay separate) 
+// not when the PP is built from a duration (two weeks in two days)
+//  -> only temp_rel = after or before (and "from", will be turned into "after" later)
+35> ADV[tempexpr=+,mwe=+,c_anchor=+, t_ambiguous_analysis=+] = 
+	#2[noun,tempexpr,c_dur,c_set:~],
+	PP#1[c_dur:~,tempexpr,c_anchor],
+		where(#1[form:ffrom] | #1[temp_rel:after] | #1[temp_rel:before]).
+
+
+// "some Tuesdays in 2006".
+35> ADV[tempexpr=+,mwe=+,c_anchor=+, t_ambiguous_analysis=+, c_set=+] = 
+	#2[noun,tempexpr,c_dur,c_set],
+	PP#1[c_dur:~, tempexpr,c_anchor,temp_rel:during].
+
+

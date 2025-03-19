@@ -1,0 +1,290 @@
+// deduction_sentiments_1.xip
+// dépendances de sentiments, 1ère partie (de deduction_sentiments.xip), extraction des sentiments
+// positifs et négatifs
+// créé: 25.6.2007 (Sigrid Maurel)
+// modifié: 23.1.2009 (Sigrid Maurel)
+
+
+Déduction:
+
+//----------------------------------------------------------------------------------------------------
+// sentiments positifs
+
+// la belle ville
+// Impossible de touver du matériel de bonne qualité. -> pas de relation souhaitée
+// C'est du matériel de bonne qualité. -> relation souhaitée
+// J'aime les îles de Fira et d'Oia. -> relation souhaitée
+// (11.6.2007) PB: "& ~PREPOBJ(#2, #3[lemme:de])" remplacé par "& ~PREPOBJ(#2[desn:+], #3[lemme:de])"
+// (12.9.2007) commenté "& ~PREPOBJ"
+// (8.8.2008) non: faire bonne figure face à Bruxelles : & ~OBJ(#4[verb:+, inf:+], #2)
+if ( NMOD(#2[no-sents:~, pron:~, measure:~, pren:~], #1[adj:+, sents:+, positif:+, noun:~])
+ & ~OBJ(#4[verb:+, inf:+], #2) )
+SENTIMENT[positif=+, confiance=3](#1, #2).
+
+// Le parc est très agréable.
+// (8.8.2008) non: Il est bon de rappeller : & ~ADJMOD(#1, #6[verb:+, inf:+])
+if ( OBJ[spred:+](#2[cond:~, fut:~, subj:~], #1[adj:+, sents:+, positif:+]) & SUBJ(#2, #3[no-sents:~, hyph:~])
+ & ~AUXIL(#2, #4[cond:+]) & ~OBJ(#5[cond:+], #2) & ~ADJMOD(#1, #6[verb:+, inf:+]) &
+ ~SENTIMENT(#1, #10) )
+SENTIMENT[positif=+, confiance=3](#1, #3).
+
+// Je suis tombée amoureuse de Lille.
+if ( ADJMOD(#1[adj:+, sents:+, positif:+], #2[adv:~, verb:~]) & ~SENTIMENT(#1, #10) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// J'aime beaucoup l'Allemagne et la France.
+// le verbe ne doit pas être au conditionnel, ni son auxiliaire
+// exclure les verbes à la 2e et 3e personne "... ceux qui aiment observer ..."
+// le verbe ne doit pas être "chercher" ou "demander" [no-sents:~]
+// objet ne doit pas pas être un numéro: #2[num:~]
+if ( OBJ(#1[last:+, verb:+, cond:~, fut:~, sents:+, positif:+, val:~, inf:~, p2:~, p3:~], #2[no-sents:~])
+ & ~AUXIL(#1, #3[cond:+]) & ~AUXIL(#1, #3[fut:+]) & ~AUXIL(#1, #3[p3:+]) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// Ceci me plait beaucoup.
+if ( OBJ(#1[last:+, verb:+, cond:~, fut:~, sents:+, positif:+, plaire:+, val:~, inf:~, no-sents:~], #2)
+ & SUBJ(#1, #4) & ~AUXIL(#1, #3[cond:+]) & ~AUXIL(#1, #3[fut:+]) )
+SENTIMENT[positif=+, confiance=2](#1, #4).
+
+
+// ************************ Modif Driss*************************************
+// Il est avec charme. Elle a du charme.
+// le verbe doit être un auxiliaire
+if ( OBJ(#1[aux:+, partpas:~], #2[positif:+, noun:+, defsuj:+, conseil:~]) & SUBJ(#1, #3)
+ & ~SENTIMENT[positif:+](#2, #3) )
+SENTIMENT[positif=+, confiance=1](#2, #3).
+
+// ************************ ********************************************
+
+
+
+
+// ************************ Ajout Driss*************************************
+// elle a un faible pour Paris.
+// J'ai un petit faible pour la vallée de la Dordogne.
+// le verbe doit être un auxiliaire
+if ( OBJ(#1[aux:+, partpas:~], #2[positif:+, noun:+, enchante:+, conseil:~]) & VMOD(#1, #3)
+ & ~SENTIMENT[positif:+](#2, #3) )
+SENTIMENT[positif=+, confiance=1](#2, #3).
+
+// ************************ ********************************************
+
+
+
+// ************************ Modif Driss*************************************
+
+// Play Time est surtout un bonheur d'humour burlesque.
+if ( OBJ[spred:+](#2, #1[sents:+, positif:+, noun:+]) & SUBJ(#2, #3) & ~SENTIMENT[positif:+](#1, #10) )
+SENTIMENT[positif=+, confiance=1](#1, #3).
+
+
+// ************************ ********************************************
+
+// La région est une de mes préférées.
+if ( OBJ(#1[aux:+], #2) & SUBJ(#1, #4[pron:~]) & NMOD(#2, #3[positif:+, noun:+, conseil:~])
+ & ~SENTIMENT[positif:+](#3, #10) )
+SENTIMENT[positif=+, confiance=2](#3, #4).
+
+// Mon préféré c'est Chambord.
+if ( OBJ(#1[aux:+], #2) & SUBJ(#1, #3[positif:+, verb:~]) & ~SENTIMENT[positif:+](#3, #2)
+ & ~SENTIMENT[positif:+](#2, #3) & ~SENTIMENT[positif:+](#10, #3) )
+SENTIMENT[positif=+, confiance=3](#3, #2).
+
+// Les deux villes les plus intéressantes sont à mon avis Tours et Anger.
+| NP{?*, #1[last:+]}, NP{?*, AP[last:+]{?*, #2[last:+, positif:+]}} |
+SENTIMENT[positif=+, confiance=2](#2, #1).
+
+// C'est la plus ravissante des vieilles boutiques, sortie tout droit de Dickens, tu en serais folle.
+| NP{?*, AP[last:+]{?*, #2[last:+, positif:+]}}, PP{?*, NP{?*, #1[last:+]}} |
+SENTIMENT[positif=+, confiance=2](#2, #1).
+
+// ************************ Modif Driss*************************************
+// Un détour vers Lille vaut vraiment le coup. 
+if ( OBJ(#1[val:+], #2[objval:+]) & SUBJ(#1,#3) )
+		SENTIMENT[positif=+, confiance=3](#1, #3).
+
+//***********************************************************************************
+
+
+// Personne ne parle de Chypre qui en effet doit valoir le coup.
+if ( SUBJ(#1, #2) & OBJ(#1[p3:+], #3[positif:+, val:+, cond:~, fut:~, subj:~])
+ & ~SENTIMENT[positif:+](#3, #2) )
+SENTIMENT[positif=+, confiance=2](#3, #2).
+
+// Cavaillon est une ville pas trop grande.
+if ( ADJMOD(#2[sents:~], #1[trop:+]) & ADVMOD(#1, #3[psneg:+]) & ~SENTIMENT[positif:+](#2, #10) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// Dai Sijie filme magnifiquement les paysages et les corps qui s'y déplacent.
+if ( VMOD(#1[aux:~, cond:~, fut:~, sents:~, no-sents:~], #2[sents:+, positif:+, adv:+])
+ & ~SENTIMENT[positif:+](#1, #10) )
+SENTIMENT[positif=+, confiance=2](#2, #1).
+
+// Ce film est moche sans être ennuyant.
+if ( PREPOBJ(#1, #3[sfsans:+]) & OBJ[spred:+](#1, #2[sents:+, negatif:+]) )
+SENTIMENT[positif=+, confiance=2](#2, #1).
+
+// Quel plaisir d'avoir pris un appartement.
+if ( NMOD(#1[sents:+, positif:+, noun:+], #2) & OBJ(#2, #3[noun:+]) )
+SENTIMENT[positif=+, confiance=1](#1, #3).
+
+// Qualité d'impression nickel.
+// l'adjectif (#2) doit suivre le nom (#1)
+if ( NMOD(#1, #2[adj:+, sents:+, positif:+, verb:~]) & NMOD(#3[desn:+, no-sents:~], #1)
+ & PREPOBJ(#1, #4[lemme:de]) & (#1 < #2) )
+SENTIMENT[positif=+, confiance=2](#2, #3).
+
+// Une imprimante très pratique, simple, peu encombrante et d'une excellente qualité.
+if ( (NMOD[posit1:+](#1[sents:+, positif:+], #2[noun:+, no-sents:~])
+ | NMOD[posit1:+](#1[sents:+, positif:+], #2[adj:+])) & ~SENTIMENT(#10, #1) & ~SENTIMENT(#1, #11)
+ & ~PREPOBJ(#1, #3) & ~DEEPSUBJ(#11[negatif:+], #1) )
+SENTIMENT[positif=+, confiance=3](#1, #2).
+
+// J'y retournerai avec plaisir.
+if ( VMOD(#1[sents:~, partpre:~, aux:~], #2[noun:+, sents:+, positif:+, conseil:~])
+ & ~SENTIMENT[positif:+](#10, #2) & ~SENTIMENT[positif:+](#2, #11) )
+SENTIMENT[positif=+, confiance=1](#2, #1).
+
+// ************************ Modif Driss "OBJ(#1,#2[p1:~, p3:~]?")*************************************
+// Je peux te conseiller Grenoble.
+if ( OBJ(#1[sents:+, positif:+, conseil:+, cond:~, fut:~], #2) & ~SENTIMENT(#1, #2)
+ & ~OBJ(#3[cond:+], #1) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// *************************************************************
+
+// Mais il faut surtout admirer Paris!
+if ( OBJ(#1[lemme:falloir], #2[verb:+, inf:+, enchante:+, positif:+]) & OBJ(#2, #3) )
+SENTIMENT[positif=+, confiance=2](#2, #3).
+
+// Un produit parfaitement réussi à un prix plus que raisonnable pour toutes ces performances.
+if ( NMOD(#2[no-sents:~, pron:~], #1[partpas:+, adj:~, sents:+, positif:+]) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// Ce jeu est vraiment à conseiller.
+// La côte d'Azur est vraiment à visiter.
+if ( PREPOBJ(#2[positif:+, averb:+, inf:+], #1[lemme:à]) & ~SENTIMENT(#2, #10) )
+SENTIMENT[positif=+, confiance=3](#1, #2).
+
+// Je suis jeune photographe et je m'intéresse au jeu vidéo et à ses joueurs.
+if ( VMOD(#1[sents:+, positif:+], #2) & (PREPOBJ(#2, #3[lemme:à]) | PREPOBJ(#2, #3[lemme:de]))
+ & ~SENTIMENT(#1, #10) )
+SENTIMENT[positif=+, confiance=2](#1, #2).
+
+// règle "default": quand il n'y a rien en relation avec le verbe de sentiment, une dépendance unaire
+// est créée pour signaler le verbe en question
+// exclure les verbes à la 3e personne? "... ceux qui aiment observer ..."
+// J'aime aussi beaucoup quand il fait beau.
+| FV{?*, #1[last:+, surface:~plus]}; GV{?*, #1[last:+]} |
+if ( #1[sents:+, positif:+, val:~, cond:~, fut:~, p3:~] & ~OBJ(#1, #2) & ~AUXIL(#1, #3[cond:+])
+ & ~SENTIMENT(#1, #10) )
+SENTIMENT[positif=+, confiance=2](#1).
+
+
+
+//----------------------------------------------------------------------------------------------------
+// sentiments négatifs
+
+// la ville bondé de monde
+// (11.6.2007) PB: "& ~PREPOBJ(#2, #3[lemme:de])" remplacé par "& ~PREPOBJ(#2[desn:+], #3[lemme:de])"
+// (12.9.2007) commenté "& ~PREPOBJ"
+if ( NMOD(#2[no-sents:~, pron:~, pren:~], #1[adj:+, sents:+, negatif:+, touri:~, noun:~])
+ & ~OBJ(#4[verb:+, inf:+], #2) )
+SENTIMENT[negatif=+, confiance=3](#1, #2).
+
+// Un produit parfaitement raté à un prix plus que raisonnable pour toutes ces performances.
+if ( NMOD(#2[no-sents:~, pron:~], #1[partpas:+, adj:~, sents:+, negatif:+]) )
+SENTIMENT[negatif=+, confiance=3](#1, #2).
+
+// La ville est vraiment moche.
+if ( OBJ[spred:+](#2[cond:~, fut:~, subj:~], #1[adj:+, sents:+, negatif:+, touri:~]) &
+ SUBJ(#2, #3[no-sents:~, hyph:~]) & ~AUXIL(#2, #4[cond:+]) & ~ADJMOD(#1, #6[verb:+, inf:+]) &
+ ~SENTIMENT(#1, #10) )
+SENTIMENT[negatif=+, confiance=3](#1, #3).
+
+// Cavaillon est une ville un peu trop grande.
+if ( ADJMOD(#2[sents:~], #1[trop:+]) & ~ADVMOD(#1, #10[psneg:+]) & ~SENTIMENT[negatif:+](#2, #11) )
+SENTIMENT[negatif=+, confiance=2](#1, #2).
+
+// Je regrette les vacances.
+// le verbe ne doit pas être au conditionnel, ni son auxiliaire
+// exclure les verbes à la 3e personne? "... ceux qui détestent observer ..."
+// le verbe ne doit pas être "chercher" ou "demander"
+if ( OBJ(#1[last:+, verb:+, cond:~, fut:~, sents:+, negatif:+, val:~, inf:~, p2:~, p3:~], #2[no-sents:~])
+ & ~AUXIL(#1, #3[cond:+]) & ~AUXIL(#1, #3[fut:+]) & ~AUXIL(#1, #3[p3:+]) )
+SENTIMENT[negatif=+, confiance=2](#1, #2).
+
+// Ceci me déplait beaucoup.
+if ( OBJ(#1[last:+, verb:+, cond:~, fut:~, sents:+, negatif:+, plaire:+, val:~, inf:~, no-sents:~], #2)
+ & SUBJ(#1, #4) & ~AUXIL(#1, #3[cond:+]) & ~AUXIL(#1, #3[fut:+]) )
+SENTIMENT[negatif=+, confiance=2](#1, #4).
+
+// C'est de pire en pire
+if ( OBJ(#1[aux:+, partpas:~], #2[negatif:+, noun:+, conseil:~]) & SUBJ(#1, #3) &
+ ~SENTIMENT[negatif:+](#2, #3) )
+SENTIMENT[negatif=+, confiance=2](#2, #3).
+
+// Les deux villes les plus moches sont à mon avis Toulon et Grasse.
+| NP{?*, #1[last:+]}, NP{?*, AP[last:+]{?*, #2[last:+, negatif:+]}} |
+SENTIMENT[negatif=+, confiance=2](#2, #1).
+
+// C'est une déception.
+if ( OBJ[spred:+](#2, #1[sents:+, negatif:+, noun:+]) & ~SENTIMENT[negatif:+](#1, #10) )
+SENTIMENT[negatif=+, confiance=3](#1, #2).
+
+// Dai Sijie filme malheureusement les paysages et les corps qui s'y déplacent.
+if ( VMOD(#1[aux:~, cond:~, fut:~, sents:~, no-sents:~], #2[sents:+, negatif:+, adv:+])
+ & ~SENTIMENT[negatif:+](#1, #10) )
+SENTIMENT[negatif=+, confiance=2](#2, #1).
+
+// Ce film est intéressant sans être captivant.
+if ( PREPOBJ(#1, #3[sfsans:+]) & OBJ[spred:+](#1, #2[sents:+, positif:+]) )
+SENTIMENT[negatif=+, confiance=2](#2, #1).
+
+// Qualité d'impression mauvaise.
+if ( NMOD(#1, #2[adj:+, sents:+, negatif:+, verb:~]) & NMOD(#3[desn:+, no-sents:~], #1)
+ & PREPOBJ(#1, #4[lemme:de]) & (#1 < #2) )
+SENTIMENT[negatif=+, confiance=2](#2, #3).
+
+// Manque d'exemples de formalisation.
+// Seuls bémols : le prix des cartouches.
+if ( (NMOD[posit1:+](#1[sents:+, negatif:+], #2[noun:+, no-sents:~])
+ | NMOD[posit1:+](#1[sents:+, negatif:+], #2[adj:+])) & ~SENTIMENT(#10, #1) & ~SENTIMENT(#1, #11)
+ & ~PREPOBJ(#1, #3) & ~DEEPSUBJ(#11[positif:+], #1) )
+SENTIMENT[negatif=+, confiance=1](#1, #2).
+
+// Quel dommage d'avoir pris un appartement.
+if ( NMOD(#1[sents:+, negatif:+, noun:+], #2) & OBJ(#2, #3[noun:+]) )
+SENTIMENT[negatif=+, confiance=1](#1, #3).
+
+// J'y retournerai avec inquiétude.
+if ( VMOD(#1[sents:~, partpre:~, aux:~], #2[noun:+, sents:+, negatif:+]) & ~SENTIMENT[positif:+](#10, #2)
+ & ~SENTIMENT[positif:+](#2, #11) )
+SENTIMENT[negatif=+, confiance=1](#2, #1).
+
+// Je peux te déconseiller Grenoble.
+if ( OBJ(#1[sents:+, negatif:+, avertissement:+, cond:~, fut:~], #2[p1:~, p3:~]) & ~SENTIMENT(#1, #2)
+ & ~OBJ(#3[cond:+], #1) )
+SENTIMENT[negatif=+, confiance=2](#1, #2).
+
+// Mais il faut surtout éviter Limassol!
+if ( OBJ(#1[lemme:falloir], #2[verb:+, inf:+, desapprobation:+, negatif:+]) & OBJ(#2, #3) )
+SENTIMENT[negatif=+, confiance=3](#2, #3).
+
+// Ce jeu est vraiment à déconseiller.
+// La côte d'Azur est vraiment à éviter durant cette période.
+if ( PREPOBJ(#2[negatif:+, averb:+, inf:+], #1[lemme:à]) & ~SENTIMENT(#2, #10) )
+SENTIMENT[negatif=+, confiance=3](#1, #2).
+
+// Je suis jeune photographe et je m'ennuie au jeu vidéo et à ses joueurs.
+if ( VMOD(#1[sents:+, negatif:+], #2) & (PREPOBJ(#2, #3[lemme:à]) | PREPOBJ(#2, #3[lemme:de]))
+ & ~SENTIMENT(#1, #10) )
+SENTIMENT[negatif=+, confiance=2](#1, #2).
+
+// règle "default": quand il n'y a rien en relation avec le verbe de sentiment, une dépendance unaire
+// est créée pour signaler le verbe en question
+// Je regrette d'être venu.
+| FV{?*, #1[last:+]}; GV{?*, #1[last:+]}  |
+if ( #1[sents:+, negatif:+, cond:~, fut:~, val:~, p3:~] & ~OBJ(#1, #2) & ~AUXIL(#1, #3[cond:+])
+ & ~SENTIMENT(#1, #10) )
+SENTIMENT[negatif=+, confiance=2](#1).

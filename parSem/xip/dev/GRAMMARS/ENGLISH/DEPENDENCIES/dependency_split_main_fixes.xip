@@ -1,0 +1,41 @@
+////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2011 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : dependency_split_main_fixes.xip
+//!   Date       : 11/02/2011
+//!   Author     : André Bittar 
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+// Call these rules at the right point to ensure correct detection of 
+// the main verb.
+
+// Rule 1: corrects erroneous embedding (rule 2444 in paraph.xip embeds a main verb under a subordinate verb)
+// This was to fix the following problem...
+// If an extracted subordinate clause headed by a previously marked indirect speech main verb (MAIN),
+// itself with an embedded clause, is followed by a sentence-final clause headed
+// by a main verb of indirect speech [indspeech:+] (also MAIN)
+// then this final verb is the main verb of the sentence.
+// e.g. John said Paul came, Mary stated. "stated" is the main verb.
+//      John said Paul came, stated Mary. "stated" is the main verb.
+if ( (^MAIN(#1) & MAIN(#2)) & EMBED(#1,#2) )
+~
+
+// Corrects wrong embedding. If a verb is embedded under a verb other than the main verb, 
+// it cannot also be embedded under the main verb
+// But we need to know which one to delete. This could benefit from levels.
+// The man who lives next door tried to greet John. *EMBED(lives,greet)
+if ( EMBED(#1_lives,#2_tried) & EMBED(#3_greet,#2_tried) & MAIN(#2_tried) & ^EMBED(#1_lives,#3_greet) )
+~
+
+// corrects MAIN verb detection when the verb in a subordinate clause is chosen
+// e.g. Although he ensures things stay at the top, John imitates Paul. *MAIN(stays), MAIN(imitates)
+if ( ^MAIN(#1) & CONNECTOR(#1,#2[start]) )
+~

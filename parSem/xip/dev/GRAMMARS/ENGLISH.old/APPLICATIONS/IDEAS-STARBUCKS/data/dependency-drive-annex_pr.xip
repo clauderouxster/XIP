@@ -1,0 +1,339 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency-drive-annex_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//Creation of CORE-DRIVE and CORE-ANNEX dependencies between two cores, and of CORE-ATT between a core and another node.
+//Attribution of the feature 'identical' and 'second' to some of the CORE-DRIVE and CORE-ANNEX.
+
+//CORE-DRIVE : indique une relation syntaxique étroite : le second élément est une part importante de l'événement qui a le premier élément pour noyau (complétives, arguments régis du premier noyau)
+//CORE-ANNEX : relation secondaire : le second élément est rattaché syntaxiquement au premier (relatives, circonstancielles) mais n'est pas nécessaire à sa définition.
+//Une relation syntaxique entre deux verbes qui ont chacun la dépendance CORE est interpétée par défaut comme une relation CORE-DRIVE. Certaines de ces relations sont ensuite supprimées, ou transformées en CORE-ANNEX.
+//Création des dépendance CORE-ATT entre un élément modal (auxiliaire, adverbe) et le noyau qu'il modifie.
+//Les relations CORE-DRIVE qui unissent deux noyaux coréférents sont marquées par le trait identical.
+//Un noyau peut être le second argument d'au plus une dépendance CORE-DRIVE ou CORE-ANNEX.
+//les relations CORE-DRIVE et CORE-ANNEX ne peuvent être réciproques (si on  a CORE-DRIVE(A,B), on ne peut avoir CORE-DRIVE(B,A) ou CORE-ANNEX(B,A)).
+//Les relations CORE-DRIVE qui contreviennent à ces deux règles sans être des erreurs sont marquées du trait 'second'.
+
+
+DependencyRules:
+
+
+//############### CORE-DRIVE ##################
+// Method: establish dependencies between two COREs. a) This dependency is called CORE-DRIVE. The first argument is the driver; the driver is a verb
+//AR the embedded event is also a verb
+
+// inspect modality drivers that are finite verbs
+//a.1. CORE-DRIVE between 2 verbs
+
+if ( CORE-VERB(#1) & $1(#1,#2) & CORE-VERB(#2) & ~CORE-DRIVE(#2,#1) & ~MOD[relativ](#3,#1)  & #2 < #1 )
+	CORE-DRIVE(#2,#1).
+
+if ( CORE-VERB(#1) & $1(#2,#1) & CORE-VERB(#2) & ~CORE-DRIVE(#2,#1) & #2 < #1 )
+	CORE-DRIVE(#2,#1).
+
+// trying to exclude relative clauses that are not recognized
+// China sells Iran a cyclotron, which will be eventually installed in 1992 at Karaj.
+//ANTECEDENT(#3cyclotron,#4which)
+//OBJ-N_PRDEP_MON_KNOW(#1sells,#3cyclotron)
+//CORE-DRIVE_PRDEP_MON_PROD(#1sells,#2installed)
+
+if ( ^CORE-DRIVE(#1,#2) & $1(#1,#3) & ANTECEDENT(#3,#4[lemme:which]) )
+	CORE-ANNEX(#1,#2).
+
+if ( ^CORE-DRIVE(#1,#2) & $1(#1,#3) & ANTECEDENT(#3,#4[lemme:who]) )
+	CORE-ANNEX(#1,#2).
+
+if ( ^CORE-DRIVE(#1,#2) & MOD[sentence](#1[sc_s:~],#2) )
+	CORE-ANNEX(#1,#2).
+
+//Method: corrections (AR)
+if ( EMBED(#1,#2) & ^CORE-DRIVE(#1,#2))
+	~, CORE-DRIVE(#2,#1)
+
+if ( MOD(#2,#1) & ^CORE-DRIVE(#1,#2))
+	~, CORE-DRIVE(#2,#1)
+
+
+// deux noyaux coordonnés ne sont pas dans une relation CORE-DRIVE
+if (^CORE-DRIVE(#1,#2) & VCOORD(#1,#2) & CORE-DRIVE(#3,#1) & ~CORE-DRIVE(#3,#2))
+	~, CORE-DRIVE(#3,#2)
+
+
+if (^CORE-DRIVE(#1,#2) & VCOORD(#1,#2))
+	~
+
+
+//a.2.The embedded event is a noun
+//SP régis par le verbe
+//Method: interpret ARGUMENT as CORE-DRIVE when the argument is an event
+
+if ( (ARGUMENT(#1,#2)) & CORE(#2) & ~CORE-DRIVE(#1,#2))
+	CORE-DRIVE(#1,#2).
+
+//Iran agrees to allow IAEA inspectors to visit -> CORE-DRIVE_PROBA(agrees,visit) -> ~
+
+if (CORE-DRIVE(#1,#2) & ^CORE-DRIVE(#3,#2) & (#1<#3 | #3<#1) & OBJ(#1,#2) & ~OBJ(#1,#3))
+	~.
+
+
+//says he wants to see : pas de relation directe entre says et see
+if (CORE-DRIVE(#1,#2) & CORE-DRIVE(#2,#3) & ^CORE-DRIVE(#1,#3) & #1<#2 & #2<#3)
+	~
+
+//############### CORE-ANNEX ##################
+
+
+//Method: establish dependencies between two COREs. b) CORE-ANNEX
+//AR les compléments prépositionnels non régis 
+if (MOD(#1,#2) & CORE-VERB(#1) & CORE-NOUN(#2) & PREPD(#2,#3) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-ANNEX(#1,#2)
+
+// If there are two core-drives with the same head and both only verbs, we eliminate the one that is farther from the head
+
+//China's Nuclear Industry Organization signs a contract to supply the Atomic Energy Organization with a micro-nuclear research reactor to be built at Isfahan. -> CORE_ANNEX(signs,built)
+//CORE-DRIVE(signs,supply)
+//CORE-DRIVE(signs,built)
+
+if ( CORE-DRIVE(#1,#2[verb]) & ^CORE-DRIVE(#1,#3[verb]) & #2 < #3 )
+	CORE-ANNEX(#1,#3).
+
+
+//AR les relatives ne sont pas dans une relation CORE-DRIVE, mais CORE-ANNEX avec le verbe principal quand elles ne qualifient pas un nom d'événement.
+if (^CORE-DRIVE(#2,#1) & EMBED[relativ](#1,#2) )
+	CORE-ANNEX[rel=+](#2,#1)
+
+if (^CORE-DRIVE(#1,#2) & CORE-DRIVE[rel](#2,#1))
+	CORE-ANNEX[rel=+](#1,#2)
+
+
+//if (^CORE-DRIVE(#2,#1) & EMBED[relativ](#1,#2) & MOD[sentence](#3[evnt],#1))
+//	CORE-DRIVE[rel=+](#3,#1)
+
+if (~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (MOD(#2,#3)|SUBJ(#2,#3)|OBJ(#2,#3)) & ANTECEDENT(#3,#4) & (MOD(#1,#4)|SUBJ(#1,#4)|OBJ(#1,#4)))
+	CORE-ANNEX[rel=+](#2,#1)
+
+if (MOD[relativ, sentence](#3,#1) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (MOD(#2,#3)|SUBJ(#2,#3)|OBJ(#2,#3)) & CORE(#2))
+	CORE-ANNEX[rel=+](#2,#1)
+
+// les participiales au gérondif
+if (MOD[gerund](#1,#2) & (SUBJ(#3,#1) | OBJ(#3,#1) | MOD(#3,#1) | SUBJ-N (#3,#1) | OBJ-N(#3,#1))& ~CORE-DRIVE(?,#2))
+	CORE-ANNEX[ger=+](#3,#2)
+
+// les participes passés lorsqu'ils modifient un nom qui n'est pas un noyau d'événement
+if (^CORE-DRIVE(#1,#2[vpap]) & EMBED(#2,#1) & MOD(#3,#2))
+	CORE-ANNEX[partpas=+](#1,#2)
+
+
+// les subordonnées temporelles ou logiques (because, although, since, after)
+if (^CORE-DRIVE(#1,#2) & CONNECTOR(#2,?[annex]))
+	CORE-ANNEX(#1,#2)
+
+if (^CORE-ANNEX(#1,#2) & CONNECTOR(#2,?[temp]))
+	CORE-ANNEX[temp=+](#1,#2)
+
+if (^CORE-ANNEX(#1,#2) & CONNECTOR(#2,?[logic]))
+	CORE-ANNEX[logic=+](#1,#2)
+
+//during the visit
+if (^CORE-DRIVE(#1,#2) & PREPD(#2,?[form:fduring]))
+	CORE-ANNEX(#1,#2)
+
+if (^CORE-DRIVE(#1,#2) & PREPD(#2,?[form:fafter]) & ~ARGUMENT(#1,#2))
+	CORE-ANNEX(#1,#2)
+
+
+//AR les conditionnelles en if
+if (^CORE-ANNEX(#2,#1) & CONNECTOR(#1,?[form:fif]))
+	CORE-ANNEX[if=+](#2,#1)
+
+// les gérondifs
+if (CORE-VERB(#1) & ~MAIN(#1) & ~VDOMAIN(#1,?) & ~CORE-DRIVE(?,#1) & ~CORE-ANNEX(?,#1) & (SUBJ(#1,#2) | SUBJ-N(#1,#2)) & (SUBJ(#3,#2) | SUBJ-N(#3,#2) | OBJ(#3,#2) | OBJ-N(#3,#2) | MOD(#3,#2)) & (#1<#3 | #3<#1) & ~NUCL(#1,#3) & ~NUCL(#3,#1) & ~CORE-ATT(#3,#1) & ~CORE-ATT(#1,#3))
+	CORE-ANNEX(#3,#1)
+
+// les participes passés modifieurs d'un nom d'événement
+// the scheduled visit
+if ( MOD[pre](#1,#2[partpas]) & CORE(#1) & ~CORE-ANNEX(#1,#2) & ~CORE-DRIVE(#1,#2))
+	CORE-ANNEX(#1,#2)
+
+
+// infinitifs as modifiers: Iran's deal with Russia to start up the Bushehr nuclear plant has been delayed over Russian insistence on payment for spent fuel.
+
+if ( MOD[infinit,subcat:~](#1,#2) & CORE(#1) & CORE(#2) & ~CORE-DRIVE(#1,?) & ~CORE-ANNEX(#1,?) )
+	CORE-ANNEX(#1,#2).
+
+if ( MOD[post,subcat:~](#1,#2) & CORE(#1) & CORE(#2) & ~CORE-DRIVE(#1,?) & ~CORE-ANNEX(#1,?) & PREPD(#2,?) )
+	CORE-ANNEX(#1,#2).
+
+if ( MOD[infinit,subcat:~](#1,#2) & CORE(#1) & CORE(#2) & ~CORE-DRIVE(#1,?) & ~CORE-ANNEX(#1,?) )
+	CORE-ANNEX(#1,#2).
+
+// les subordonnées temporelles
+if (^CORE-DRIVE[relativ:~](#1,#2) & (MOD(#2,#3[form:fwhen]) | TEMP(#2,#3[form:fwhen])))
+	CORE-ANNEX[temp=+](#1,#2)
+
+
+//############### CORE-ATT ##################
+
+// établissement des CORE-ATT (modalité attachée et négation)
+//a) auxiliaires modaux
+if ( NUCL[vlink,modal](#1,#2) & CORE(#2) & ~CORE-ATT(#1,#2) )
+	CORE-ATT[modal=+](#1,#2)
+
+if (VDOMAIN[modal](#1,#2) & CORE(#1) & ~CORE-ATT(#2,#1))
+	CORE-ATT[modal=+](#2,#1).
+
+if (CORE-NOUN(#1) & MOD(#1,#2[modaladj]) & ~CORE-ATT[modal](#1,?))
+	CORE-ATT[modal=+](#2,#1)
+
+//b) négation
+if (MOD[neg](#1,#2) & ~CORE-ATT[neg](#2,#1))
+	CORE-ATT[neg=+](#2,#1)
+
+if (QUANTD[neg](#1,#2) & ~CORE-ATT[neg](#2,#1))
+	CORE-ATT[neg=+](#2,#1)
+
+
+//c) adverbes modaux
+if (CORE(#1) & (MOD(#1,#2[modaladv]) | MANNER(#1,#2[modaladv])))
+	CORE-ATT[modal=+](#2,#1)
+
+//a.3.The embedded event is an adjective
+if ( CORE-VERB(#1) & CORE-ADJ(#2) & NUCL[subjcompl](#1,#2) & ^CORE-DRIVE(#1,#2)E)
+	CORE-DRIVE[attribute=+](#1,#2)
+
+//It is necessary that | to
+//if (CORE-VERB(#1[form:fbe]) & NUCL[subjcompl](#1,#2[modaladj]) & ^CORE-DRIVE(#1,#3) )
+//	CORE-ATT(#1,#3).
+
+if (CORE-DRIVE(#1,#2) & CORE-ATT(#2,#3))
+	CORE-DRIVE(#1,#3)
+
+if (CORE-ANNEX(#1,#2) & CORE-ATT(#2,#3))
+	CORE-ANNEX(#1,#3)
+
+if (CORE-VERB[main](#1) &  CORE-ATT(#1,#2) & ^CORE-VERB(#2))
+	CORE-VERB[main=+](#2)
+
+if ((^CORE-VERB(#1)|^CORE-ADJ(#1)) & CORE-ATT(#1,?))
+	~
+
+if (^CORE-ATT(#1,#2) & NUCL[subjcompl](#1,#3[modaladj]))
+	CORE-ATT(#3,#2)
+
+if (MOD(#1,#2) & CORE-NOUN(#1) & CORE-NOUN(#2) & PREPD(#2,#3) & ~CORE-DRIVE(?,#2) & ~CORE-ANNEX(?,#2))
+	CORE-ANNEX(#1,#2)
+
+
+// Method: establish dependencies between two COREs. d) CORE-DRIVE : the driver is an adjective
+
+
+
+//AR predicative adjectives that are drivers
+if (POTMOD(#1[adj],#2) & CORE-VERB(#2))
+	CORE-DRIVE(#1,#2)
+
+
+
+//############### marquage des relations CORE-DRIVE particulières ##################
+
+// 1) marquer les relations drive qui unissent en fait des événements coréférents : verbes support, adjectifs prédicatifs
+// verbes support
+if (^CORE-DRIVE(#1,#2) & ARGUMENT[sv](#1,#2))
+	CORE-DRIVE[identical=+](#1,#2)
+
+
+if (^CORE-DRIVE(#1,#2) & ARGUMENT[attribute](#1,#2))
+	CORE-DRIVE[identical=+](#1,#2)
+
+// are on standby to visit
+if (^CORE-DRIVE(#1[form:fbe],#2) & CORE-NOUN[attribute](#2))
+	CORE-DRIVE[identical=+](#1,#2)
+
+if (^CORE-ANNEX(#1[form:fbe],#2) & CORE-NOUN[attribute](#2))
+	CORE-DRIVE[identical=+](#1,#2)
+
+// 2) marquage de relations DRIVE secondaires (le driver est dans une subordonnée qui modifie le nom d'événement) => elles seront traitées à part pour éviter des phénomènes cycliques (un élément est aussi le driver de son driver)
+
+// marquage des relations CORE-DRIVE lorsque le driver est dans une relative dont l'antécédent est l'événement régi : meetings that never happened
+// CORE-ANNEX(meeting, happened): car 'that never happened' est un complément de meetings
+// CORE-DRIVE(happened, meeting): car that (et donc son antécédent meetings) est le sujet de happened
+// => CORE-ANNEX(meeting, happened), CORE-DRIVE[rel, second](happened, meeting)
+if (^CORE-DRIVE(#1,#2) & MOD[relativ, sentence](#2,#1))
+	CORE-DRIVE[second=+,rel=+](#1,#2)
+
+// marquage des relations CORE-DRIVE lorsque le driver est dans une participiale au gérondif dont l'antécédent est l'événement régi : a statement stressing that
+// CORE-ANNEX(statement, stressing) : car stressing est un modifieur de statement
+// CORE-DRIVE(stressing, statement) : car statement est le sujet (normalisé) de stressing
+// => CORE-ANNEX(statement, stressing), CORE-DRIVE[ger, second](stressing, statement)
+if (^CORE-DRIVE(#1,#2) & MOD[gerund](#2,#1))
+	CORE-DRIVE[second=+,ger=+](#1,#2)
+
+
+// marquage des relations CORE-DRIVE lorsque le driver est un participe passé modifiant l'événement régi
+if (^CORE-DRIVE(#1,#2) & MOD[infinit:~](#2,#1[partpas]))
+	CORE-DRIVE[second=+,partpas=+](#1,#2)
+
+
+// marquage des relations CORE-DRIVE lorsque le driver est dans une infinitive dont l'antécédent est l'événement régi
+//if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3[nfin],#2) & #2<#3)
+//	CORE-DRIVE[second=+, infinit=+](#3,#2)
+
+
+//deux verbes coordonnés partagent le même sujet (ou argument)=> il n'en faut qu'un principal
+if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3,#2) & VCOORD(#1,#3))
+	CORE-DRIVE[second=+](#3,#2)
+
+//############### corrections ##################
+// suppression de certaines relations CORE-DRIVE
+
+if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3,#2) & (#1<#3 | #3<#1) & OBJ(#1,#2) & ~OBJ(#1,#3))
+	~
+
+if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3,#2) & CORE-DRIVE[identical:~, second:~](#1,#3))
+	CORE-DRIVE[second=+](#3,#2)
+
+//if (^CORE-DRIVE[second:~](#1,#2) & CORE-DRIVE[second:~](#3,#2) & CORE-ANNEX(#2,#3))
+//	~
+
+if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3,#2) & ARGUMENT(#1,#2) & ~ARGUMENT(#3,#2))
+	~
+
+
+if (CORE-DRIVE[second:~](#1,#2) & ^CORE-DRIVE[second:~](#3,#2) & EMBED(#2,#1) & ~EMBED(#2,#3))
+	~
+
+//praises the IAEA's work in promoting safety
+//CORE-DRIVE(#1praises,#3promoting)
+//CORE-DRIVE(#1praises,#2work)
+//CORE-ANNEX(#2work,#3promoting)
+
+if ( CORE-DRIVE(#1,#2) & ^CORE-DRIVE(#1,#3) & CORE-ANNEX(#2,#3) )
+	CORE-ANNEX(#1,#3).
+
+
+// *** suppression de certaines relations CORE-ANNEX
+// un participe passé modifie un nom d'événement : on supprime la relation CORE-ANNEX entre le participe et le verbe principal ( et on ajoute s'il n'y en a pas une relation annex entre le verbe principal et le nom d'événement)
+if ( CORE-ANNEX[second:~, partpas ](#1,#2) & CORE-ANNEX[second:~](#3,#2) & ~CORE-DRIVE[second:~](?,#3)  & ~CORE-ANNEX[second:~](?,#3) & ~CORE[main](#3))
+	CORE-ANNEX(#1,#3)
+
+if (^CORE-ANNEX[second:~, partpas ](#1,#2) & CORE-ANNEX[second:~](#3,#2)) 
+	~
+
+
+// lorsque deux noyaux réfèrent au même événement, supprimer les relations DRIVE et ANNEX qui sont rattachées au premier des deux
+if ((CORE-DRIVE[identical](#1,#2)|CORE-ANNEX[identical](#1,#2))& (^CORE-DRIVE(#1,#3) |^CORE-ANNEX(#1,#3)) & (CORE-DRIVE(#2,#3) |CORE-ANNEX(#2,#3)))
+	~
+
+
+// Pour les cas où un noyau aurait deux drivers
+if (CORE-ANNEX[second:~](#1,#2) & ^CORE-DRIVE[second:~](#1,#2))
+	~

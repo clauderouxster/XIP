@@ -1,0 +1,80 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : Date normalisation
+//!   Filename   : norm_dates.xip
+//!   Date       : April 2008
+//!   
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// PRINCIPE :
+// Qlqs modifs dans les fichiers de Aude (en amont) et exploitation de ces modifs ici.
+// Par ex., ajout des traits "annee" et "numjourpot" (pour potentiel), découpage de l'ADV 00/00/0000 en sous unités, etc.
+
+
+Déduction:
+
+//DATES ABSOLUES
+
+//2008 = date absolue incomplète
+
+if (DATE(#1[annee:+]))
+    DATE[absolue=+,incomplete=+](#1).
+
+
+//Juin 2008 = date absolue incomplète
+|NOUN#3{NOUN#1[first,mois],NUM#2[last,annee]}|
+if (DATE(#3))
+    DATE[absolue=+,incomplete=+](#3).
+
+
+//21 Juin 2008 = date absolue complète
+|NOUN#4{NUM#1[first,numjourpot],NOUN#2[mois],NUM#3[last,annee]}|
+if (DATE(#4))
+    DATE[absolue=+,complete=+](#4).
+
+//sous la forme 00/00/0000 ou 00/00/00:
+//|ADV#1[date]{#2[numJour],#3[punct],#4[numMois],#5[punct],#6[annee]}|
+|ADV#1[date,absolue,complete]|
+if (DATE(#1))
+    DATE[absolue=+,complete=+](#1).
+
+
+//lundi 21 Juin 2008 = date absolue complète
+|NOUN#5{NOUN#1[first,jour],NUM#2[numjourpot],NOUN#3[mois],NUM#4[last,annee]}|
+if (DATE(#5))
+    DATE[absolue=+,complete=+](#5).
+
+
+// DATES RELATIVES
+
+//jours seuls ATTENTION à revoir
+
+|NOUN#1[last,jour]|
+if(~DATE(#1))
+	DATE[relative=+](#1)
+
+
+//lundi 21 = date relative
+|NOUN#3{NOUN#1[first,jour],NUM#2[last,numjourpot]}|
+if (DATE(#3))
+    DATE[relative=+](#3).
+
+
+
+//INTERVALLES
+//avec indication du début et de la fin
+//ex : de ... à....
+|PP{PREP#1[form:fde, def],NP{NOUN#2[date]}},PP{PREP#3[form:fa,def],NP{NOUN#4[date]}}|
+INTERVAL(#2,#4).
+
+
+//si ellision sur premier terme
+// ex: du 15 au 20 mars 2008
+|PP{PREP#1[form:fde, def],NP{NUM#2[numjourpot]}},PP{PREP#3[form:fa,def],NP{NOUN#4[date]}}|
+INTERVAL(#2,#4).
+
+
+
+//if (DATE(#1[interval]))
+// INTERVAL(#1).

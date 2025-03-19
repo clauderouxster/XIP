@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------
+# FILE:		numbers.xfst
+# CONTENT:	(x)fst script for converting numbers <-> digits
+# LABGUAGE:	English
+#
+# AUTHOR:	A. Schiller
+# UPDATED:	01-Mar-2007
+# ---------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# General outline:
+# - define Num1to9
+# - define Num10to99
+# - define Num100to999 
+#	== Num1to9 "hundred" [ 0:%0 0:%0 | 0:%0 Num1to9 | Num10to99 ]
+# - define Num1000to999999
+#	 == [Num1to9|Num10to99|Num100to999] "thousand" 
+#		[ 0:%0 0:%0 0:%0 |
+#		  0:%0 0:%0 Num1to9 |
+#		  0:%0 Num10to99 |
+#		  Num100to999 ]
+# ---------------------------------------------------------------
+
+echo >>> separators
+define HY	%-:0 ;
+define SP	" ":0 ;
+define AND	{and}:0 SP ;
+
+echo ---------------------------------------------------------------
+echo >>> ENGLISH
+echo ---------------------------------------------------------------
+
+echo >>> zero
+define Zero	{null}:%0 ;
+
+# ---------------------------------------------------------------
+echo >>> numbers 1 to  9
+define Num1to9 	[ {one}:1 | {two}:2 | {three}:3 | {four}:4 | {five}:5 
+		| {six}:6 | {seven}:7 | {eight}:8 | {nine}:9 ] ;
+
+
+# ---------------------------------------------------------------
+define Num10to19 [
+	{ten}:{10}
+|	{eleven}:{11}
+|	{twelve}:{12}
+|	{thirteen}:{13}
+|	{fourteen}:{14}
+|	{fifteen}:{15}
+|	{sixteen}:{16}
+|	{seventeen}:{17}
+|	{eighteen}:{18}
+|	{nineteen}:{19}
+];
+
+define Num10to99 [
+	Num10to19
+|	[ {twenty}:2 | {thirty}:3 | {fourty}:4 | {fifty}:5
+	| {sixty}:6 | {seventy}:7 | {eighty}:8 | {ninety}:9 ]
+	[ 0:%0 | [HY|SP] Num1to9 ]
+] ; 
+
+# ---------------------------------------------------------------
+echo >>> numbers 100 to 999
+
+define Num100to999 [
+	[ Num1to9 SP | 0:1 ] {hundred}:0 
+	[ 
+	  0:%0 0:%0
+	| SP (AND) 0:%0 Num1to9 
+	| SP (AND) Num10to99
+	]
+] ;
+
+# ---------------------------------------------------------------
+echo >>> numbers 1000 to 999999
+
+define Num1000to999999 [
+	[ [ Num1to9 | Num10to99 | Num100to999 ] SP | 0:1 ] {thousand}:0
+	[ 0:%0 0:%0 0:%0 
+	| SP (AND) 0:%0 0:%0 Num1to9
+	| SP (AND) 0:%0 Num10to99
+	| SP (AND) Num100to999
+	]
+];
+
+# ---------------------------------------------------------------
+echo >>> Years
+define Years	[ [ Num1to9 | Num10to19 ] 
+		  SP ({hundred}:0 SP) (AND) 
+		  [0:%0 Num1to9 | Num10to99 ]
+		]  ;
+
+
+# ---------------------------------------------------------------
+echo >>> combine English numbers
+
+read regex [
+	[ Zero | Num1to9 | Num10to99 | 	Num100to999 | Num1000to999999 | Years ]
+].i ;
+
+save "num.fst"
+

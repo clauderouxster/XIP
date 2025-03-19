@@ -1,0 +1,505 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyBusinessRelations.xip                             !
+//!   Date       : 2010/July                                                   !
+//!   Author     : Daniel Santos                                               !
+//!   Revised by : Diogo Oliveira (2010/August)                                !
+//!   Revised by : Vera Cabarrão (2011/January)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating the extraction of business relations            !
+//!                                                                            !
+//!   Dependencies handled in this file:  BUSINESS                             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/17
+// Changed all "company" occurrences to "SEM-Hinstitution" in order to comply with the new set of directives.
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+// Employee                                                                   //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João trabalha na Microsoft
+// Example: O João está a trabalhar na Microsoft.
+// Example: Trabalha na Microsoft.
+  if( (SUBJ[ELIPS](#3[lemma:trabalhar],#2) || SUBJ[PRE](#3[lemma:trabalhar],#2[human])) &
+      (MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) || CDIR(#3,#4[SEM-Hcollective]) || CDIR(#3,#4[SEM-Hinstitution])) & ~MOD[NEG](#3,#5))
+   BUSINESS[employee=+](#2,#4)
+
+// Example: O João é empregado na Microsoft
+// Example: É empregado na Microsoft.
+ if( (SUBJ[ELIPS](#3[lemma:empregar],#2) || SUBJ[PRE](#3[lemma:empregar],#2[human])) &
+     (MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) & VLINK(#5[lemma:ser],#3)  & ~MOD[NEG](#3,#6))
+   BUSINESS[employee=+](#2,#4)
+
+// Example: O João, empregado da Microsoft,
+  if( (APPOSIT(#2[human],#3[lemma:empregado]) || APPOSIT(#2[human],#3[SEM-Hcargo]) || APPOSIT(#2[human],#3[SEM-Hprofession])) &
+      (MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) )
+   BUSINESS[employee=+](#2,#4)
+
+// Example: O João é engenheiro na Microsoft.
+// Example: É engenheiro na Microsoft.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      (PREDSUBJ(#3,#4[SEM-Hcargo]) || PREDSUBJ(#3,#4[SEM-Hprofession])) &
+      (MOD[POST](#4,#5[SEM-Hcollective]) || MOD[POST](#4,#5[SEM-Hinstitution])) & ~MOD[NEG](#3,#6))
+   BUSINESS[employee=+](#2,#5)
+
+//VERA, 2011/03/23
+// Example: O João que trabalha na Microsoft.
+// Example: O João que é empregado na Microsoft.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:empregar],#1) || SUBJ[PRE](#3[lemma:trabalhar],#1) ) &
+      ( MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[employee](#2,#4)
+    )
+   BUSINESS[employee=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que é engenheiro na Microsoft.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      (PREDSUBJ(#3,#5[SEM-Hcargo]) || PREDSUBJ(#3,#5[SEM-Hprofession]) ) &
+      ( MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[employee](#2,#4)
+    )
+   BUSINESS[employee=+](#2,#4)
+
+
+// Example: O João, contratado pela Microsoft,
+
+// Example: O João foi contratado pela Microsoft
+ if( SUBJ[PRE](#3[lemma:contratar],#2[human]) & (AGENT(#3,#4[SEM-Hcollective]) || AGENT(#3,#4[SEM-Hinstitution]) ) & PATIENT(#3,#2) & VDOMAIN(#5[lemma:ser],#3)  & ~MOD[NEG](#3,#6))
+   BUSINESS[employee=+](#2,#4)
+
+
+////////////////////////
+// Elipsis
+////////////////////////
+
+// Example: Filipe de Botton - COTEC Portugal (Presidente do Júri).
+|  NP{?*,noun#1[human]},PUNCT,NP{noun#2[SEM-Hinstitution];noun#2[SEM-Hcollective]} |
+        BUSINESS[employee=+](#1,#2)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Profession                                                                 //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João é engenheiro.
+// Example: É engenheiro.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      (PREDSUBJ(#3,#4[SEM-Hcargo]) || PREDSUBJ(#3,#4[SEM-Hprofession])) & ~MOD[NEG](#3,#5))
+       BUSINESS[profession=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que é engenheiro.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      (PREDSUBJ(#3,#4[SEM-Hcargo]) || PREDSUBJ(#3,#4[SEM-Hprofession]) )&
+      ~BUSINESS[profession](#2,#4)
+    )
+   BUSINESS[profession=+](#2,#4)
+
+// Example: O engenheiro João. (it seems it is not needeed - a regra que dispara é a próxima)
+//| NP{?*,noun#3{noun#1[SEM-Hcargo];noun#1[SEM-Hprofession],noun#2[human]}};PP{?*,noun#3{noun#1[SEM-Hcargo];noun#1[SEM-Hprofession],noun#2[human]}} |
+// BUSINESS[profession=+](#3,#1)
+
+// Incluir nas EM profissão+nome próprio e profissão+gentílico+nome próprio
+// Example: O treinador sérvio Dusan Bajevic
+//
+// NUNO /////////////////////////////////////////////////////////////////////////////////
+//
+//
+| ?{?*,noun{noun#1[SEM-Hcargo];noun#1[SEM-Hprofession],?*,noun#2[human]}} |
+   BUSINESS[profession=+](#2,#1)
+
+
+// Example: Esmeralda Dourado - Presidente da Comissão Executiva da SAG Gest.
+// Example: O pai, engenheiro agrónomo,
+|  ?{?*,noun#1[human]},PUNCT,NP{noun#3[SEM-Hcargo];noun#3[SEM-Hprofession];noun#3[sem-hprof];noun#3[title]} |
+if (~COORD(#4,#3))
+        BUSINESS[profession=+](#1,#3)
+
+// Análise errada do verbo - problema para resolver
+// Example: Miguel Maya aprovado como administrador do BCP.
+| NP#1{?*,noun#2[human]},AP{PASTPART[lemma:aprovar]};AP{PASTPART[lemma:nomear]};AP{PASTPART[lemma:eleger]},CONJ[lemma:como],NP{?*,noun#3[SEM-Hprofession]};NP{?*,noun#3[SEM-Hcargo]},PP#4{?*,noun#5[SEM-Hinstitution]};PP#4{?*,noun#5[SEM-Hcollective]} |
+  if(HEAD(#2,#1) & HEAD(#5,#4))
+   BUSINESS[profession=+](#2,#3)
+
+// Regra não funciona se tivermos verbo+como ("foi aprovado como administrador do BCP")
+// Example: Miguel Maya foi eleito administrador do BCP.
+ if( (SUBJ[PRE](#2[lemma:aprovar],#3[human]) || SUBJ[PRE](#2[lemma:nomear],#3[human]) || SUBJ[PRE](#2[lemma:eleger],#3[human])) &
+     VDOMAIN(#1[lemma:ser],#2) &
+     (CDIR[POST](#2,#4[SEM-Hprofession]) || CDIR[POST](#2,#4[SEM-Hcargo])) &
+     ~MOD[NEG](#2,?) )
+   BUSINESS[profession=+](#3,#4)
+
+// Example: O presidente da Worten, João Costa,
+// Example: O primeiro-ministro, José Sócrates,
+|  ?{?*,noun#1[SEM-Hcargo];noun#1[SEM-Hprofession];noun#1[sem-hprof];noun#1[title]},PUNCT,NP{noun#3[human]} |
+if (~COORD(#4,#1))
+        BUSINESS[profession=+](#3,#1)
+
+// Regra não funciona, pois temos verbo+como ("apresentado como")
+// Example: O espanhol poderá então ser oficialmente apresentado como jogador do Sporting.
+ if( VDOMAIN(?,#1[lemma:apresentar]) &
+     (SUBJ[ELIPS](#1,#2) || SUBJ[PRE](#1,#2[gentcountry]) || SUBJ[PRE](#1,#2[human])) &
+     MOD(#1,#3[SEM-Hprofession]) &
+     (MOD(#3,#4[SEM-Hinstitution]) || MOD(#3,#4[SEM-Hcollective])) &
+     ~MOD[NEG](#1,?)
+   )
+   BUSINESS[profession=+](#2,#3)
+
+// Example: Filipe de Botton - COTEC Portugal (Presidente do Júri)
+  if(BUSINESS[employee](#1,#2) & APPOSIT(#2,#3[SEM-Hprofession]))
+   BUSINESS[profession=+](#1,#3)
+
+// Example: O João é membro da direção da Worten.
+// Example: É membro da direção da Worten.
+  if( (SUBJ[ELIPS](#1[lemma:ser],#2) || SUBJ[PRE](#1[lemma:ser],#2[human])) &
+      PREDSUBJ(#1,#3[lemma:membro]) &
+      MOD[POST](#3,#4[lemma:direção]) &
+      (MOD(#4,#5[SEM-Hinstitution]) || MOD(#4,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#1,?))
+   BUSINESS[employee=+](#2,#5)
+
+// Example: O diretor-executivo da Worten é o João
+ if( SUBJ(#2[lemma:ser],#1[SEM-Hcargo]) &
+     PREDSUBJ(#2,#3[human])
+   )
+   BUSINESS[profession=+](#3,#1)
+
+// Example: O João manteve o cargo de presidente da Worten até se reformar.
+  if( (SUBJ[ELIPS](#1[lemma:manter],#2) || SUBJ[PRE](#1[lemma:manter],#2[human])) &
+      CDIR(#1,#3[lemma:cargo]) &
+      (MOD[POST](#3,#4[SEM-Hcargo]) || MOD[POST](#3,#4[title]))
+    )
+   BUSINESS[profession=+](#2,#4)
+
+
+////////////////////////
+// Elipsis
+////////////////////////
+
+// descomentar quando as anáforas estiverem tratadas
+// Example: Diretor da Worten.
+//  if( (NE[cargo](#1) || MOD(#1[SEM-Hprofession],#4[SEM-Hinstitution]) || MOD(#1[SEM-Hprofession],#4[SEM-Hcollective])) &
+//      ~SUBJ(#2[lemma:ser],#3[human]) & ~APPOSIT(#3,#1) & ~BUSINESS[profession](#3,#1))
+//         BUSINESS[profession=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#1)
+
+////////////////////////
+// FEATURE CARGO
+////////////////////////
+
+  if(^BUSINESS[profession=+](#1,#2[SEM-Hcargo]))
+       BUSINESS[profession=+,cargo=+](#1,#2)
+
+////////////////////////
+// FEATURE EMPLOYEE
+////////////////////////
+
+  if(BUSINESS[profession](#1,#2) & (MOD(#2,#3[SEM-Hinstitution]) || MOD(#2,#3[SEM-Hcollective])) & ~BUSINESS[employee](#1,#3))
+   BUSINESS[employee=+](#1,#3)
+
+////////////////////////////////////////////////////////////////////////////////
+// founder                                                                    //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João fundou a Microsoft.
+// Example: O João foi quem fundou a Microsoft.
+// Example: O João criou a Microsoft.
+// Example: Fundou a Microsoft.
+  if( (SUBJ[ELIPS](#3[lemma:fundar],#2) || SUBJ[PRE](#3[lemma:fundar],#2[human]) ||
+      SUBJ[ELIPS](#3[lemma:criar],#2) || SUBJ[PRE](#3[lemma:criar],#2[human])) &
+      (CDIR[POST](#3,#4[SEM-Hcollective]) || CDIR[POST](#3,#4[SEM-Hinstitution])) &
+      ~MOD[NEG](#3,#5) & ~BUSINESS[founder=+](#2,#4))
+   BUSINESS[founder=+](#2,#4)
+
+// Example: A Microsoft foi fundada pelo João.
+// Example: A Microsoft foi criada pelo João.
+  if ( (AGENT(#3[lemma:fundar],#2[human]) || AGENT(#3[lemma:criar],#2[human])) &
+       (PATIENT(#3,#4[SEM-Hinstitution]) || PATIENT(#3,#4[SEM-Hcollective])) &
+       VLINK(#5[lemma:ser],#3) & ~MOD[NEG](#3,#6)
+     )
+        BUSINESS[founder=+](#2,#4)
+
+// Example: O João foi o fundador da Microsoft.
+// Example: Foi o fundador da Microsoft.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ(#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[lemma:fundador]) &
+      (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#4,#5[SEM-Hcollective]) ) &
+      ~MOD[NEG](#3,#6)
+    )
+   BUSINESS[founder=+](#2,#5)
+
+// Example: O João é o pai da Microsoft.
+// Example: É o pai da Microsoft.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ(#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[lemma:pai]) &
+      (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#3,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6)
+    )
+   BUSINESS[founder=+](#2,#5)
+
+//VERA, 2011/03/23
+// Example: O João que fundou a Microsoft.
+// Example: O João que criou a Microsoft.
+// Example: O João que foi quem fundou a Microsoft.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:fundar],#1) || SUBJ[PRE](#3[lemma:criar],#1) ) &
+      (CDIR(#3,#4[SEM-Hinstitution]) || CDIR(#3,#4[SEM-Hcollective]) ) &
+      ~BUSINESS[founder](#2,#4)
+    )
+   BUSINESS[founder=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que foi o fundador da Microsoft.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3,#1) &
+      PREDSUBJ(#3,#5[lemma:fundador]) &
+      ( MOD[POST](#5,#4[SEM-Hcollective]) || MOD[POST](#5,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[founder](#2,#4)
+    )
+   BUSINESS[founder=+](#2,#4)
+
+// Example: A empresa fundada pelo João, a Microsoft.
+// Example: A empresa criada pelo João, a Microsoft.
+| AP{#1[lemma:fundar]};AP{#1[lemma:criar]},PP{?*,noun#2[human]},PUNCT,NP{?*,noun#3[SEM-Hinstitution]};NP{?*,noun#3[SEM-Hcollective]} |
+  if(MOD(#1,#2))
+   BUSINESS[founder=+](#2,#3)
+
+// Example: As empresas fundadas pelo João, a Microsoft e a Worten.
+  if(BUSINESS[founder](#1,#2) & COORD(#3,#2) & COORD (#3,#4) & ~BUSINESS[founder](#1,#4))
+   BUSINESS[founder=+](#1,#4)
+
+// Apagar regra quando o SUBJ[ELIPS] for identificado.
+// Example: Em 1991 criou a Fundação Horácio Roque.
+  if( (CDIR(#1[lemma:criar],#2[SEM-Hinstitution]) || CDIR(#1[lemma:fundar],#2[SEM-Hinstitution]) || CDIR(#1[lemma:criar],#2[SEM-Hcollective]) || CDIR(#1[lemma:fundar],#2[SEM-Hcollective])) & ~SUBJ(#1,#3))
+   BUSINESS[founder=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#2)
+
+
+////////////////////////
+// Elipsis
+////////////////////////
+
+// Example: Foi quem fundou a Microsoft.
+  if( (SUBJ[ANAPH0](#2[lemma:fundar],#1) || SUBJ[ANAPH0](#2[lemma:criar],#1)) & ( CDIR[POST](#2,#3[SEM-Hcollective]) || CDIR[POST](#2,#3[SEM-Hinstitution]))  & ~MOD[NEG](#2,#4) & ~BUSINESS[founder](#1,#3) & ~BUSINESS[founder](#5,#3))
+   BUSINESS[founder=+](#1,#3)
+
+// Example: Fundador da HP.
+  if( (MOD[POST](#1[lemma:fundador],#2[SEM-Hinstitution]) || MOD[POST](#1[lemma:fundador],#2[SEM-Hcollective])) & ~ATTRIB(#3,#1) & ~BUSINESS[founder](#4,#2))
+   BUSINESS[founder=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#2)
+
+////////////////////////////////////////////////////////////////////////////////
+// client                                                                     //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João comprou na Worten.
+// Example: Comprou na Worten.
+  if( (SUBJ[ELIPS](#3[lemma:comprar],#2) || SUBJ[PRE](#3[lemma:comprar],#2[human])) &
+      (MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]))  &
+      ~MOD[NEG](#3,#5) & ~CDIR(#3,#6))
+   BUSINESS[client=+](#2,#4)
+
+// Example: O João fez compras na Worten.
+// Example: Fez compras na Worten.
+  if( (SUBJ[ELIPS](#3[lemma:fazer],#2) || SUBJ[PRE](#3[lemma:fazer],#2[human])) &
+      CDIR[POST](#3,#4[lemma:compra]) &
+      (MOD[POST](#3,#5[SEM-Hinstitution]) || MOD[POST](#3,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[client=+](#2,#5)
+
+// Example: O João é cliente da Worten.
+// Example: É cliente da Worten.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[lemma:cliente]) &
+      (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#4,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[client=+](#2,#5)
+
+// Example: O João comprou um computador na Worten.
+// Example: Comprou um computador na Worten.
+  if( (SUBJ[ELIPS](#3[lemma:comprar],#2) || SUBJ[PRE](#3[lemma:comprar],#2[human]) ||
+      SUBJ[ELIPS](#3[lemma:adquirir],#2) || SUBJ[PRE](#3[lemma:adquirir],#2[human])) &
+      CDIR[POST](#3,#4) &
+      (MOD[POST](#3,#5[SEM-Hinstitution]) || MOD[POST](#3,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[client=+](#2,#5)
+
+//VERA, 2011/03/23
+// Example: O João que comprou um computador na Worten.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:comprar],#1) || SUBJ[PRE](#3[lemma:adquirir],#1) ) &
+      CDIR(#3,#5) &
+      ( MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[client](#2,#4)
+    )
+   BUSINESS[client=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que fez compras na Worten.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:fazer],#1) &
+      CDIR(#3,#5[lemma:compra]) &
+      ( MOD[POST](#3,#4[SEM-Hcollective]) || MOD[POST](#3,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[client](#2,#4)
+    )
+   BUSINESS[client=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que é cliente da Worten.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      PREDSUBJ(#3,#5[lemma:cliente]) &
+      ( MOD[POST](#5,#4[SEM-Hcollective]) || MOD[POST](#5,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[client](#2,#4)
+    )
+   BUSINESS[client=+](#2,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Owner                                                                     //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João é dono da Worten.
+// Example: O João é acionista maioritário da Worten.
+// Example: É dono da Worten.
+// Example: É acionista da Worten.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human]) || SUBJ[PRE](#3[lemma:ser],#2[admin_area])) &
+      (PREDSUBJ(#3,#4[lemma:dono]) || PREDSUBJ(#3,#4[lemma:acionista]) || PREDSUBJ(#3,#4[lemma:"acionista ?+"]) || PREDSUBJ(#3,#4[lemma:proprietário])) &
+      (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#4,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[owner=+](#2,#5)
+
+// Example: O João foi acionista fundador da Worten.
+// Example: Foi acionista fundador da Worten.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human]) || SUBJ[PRE](#3[lemma:ser],#2[admin_area])) &
+      PREDSUBJ(#3,#4[lemma:"acionista fundador"]) &
+      (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#4,#5[SEM-Hcollective])) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[founder=+](#2,#5),
+   BUSINESS[owner=+](#2,#5)
+
+// Example: O João detém 10% das ações da Worten.
+// Example: Tem 10% das ações da Worten.
+if( (SUBJ[ELIPS](#3,#2) || SUBJ[PRE](#3,#2[human]) || SUBJ[PRE](#3,#2[admin_area])) &
+    CDIR[POST](#3,#4[lemma:ação]) &
+    (MOD[POST](#4,#5[SEM-Hinstitution]) || MOD[POST](#4,#5[SEM-Hcollective])) &
+    ~MOD[NEG](#3,#6))
+   BUSINESS[owner=+](#2,#5)
+
+//VERA, 2011/03/23
+// Example: O João que detém 10% das ações da Worten.
+  if( ( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) || ANTECEDENT[RELAT](#2[admin_area],#1[lemma:que]) ) &
+      ( SUBJ[PRE](#3[lemma:deter],#1) || SUBJ[PRE](#3[lemma:ter],#1) || SUBJ[PRE](#3[lemma:possuir],#1) || SUBJ[PRE](#3[lemma:adquirir],#1) || SUBJ[PRE](#3[lemma:comprar],#1) )&
+      MOD[POST](#3,#5[lemma:ação]) &
+      ( MOD[POST](#5,#4[SEM-Hcollective]) || MOD[POST](#5,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[owner](#2,#4)
+    )
+   BUSINESS[owner=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que é dono da Worten.
+// Example: O João que é acionista maioritário da Worten.
+  if( (ANTECEDENT[RELAT](#2[human],#1[lemma:que]) || ANTECEDENT[RELAT](#2[admin_area],#1[lemma:que]) ) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      ( PREDSUBJ(#3,#5[lemma:dono]) || PREDSUBJ(#3,#5[lemma:acionista]) || PREDSUBJ(#3,#5[lemma:"acionista ?+"]) ) &
+      ( MOD[POST](#5,#4[SEM-Hcollective]) || MOD[POST](#5,#4[SEM-Hinstitution]) ) &
+      ~BUSINESS[owner](#2,#4)
+    )
+   BUSINESS[owner=+](#2,#4)
+
+// Example: A Worten, detida na totalidade pelo João.
+| NP#1{?*,noun#2[SEM-Hinstitution]};NP#1{?*,noun#2[SEM-Hcollective]},(PUNCT),AP{PASTPART[lemma:deter]},(?),PP#3{?*,noun#4[human]};PP#3{?*,noun#4[admin_area]} |
+  if(HEAD(#2,#1) & HEAD(#4,#3) & ~BUSINESS[owner](#4,#2))
+   BUSINESS[owner=+](#4,#2)
+
+if (^BUSINESS[client](#1,#2) & BUSINESS[owner](#1,#2))
+   ~
+
+
+////////////////////////////////////////////////////////////////////////////////
+// affiliation                                                                //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João é adepto do Sporting.
+// Example: É adepto do Sporting.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[lemma:adepto]) &
+      MOD[POST](#4,#5[SEM-Hinstitution]) &
+      ~MOD[NEG](#3,?) & ~BUSINESS[global-affiliation=+](#2,?))
+   BUSINESS[global-affiliation=+](#2,#5)
+
+// Example: O João é sócio do Sporting.
+// Example: O João é membro da UNICEF.
+// Example: É sócio do Sporting.
+// Example: É membro da UNICEF.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      (PREDSUBJ(#3,#4[lemma:sócio]) || PREDSUBJ(#3,#4[lemma:membro])) &
+      MOD[POST](#4,#5[SEM-Hinstitution]) &
+      ~MOD[NEG](#3,#6))
+   BUSINESS[global-affiliation=+](#2,#5)
+
+// Example: O João é portista.
+// Example: É portista.
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ[PRE](#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[member,affiliation]) &
+      ~MOD[NEG](#3,#5))
+   BUSINESS[global-affiliation=+](#2,#4)
+
+// Deveria ser identificado como Cargo_Profession (O Diogo vai rever os traços de Embaixador quando tratar das associações, cargos e profissões)
+// Example: O Embaixador Português...
+//if( MOD[POST](#1[lemma:embaixador],#2[gentcountry]))
+//      BUSINESS[global-affiliation=+](#1,#2)
+
+
+// Example: O Embaixador de Portugal...
+| noun[SEM-Hpeople]{noun#1[lemma:embaixador],prep,noun#2[country]} |
+   BUSINESS[global-affiliation=+](#1,#2)
+
+//VERA, 2011/03/23
+// Example: O João que é sócio do Sporting.
+// Example: O João que é membro da UNICEF.
+// Example: O João que é adepto do Sporting.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      ( PREDSUBJ(#3,#5[lemma:sócio]) || PREDSUBJ(#3,#5[lemma:membro]) || PREDSUBJ(#3,#5[lemma:adepto]) ) &
+      MOD[POST](#5,#4[SEM-Hinstitution]) &
+      ~BUSINESS[global-affiliation](#2,#4)
+    )
+   BUSINESS[global-affiliation=+](#2,#4)
+
+//VERA, 2011/03/23
+// Example: O João que é portista.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      PREDSUBJ(#3,#4[member,affiliation]) &
+      ~BUSINESS[global-affiliation](#2,#4)
+    )
+   BUSINESS[global-affiliation=+](#2,#4)
+
+// Example: Alberto Martins é militante do PCP
+// Example: É militante do PCP
+  if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ(#3[lemma:ser],#2[human])) &
+      PREDSUBJ(#3,#4[lemma:militante]) &
+      MOD[POST](#4,#5[SEM-Hpartido]) & ~MOD[NEG](#3,?))
+   BUSINESS[global-affiliation=+](#2,#5)
+
+
+////////////////////////
+// Elipsis
+////////////////////////
+
+// Example: Sócio do Sporting.
+// Example: Membro da UNICEF.
+| TOP{NP#1{noun#2[lemma:membro]};NP#1{noun#2[lemma:sócio]};NP#1{noun#2[lemma:adepto]},PP{?*,noun#3[SEM-Hinstitution]}} |
+        BUSINESS[global-affiliation=+](##pron[surface="Ele",lemma="eu",pers=+,3p=+,sg=+],#3)

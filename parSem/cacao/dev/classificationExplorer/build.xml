@@ -1,0 +1,229 @@
+
+<project default="all" basedir=".">
+    
+    <target name="usage" depends="" description="general information">
+        <echo>
+            - ant do the following target "clean, compile, run"
+            - ant clean
+            - ant generateXsd : generate the xml schema(classification.xsd) from
+                the xml file (classificationDewey.xml)
+            - ant compile  compile all java source code
+            - ant jar  build the file build/classificationExplorer.jar
+            - ant run  test (there is an non regression test in classificationExplorer/test directory
+            - ant delivery generate the delivery: build/classificationExplorer.zip
+            - ant testDelivery   test la delivery (compile and run sample/Test.java
+            - ant hsqldb   launch the hsqldb server
+            - ant h2       launch the h2 server
+        </echo>
+    </target>
+    
+    <!-- 
+    <target name="all" depends="clean, generateXsd, generateClass, compile, run" />
+    -->
+    <target name="all" depends="clean, compile, run" />
+
+    <target name="generateXsd" depends="init" description="generate the xml schema">
+        <delete file="${xsdFile}" />
+        <property name="trangJar" location="${basedir}/tools/trang/trang.jar" />
+        <replace file="${xmlFile}" token="idx=" value="id="/>
+        <java jar="${trangJar}" fork="true" failonerror="true">
+            <arg line="-I xml -O xsd" />
+            <arg value="${xmlFile}" />
+            <arg value="${xsdFile}"/>
+        </java>
+        <replace file="${xsdFile}" token="xs:integer" value="xs:string"/>
+        <replace file="${xsdFile}" token="xs:NCName" value="xs:string"/>
+    </target>
+    
+     <!--  jaxb is no more used
+    <target name="generateClass" depends="init" description="">
+        <property name="srcImport" value="${srcDir}/classificationExplorer/importClassification" />
+        <mkdir dir="${srcImport}" />
+        <exec executable="xjc" failonerror="true">
+            <arg value="-d"/>
+            <arg value="${srcDir}"/>
+            <arg value="-p"/>
+            <arg value="classificationExplorer.importClassification"/>
+            <arg value="${xsdFile}"/>
+        </exec>
+    </target>
+    -->
+    
+    <target name="compile" depends="init">
+        <mkdir dir="${classDir}"/>
+        <javac srcdir="${srcDir}" destdir="${classDir}" failonerror="true" >
+            <include name="**/*.java"/>
+            <compilerarg value="-Xlint"/>
+            <classpath>
+                <fileset dir="${libExt}">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+    </target>
+    
+    <target name="jar" depends="init, compile" description="build jar">
+        <delete file="${jarFile}" />
+        <jar destfile="${jarFile}" basedir="${classDir}" update="no">
+            <fileset dir="${classDir}"/>
+            <fileset dir="${basedir}/config" excludes="**/CVS" />
+            <manifest>
+                <attribute name="Main-Class" value="classificationExplorer.ClassificationExplorer"/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <target name="runJar" depends="init, jar, rJar" description="compile, build jar and run" />
+    
+    <target name="rJar" depends="init" description="run the jar">
+        <java  classname="classificationExplorer.Test" fork="true" failonerror="true" maxmemory="512m" >
+            <classpath>
+                <fileset file="${jarFile}" />
+                <fileset dir="${libExt}">
+                    <include name="*.jar"/>
+                </fileset>
+            </classpath>
+        </java>
+    </target>
+    
+    <target name="run" depends="init, compile" description="compile, and run">
+        <java  classname="classificationExplorer.Test" fork="true" failonerror="true" maxmemory="512m">
+            <arg value="xmlClassification" />
+            <classpath>
+                <pathelement path="${classDir}"/>
+                <pathelement path="${basedir}/config"/>
+                <fileset dir="${libExt}">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+        </java>
+    </target>
+    
+    <!-- generate java doc -->
+    <target name="doc" depends="init" >
+        <delete dir="${javaDocDir}"/>
+        <mkdir dir="${javaDocDir}"/>
+        <javadoc
+                 sourcefiles="${srcDir}/classificationExplorer/ClassificationExplorer.java, 
+                 ${srcDir}/classificationExplorer/Item.java, ${srcDir}/classificationExplorer/Classification.java,
+                 ${srcDir}/classificationExplorer/Const.java"
+                 destdir="${javaDocDir}"
+                 author="false"
+                 version="0.2"
+                 use="false"
+                 windowtitle="ClassificationExplorer java API"
+                 Public="true"
+        >
+            <classpath>
+                <pathelement path="${classDir}"/>
+                <pathelement path="${basedir}/config"/>
+                <fileset dir="${libExt}">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+            <doctitle><![CDATA[<h1>classificationExplorer java API</h1>]]>
+            </doctitle>
+            <bottom><![CDATA[<i>Copyright &#169; 2009 Xerox All Rights Reserved.</i>]]>
+            </bottom>
+        </javadoc>
+    </target>
+    
+    <target name="delivery" depends="init, clean, jar, doc, generateXsd" description="generate the delivery in the dist directory">
+        <delete dir="${deliveryDir}"/>
+        <mkdir dir="${deliveryDir}"/>
+        <mkdir dir="${deliveryDir}/doc"/>
+        <copy file="${docDir}/info.doc" todir="${deliveryDir}/doc" />
+        <mkdir dir="${deliveryDir}/xmlClassification"/>
+        <copy file="${xmlFile}" todir="${deliveryDir}/xmlClassification" />
+        <copy file="${xmlFile2}" todir="${deliveryDir}/xmlClassification" />
+        <mkdir dir="${deliveryDir}/classificationSchema"/>
+        <copy file="${xsdFile}" todir="${deliveryDir}/classificationSchema" />
+        <mkdir dir="${deliveryDir}/sample"/>
+        <copy file="${sampleDir}/Test.java" todir="${deliveryDir}/sample" />
+        <copy file="${sampleDir}/build.xml" todir="${deliveryDir}/sample" />
+        <mkdir dir="${deliveryDir}/lib"/>
+        <copy file="${jarFile}" todir="${deliveryDir}/lib" />
+        <copy  todir="${deliveryDir}/lib" >
+            <fileset dir="${libExt}" includes="h2.jar log4j-1.2.15.jar mysql-connector-java-5.1.5-bin.jar
+                toplink-essentials-agent.jar toplink-essentials.jar" />
+        </copy>
+        <mkdir dir="${deliveryDir}/config"/>
+        <copy file="${basedir}/config/classificationExplorer.properties" todir="${deliveryDir}/config" />
+        <copy file="${basedir}/config/log4j.properties" todir="${deliveryDir}/config" />
+        <mkdir dir="${deliveryDir}/javaDoc"/>
+        <copy  todir="${deliveryDir}/javaDoc" >
+            <fileset dir="${javaDocDir}" />
+        </copy>
+        <zip destfile="${buildDir}/classificationExplorer.zip" basedir="${deliveryDir}" />
+    </target>
+    
+    <target name="testDelivery" depends="delivery" description="test the delivery in a tmp directory">
+        <delete dir="${buildDir}/testDelivery" />
+        <mkdir dir="${buildDir}/testDelivery" />
+        <unzip src="${buildDir}/classificationExplorer.zip" dest="${buildDir}/testDelivery" />
+        <ant antfile="${buildDir}/testDelivery/sample/build.xml" dir="${buildDir}/testDelivery/sample" target="run" />
+    </target>
+    
+    <target name="hsqldb" depends="init" description="launch hsqldb server">
+        <property name="dbFile" location="${basedir}/db/hsqldb-server" />
+        <mkdir dir="${dbFile}"/>
+        <java  classname="org.hsqldb.Server" fork="true" failonerror="true" maxmemory="512m">
+            <arg line="-database.0 file:${dbFile} -dbname.0 classification" />
+            <classpath>
+                <pathelement path="${libExt}/hsqldb.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="hsqldbUI" depends="init" description="launch hsqldb UI">
+        <property name="dbFile" location="${basedir}/db/hsqldb-server" />
+        <mkdir dir="${dbFile}"/>
+        <java  classname="org.hsqldb.util.DatabaseManagerSwing" fork="true" failonerror="true" maxmemory="512m">
+            <arg value="" />
+            <classpath>
+                <pathelement path="${libExt}/hsqldb.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="h2" depends="init" description="launch h2 server">
+        <property name="dbFile" location="${basedir}/db/h2-server" />
+        <mkdir dir="${dbFile}"/>
+        <java  classname="org.h2.tools.Server" fork="true" failonerror="true" maxmemory="512m">
+            <arg line="-baseDir ${dbFile}" />
+            <arg value="-webAllowOthers" />
+            <classpath>
+                <pathelement path="${libExt}/h2.jar"/>
+            </classpath>
+        </java>
+    </target>
+    
+    <target name="clean" depends="propertiesSetting">
+        <delete dir="${buildDir}"/>
+        <delete dir="${basedir}/db"/>
+        <delete dir="${basedir}/log"/>
+        <delete dir="${basedir}/netbeans/build"/>
+        <delete dir="${basedir}/netbeans/dist"/>
+    </target>
+    
+    <target name="propertiesSetting">
+        <property name="srcDir" location="${basedir}/src" />
+        <property name="buildDir" location="${basedir}/build" />
+        <property name="sampleDir" location="${basedir}/sample" />
+        <property name="docDir" location="${basedir}/doc" />
+        <property name="javaDocDir" location="${buildDir}/javaDoc" />
+        <property name="classDir" location="${buildDir}/classes" />
+        <property name="deliveryDir" location="${buildDir}/dist" />
+        <property name="jarFile" location="${buildDir}/classificationExplorer.jar" />
+        <property name="libExt" location="${basedir}/libExt" />
+        <property name="xmlFile" location="${basedir}/xmlClassification/classificationDewey.xml" />
+        <property name="xmlFile2" location="${basedir}/xmlClassification/classification1.xml" />
+        <property name="xsdFile" location="${buildDir}/classification.xsd" />
+    </target>
+    
+    <target name="init" depends="propertiesSetting">
+        <mkdir dir="${buildDir}"/>
+        <mkdir dir="${classDir}"/>
+        <mkdir dir="${basedir}/log"/>
+    </target>
+</project>

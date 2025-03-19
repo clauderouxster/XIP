@@ -1,0 +1,245 @@
+// TEST for GKLS corpus
+// Extracting NPs
+// We only extract NPs that are not made by a unique pronoun or quantifier.
+
+DependencyRules:
+
+if (PRODUCT(#1))
+	ENTITE(#1)
+if ( LOCORG(#1) )
+	ENTITE[location=+,org=+](#1)
+
+if ( LOCATION(#1) )
+	ENTITE[location=+](#1)
+
+if ( EVENT(#1) )
+	ENTITE[event=+](#1)
+
+if ( PERSON(#1) )
+	ENTITE[person=+](#1)
+
+if ( LAW(#1) )
+	ENTITE[law=+](#1)
+
+if (ORGANISATION(#1) )
+	ENTITE[org=+](#1)
+
+if ( TEMPEXPR(#1) )
+	ENTITE[tempexpr=+](#1)
+
+if ( DATE(#1) )
+	ENTITE[tempexpr=+](#1)
+
+if ( PERCENT(#1) )
+	ENTITE(#1)
+
+if ( EMAIL(#1) )
+	ENTITE(#1)
+
+if ( PHONE(#1) )
+	ENTITE(#1)
+
+if ( HOUR(#1) )
+	ENTITE(#1)
+
+if (MONEY(#1) )
+	ENTITE(#1)
+
+
+if (TIMEX3(#1))
+	ENTITE(#1)
+
+// NPs containing common terms
+
+
+// common term is the head and is alone (can still be determined)
+| NP#1[dig:~]|
+	if ( HEAD(#3[pron:~,quant:~,symbol:~,dig:~,curr:~,orgend:~,month:~,person:~],#1) 
+		& ~COORD(?,#3) & ( ~MOD(#3,?) | MOD[post](#3,?) ) 
+		& ~ENTITE(#3) & ~ENTITE(#1) )
+	TERM(#1)
+
+
+// term is the head but it is modified by other items. Only in case of pre-modifier
+| NP#1 | 
+	if ( HEAD(#3[pron:~,quant:~,symbol:~,dig:~,curr:~,orgend:~,month:~],#1) 
+		& ~COORD(?,#3) &  MOD[pre](#3,#4)
+		& ~ENTITE(#3) & ~ENTITE(#1) & ~~ENTITE(#4) )
+	TERM_MODIF(#1)
+
+|NOUN#1[term,mwe,air]|
+	GENERIC_TERM[air=+](#1).
+
+|NOUN#1[term,mwe,automobile]|
+	GENERIC_TERM[automobile=+](#1).
+
+|NOUN#1[term,mwe,capitalgoods]|
+	GENERIC_TERM[capitalgoods=+](#1).
+
+|NOUN#1[term,mwe,chemical]|
+	GENERIC_TERM[chemical=+](#1).
+
+|NOUN#1[term,mwe,hardware]|
+	GENERIC_TERM[hardware=+](#1).
+
+|NOUN#1[term,mwe,hotels]|
+	GENERIC_TERM[hotels=+](#1).
+
+|NOUN#1[term,mwe,infrastructure]|
+	GENERIC_TERM[infrastructure=+](#1).
+
+|NOUN#1[term,mwe,insurance]|
+	GENERIC_TERM[insurance=+](#1).
+
+|NOUN#1[term,mwe,metalmining]|
+	GENERIC_TERM[metalmining=+](#1).
+
+|NOUN#1[term,mwe]|
+	if (~GENERIC_TERM(#1))
+	GENERIC_TERM(#1)
+
+
+if (^TERM(#1) & GENERIC_TERM(#1))
+	~
+
+// head is not a common term but one of the  PRE-modifier is a common term
+//| NP#1 | 
+//	if ( HEAD(#3[pron:~,quant:~,symbol:~,dig:~],#1) 
+//		& ~COORD(?,#3) &  MOD[pre](#3,?)
+//		& ~ENTITE(#3) & ~ENTITE(#1) )
+//	TERM_IN_NP(#1)
+
+
+// Avoiding to have in NP_ONLY qualificative adjectives alone
+// first stage, mark NP's that only contain a qualificative adjective
+| NP#1{AP[first,last]{?[adj,first,last]}} |
+	LIXO(#1)
+
+// Avoiding to have in NP_ONLY digits and numerals alone
+| NP#1{dig[first,last]}; NP#1{num[first,last]} |
+	LIXO(#1)
+
+
+// no terms in the np
+//| NP#1 |
+//	if ( ~LIXO(#1) & HEAD(#3[pron:~,quant:~,symbol:~,ford:~,mazda:~,volvo:~//,landrover:~,jaguar:~],#1) 
+//		& ~TERM(#1) & ~TERM_MODIF & ~TERM_IN_NP(#1)
+//		&  ~COORD(?,#3)
+//		& ~ENTITE(#3) & ~ENTITE(#1) )
+//	NP_ONLY(#1)
+
+
+
+
+// TYPING TERM  with features according to the car manufacturers that use these terms
+
+//if ( ^TERM(#10) & HEAD(#1[!car_maker:!],#10) )
+//	TERM(#10)
+
+// TYPING TERM_MODIF with features according to the car manufacturers that use these terms
+//if ( ^TERM_MODIF(#10) & HEAD(#1[!car_maker:!],#10) )
+//	TERM_MODIF(#10)
+
+
+// ESSAI (termes simples inclus)
+//| noun#1{?+, #2[noun,coded_term,last,mwe:~]} |
+//if ( TERM(#10) & HEAD(#1[mwe],#10) & #2[!car_maker:!] )
+//	INCLUDED_SUBTERM(#2)
+
+
+
+
+// Cleaning rules
+// - If we have at the same time a TERM(without MODIF) and a TERM_MODIF for the same expression
+// - Then destroy the TERM_MODIF dependency
+// e.g. "Check/clean pressure cap"
+
+if ( TERM(#1) & ^TERM_MODIF(#1) )
+	~
+
+|NP#1{NOUN[date]}|
+      if ( ^TERM(#1))
+	~
+
+|NP#1{NOUN[date]}| 
+  if ( ^TERM_MODIF(#1))
+	~
+
+|NP#1{NOUN[wordpart]}|
+      if ( ^TERM(#1))
+	~
+
+|NP#1{NOUN[wordpart]}| 
+  if ( ^TERM_MODIF(#1))
+	~
+
+|NP#1{NOUN[guess,proper]}| 
+  if ( ^TERM(#1))
+	~
+
+|NP#1{NOUN[date]}|
+      if ( ^TERM_MODIF(#1))
+	~
+       
+
+|NP{?*,NOUN[lemme:"?*.+?*"]}|
+	if ( ^TERM(#1))
+	~
+
+|NP{?*,NOUN[lemme:"?*.+?*"]}|
+	if ( ^TERM_MODIF(#1))
+	~
+
+|NP{?*,NOUN[lemme:"?*.+?*"]}|
+	if ( ^TERM_IN_NP(#1))
+	~
+
+|NP#1{NOUN[let]}|
+	if ( ^TERM(#1))
+	~
+
+|NP#1{?*,DIG+,?*}|
+     	if ( ^TERM(#1))
+	~
+
+|NP#1{?*,DIG+,?*}|
+     	if ( ^TERM_MODIF(#1))
+	~
+
+//|NP#1{?[lemme:"%c+?*"]}|
+//	if ( ^TERM(#1))
+//	~
+
+|NP#1{?[lemme:"%d+%C*%c*%d*"]}|
+	if ( ^TERM(#1))
+	~
+|NP#1{?[lemme:"%d+%C*%c*%d*"]}|
+	if ( ^TERM_MODIF(#1))
+	~
+
+|NP#1{?[lemme:"Q%d"]}|
+	if ( ^TERM(#1))
+	~
+|NP#1{?[lemme:"Q%d"]}|
+	if ( ^TERM_MODIF(#1))
+	~
+
+if (^TERM(#1) & ( HEAD(#2[lemme:"paper"],#1) |  HEAD(#2[lemme:"report"],#1) ) )
+	~
+if (^TERM_IN_NP(#1) & ( HEAD(#2[lemme:"paper"],#1) |  HEAD(#2[lemme:"report"],#1)))
+	~
+
+if (^TERM_MODIF(#1) & ( HEAD(#2[lemme:"paper"],#1) |  HEAD(#2[lemme:"report"],#1)))
+	~
+
+if (^TERM(#1) & LIXO(#1))
+	~
+if (^TERM_MODIF(#1) & LIXO(#1))
+	~
+
+if (^TERM_IN_NP(#1) & LIXO(#1))
+	~
+
+|NP#1{NOUN#2}|
+if (^TERM(#1) & PERSON(#2))
+	~

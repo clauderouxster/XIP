@@ -1,0 +1,707 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : SemEval07
+//!   filename   : dependency_meto.xip
+//!   Date       : 2007
+//!   
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+// 
+// LEVEL 0: BASIC
+//	- NAMED ENTITIES: recuperer l'info d'une dep au niveau des noeuds 
+//			qu'elle contient.
+//	- TRIPLETS LONGS: pour faire de l'analyse distributionnelle sur des
+//			"syntagmes" complexes
+//	- LEXICALISATION de PREPD
+//	- CONSTRUCTIONS POSSESSIVES
+// 	- COORD ITEMS
+//	
+//	!!! A FAIRE !!! : enumeration d'EN, Pb Titres
+// 
+//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+
+
+
+// NAMED ENTITIES
+// Pour faire affecter le trait de la dep au noeud concerné
+
+Script: 
+
+1> if (PERSON(#1)) {#1[entitnom=+,person=+];}
+1> if (ORGANISATION(#1)) {#1[entitnom=+,comp=+];}// trait /org/=feature,/comp/=dependance
+1> if (EVENT(#1)) {#1[entitnom=+,event=+];}
+1> if (LOCORG(#1[!country:+!, !city:+!, !contin:+!])) {#1[entitnom=+,locorg=+];}
+
+
+// Pour faire "descendre" le trait a ts les noeuds fils
+1> |Noun[entitnom]{noun#1}| {#1[entitnom=+];}
+1> |Noun[entitnom]{?*#1}| {#1[entitnom_part=+];}
+1> |Noun[person:+]{?*,Noun#1}|{#1[person=+];}
+1> |Noun[evt:+]{?*,Noun#1}|{#1[evt=+];}
+1> |Noun[comp:+]{?*,Noun#1}|{#1[comp=+];}
+1> |Noun[locorg:+]{?*,Noun#1}|{#1[locorg=+];}
+
+
+DependencyRules:
+
+// ******
+// Pronpers --> PERSON 
+// dep avec pronpers effacee.
+//if (^$1(#1,#2[pron_trip]))
+//        $1(#1,##fict[lemme=PERSON]).
+
+//if (^$1(#1[pron_trip],#2))
+//        $1(##fict[lemme=PERSON],#2).
+
+// ******
+// POUR TRIPLETS LONGS
+// (The little cat is very nice.)
+// attention, c'est recursif.
+// d'un cote
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & HEAD[long:~](#2,#3) & (#3[lemme]~:#2[lemme]))
+//	   $1[long=+](#1,#3).
+//// de l'autre 
+//if ($1[!post:+!,!pre:+!,!appos:+!,!proper:+!](#1,#2) & HEAD[long:~](#1,#3) & (#3[lemme]~:#1[lemme]))
+//	   $1[long=+](#3,#2).
+
+
+//// Pour gerer MOD_LONG(The little cat,little) 
+//// tous les nds au meme niveau (le mot cible est le dernier)
+//|?#3{?*,?+#2,?#1[last]}|
+//	if($1[long:~](#1,#2) & ^$1[long:+](#3,#2) & (#2[lemme]::#2[lemme]))
+//		~.
+
+//// on descend plus bas
+//|?#3{?*,?{?+#2},?#1[last]}|
+//	if($1[long:~](#1,#2) & ^$1[long:+](#3,#2) & (#2[lemme]::#2[lemme]))
+//		~.
+
+//// avec chunk plus compliques
+//|?#3{?*,?+#2,?*,?#1[last]}|
+//	if($1[long:~](#1,#2) & ^$1[long:+](#3,#2) & (#2[lemme]::#2[lemme]))
+//		~.
+
+//|?#3{?*,?{?*,?+#2,?*},?*,?#1[last]}|
+//	if($1[long:~](#1,#2) & ^$1[long:+](#3,#2) & (#2[lemme]::#2[lemme]))
+//		~.
+
+// ******
+// PREP (+pron) (=PP de SemEval)
+// Ex: "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// MOD-T(NOUN:organisation,NOUN:seminar)
+// PREPD(NOUN:seminar,PREP:of)
+// On construit:
+// PREP_OF(NOUN:organisation,NOUN:seminar)
+// Pour les pron : creation d'un noeud fictif.
+
+// deps sans pronoms
+if((MOD(#1,#2[pronpers:~])| LOC (#1,#2)) & PREPD(#2,#3[!form_prep:!]) & ~PREP(#1,#2))
+      	PREP(#1,#2).
+// deps avec pronoms (que personnels)
+if(MOD(#1,#2[pron_trip]) & PREPD(#2,#3[!form_prep:!]) )
+	PREP(#1,##Pron[lemme=PERSON]).
+
+// ******
+// Verb particle + pronoms
+// Ex : "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// NUCL(VERB:take,ADV:over)
+// OBJ-N(VERB:take,NOUN:organisation)
+// On construit :
+// PREP_P_OVER(VERB:take,NOUN:organisation)
+
+// Config normale:
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3[pronpers:~])))
+		PREP(#1,#3).
+
+// Avec un Pronom:
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3[pronpers:+])))
+		PREP(#1,#3),
+	        PREP(#1,##fict[lemme=PERSON]).
+
+// ******
+// Constructions possessives (=GEN ou HASGEN de SemSeval)
+
+| NP#5{?*, noun#1[last:~],?*, part#2[last:~],?*,noun#4[verb:~]}|
+	if (PARTICLE (#1,#2) & HEAD(#4,#5))
+	POSSES(#1,#4).
+
+// attention peut-etre trop laxiste
+| NOUN#5{?*, noun#1[last:~], part#2[last:~],?*,noun#4[verb:~]}|
+	if (~POSSES(#1,#4))
+	POSSES(#1,#4).
+
+//de caroline
+| ?{#1[last]};#1, part, #2 |
+	if ( MOD[pre](#2[noun],#1) & ~POSSES(#1,#2))
+	POSSES(#1,#2)
+
+// ******
+// COORDITEMS
+|NP{?*,#1[last]},CONJ,NP{?*,#2[last]}|
+	if(~NCOORD(#1,#2))
+	NCOORD(#1,#2)
+
+|PP{PREP,NP{?*,#1[last]}},CONJ,NP{?*,#2[last]}|
+	if(~NCOORD(#1,#2))
+	NCOORD(#1,#2)
+
+
+// ******
+// Effacements:
+
+if  (^MOD(#1,#2) & ATTRIB(#1,#2))
+     ~.
+if  (^MOD(#1,#2) & PREP(#1,#2))  
+     ~.
+if  (^MOD(#1,#2) & PREP(#1,#2))	 
+     ~.
+if  (^MOD(#1,#2[pronpers]))	
+     ~.
+if  (^MOD(#1[pronpers],#2))
+    ~.
+if  (^MOD(#1,#2) & POSSES(#2,#1))
+    ~.
+
+// PREP_OF(NP:the president,PP:of France_LOCORG:+_COUNTRY:+)
+|PP#2|
+  if (^PREP(#1,#2)) 
+     ~.
+	   	
+|PP#2|
+  if (^MOD(#1,#2))
+      ~.
+	   	
+|PP#2|
+  if (^MOD(#2,#1))
+      ~.
+	  	
+
+
+
+////////////////////////////////////////////
+////////////////////////////////////////////
+//					  //
+// LEVEL 1: METONYMY BASELINE             //
+//					  //
+////////////////////////////////////////////
+////////////////////////////////////////////
+
+
+
+// ********
+// Marquage unites metonymiques (SemEval)
+
+// Pour avoir les deps concernant cette unite.
+
+if ($1[long:~](#1,#2[annotsupOrg]) )
+	$1[metoregOrg=+,metosem=+](#1,#2).
+
+if ($1[long:~](#1[annotsupOrg],#2))
+	$1[metorectOrg=+,metosem=+](#1,#2).
+
+
+
+// effacements 
+
+if  (^SUBJ[meto](#1,#2))
+	~.
+if  (^SUBJ[meto](#1,#2))
+	~.
+if  (^HEAD[meto](#1,#2))
+	~.
+if  (^HEAD[meto](#1,#2))
+	~.
+if  (^PREPD[meto](#1,#2))
+	~.
+if  (^PREPD[meto](#1,#2))
+	~.
+
+//**********
+// Literal par defaut
+
+// pour SemEval
+|?#1[annotsupOrg]|
+	if (~ORG-LIT[metosem](#1))
+	ORG-LIT[metosem=+,bydefault=+,orglit=+](#1), ORGSEMEVAL(#1)
+
+|?#1[annotsupLoc]|
+	if (~LOC-LIT[metosem](#1))
+	LOC-LIT[metosem=+,bydefault=+,loclit=+](#1),LOCSEMEVAL(#1)
+
+// pour xip normal
+
+if (ORGANISATION[long:~](#1) & ~ORG-LIT[metoxip,bydefault](#1) )
+     ORG-LIT[metoxip=+,bydefault=+,orglit=+](#1).
+
+if (LOCORG[long:~](#1) & ~LOC-LIT[metoxip,bydefault](#1))
+     LOC-LIT[metoxip=+,bydefault=+,loclit=+](#1)
+
+
+
+//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+// 
+// LEVEL 2: METONYMY Interpretation
+// 
+//	  A/ Organisation
+//	      - org-literal par defaut (in level 1)
+//	      - org-literal "certain"
+//	      - org-for-members
+//	      - org-for-products
+//	      - org-for-facility
+//	      - object-for-name
+//	      - org-for-index
+//	      - org-for-event
+//	      - mixed
+//	      - othermet
+//	  B/ Location
+//	      - loc-literal par defaut (in level 1)
+//	      - loc-literal "certain"
+//	      - loc-for-people
+//	      - loc-for-event
+//	      - mixed
+//	      - othermet
+// 
+//////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+
+|#1[nmeto_countrylit]|
+	TATA(#1).
+
+////////////////////////////
+// A) ORGANISATION METONYMY
+////////////////////////////
+
+//*******************
+// ORG-LITERAL CERTAIN
+//*******************
+
+// Niveaux d'annotation :
+// ORG-LIT_BYDEFAULT : baseline
+// ORG-LIT	     : annotation choisie
+// ORG-LIT_SURE	     : annotation choisie et considérée comme sûre.
+
+//*** Subj
+ 
+   if (^ORG-LIT[bydefault,metosem](#1) & SUBJ-N[long:~](#2[o_lit],#1) )
+        ORG-LIT[sure=+,bydefault=~](#1).
+   if (^ORG-LIT[bydefault,metoxip](#1) & SUBJ-N[long:~](#2[o_lit],#1) )
+        ORG-LIT[sure=+,bydefault=~](#1).
+	
+//*** Obj
+
+   if (^ORG-LIT[bydefault,metosem](#1) & OBJ-N[long:~](#2[vmeto_orglit,orgorg],#1) )
+	ORG-LIT[sure=+,bydefault=~](#1).
+   if (^ORG-LIT[bydefault,metoxip](#1) & OBJ-N[long:~](#2[vmeto_orglit,orgorg],#1) )
+	ORG-LIT[sure=+,bydefault=~](#1).
+
+
+//*** Prep
+// demander si my de faire plus simple
+// lexicaliser pour etre plus sur ?
+// regrouper les preps discriminantes ici sous un meme trait ?
+// against/including/from/such_as/of/by/with/like
+
+// pas sûr
+if (^ORG-LIT[bydefault,metosem](#1) & (PREP[prep_o_lit,long:~](#2,#1)))
+       ORG-LIT[bydefault=~](#1).
+
+if (^ORG-LIT[bydefault,metoxip](#1) & (PREP[prep_o_lit,long:~](#2,#1)))
+       ORG-LIT[bydefault=~](#1).
+
+// sûr
+
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[of,long:~](#2[meto_orglit],#1))
+       ORG-LIT[sure=+](#1).
+if (^ORG-LIT[sure:~,bydefault:~,metoxip](#1) & PREP[of,long:~](#2[meto_orglit],#1))
+       ORG-LIT[sure=+](#1).
+
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[such_as,long:~](#2[meto_orglit],#1))
+       ORG-LIT[sure=+](#1).
+if (^ORG-LIT[sure:~,bydefault:~,metoxip](#1) & PREP[such_as,long:~](#2[meto_orglit],#1))
+       ORG-LIT[sure=+](#1).
+
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[of,long:~](#2,#1) & PERSON (#2))
+       ORG-LIT[sure=+](#1).
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[of,long:~](#2,#1)& PERSON (#2))
+       ORG-LIT[sure=+](#1).
+
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[with,long:~](#2[vmeto_orglit,orgorg],#1))
+       ORG-LIT[sure=+](#1).
+if (^ORG-LIT[sure:~,bydefault:~,metosem](#1) & PREP[with,long:~](#2[vmeto_orglit,orgorg],#1))
+       ORG-LIT[sure=+](#1).
+
+
+//effacement car ne marche pas si tests sur plusieurs traits:
+  if (^ORG-LIT[bydefault:+](#1) &  ORG-LIT[sure:+](#1))
+	~.
+
+//*** Modpre 
+// sûr
+
+   if (^ORG-LIT[bydefault,metosem](#1) & MOD[pre,long:~](#2[meto_orglit],#1))
+	ORG-LIT[sure=+,bydefault=~](#1).
+
+   if (^ORG-LIT[bydefault,metoxip](#1) & MOD[pre,long:~](#2[meto_orglit],#1) )
+	ORG-LIT[sure=+,bydefault=~](#1).
+
+// pas sûr
+
+   if (^ORG-LIT[bydefault,metosem](#1) & MOD[pre,long:~](#2[meto_orglit:~],#1))
+	ORG-LIT[bydefault=~](#1).
+
+   if (^ORG-LIT[bydefault,metoxip](#1) & MOD[pre,long:~](#2[meto_orglit:~],#1))
+	ORG-LIT[bydefault=~](#1).
+
+
+//*** Gen 
+// sûr
+   if (^ORG-LIT[bydefault,metosem](#1) & POSSES[long:~](#1,#2[meto_orglit]))
+	ORG-LIT[sure=+,bydefault=~](#1).
+   if (^ORG-LIT[bydefault,metoxip](#1) & POSSES[long:~](#1,#2[meto_orglit]))
+	ORG-LIT[sure=+,bydefault=~](#1).
+
+// pas sûr
+   if (^ORG-LIT[bydefault,metosem](#1) & POSSES[long:~](#1,#2[meto_orglit:~]))
+	ORG-LIT[bydefault=~](#1).
+   if (^ORG-LIT[bydefault,metoxip](#1) & POSSES[long:~](#1,#2[meto_orglit:~]))
+	ORG-LIT[bydefault=~](#1).
+
+
+
+//****************
+// ORG-FOR-MEMBERS
+//****************
+
+//*** Subj
+
+
+if (^ORG-LIT[metosem](#1) & (CONTENT(#2,#1)|EXPERIENCER(#2,#1)))
+	ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~,sure=~](#1).
+
+if (^ORG-LIT[metoxip](#1) & (CONTENT(#2,#1)|EXPERIENCER(#2,#1)))
+	ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~,sure=~](#1).
+
+if (^ORG-LIT[metosem](#1) & SUBJ-N(#2[o_memb],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~,sure=~](#1).
+if (^ORG-LIT[metoxip](#1) & SUBJ-N(#2[o_memb],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~,sure=~](#1).
+
+// *** Obj
+
+if (^ORG-LIT[metosem](#1) & OBJ-N(#2[legact],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+](#1).
+if (^ORG-LIT[metoxip](#1) & OBJ-N(#2[legact],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+](#1).
+
+if (^ORG-LIT[metosem](#1) & OBJ-N(#2[vmeto_orgmemb,obj],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+](#1).
+if (^ORG-LIT[metoxip](#1) & OBJ-N(#2[vmeto_orgmemb,obj],#1))
+	ORG-MEMBERS[orglit=~,orgmemb=+](#1).
+
+// *** Prep
+// according_to/by/with
+
+if (^ORG-LIT[metosem](#1) & PREP[with,long:~](#2[o_memb],#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+if (^ORG-LIT[metoxip](#1) & PREP[with,long:~](#2[o_memb],#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+if (^ORG-LIT[metosem](#1) & PREP[by,long:~](#2[meto_orgmemb],#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+if (^ORG-LIT[metoxip](#1) & PREP[by,long:~](#2[meto_orgmemb],#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+if (^ORG-LIT[metosem](#1) & PREP[according_to,long:~](#2,#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+if (^ORG-LIT[metoxip](#1) & PREP[according_to,long:~](#2,#1))
+       ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+//*** Modpre
+
+   if (^ORG-LIT[metosem](#1) & MOD[long:~,pre](#2[meto_orgmemb],#1)) 
+	 ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+   if (^ORG-LIT[metoxip](#1) & MOD[long:~,pre](#2[meto_orgmemb],#1))
+	 ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+//*** Posses
+
+   if (^ORG-LIT[metosem](#1) & POSSES[long:~](#2[meto_orgmemb],#1))
+	 ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+   if (^ORG-LIT[metoxip](#1) & POSSES[long:~](#2[meto_orgmemb],#1))
+	 ORG-MEMBERS[orglit=~,orgmemb=+,bydefault=~](#1).
+
+//****************
+// ORG-FOR-PRODUCT
+//****************
+
+
+//*** Modpre
+
+   if ((^ORG-LIT[metosem](#1)|^ORG-MEMBERS(#1[metosem])) & MOD[long:~,pre](#2[meto_orgprod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+   if ((^ORG-LIT[metoxip](#1)|^ORG-MEMBERS(#1[metoxip])) & MOD[long:~,pre](#2[meto_orgprod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** determinants seuls :
+
+   if ( (^ORG-LIT[bydefault,metosem](#1[orgend:~,orghead:~,toutmaj:~]) | ^ORG-MEMBERS[metosem](#1[orgend:~,orghead:~,toutmaj:~])) & DETD[long:~](#1,#2[maj:~,adv:~])) 
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+   if ( (^ORG-LIT[bydefault,metoxip](#1[orgend:~,orghead:~,toutmaj:~])|^ORG-MEMBERS[metoxip](#1[orgend:~,orghead:~,toutmaj:~])) & DETD[long:~](#1,#2[maj:~,adv:~]) )
+        ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** determinant poss = certain
+
+   if (^ORG-PRODUCT[certain:~,metosem](#1)&  DETD[long:~,gen](#1,#2) )
+	ORG-PRODUCT[certain=+](#1).
+   if (^ORG-PRODUCT[certain:~,metoxip](#1)&  DETD[long:~,gen](#1,#2))
+	ORG-PRODUCT[certain=+](#1).
+
+
+//*** determinants + adj = certain:	
+   
+   if (^ORG-PRODUCT[orgprod,certain:~,metosem](#1)& (QUALIF[long:~](#1,#2)|MOD[long:~,pre](#1,#2[adj])) )
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+   if (^ORG-PRODUCT[orgprod,certain:~,metoxip](#1)& (QUALIF[long:~](#1,#2)|MOD[long:~,pre](#1,#2[adj])) )
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+//*** determinant + certaines PREP = certain
+
+   if ((^ORG-PRODUCT[orgprod,certain:~,metosem](#1)|^ORG-LIT[metosem](#1)|^ORG-MEMBERS[metosem](#1)) & (PREP[long:~,between](#2[meto_orgprod],#1)|PREP[long:~,of](#2[meto_orgprod],#1)))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+   if ((^ORG-PRODUCT[orgprod,certain:~,metoxip](#1)|^ORG-LIT[metoxip](#1)|^ORG-MEMBERS[metoxip](#1)) & (PREP[long:~,between](#2[meto_orgprod],#1)|PREP[long:~,of](#2[meto_orgprod],#1)))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+
+//*** determinant sur MOD + MOD avec un noun  = dangereux ?
+
+   if ((^ORG-LIT[bydefault,metosem](#1)|^ORG-MEMBERS(#1[metosem])) & MOD[long:~,pre](#2[meto_orglit:~],#1) & DETD(#2,#3) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+   if ((^ORG-LIT[bydefault,metoxip](#1)|^ORG-MEMBERS(#1[metoxip])) & MOD[long:~,pre](#2[meto_orglit:~],#1) & DETD(#2,#3) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+
+//*** determinants + obj = certain:	
+
+   if (^ORG-PRODUCT[orgprod,certain:~,metosem](#1)& OBJ-N[long:~](#2[a_vdrive],#1))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+   if (^ORG-PRODUCT[orgprod,certain:~,metoxip](#1)& OBJ-N[long:~](#2[a_vdrive],#1))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+   if (^ORG-PRODUCT[orgprod,certain:~,metosem](#1)& OBJ-N[long:~](#2[vmeto_orgprod],#1))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+   if (^ORG-PRODUCT[orgprod,certain:~,metoxip](#1)& OBJ-N[long:~](#2[vmeto_orgprod],#1))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+//*** determinant + certain POSSES
+   if (^ORG-PRODUCT[orgprod,certain:~,metosem](#1)& POSSES[long:~](#1,#2[meto_orgprod]))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+   if (^ORG-PRODUCT[orgprod,certain:~,metoxip](#1)& POSSES[long:~](#1,#2[meto_orgprod]))
+	ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+//*** POSSES seul
+
+
+
+//*** obj tout court
+
+ if ( (^ORG-LIT[metosem](#1) | ^ORG-MEMBERS[metosem](#1) ) & OBJ-N[long:~](#2[o_prod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+ if ( (^ORG-LIT[metoxip](#1) | ^ORG-MEMBERS[metosem](#1) ) & OBJ-N[long:~](#2[o_prod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** attrib seul
+
+    if ((^ORG-LIT[metosem](#1)|^ORG-MEMBERS[metosem](#1)) & ATTRIB[long:~](#2[meto_orgprod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+    if ((^ORG-LIT[metoxip](#1)|^ORG-MEMBERS[metoxip](#1)) & ATTRIB[long:~](#2[meto_orgprod],#1) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** adjectif seul 
+
+    if ((^ORG-LIT[metosem](#1[orgend:~,orghead:~,toutmaj:~])|^ORG-MEMBERS[metosem](#1[orgend:~,orghead:~,toutmaj:~])) & QUALIF[long:~](#1,#2) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+    if ((^ORG-LIT[metoxip](#1[orgend:~,orghead:~,toutmaj:~])|^ORG-MEMBERS[metoxip](#1[orgend:~,orghead:~,toutmaj:~])) & QUALIF[long:~](#1,#2) )
+	ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** adjectif + pluriel 
+
+    if (^ORG-PRODUCT[orgprod,certain:~,metosem](#1) & QUALIF[long:~](#1[sg:~,pl],#2) )
+	 ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+    if (^ORG-PRODUCT[orgprod,certain:~,metoxip](#1) & QUALIF[long:~](#1[sg:~,pl],#2) )
+	 ORG-PRODUCT[orgprod=+,bydefault=~,sure=~,certain=+](#1).
+
+//*** info prix
+
+   if (^ORG-LIT[metosem](#1)|^ORG-MEMBERS[metosem](#1) & (ATTRIB(#1,#2)|MOD[long:~,post](#1,#2)) & MONEY(#2))
+	 ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+   if (^ORG-LIT[metoxip](#1)|^ORG-MEMBERS[metoxip](#1) & (ATTRIB(#1,#2)|MOD[long:~,post](#1,#2)) & MONEY(#2))
+	 ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+//*** pluriel seul
+
+   if (^ORG-LIT[metosem,bydefault](#1[pl,sg:~])|^ORG-MEMBERS[metosem](#1[pl,sg:~]))
+	 ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+   if (^ORG-LIT[metoxip,bydefault](#1[pl,sg:~])|^ORG-MEMBERS[metoxip](#1[pl,sg:~]))
+	 ORG-PRODUCT[orglit=~,orgmemb=~,orgprod=+,bydefault=~,sure=~](#1).
+
+
+
+
+//*************
+// ORG-FOR-NAME
+//*************
+
+
+//*** acronymes entre parentheses
+| INS{PUNCT,?{noun#2[toutmaj]};noun#2[toutmaj],PUNCT}|
+  if (^ORG-LIT[metosem](#2))
+         ORG-NAME[orglit=~,orgname=+,bydefault=~](#2).
+
+//*** Subj
+
+
+if (^ORG-LIT[metosem](#1) & SUBJ-N(#2[vmeto_orgname],#1))
+	ORG-NAME[orglit=~,orgname=+,bydefault=~,sure=~](#1).
+if (^ORG-LIT[metoxip](#1) & SUBJ-N(#2[vmeto_orgname],#1))
+	ORG-NAME[orglit=~,orgname=+,bydefault=~,sure=~](#1).
+
+
+//**************
+// ORG-FOR-FACILITY
+//*************
+
+
+//*** Prep
+
+   if (^ORG-LIT[metosem](#1) & PREP[in,long:~](#2[meto_orglit:~,verb],#1[orgend:~,orghead:~,toutmaj:~])) // contrainte sur vb trop radicale?
+        ORG-FACILITY[orglit=~,orgfacility=+,bydefault=~,sure=~](#1).
+
+   if (^ORG-LIT[metoxip](#1) & PREP[in,long:~](#2[meto_orglit:~,verb],#1[orgend:~,orghead:~,toutmaj:~]))
+        ORG-FACILITY[orglit=~,orgfacility=+,bydefault=~,sure=~](#1).
+
+
+
+
+////////////////////////////
+// B) LOCATION (COUNTRY) METONYMY
+////////////////////////////
+
+
+
+//****************
+// LOC-LITERAL CERTAIN
+//****************
+
+//*** Prep
+
+   if (^LOC-LIT[bydefault:+,sure:~,metosem](#1) & PREP[in,long:~](#2,#1))
+       LOC-LIT[sure=+,bydefault=~](#1).
+
+   if (^LOC-LIT[bydefault:+,sure:~,metoxip](#1) & PREP[in,long:~](#2,#1))
+       LOC-LIT[sure=+,bydefault=~](#1).
+
+//*** Subj
+
+   if (^LOC-LIT[bydefault,metosem](#1) & SUBJ-N[long:~](#2[vmeto_countrylit],#1) )
+	LOC-LIT[sure=+,bydefault=~](#1).
+   if (^LOC-LIT[bydefault,metoxip](#1) & SUBJ-N[long:~](#2[vmeto_countrylit],#1) )
+	LOC-LIT[sure=+,bydefault=~](#1).
+
+
+
+//***************
+// LOC-FOR-PEOPLE
+//****************
+
+//*** Subj or experiencer
+
+   if (^LOC-LIT[bydefault,metosem](#1) & SUBJ-N[long:~](#2[vmeto_countrypfp],#1) )
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+   if (^LOC-LIT[bydefault,metoxip](#1) & SUBJ-N[long:~](#2[vmeto_countrypfp],#1) )
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+   if (^LOC-LIT[bydefault,metosem](#1) & EXPERIENCER[long:~](#2[vmeto_countrypfp],#1) )
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+   if (^LOC-LIT[bydefault,metoxip](#1) & EXPERIENCER[long:~](#2[vmeto_countrypfp],#1) )
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+
+//***Obj
+
+if (^LOC-LIT[bydefault,metosem](#1) & OBJ-N(#2[vmeto_countrypfp],#1))
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+	
+if (^LOC-LIT[bydefault,metoxip](#1) & OBJ-N(#2[vmeto_countrypfp],#1))
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+// ** TEST: with+COUNTRY ==> LOC-FOR-PEOPLE
+
+if (^LOC-LIT[bydefault,metosem](#1) & PREP[with](#2,#1))
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+if (^LOC-LIT[bydefault,metoxip](#1) & PREP[with](#2,#1))
+	LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#1).
+
+// *** Great Britain players : the head of the NP starting with LOC
+// is a noun bearing the feature c_person ==> LOC-FOR-PEOPLE
+
+|NP#1{NOUN#2,NOUN#3[c_person]}}|
+	if (^LOC-LIT[bydefault,metosem](#2) & HEAD(#3,#1))
+		LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#2).
+
+|NP#1{NOUN#2,NOUN#3[c_person]}}|
+	if (^LOC-LIT[bydefault,metoxip](#2) & HEAD(#3,#1))
+		LOC-PEOPLE[loclit=~,locpeople=+,sure=+,bydefault=~](#2).
+
+if (^LOC-LIT[bydefault,metosem](#1) & MOD[pre](#2,#1))
+	TUTU(#2,#1).
+
+
+
+
+////////////////////////////
+// C) FINAL
+////////////////////////////
+
+    if(^ORG-LIT[bydefault,metosem](#1[toutmaj])|^ORG-LIT[bydefault,metosem](#1[orgend])|^ORG-LIT[bydefault,metosem](#1[orghead]))
+	ORG-LIT[bydefault:~](#1).		
+	
+    if(^ORG-LIT[bydefault,metoxip](#1[toutmaj])|^ORG-LIT[bydefault,metoxip](#1[orgend])|^ORG-LIT[bydefault,metoxip](#1[orghead]))
+	ORG-LIT[bydefault:~](#1).
+
+
+
+
+//****************//****************
+//****************//****************
+//Drafts
+//Script:
+
+//if ($1[metorect](#1,#2)){
+//   print($1+"_"+$1[form_prep]+"("+#1+":"+#1[lemme]+"_"+","+#2+":"+#2[lemme]+")\n");
+//   }
+
+//if ($1[metoreg](#1,#2)){
+//   print($1+"_"+$1[form_prep]+"("+#1+":"+#1[lemme]+"_"+","+#2+":"+#2[lemme]+")\n");
+//   }

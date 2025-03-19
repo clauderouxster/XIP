@@ -1,0 +1,288 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependency8.xip                                             !
+//!   Date       : 2006/October                                                !
+//!   Author     : Caroline Hagege, Nuno Mamede                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating and correcting some SUBJ-CDIR dependencies      !
+//!                                                                            !
+//!   Dependencies handled in this file:  SUBJ-OBJ Adjustements                !
+//!                                       DICENDI verbs (subjects)             !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// SUBJ-OBJ Adjustements
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If a passive form has no subject on its left and if there is a NP
+// on its right (that have been calculated previously as object of
+// another verb on the left, then this NP is the subject.
+//
+// Example: Assim que foram reconhecidos os resultados
+//                                                   SUBJ(reconhecer,resultados)
+//
+| #1[verb,pastpart], NP#2 |
+ if ( VDOMAIN(?,#3[pastpart]) & VLINK(#6[lemma:ser],#3) & HEAD(#3,#1) // passive
+   &
+   ~SUBJ[pre](#3,?) // verbo nao tem sujeito a esquerda
+   &
+   HEAD(#4,#2)
+   &
+   ^CDIR[post](#3,#4) // foi considerado este NP como objecto de maneira inadequada
+   &
+   )
+   SUBJ[post=+](#3,#4)  // este objecto passa a ser um sujeito
+
+
+
+// If something is at the same time a subj_pre and a subj_post
+// Because subj_post are not calculated by default rules but by explicit rules
+// then we destroy the subj_pre relation
+//
+// Example: Assim que foram reconhecidos os resultados demitiu-se
+//                                                     *SUBJ(demitir,resultados)
+//
+ if ( SUBJ[post](?,#2) & ^SUBJ[pre](?,#2) )
+   ~
+
+// HAGEGE-10-5-07
+// Correcting erroneous CDIR dependencies when the dependent is a reflex pronoun
+// And if the governor bears feature Vai:+, vrefl:+
+//
+// Example: dignou-se o Pedro a comparecer. PARTICLE_REFL(dignou,se)
+if ( ^CDIR[post](#1[Vai,vrefl],#2[surface:"se"]) )
+   PARTICLE[post=~,refl=+](#1,#2)
+
+// HAGEGE-10-5-07
+// Dealing with inverted subject of intransitive verbs which are reflexive
+//
+// Example: Dignou-se o Pedro SUBJ(dignou,Pedro)
+| NP{#2[pron]}, NP#3 |
+if ( PARTICLE[refl](#1[Vai,vrefl],#2) & ~SUBJ[pre](#1,?) & HEAD(#4,#3) )
+SUBJ[post=+](#1,#4)
+
+
+// Correcting erroneous CDIR dependencies when the dependent is marked as quantity
+// i.e. length, etc which supertype is meastype)
+// The quantity feature is going to be passed to the MOD dependency...
+//
+// Example: O João correu 2 metros
+//
+| #3[SEM-unitype] |
+if ( ( ^CDIR[post](#1[Vai],#2) | ^SUBJ[post](#1[Vai],#2) ) & HEAD(#2,#3[!SEM-unitype:!]) )
+   MOD(#1,#2)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// DICENDI VERBS (SUBJs and CINDIRs)
+//
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+// With the verba dicendi, a subject inversion occurs, which prevents the system 
+// from corrrectly extraction the SUBJECT dependency.
+//
+// The verba dicendi context also allows to unambiguously extract the CINDIR dependency
+// for the dative complement.
+//
+// Auxiliary verbal chains complicate matters further by allowing different
+// ordering of SUBJ and CINDIR.
+//
+// In this syntactic pattern, we considered that there is no need to restrict 
+// the distrutional constraints on the verbum dicendi arguments, thus allowing 
+// for figurative uses of these verbs (in fables, for instace)
+
+
+//////////////////////////////
+// Clitic
+//////////////////////////////
+
+//NJM+JB, 2013/01/16
+// Example: O Zé abandonou, acabou ele por dizer-lhe.
+|punct[comma];punct[dash], ?*[verb], ?*[verb]{?*, pron#5[pers]}, ?*[verb], #4[verb,vdic=+], (ADVP;?[verb,gerund])*, NP#1{pron[pers,dat,cli]}, punct |
+ if ( VDOMAIN(?,#3) & ^MOD[dat](#3[dicendi],#2) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#3,#4) )
+   CINDIR[dat=~,post=+](#3,#2), SUBJ[post=+](#3,#5)
+
+//NJM+JB, 2012/12/05
+// Example: Não posso mais, disse-lhe ele.
+|punct[comma];punct[dash], ?*[verb], ?#5[verb,vdic=+], NP{pron#4[pers,dat,cli]}, (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( ^CDIR(#3[dicendi],#2[nom,pers]) & HEAD(#3,#5) & VDOMAIN(?,#3) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) )
+   SUBJ(#3,#2)//, CINDIR[post=+](#3,#4)
+
+// Example: Não posso mais, disse-lhe o Pedro.
+|punct[comma];punct[dash], ?*[verb], ?#5[verb,vdic=+], NP{pron#4[pers,dat,cli]}, (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( ^CDIR(#3[dicendi],#2) & HEAD(#3,#5) & VDOMAIN(?,#3) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) )
+   SUBJ(#3,#2)//, CINDIR[post=+](#3,#4)
+
+//NJM+JB, 2013/01/15
+// Example: Não posso mais, disse-lhe.
+//|punct[comma];punct[dash], ?*[verb], ?#2[verb,vdic=+], NP{pron#1[pers,dat,cli]}, (ADVP;?[verb,gerund])*, punct |
+// if ( ^MOD[dat](#3[dicendi],#1) & ~CINDIR(#3,?) & HEAD(#3,#2) & VDOMAIN(?,#3) )
+//   CINDIR[dat=~, post=+](#3,#1)
+
+
+//////////////////////////////
+// "Normal"
+//////////////////////////////
+
+
+//NJM+JB, 2012/12/05
+// Allowing a SUBJ[post] of a dicendi verb even not at the end of the sentence
+// if the potential SUBJ is a proper name followed by punctuation
+// This rule has to be further refined to only allow person names here.
+//
+// Example: Ai - disse o Rui, acho que vou sair...
+// Example: Não posso mais, disse o professor ao aluno.
+// Example: Não posso mais, disse o presidente ao sócio.
+// Example: Não posso mais, disse o Pedro ao João.
+// Example: Não posso mais, disse sussurando o Pedro.
+// Example: Não posso mais, disse o Pedro sussurando.
+|punct[comma];punct[dash], ?*[verb], ?#7[verb,vdic=+], (ADVP;?[verb,gerund];NP#1;PP#5{prep[lemma:a],?*})+, punct |
+ if ( ^CDIR(#3[dicendi],#2[UMB-Human]) & HEAD(#3,#7) & VDOMAIN(?,#3) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#6,#5) )
+   SUBJ(#3,#2), CINDIR[post=+](#3,#6)
+
+|punct[comma];punct[dash], ?*[verb], ?#4[verb,vdic=+], (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( ^CDIR(#3[dicendi],#2[UMB-Human]) & HEAD(#3,#4) & VDOMAIN(?,#3) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) )
+   SUBJ(#3,#2)
+
+
+
+//////////////////////////////
+// Personal Pronoun
+//////////////////////////////
+
+//NJM+JB, 2012/12/05
+// NP (nominativo pessoal) is the last element of the sentence
+//
+// Example: "acho que o Brasil precisa", afirmou ele.
+// Example: Não posso mais, disse ele ao João.
+//
+|punct[comma];punct[dash], ?*[verb], ?#4[verb,vdic=+], (ADVP;?[verb,gerund];NP#1;PP#5{prep[lemma:a],?*})+, punct |
+ if ( ^CDIR(#3[dicendi],#2[nom,pers]) & HEAD(#3,#4) & VDOMAIN(?,#3) & HEAD(#2,#1) & ~SUBJ(#3,?) & HEAD(#6,#5) )
+   SUBJ(#3,#2), CINDIR[post=+](#3,#6)
+
+|punct[comma];punct[dash], ?*[verb], ?#4[verb,vdic=+], (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( ^CDIR(#3[dicendi],#2[nom,pers]) & HEAD(#3,#4) & VDOMAIN(?,#3) & HEAD(#2,#1) & ~SUBJ(#3,?) )
+   SUBJ(#3,#2)
+
+//NJM+JB, 2013/01/17
+// Example: O Zé abandonou, acabou ele por dizer.
+|punct[comma];punct[dash], ?*[verb], ?*[verb]{?*, pron#5[pers]}, ?*[verb], #4[verb,vdic=+], (ADVP;?[verb,gerund])*, punct |
+ if ( VDOMAIN(?,#3) & ~SUBJ(#3,?) & HEAD(#3,#4) )
+   SUBJ(#3,#5)
+
+
+
+
+//////////////////////////////
+// Verb alone
+//////////////////////////////
+
+//NJM+JB, 2012/12/07
+//Example: "Não posso mais", disse-lhe, e saiu da sala.
+|punct[comma];punct[dash], ?#1[verb,vdic=+], (NP{pron[pers,dat,cli]}), (ADVP;?[verb,gerund])+, punct |
+   if (HEAD(#2[dicendi],#1) )
+   ~
+
+// Example: Não posso mais, disse ao Pedro.
+|punct[comma];punct[dash], ?*[verb], ?#1[verb,vdic=+], (ADVP;?[verb,gerund];PP#5{prep[lemma:a],?*})+, punct |
+ if (HEAD(#2[dicendi],#1) & VDOMAIN(?,#3) & HEAD(#6,#5) )
+   ~
+
+// Example: Não posso mais, disse.
+|punct[comma];punct[dash], ?*[verb], ?#1[verb,vdic=+], punct |
+ if (HEAD(#2[dicendi],#1) & VDOMAIN(?,#2) )
+   ~
+
+
+//////////////////////////////
+// Verbal Chains
+//////////////////////////////
+
+//NJM+JB, 2011/03/14
+// Example: O Zé abandonou, tinha dito o Pedro.
+//
+|punct[comma];punct[dash], #3[verb], ?*[verb], #5[verb,vdic=+], (ADVP;?[verb,gerund];NP#1)*, punct |
+ if ( VDOMAIN(#4,#6) & ^CDIR(#6[dicendi],#2[UMB-Human]) & ~SUBJ(#6,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#4,#3) & HEAD(#6,#5) )
+   SUBJ(#6,#2)
+
+
+//NJM+JB, 2011/03/14
+// Example: O Zé abandonou, tinha o Pedro dito.
+//
+|punct[comma];punct[dash], #3[verb], ?*[verb], NP#1, ?*[verb], #5[verb,vdic=+], (ADVP;?[verb,gerund])*, punct |
+ if ( VDOMAIN(#4,#6) & ^CDIR(#6[dicendi],#2[UMB-Human]) & ~SUBJ(#6,?) & HEAD(#2[t-feast-event:~,dat:~],#1) & HEAD(#4,#3) & HEAD(#6,#5) )
+   SUBJ(#6,#2)
+
+
+//NJM+JB, 2013/01/15
+// Example: O Zé abandonou, acabou por lhe dizer.
+//
+|punct[comma];punct[dash], #3[verb], ?*[verb], NP#1, ?*[verb], #5[verb,vdic=+], (ADVP;?[verb,gerund])*, punct |
+ if ( VDOMAIN(#4,#6) & ^CDIR(#6[dicendi],#2) & ~SUBJ(#6,?) & HEAD(#2[t-feast-event:~,dat],#1) & HEAD(#4,#3) & HEAD(#6,#5) )
+   CINDIR(#6,#2)
+
+
+//NJM+JB, 2013/01/15
+// Example: O Zé abandonou, acabou por lhe dizer o Pedro.
+// Example: O Zé abandonou, pôde-lhe dizer ele.
+//
+|punct[comma];punct[dash], ?*[verb], NP{pron#5[pers,dat]}, #4[verb,vdic=+], (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( VDOMAIN(?,#3) & (^CDIR(#3[dicendi],#2[UMB-Human]) || ^CDIR(#3[dicendi],#2[pers])) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#3,#4) )
+   SUBJ(#3,#2), CINDIR[post=+](#3,#5)
+
+//NJM+JB, 2013/07/02
+// Example: Irra, teve de lhe dizer ele.
+//
+|punct[comma];punct[dash], ?*[verb], NP{pron#5[pers,dat]}, #4[verb,vdic=+], (ADVP;?[verb,gerund];NP#1)+, punct |
+ if ( VDOMAIN(?,#3) & ^CDIR(#3[dicendi],#5) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#3,#4) )
+   CINDIR[post=+](#3,#5), SUBJ[post=+](#3,#2)
+
+
+//NJM+JB, 2013/07/02
+// Example: Irra, teve o Pedro de lhe dizer.
+//
+|punct[comma];punct[dash], ?*[verb]{?[verb], NP#1, PREP}, NP{pron#5[pers,dat]}, #4[verb,vdic=+], punct |
+ if ( VDOMAIN(?,#3) & ^CDIR(#3[dicendi],#5)  & HEAD(#3,#4) )
+   CINDIR[pre=+,post=~](#3,#5)
+
+
+
+//NJM+JB, 2013/01/15
+// Example: O Zé abandonou, acabou ele por dizer ao Pedro.
+//
+|punct[comma];punct[dash], ?*[verb], ?*[verb]{?*, pron#5[pers]}, ?*[verb], #4[verb,vdic=+], (ADVP;?[verb,gerund];PP#1{prep[lemma:a],?*})+, punct |
+ if ( VDOMAIN(?,#3) & ^MOD(#3[dicendi],#2) & ~SUBJ(#3,?) & HEAD(#2[t-feast-event:~],#1) & HEAD(#3,#4) )
+   SUBJ(#3,#5), CINDIR[post=+](#3,#2)
+
+
+
+////////////////////////////////////////////////
+// Repairing related with CINDIRs
+////////////////////////////////////////////////
+
+if ( ^MOD[dat](#1[dicendi],#2) )
+   CINDIR[dat=~, post=+](#1,#2)
+
+
+ //NJM+JB, 2013/01/15
+if ( ^MOD(#1,#2) & CINDIR(#1,#2) )
+   ~
+
+//NJM+JB, 2013/01/15
+ if ( ^MOD(#2,#3) & SUBJ(#1,#2) & CINDIR(#1,#3) )
+   ~

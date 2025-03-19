@@ -1,0 +1,23 @@
+#!/bin/sh
+set -x
+rm -rf build
+mkdir build
+
+# 32 bits arch
+LIBROOT=../../lib/linux
+DEFINES="-DXMLINPUT -DXIPSTLUSE -DXIPSTLAPI -DUNIX -DXIPSTDC"
+
+# 64 bits arch
+#LIBROOT=../../lib/linux64
+#DEFINES=-"DXMLINPUT -DXIPSTLUSE -DXIPSTLAPI -DUNIX -DXIPSTDC -DNOUNSIGNEDINT -DARCH64"
+
+g++ -c -o build/derivation.o -O3 $DEFINES -I../../include derivation.cxx
+
+gcc -mt -o build/derivationD build/derivation.o -L$LIBROOT/sharedLib -Wl,-Bdynamic -lxip -Wl,-Bdynamic -lm -lpthread -lz -lstdc++
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBROOT/sharedLib
+export LD_LIBRARY_PATH
+build/derivationD
+
+gcc -mt -o build/derivationS build/derivation.o -L$LIBROOT/staticLib -lxip -lm -lpthread -lz -lstdc++
+build/derivationS
+

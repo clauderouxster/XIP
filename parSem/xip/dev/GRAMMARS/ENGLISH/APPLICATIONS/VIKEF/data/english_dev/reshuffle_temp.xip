@@ -1,0 +1,244 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar with temporal normalization
+//!   filename   : reshuffle_temp.xip
+//!   Date       : January 2005
+//!   Author     : Caroline Hagege
+//!   Comment	 : This file contains rules dedicated to the reconstruction 
+//!		   of complex temporal expressions
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Rule XXXX
+// Juxtaposition of 2 PP's consisting in an unique temporal expression
+
+// Construction of another node above these two expressions
+
+
+reshuffling:
+
+
+// rule that applied previously in localdates and that makes "every + month" be a noun.
+// Don't touch this rule because can be useful for entities
+// either reshuffling in this case
+2> NP{noun[tempexpr:+]{quant#1[lemme:every,first:+], noun#2[last:+,tempexpr:+]}}
+   = NP[tempexpr=+,t_freq=+]{#1,#2}.
+  
+
+// <time_span> prep <date> - The period to 1993
+2> NP{#1,#2[time_span]}, PP#3[tempexpr]{prep#4, NP#5} 
+   = NP[tempexpr=+]{#1,#2,#3{#4,#5}} .
+// prep <time_span> of <date>
+2> PP{prep#10,NP{#1,#2[time_span:+,last:+]}}, PP#3[tempexpr]{prep#4, NP#5} 
+   = PP[tempexpr=+]{#10,NP[tempexpr=+]{#1,#2,#3{#4,#5}}} .
+
+
+// adj[period], noun[tempexpr] - recent years
+//2>  AP#1{?*#10,#11[first,last,period]}, NP{?*#2,#3[last,tempexpr]} 
+// = NP{#1{#10,#11},#2,#3}.
+
+// month/season/day name followed by a common noun
+// e.g. March shipment
+2> NP{?*#10,#1[last:+,month:+]}, NP{#2[first,last,noun:+,adj:~]} 
+	= NP{#10, #1, #2}.
+// GARDER EN RESHUFFLING POUR L INSTANT ET REFLECHIR A CE QU ON VEUT FAIRE DE CES EXPRESSIONS
+
+
+// for ADV NP[tempexpr]
+// e.g. for nearly forty years
+5> prep#1[lemme:for], #2[adv], NP#3[tempexpr]
+   = PP[tempexpr:+,t_relat:+]{#1, #2, #3}.
+// IN ADV NP[head est period:+]
+// e.g. in just|exactly a minute
+5> prep#1[lemme:in], #2[adv], NP#3[tempexpr]{?+#30,noun#31[last:+,period:+]} 
+   = PP[tempexpr:+,t_relat:+]{#1,#2,#3{#30,#31}} .
+
+// e.g. AT Three o'clock in the afternoon
+5> PP#1[tempexpr:+]{prep#3,NP{noun#4[hour:+,first:+,last:+]}}, PP#2[tempexpr:+]
+ = PP[tempexpr:+,t_relat:+]{#3, NP{#4,#2} }.
+
+// prep the summer of 1994
+//5> PP[tempexpr:+]{prep#1, NP#10{?+#30,noun#31[season:+]}}, PP#2{prep[lemme:of], NP{dig[first,last]}} 
+// = PP[tempexpr:+,t_relat:+]{#1, NP{#10{#30,#31},#2}}.
+// already treated localdates
+
+// prep the <ord> tempexpr of year
+// in the first quarter of 2003
+5> PP{prep#1, NP#10{?*#11, noun#12[period:+,last:+]}}, PP#2{prep#3[lemme:of], NP{dig#4[first:+,last:+]}}
+   = PP[tempexpr:+,t_relat:+]{#1,NP{#10{#11,#12},#2{#3,#4}}}.
+
+
+// e.g. the third of October
+5> NP#1{det#10, num#11[last:+,ord:+]}, PP#2{prep#20[lemme:of], NP#21[tempexpr:+]} 
+ = NP[tempexpr:+,t_relat:+]{#1{#10,#11},#2{#20,#21}} .
+
+
+// quant + day + year
+// some Tuesdays in 1998 - quantifier implies the freq:+ feature
+6> #1[quant:+], NP{noun#2[first:+,last:+,day:+]}, PP#3{prep#30,dig#31[year:+]}
+ = NP[tempexpr:+,t_freq:+,t_relat:+]{ NP{#1,#2}, #3{#30,#31} } .
+
+// dig/num <minutes> to dig/num
+//5> NP[tempexpr]{#1[card:+],noun#2[period:+]}, PP{#3[lemme:to],NP{#4[card:+,first,last]}}
+//	= NP[tempexpr:+,hour:+]{#1,#2,#3,#4} .
+
+
+// for complex expressions denoting a time interval
+// e.g. from monday to wednesday, from morning till night, between Monday and Friday, from 8:00 to 10:00
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, PP#2{prep#20[lemme:to],NP#21[tempexpr]} 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#2{#20,#21}} } .
+
+
+// e.g. from monday till wednesday, from morning till night, between Monday and Friday
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, PP#2{prep#20[lemme:till],NP#21[tempexpr]} 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#2{#20,#21}} } .
+
+// e.g. from monday till wednesday, from morning until night, between Monday and Friday
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, PP#2{prep#20[lemme:until],NP#21[tempexpr]} 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#2{#20,#21}} } .
+
+// e.g. from monday till wednesday, from morning until night, between Monday and Friday
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, PP#2{prep#20[lemme:through],NP#21[tempexpr]} 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#2{#20,#21}} } .
+
+
+// e.g. from 2002 through 2003 (bad tagged through)
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, adv#20[lemme:through], NP#2[tempexpr] 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,PP{prep#20[prep=+,adv=~],#2}} } .
+
+// e.g. from monday-wednesday, from 8:00- 10:00
+5> PP{prep#10[lemme:from],NP#1[tempexpr:+]}, punct#3[form:fhyph], NP#21[tempexpr]
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#3,#21}} .
+
+
+
+// between monday and friday
+5> PP{prep#10[lemme:between], NP#1[tempexpr:+]}, conj#2[lemme:and], NP#3[tempexpr:+] 
+ = PP[tempexpr:+,interval:+]{#10, NP{#1,#2,#3}} .
+
+// interval as NPs (and not PPS)
+// e.g. I will be on vacations Sept. 23 - Oct. 5
+5> NP#1[tempexpr:+], punct#3[form:fhyph], NP#2[tempexpr:+] 
+   = NP[tempexpr:+,interval:+]{#1,#3,#2} .
+
+
+
+
+
+// adv[time] or ADVP[time], NP[tempexpr] - (very) late last night
+5> #1[adv:+,time:+], NP#2[tempexpr] 
+ = NP[tempexpr:+,t_relat:+]{#1,#2} .
+
+// adv[time] of ADVP[time], PP{?*,NP[tempexpr]}  - eg (very) early in the morning
+5> #1[adv:+,time:+], PP#2{?+#20,NP#21[tempexpr:+]}
+ = ADVP[tempexpr:+,t_relat:+]{#1,#2{#20,#21}} .
+	
+
+// adj[time] followed by NP[tempexpr]
+// until early next century
+5> prep#2, AP#1{?*#10,adj#11[time:+,last:+]}, NP#3[tempexpr:+] 
+  	= PP[tempexpr:+,t_relat:+]{#2,NP{#1{#10,#11},#3}} .
+
+
+
+// next + mwe date
+// e.g. next 31 August
+5> AP[t_relat:+,preperiod:+]{#1[first,last]}, NP{noun#2[mwe:+,date:+,first:+,last:+]} 
+  = NP[tempexpr:+,t_relat:+]{#1,#2} .
+
+// yesterday/tomorrow night/evening
+//5> NP[tempexpr]{?+#1}, NP{#2[first,last,posttime]} 
+// = NP[tempexpr:+,t_relat:+]{#1,#2} .
+// redundant with other rule layer 15
+
+// dig+period+prep+period
+// 20 days in July, 4 days in Summer
+10> NP{dig#1, ?*#2, noun#3[period:+,last:+]}, PP#5{prep#50, #51[tempexpr:+,noun:+]}
+	= NP[tempexpr:+,t_relat:+]{#1,#2,#3,#5{#50,#51}} .
+
+// num+period+prep+period
+// twenty days in July, 4 days in Summer - also two weeks from next Tuesday
+//10> NP{num#1, ?*#2, noun#3[period:+,last:+]}, PP#5{prep#50, NP#51[tempexpr:+]}
+//	= NP[tempexpr:+,t_relat:+]{NP{#1,#2,#3},#5{#50,#51}} .
+
+// Day_Name Month dig year
+// e.g. Friday, October 1, 1999
+//10> NP{?*#1,noun#2[day:+,last:+]}, punct#3[comma], NP[tempexpr]{noun#4[first:+,last:+, date:+]}, punct#5[comma], NP{dig#6[first:+,last:+,year:+]} 
+// = NP[tempexpr:+,t_absolut:+]{#1,#2,#3,#4,#5,#6} .
+// not useful already tretaed
+
+//  at num to num
+//10> PP{prep#1[lemme:at], NP{num#2[first,last]}}, PP{prep#3[lemme:to],NP{num#4[first,last]}}
+//	= PP[tempexpr:+,hour:+]{#1, NP[tempexpr:+,hour:+]{#2, #3, #4}} .
+// not useful
+
+// in the posstime of NP[tempexpr]
+// e.g. in the morning of January 31.
+//10> PP{prep#1[lemme:in], NP#2[tempexpr]{det#20,noun#21[posttime:+]}}, PP#3[tempexpr:+]{prep#30[lemme:of],?-#31} 
+//	= PP[tempexpr:+]{#1, NP[tempexpr:+]{#2{#20,#21},#3{#30,#31}} } .
+
+10> NP#2[tempexpr]{det#21,noun#22[posttime:+]}, PP#3[tempexpr:+]{prep#30[lemme:of],?-#31} 
+	= NP[tempexpr:+]{#2{#21,#22},#3{#30,#31}} .
+
+// e.g. at twelve o'clock January 3, 1998
+10> PP[tempexpr:+]{prep#10, NP{noun#11[hour:+,first:+,last:+]}}, (punct#5[comma]), NP#2[tempexpr:+]{noun#20[date]}
+ = PP[tempexpr:+,t_absolut:+]{#10, NP{#11,#5, #2{#20}} } .
+
+
+// e.g. Friday at 8:00 AM
+10> PP{prep#1[lemme:on], NP#2[tempexpr:+]}, PP#3{prep#30[lemme:at], NP#31{?*#40,noun#41[hour:+],?-#42}}
+= PP[tempexpr:+,hour:+]{#1,NP[tempexpr:+,hour:+]{#2,#3{#30,#31{#40,#41,#42}}}} .
+ 
+//10> NP#2[tempexpr], PP#3{prep#30[lemme:at], NP#31{?*#40,noun#41[hour:+],?-#42}}
+//= NP[tempexpr:+,hour:+]{#2,#3{#30,#31{#40,#41,#42}}} .
+// not useful covered by other rule
+
+// prep period PP{of, period,last}
+// in January of this year 
+10> PP[tempexpr]{prep#10, NP{noun#11[period:+,last:+,first:+]}}, PP[tempexpr]{prep#5[lemme:of],NP{?*#3,noun#4[period:+,last:+]}}
+= PP[tempexpr:+,t_relat:+]{#10, NP{#11,#5,NP{#3,#4}}} .
+
+// prep period NP{?*,period,last}
+// in January this year 
+10> PP[tempexpr]{prep#10, NP{noun#11[period:+,last:+,first:+]}}, NP[tempexpr]{?+#3,noun#4[period:+,last:+]} 
+= PP[tempexpr:+,t_relat:+]{#10, NP{#11,#3,#4}} .
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Joining 2 adjacents temporal expressions into a single one
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// The second NP is a freq:+, then the whole NP is a freq:+
+// e.g. June 11 every year
+//15> NP[tempexpr:+]{?-#1}, NP[tempexpr:+,t_freq:+]{?-#2} =
+//	NP[tempexpr:+,t_freq:+]{#1,#2} .
+
+
+// VERY GENERAL RULE
+// Joining adjacent temporal NPs into one big temporal NP (.e.g two days before yesterday, three days each week, etc.)
+15> NP[tempexpr:+]{?-#1}, NP[tempexpr:+]{?-#2} =
+	NP[tempexpr:+,t_relat:+]{#1,#2} .
+
+
+20> NP#1[tempexpr:+], PP#2[tempexpr:+, interval:+] =
+      NP{#1,#2} .
+
+20> prep#1, NP#2[tempexpr] 
+	= PP{#1,#2} .
+
+
+
+// PERIOD + ADV compar
+// e.g. a day later - a week earlier
+// a day before
+
+25> NP#1{?+#10,#20[period:+]}, ADV#30[reftime:+]
+	= NP[tempexpr:+,t_relat:+]{#10,#20,#30} .
+
+25> NP#1{?+#10,#20[period:+]}, ADV#30[time:+,compar:+]
+	= NP[tempexpr:+,t_relat:+]{#10,#20,#30} .
+

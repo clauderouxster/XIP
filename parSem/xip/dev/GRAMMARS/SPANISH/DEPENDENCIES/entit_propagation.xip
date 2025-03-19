@@ -1,0 +1,128 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Center Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 -2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP spanish grammar
+//!   filename   : entit_propagation.xip
+//!   author	 : C. Hagege
+//!   Date       : 1/12/2008
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Marking parts of discovered Named Entities in order to take advantage of
+// propagation
+
+Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// MARKING
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: Pedro Ferreira           -> marks: Pedro and Ferreira
+// Example: Presidente Cavaco Silva  -> marks: Cavaco and Silva
+// 
+| noun#1[human,mwe:+]{?*,noun#2[title:~,location:~,org:~,maj:+],?*,noun#3[last,title:~,location:~,maj:+]} |
+if (NE[persona](#1) ) 
+	{ PERSON##2=1; PERSON##3=1; }
+
+
+
+
+//a NER type person which starts with relative
+// we propagate what follows the relative
+// a irma/tia Kiazer marks Kiazer
+| noun[mwe:+,human:+]{?[relative], noun#2[prop:+]} |
+if ( NE[people](#1) )
+{ PERSON##2=1; }
+
+
+
+
+// marking the proper name just following "ONG" as organization
+// e.g. La ONG Atini -> marks Atini
+| noun#1[org]{?[lemma:ONG], noun#2[prop:+]} |
+if ( NE[organizacion=+](#1) )
+   { INSTIT##2=1; }
+
+
+
+// marking acronym names of organization that have been previously detected by context
+// e.g. Movimiento para el Socialismo (MPS), marks MPS
+| NP{?*,noun[last,org]}, punct[fopar], NP{noun#1[first,last,acron,org]}, punct[fcpar] | 
+if (NE[organizacion](#1) )
+	{ INSTIT##1=1; }
+	
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// PROPAGATION
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if two nouns have been marked by the previous rule but do not bear any people 
+// feature (only proper feature), then the PESSOA Ne is the concatenation of
+// these two nouns.
+//
+// Example: o Tito Tutu Tata da Tete falou. Tito Tete foi fixe.
+//
+| noun#3[prop,human=+]{?*,noun#1[maj], ?*, noun#2[maj]} |
+	if ( ~NE[persona](#3) & PERSON##1:1 & PERSON##2:1 )
+	NE[persona=+,propag=+](#3)
+
+
+// noun alone that has been marked for propagation
+//
+| noun#1[toutmaj:~,maj:+] | 
+if ( PERSON##1:1 & ~NE[persona](#1) )
+	NE[persona=+,propag=+](#1)
+
+
+// institution that has been marked
+// 
+| noun#1[maj:+] |
+  if ( INSTIT##1 & ~NE[organizacion](#1) )
+  NE[organizacion=+,propag=+](#1)
+
+
+
+// Cleaning Rule
+// If we have a noun under a noun and both nouns are of same NE type, then only
+// keep the higher level.
+//
+| noun#1{?*,#2} |
+if ( NE(#1) & ^NE(#2) )
+ ~
+
+if (NE[propag:~](#1) & ^NE[propag](#1) )
+~
+
+
+// Cleaning rule for deleting NE which consists in a single word in lower-case
+if ( ^NE(#1[surface:"c%+",mwe:~,date:~]) )
+	~
+
+
+//Script:
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// STOP PROPAGATION
+// (cleans lemmas when a closing DOC tag is found)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// If token </DOC> is found, then clean all variables that have been modified
+// (propagation)
+//
+//| #1[lemma:"</DOC>"]; #1[lemma:"</doc>"] |
+//{	CleanAllLemmas; }
+

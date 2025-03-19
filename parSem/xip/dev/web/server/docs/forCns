@@ -1,0 +1,124 @@
+utilisation TOMCAT + APACHE httpd
+--------------------------------------------------------
+
+le fichiers ZIP pour l'installation sont dans /opt/exchange/grondeau/apache:
+	httpd-2.0.49.tar.gz 
+	jakarta	-tomcat-5.0.25.zip  
+	jakarta-tomcat-connectors-jk2-src-current.zip
+
+/opt/exchange/grondeau contient le fichier xip.war
+
+/opt/exchange/grondeau/conf contient les fichiers de conf appache et tomcat
+
+
+-----------------java ----------------------------------
+java doit etre installe
+setenv JAVA_HOME .....
+
+-----------------tomcat ----------------------------------
+vi ...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25/bin/setclasspath.sh
+	 # doit etre de path absolu pour permettre de demarrer tomcat de n'importe quel directory
+	 TOM_ROOT=...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25
+	 CLASSPATH="$CLASSPATH:$TOM_ROOT/webapps/xip/WEB-INF/lib/jxip.jar"
+	 LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TOM_ROOT/temp/XXXXXX/linux"
+		avec XXXXX= nom de l'utilisateur (root???)
+
+--------------apache httpd -----------------------------
+creer ...ROOTINSTALLDIR.../httpd-2.0.49-src a partir du tar file
+mkdir ...ROOTINSTALLDIR.../httpd-2.0.49
+cd ...ROOTINSTALLDIR.../httpd-2.0.49-src
+./configure --prefix=...ROOTINSTALLDIR.../httpd-2.0.49
+make
+make install
+vi ...ROOTINSTALLDIR.../httpd-2.0.49/conf/httpd.conf
+#Listen 80
+#13.202.220.196 = choranche
+Listen 13.202.220.196:5080
+
+pour demarer/stopper serveur:
+...ROOTINSTALLDIR.../httpd-2.0.49/bin/apachectl start
+...ROOTINSTALLDIR.../httpd-2.0.49/bin/apachectl stop
+pour tester:
+http://choranche.grenoble.xrce.xerox.com:5080/
+
+--------- connector -----------------
+creer ...ROOTINSTALLDIR.../jakarta-tomcat-connectors-jk2-2.0.4-src a partir du tar file
+cd ...ROOTINSTALLDIR.../jakarta-tomcat-connectors-jk2-2.0.4-src/jk/native2
+./buildconf.sh
+.configure --with-jni --with-apxs2=...ROOTINSTALLDIR.../httpd-2.0.49/bin/apxs
+make
+cd ../build/jk2/apache2
+...ROOTINSTALLDIR.../httpd-2.0.49/bin/apxs -n jk2 -i mod_jk2.so
+...ROOTINSTALLDIR.../httpd-2.0.49/bin/apxs -n jk2 -i libjkjni.so
+
+---------------------httpd server ------------------------
+vi ...ROOTINSTALLDIR.../httpd-2.0.49/conf/httpd.conf
+chercher LoadModule et ajouter la ligne:
+LoadModule jk2_module modules/mod_jk2.so
+
+vi ...ROOTINSTALLDIR.../httpd-2.0.49/conf/workers2.properties
+inserer les lignes suivantes:
+	[channel.socket:localhost:8009]
+	port=8009
+	host=127.0.0.1
+ 
+	[ajp13:localhost:8009]
+	channel=channel.socket:localhost:8009
+ 
+	[uri:/jsp-examples/*]
+	worker=ajp13:localhost:8009
+
+	[uri:/xip/*]
+	worker=ajp13:localhost:8009
+
+
+voir example: ...ROOTINSTALLDIR.../jakarta-tomcat-connectors-jk2-2.0.4-src/jk/conf/workers.properties
+
+test avec les exemples fournis avec tomcat:
+http://choranche.grenoble.xrce.xerox.com:5080/jsp-examples/
+
+---------------------------------installer les pages JSP de XIP WEB ----------------------
+mkdir  ...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25/webapps/xip
+cp /opt/exchange/grondeau/xip.war  ...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25/webapps/xip
+jar xvf xip.war 
+
+adaptation de la delivery 
+cd ...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25/webapps/xip
+vi page1.jsp
+modifier la ligne en fonction du repertoire d'installation:
+String grmRoot = "...ROOTINSTALLDIR.../jakarta-tomcat-5.0.25/webapps/xip/grammar";
+
+------------------------------- installer les pages web du sites xerox --------------
+cp -r /opt/W3/public/docs/*  ...ROOTINSTALLDIR.../httpd-2.0.49/htdocs
+tester:
+http://choranche.grenoble.xrce.xerox.com:5080/competencies/content-analysis/homepage.en.html
+------------------------------- adapter ces pages pour prises en compte de XIP-WEB -----------------------
+vi ...ROOTINSTALLDIR.../httpd-2.0.49/htdocs/competencies/content-analysis/homepage.en.html
+rajouter la ligne 141:
+ <li><a href="/xip/page1.jsp">XIP parser</a></li>
+vi ...ROOTINSTALLDIR.../httpd-2.0.49/htdocs/competencies/content-analysis/robustparsing/home.en.html
+rajouter la ligne 167:
+ <br><br>XIP <a href="/xip/page1.jsp"> demos.</a>
+
+
+vi  ...ROOTINSTALLDIR.../httpd-2.0.49/htdocs/competencies/content-analysis/robustparsing/home.en.html
+remplacer la ligne:
+ (Contact: <a href="mailto:chanod@xrce.xerox.com">JP. Chanod</a>)</p>
+par
+ (Contact: <a href="mailto:segond@xrce.xerox.com">F. Segond</a>)</p>
+
+tester:
+http://choranche.grenoble.xrce.xerox.com:5080/competencies/content-analysis/homepage.en.html
+--------------------------------------------------
+ATTENTION: le premier acces a la page de demo xip ne doit pas etre fait juste apres le redemarrage (attendre 5/6s)
+De plus, le premier acces implique la compilation des fichiers JSP + chargement des grammaires ce qui donnent
+un temps de reponse de l'ordre de 5/6s ensuite c'est plus rapide.
+quand xip.war est maj, la premiere fois que tomcat est redemarre on obtient l'erreur suivante
+(les re-demarrages suivants sont corrects):
+Error page
+	The server encountered an internal error:
+	URI = /xip/page1.jsp
+
+	status code = 500
+
+	root cause = java.lang.NullPointerException

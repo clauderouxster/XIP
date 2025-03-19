@@ -1,0 +1,1795 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:		dependeny.xip
+//! Content:	Dependency definitions
+//!
+//! Language:	ITALIAN
+//! ENCODING:	UTF-8	[€àâáäã]
+//!
+//! Author:	Giovanni Depau
+//!
+//! Date: 	17-Jan-2006	:: initial version
+//! Update:	08-Apr-2008	:: changed to UTF-8
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//HEADs
+//| ?#1{?*, #2[last]} |
+//if ( ~HEAD(?,#2) )
+//	HEAD(#2,#1).
+
+//| TOP#1{?*, #2[last]} |
+//if ( HEAD(#2,#1) )
+//	~.
+
+//Nouns.
+| NP#1{?*, #2[last]} |
+	if ( ~HEAD(?,#2) )
+	HEAD(#2,#1).
+
+//Adj.
+|ap#1{?*, #2[last]}| 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+//Adv.
+| advp#1{?*, #2[last]} | 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+//PP
+|pp#1{prep, ?*, #2[last]}| 
+	if(head(#20, #2)) 
+	HEAD(#20, #1).
+
+//Prep.
+//| pp#1{prep, np{?*,#2[last]} } | 
+//if ( ~HEAD(?,#1) )
+//	HEAD(#2,#1).
+
+//IV.
+| iv#1{?*, #2[last]} | 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+//FV.
+| fv#1{?*, #2[last]} | 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+//NFV.
+| nfv#1{?*, #2[last]} | 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+//RFV.
+| rfv#1{?*, #2[last]} | 
+	if ( ~HEAD(?,#1) )
+	HEAD(#2,#1).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// NEs
+
+//PERSON
+| noun#1[prop,featpeople,!featpeople:!, abbr:~,premod:~,postmod:~] |
+if ( ~PERSON(#1) )
+PERSON(#1).
+
+| noun#1 |
+if ( (lastname##1:1) & ~PERSON(#1) )
+	PERSON(#1).
+
+| noun#1{?*, noun^#2, ?*} |
+	if ( PERSON(#1) & ^PERSON(#2) )
+	~.
+
+//LOC
+| noun#1[prop,featgeo,!featgeo:!, demonym:~] |
+	if ( ~LOC(#1) & ~ORG(#1) )	
+	LOC(#1).
+
+| noun#1 |
+	if ( (place##1:1) & ~LOC(#1) )
+	LOC(#1).
+
+| noun#1{?*, noun^#2, ?*} |
+	if ( LOC(#1) & ^LOC(#2) )
+	~. 
+
+//ORG
+| noun#1[featorg, !featorg:!, org=~,prop,abbr:~,premod:~,postmod:~] |
+	if ( ~ORG(#1) & ~PERSON(#1) & ~LOC(#1) )
+	ORG(#1).
+
+//| noun#1[prop,org,mwe] |
+//	if ( ~ORG(#1) )
+//	ORG(#1).
+
+| noun#1 |
+	if ( (soc##1:1) & ~ORG(#1) )
+	ORG(#1).
+
+| noun#1{?*, noun^#2, ?*} |
+	if ( ORG(#1) & ^ORG(#2) )
+	~. 
+
+//DATE
+| noun#1[date:+] |
+	DATE(#1).
+
+| noun#1{?*, noun^#2, ?*} |
+	if ( DATE(#1) & ^DATE(#2) )
+	~.
+
+| num#1[date:+] |
+	DATE(#1).
+
+//ARTEFACT
+| noun#1[featartefact, !featartefact:!, prop,abbr:~,premod:~,postmod:~] |
+	ARTEFACT(#1).
+
+| noun#1{?*, noun^#2, ?*} |
+	if ( ARTEFACT(#1) & ^ARTEFACT(#2) )
+	~.
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// STARE
+// 10.10.2008 (SM):
+// In Albania intanto la situazione del Paese sta precipitando verso la guerra civile.
+| SC{?*[fv:~], FV{?*, #1[form:fstare, last:+]}; RFV{?*, #1[form:fstare, last:+]}},
+ GV{?*, #2[gerund:+, last:+]} |
+	STARE(#1, #2).
+
+// 10.10.2008 (SM):
+// Ma se sarà messo con le spalle al muro dai clan che si stanno scontrando nel suo partito...
+| FV{?*, #1[form:fstare, last:+]}; RFV{?*, #1[form:fstare, last:+]}, GV{?*, #2[gerund:+, last:+]} |
+	STARE(#1, #2).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//DOMIN.
+//La password non viene accettata / non va accettata. 16/05
+|SC{ ?*,  FV{?*,#2[last,aux]}}, ADVP*, NFV{?*,#3[last,pastpart]} |	
+	if((#2[number]:#3[number])	
+	& ~DOMIN(#2,#3))
+	DOMIN(#2,#3).
+
+//Il bambino E' CADUTO nel pozzo.
+// 2.10.2008 (SM):
+// la nostra linea politica é rappresentata dal Movimento popolare del Kosovo
+//|SC{ ?*,  FV{?*,#2[last,form:fessere]}}, ?*[punct:~,art:~,noun:~,nfv:~], NFV{?*,#3[last,pastpart,form:~fessere]} |
+| SC{?*, FV{?*, #2[last:+, form:fessere]}}, ?*[punct:~, sc:~, np:~, nfv:~],
+ NFV{?*, #3[last:+, pastpart:+]} |
+	if( (#2[number]:#3[number])& ~DOMIN(#2,#3) )
+	DOMIN(#2, #3).
+
+//L'onesto HA PREVALSO sull'utile.
+// 10.11.2008 (SM):
+// Abbiamo notizia della presenza della criminalità italiana nello scandalo delle finanziarie albanesi ha detto Vigna
+//| SC{?*, FV{?*, #2[last:+, form:favere]}}, ?*[punct:~, art:~, noun:~, nfv:~],
+| SC{?*, FV{?*, #2[last:+, form:favere]}}, ?*[punct:~, art:~, np:~, nfv:~, sc:~],
+ NFV{?*, #3[last:+, pastpart:+, form:~fessere]} |
+// 27.8.2008 (SM):
+// Hanno ucciso Tomaso alle spalle.
+//	if((#2[number]:#3[number])
+//	& ~DOMIN(#2,#3))
+	if ( ~DOMIN(#2, #3) )
+	DOMIN(#2, #3).
+
+// 26.9.2008 (SM):
+// mi sono mangiato
+| SC{?*, RFV{?*, #1[last:+, form:fessere]}}, ?*[punct:~, np:~, nfv:~],
+ NFV{?*, #2[last:+, pastpart:+, form:~fessere]} |
+	if( (#1[number]:#2[number])& ~DOMIN(#1, #2) )
+	DOMIN(#1, #2).
+
+// 9.10.2008 (SM):
+// mio fratello è stato ucciso alle spalle
+| NFV{?*, #1[last:+, pastpart:+, form:fessere]}, NFV{?*, #2[last:+, pastpart:+]} |
+	if ( ^DOMIN(#10, #1) )
+	DOMIN(#10, #2).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//PREPOBJ.
+| pp#1{#3[prep], np{?*,#4[last]} } |
+if ( ~PREPOBJ(#4,#3) )
+	PREPOBJ(#4,#3).
+
+| iv#1{#3[prep], #5[last]} | 
+	PREPOBJ(#5,#3).
+
+//| pp#1{#3[prep], ap{?*,#4[last]} } | 
+//	PREPOBJ(#4,#3).
+
+// 7.11.2008 (SM):
+// le persone alle quali ha parlato
+| prep#1, SC{?*, FV{(det), pron#2, verb[last:+]}} |
+	PREPOBJ(#2, #1).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// CONJOBJ
+// 17.10.2008 (SM):
+// mangia perché non nuota
+| SC{BG{conj#1[subord:+]}, FV{?*, verb#2[last:+]}; RFV{?*, verb#2[last:+]}} |
+	CONJOBJ(#2, #1).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//DETERMINERS; Ex "Il ragazzo, questo ragazzo, la mia ragazza", etc...
+| NP#3{?*, det#2[tokenend:~]} | 
+	if ( HEAD(#1,#3) )
+	DETD(#1,#2).
+
+// 27.8.2008 (SM):
+// il governo della città
+| NP#3{?*, det#2[tokenend:+]} | 
+	if ( HEAD(#1, #3) )
+	DETD(#1, #2).
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+//REFLEX : questa politica SI INTEGRA in una politica di repressione
+// 31.10.2008 (SM), inclusion of PRONOM info
+// mi lavo, mi arrabbio
+//| RFV#3{?*, pron#2[refl:+]} |
+| RFV#3{?*, pron#2[refl:+], verb[pronom:~, aux:~, form:~fessere, last:+]} | 
+	if ( HEAD(#1, #3) )
+	REFLEX(#1, #2).
+
+// 31.10.2008 (SM):
+// mi sono lavata, mi sono arrabbiata
+| SC{?*, RFV#3{?*, pron#2[refl:+]}}, NFV{verb#4[pronom:~]} | 
+	if ( HEAD(#1, #3) & DOMIN(#1, #4) )
+	REFLEX(#4, #2).
+
+// 26.9.2008 (SM):
+// io mi mangio, mi sono lavata
+if ( ^REFLEX(#1, #2) & #1[trans:+, pronom:~] )
+	OBJ[refl=+](#1, #2).
+
+// 26.9.2008 (SM):
+// io ti mangio
+| FV#3{?*, pron#2[acc:+, lemma:~si]} | 
+	if ( HEAD(#1[trans:+], #3) )
+	OBJ(#1, #2).
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// SUBJ_IMPERS
+// 31.10.2008 (SM):
+// Si riciclava denaro sporco con diversi sistemi.
+| RFV{?*, pron#1[lemma:si], verb#2[pronom:~, form:~fessere]} | 
+	SUBJ_IMPERS(#2, #1).
+
+// 31.10.2008 (SM):
+// Si è riciclato denaro sporco con diversi sistemi.
+| SC{?*, RFV{?*, pron#1[lemma:si], verb#2[form:fessere, last:+]}}, NFV{verb#3[pronom:~]} | 
+	if ( DOMIN(#2, #3) )
+	SUBJ_IMPERS(#3, #1).
+
+// 6.11.2008 (SM):
+// Si riciclava denaro sporco con diversi sistemi.
+if ( ^OBJ[refl:+](#1, #2) & SUBJ_IMPERS(#1, #2) )
+	~.
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// EMPTYCOMPL
+// 31.10.2008 (SM):
+// Anche Dashamir Shehi attacca il Governo e si oppone a misure di emergenza . 
+| RFV{?*, pron#1[lemma:si], verb#2[pronom:+, form:~fessere]} | 
+	if ( ~SUBJ_IMPERS(#2, #1) )
+	EMPTYCOMPL(#2, #1).
+
+// 31.10.2008 (SM):
+// Ma ieri la folla aveva campo libero e si é sfogata contro ogni simbolo del potere centrale...
+| SC{?*, RFV{?*, pron#1[lemma:si], verb#2[form:fessere, last:+]}}, NFV{verb#3[pronom:+]} | 
+	if ( DOMIN(#2, #3) & ~SUBJ_IMPERS(#3, #1) )
+	EMPTYCOMPL(#3, #1).
+
+// 31.10.2008 (SM):
+// Pansa ha confermato quanto sostenuto dal collega dell' antimafia , limitandosi ad ammettere ...
+| GV{verb#1[pronom:+, tokenstart:+]}, NP{pron#2[tokenend:+, lemma:si]} |
+	EMPTYCOMPL(#1, #2).
+
+
+////////////////////////////////////  SUBJ.  /////////////////////////////////////////////////////////////
+
+//io mangio, tu mangi etc...~*io cammina etc...
+//| NP{#1[pron:+,nom:+]}, ADVP*, FV{?*,#2[last]}, ~NFV |
+// 20.8.2008 (SM):
+// io mangio
+| NP{#1[pron:+, nom:+]}, ADVP*, FV{?*, #2[last:+]} |
+	if ( #1[person]:#2[person]
+	   & #1[number]:#2[number] )
+	SUBJ(#2, #1).
+
+// 6.10.2008 (SM):
+// tutto dipenderà dalle iniziative
+| NP{#1[pron:+, indef:+]}, ADVP*, FV{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] )
+	SUBJ(#2, #1).
+
+//tutta F.C. Internazionale ha il piacere di ...
+| NP{?*,#1[org:+,noun:+,nom:~,last]}, ?*, FV{?*,#2[last]}, NFV~ |
+	if(#1[number]:#2[number]
+	&~SUBJ(#2,#1))
+	SUBJ(#2,#1).
+
+// 10.3.2009 (SM):
+// questa è ancora la città
+| NP{#1[pron:+, dem:+]}, ADVP*, FV{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] )
+	SUBJ(#2, #1).
+
+//Il cane (nero/ di Michele) mangia.  Nelle grandi città il traffico è intenso. Nel centro delle grandi città il traffico è intenso. ~*Il cane di Michele MANGIANO
+//16/05:ajouté ?*{?*[nfv:~]
+//| NP{?*,#1[noun,nom:~,last]}, ?*, FV{?*,#2[last]}, ~NFV |
+// 19.8.2008 (SM), 11.9.2008 (SM):
+// C'é il sospetto che per aggiustare i guasti di questa catena di Sant'Antonio balcanica, una follia che ha coinvolto un milione di albanesi...
+| NP{?*, #1[noun:+, nom:~, last:+]}; NP{?*, AP[last:+]{?*, #1[adj:+, last:+]}}, ?*[np:~, bg:~],
+ FV{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~SUBJ(#2, #1) )
+	SUBJ(#2, #1).
+
+// 11.9.2008 (SM):
+// Sigrid Maurel lavora sulla grammatica italiana.
+| NP{?*, #1[noun:+, nom:~, last:+, src:guess]}, ?*[np:~], FV{?*, #2[last:+]} |
+	if ( ~SUBJ(#2, #1) )
+	SUBJ(#2, #1).
+
+//La più bella tra le mie amiche è Giovanna.
+| NP{?*, AP#1{?*, #2[adj,last]}}, ?*, FV{?*,#3[last]}, NP[firstname]|
+	if(#2[number]:#3[number])
+	SUBJ(#3,#2).
+
+//La più bella tra le mie amiche è questa.
+| NP{?*, AP#1{?*, #2[adj,last]}}, ?*, FV{?*,#3[last]}, adj[dem:+]|
+	if(#2[number]:#3[number])
+	SUBJ(#3,#2).
+
+//Nelle grandi città il traffico è diventato intenso.
+//| SC{PP*, NP{?*,#1[last]}, ?*, FV{?*,#2[form:fessere,last]}}, NFV{?*,#3[pastpart,last]}, ?*[AP:+,NP:+,ADVP:+,NFV:~] |
+
+// 12.9.2008 (SM):
+// Valona é in mano alla folla, fuori da ogni controllo, la polizia é scomparsa, rintanata nelle caserme .
+//| SC{PP*, NP{?*,#1[last]}, ?*, FV{?*,#2[form:fessere,last]}}, NFV{?*,#3[pastpart,last]} |
+| SC{?*[fv:~, np:~], NP{?*, #1[last:+]}, ?*[np:~], FV{?*, #2[form:fessere, last:+]}},
+ NFV{?*, #3[pastpart:+, last:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #1[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #2[number]:#3[number]
+	& ^SUBJ(#2, #1)
+	)
+	SUBJ(#3, #1).
+
+//La Confederazione Generale Italiana dei Lavoratori ha fatto sciopero.
+| SC{punct*, NP{?*,#1[org:+,mwe,last]}, ?*, FV{?*,#2[form:favere,last]}}, NFV{?*,#3[pastpart,pl:~,fem:~,last]} |
+	if ( #1[number]:#2[number] & ^SUBJ(#2,#1)~ )
+	SUBJ(#3,#1).
+
+//IL ragazzo ha camminato sulla tavola.
+// 12.9.2008 (SM):
+// Già un paio di mesi fa, quando non si parlava ancora di fallimenti, Berisha aveva fatto fuori il capo della polizia e quasi tutti gli ufficiali delle dogane .
+//| SC{punct*, PP*, NP{?*, #1[last]}, ?*, FV{?*,#2[form:favere,last]}}, NFV{?*,#3[pastpart,pl:~,fem:~,last]} |
+| SC{?*[fv:~, np:~], NP{?*, #1[last:+]}, ?*[coord:~], FV{?*, #2[form:favere, last:+]}},
+ NFV{?*, #3[pastpart:+, pl:~, fem:~, last:+]} |
+	if (
+//	  #1[number]:#2[number]
+	  DOMIN(#2, #3)
+	& ^SUBJ(#2, #1)
+	)
+	SUBJ(#3, #1).
+
+// 11.9.2008 (SM):
+// Sigrid Maurel ha camminato nella città.
+| SC{?*[fv:~, np:~], NP{?*, #1[last:+, src:guess]}, ?*[np:~], FV{?*, #2[form:favere, last:+]}},
+ NFV{?*, #3[pastpart:+, pl:~, fem:~, last:+]} |
+	if ( ^SUBJ(#2, #1) )
+	SUBJ(#3, #1).
+
+//Giovanni vuole passeggiare sulla sabbia.
+| SC{ PP*, NP{?*,#1[last]}, ?*, FV{?*,#2[modal,last]}}, IV{?*[prep:~],#3[last]}|
+	if(#1[number]:#2[number])	
+	SUBJ(#3,#1).
+
+//Giovanni decide di passeggiare sulla sabbia.
+| SC{PP*, NP{?*,#1[nom:~,last]}, ?*, FV{?*,#3[last]}}, ADVP*, IV{prep,#5[last]}, ?*{adj,~NFV} |
+	if(#1[number]:#3[number])
+	SUBJ(#5,#1).
+
+//La politica linguistica del regime SI INTEGRA in una politica di repressione.
+// 11.9.2008 (SM):
+// Ma ieri la folla aveva campo libero e si é sfogata contro ogni simbolo del potere centrale.
+//| SC{ (PP), NP{?*,#1[pron:~,last]}, ?*, RFV{?*,#2[last]}} |
+//| SC{NP{?*, #1[pron:~, last:+]}, ?*, RFV{?*, #2[last:+, form:~fessere]}} |
+// 12.9.2008 (SM):
+// Anche Dashamir Shehi, ex vice primo ministro, un tempo uomo del Presidente in città, attacca il Governo e si oppone a misure di emergenza.
+| SC{?*[fv:~, np:~], NP{?*, #1[pron:~, last:+]}, ?*[coord:~], RFV{?*, #2[last:+, form:~fessere]}} |
+	if ( #1[number]:#2[number] )	
+	SUBJ(#2, #1).
+
+// 11.9.2008 (SM):
+// Paolo si è lavato le mani.
+| SC{?*[fv:~, np:~], NP{?*, #1[pron:~, last:+]}, ?*[np:~], RFV{?*, #2[last:+, form:fessere]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+]} |
+	if ( #1[number]:#2[number] & #1[gender]:#3[gender] )
+	SUBJ(#3, #1).
+
+//REFL & PRONOMINAL Forms
+//Io MI INTEGRO in una politica di repressione.
+| SC{ (PP), NP{?*,#1[pron,last]}, ?*, RFV{#2[nom:~,acc:+,dat:+],#3[last]}} |
+	if(#1[number]:#3[number]
+	&#1[person]:#3[person]
+	&#1[person]:#2[person]
+	&#1[number]:#2[number]
+	&#2[person]:#3[person]
+	&#2[number]:#3[number])	
+	SUBJ(#3,#1).
+
+//Rumore proveniente dall'area di uscita delle copie.     SUBJ Rumore, proveniente   16/05
+|NP{?*,#3[last]}, NFV{?*,#5[prespart,last]}|
+	SUBJ(#5,#3).
+
+//// Giovanni mangia e beve
+////| NP{?*,#1[last]}, ?*, FV{#2[last]}}, ADVP*,  conj#3[coord], ADVP*,  SC{FV{#4[last]}}|
+//// 20.8.2008 (SM):
+//// Giovanni mangia e beve
+//| SC{?*[fv:~, np:~], NP{?*, #1[last]}, ?*, FV{#2[last]}}, ADVP*, conj#3[coord], ADVP*, SC{FV{#4[last]}} |
+////	SUBJ(#2,#1),	
+//	if ( SUBJ(#2, #1) )
+//	COORDITEMS(#2, #4),
+//	SUBJ(#4, #1).
+
+// 12.9.2008 (SM):
+// In Albania intanto la situazione del Paese sta precipitando verso la guerra civile.
+| SC{?*[fv:~, np:~], NP{?*, #1[last:+]}, ?*[coord:~], FV{?*, #2[form:fstare, last:+]}},
+ GV{?*, #3[gerund:+, last:+]} |
+	if ( #1[number]:#2[number] & ^SUBJ(#2, #1) )
+	SUBJ(#3, #1).
+
+// 1.10.2008 (SM):
+// c'è una persona competente, ci sono delle persone
+| SC{?*, FV{?*, pron[loc:+], verb#1[last:+, form:fessere]}}, (advp),
+ NP{?*, noun#2[last:+]}; PP{?*, NP{?*, noun#2[last:+]}} |
+	SUBJ(#1, #2).
+
+// 6.10.2008 (SM):
+// ce ne sarà probabilmente un secondo
+| SC{?*, NP{?*, pron[loc:+]}, NP{pron[ne:+]}, FV{?*, verb#1[last:+, form:fessere]}}, (advp),
+ NP{?*, noun#2[last:+]}; PP{?*, NP{?*, noun#2[last:+]}} |
+	SUBJ(#1, #2).
+
+// 2.10.2008 (SM):
+// Qui c'era la base di Pasha Liman affittata ai russi che tenevano alla fonda i loro sommergibili.
+| BG{conjche#1[last:+]}, (PP; ADVP; AP)*, FV{?*[refl:~], #2[last:+]}; RFV{?*, #2[last:+]} |
+	SUBJ(#2, #1).
+
+// 3.10.2008 (SM):
+// Ma se sarà messo con le spalle al muro dai clan che si stanno scontrando nel suo partito...
+| SC{BG{conjche#1[last:+]}, (PP; ADVP; AP)*, FV{?*, #2[form:fstare, last:+]};
+ RFV{?*, #2[form:fstare, last:+]}}, GV{?*, #3[gerund:+, last:+]} |
+	if ( ^SUBJ(#2, #1) )
+	SUBJ(#3, #1).
+
+
+// postposed subjects:
+
+// 9.10.2008 (SM):
+// Finora abbiamo evitato di proposito lo scontro - dice il ministro degli Esteri Sheu -.
+| SC{?*, FV{?*, verb#1[last:+, dicendi:+]}},
+ NP{?*, noun#2[last:+, people:+]; noun#2[last:+, firstname:+]; noun#2[last:+, lastname:+]} |
+	SUBJ(#1, #2).
+
+// 9.10.2008 (SM):
+// Finora abbiamo evitato di proposito lo scontro - ha detto il ministro degli Esteri Sheu -.
+| NFV{?*, verb#1[last:+, dicendi:+]},
+ NP{?*, noun#2[last:+, people:+]; noun#2[last:+, firstname:+]; noun#2[last:+, lastname:+]} |
+	SUBJ(#1, #2).
+
+// verb: peut être erg, intrans, pronom, pas de NP avant, et NP après -> SUBJ
+// 6.11.2008 (SM):
+// Qui non si trova più un seguace del Partito democratico
+| SC{?*, FV{?*, verb#1[last:+, trans:~, atts:~, atto:~]}; RFV{?*, verb#1[last:+, trans:~, atts:~, atto:~]}},
+ (ADVP), NP{?*, noun#2[last:+]} |
+	if (
+	   ~SUBJ(#1, #10)
+	 & #1[number]:#2[number]
+	 & #1[person]:#2[person]
+	 )
+	SUBJ(#1, #2).
+
+// 10.3.2009 (SM):
+// Dalla rabbia dei valonesi non si salva niente e nessuno .
+| SC{?*, FV{?*, verb#1[last:+, trans:~, atts:~, atto:~]}; RFV{?*, verb#1[last:+, trans:~, atts:~, atto:~]}},
+ (ADVP), NP{?*, pron#2[last:+]} |
+	if (
+	   ~SUBJ(#1, #10)
+	 & #1[number]:#2[number]
+	 )
+	SUBJ(#1, #2).
+
+
+// 6.11.2008 (SM):
+// si é esaurito il filone aureo del contrabbando
+| SC{?*, FV{?*, verb#3[last:+]}; RFV{?*, verb#3[last:+]}}, NFV{verb#1[last:+, trans:~, atts:~, atto:~]},
+ (ADVP), NP{?*, noun#2[last:+]} |
+	if (
+	   ~SUBJ(#1, #10)
+	 & DOMIN(#3, #1)
+	 & #1[number]:#2[number]
+	 & #1[gender]:#2[gender]
+	 )
+	SUBJ(#1, #2).
+
+// little corrections:
+
+// 26.9.2008 (SM):
+// io mi sono mangiato
+if ( ^SUBJ(#1, #2) & DOMIN(#1, #3) )
+	SUBJ(#3, #2).
+
+// 10.10.2008 (SM):
+// Sigrid sta mangiando la torta
+if ( ^SUBJ(#1, #2) & STARE(#1, #3) )
+	SUBJ(#3, #2).
+
+
+//------------------------------------------------------------------------------------------------------
+// SUBJ_PASSIVE
+// 10.9.2008 (SM), reorganisation of all SUBJ_PASSIVE rules:
+// 31.10.2008 (SM), inclusion of ERG info
+
+// Io sono promosso
+| SC{NP{?*, #1[pron:+, nom:+]}, ?*, FV{?*, #2[form:fessere, last:+]}},
+ NFV{?*, #4[form:~fessere, pastpart:+, last:+, trans:+, erg:~]} |
+	if (
+	  #1[person]:#2[person]
+	& #1[number]:#2[number]
+	& #2[number]:#4[number]
+	& #1[gender]:#4[gender]
+	& #1[number]:#4[number]
+	& ^SUBJ(#4, #1)
+	)
+	SUBJ_PASSIVE(#4, #1).
+
+// la piazza è dedicata
+| SC{punct*, NP{?*, noun#1[last:+]}, ?*, FV{?*, #2[form:fessere, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+, erg:~]} |
+	if (
+	  #1[person]:#2[person]
+	& #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #1[number]:#3[number]
+	& ^SUBJ(#3, #1)
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+// La relazione sarà discussa domani da un gruppo di esperti.
+// ..., la nostra linea politica é rappresentata dal Movimento popolare del Kosovo ...
+| SC{punct*, NP{?*, noun#1[last:+]}, ?*, FV{?*, #2[form:fessere, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+, erg:+]}, (ADVP), PP{prep[lemma:da]} |
+	if (
+	  #1[person]:#2[person]
+	& #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #1[number]:#3[number]
+	& ^SUBJ(#3, #1)
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+// Io sono stato promosso
+| SC{NP{?*, #1[pron:+, nom:+]}, ?*, FV{?*, #2[form:fessere, ind:+, last:+]}},
+ NFV{?*, #3[form:fessere, pastpart:+, last:+]}, NFV{?*, #5[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if(
+	  #1[number]:#2[number]
+	& #1[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #2[number]:#3[number]
+	& #2[number]:#5[number]
+	& #1[number]:#5[number]
+	& #1[gender]:#5[gender]
+	& #3[number]:#5[number]
+	& #3[gender]:#5[gender]
+	& ^SUBJ(#3, #1)
+	)
+	SUBJ_PASSIVE(#5, #1).
+//	DOMIN_PASSIVE(#2, #3),
+//	DOMIN_PASSIVE(#3, #5).
+
+// Paolo è stato lodato.
+| SC{NP{?*, noun#1[last:+]}, ?*, FV{?*, #2[form:fessere, ind:+, last:+]}},
+ NFV{?*, #3[form:fessere, pastpart:+, last:+]}, NFV{?*, #5[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if(
+	  #1[number]:#2[number]
+	& #1[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #2[number]:#3[number]
+	& #2[number]:#5[number]
+	& #1[number]:#5[number]
+	& #1[gender]:#5[gender]
+	& #3[number]:#5[number]
+	& #3[gender]:#5[gender]
+	& ^SUBJ(#3, #1)
+	)
+	SUBJ_PASSIVE(#5, #1).
+//	DOMIN_PASSIVE(#2, #3),
+//	DOMIN_PASSIVE(#3, #5).
+
+// Paola e Luisa sono state promosse.
+//| SC{NP{?*, noun#1[last:+]}, conj[coord:+], NP{?*, noun#2[last:+]}, ?*, FV{?*, #3[form:fessere, last:+]}},
+// NFV{?*, #4[form:fessere, pastpart:+, last:+]}, NFV{?*, #5[form:~fessere, pastpart:+, last:+, trans:+]} |
+| SC{NP{?*, noun#1[last:+]}, ?*, conj[coord:+], NP{?*, noun#2[last:+]}, ?*, FV{?*, #3[form:fessere, last:+]}},
+ NFV{?*, #4[form:fessere, pastpart:+, last:+]}, NFV{?*, #5[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if (
+//	  #3[number]:#4[number]
+	  #4[number]:#5[number]
+	& #4[gender]:#5[gender]
+//	& SUBJ$1(#3, #1)
+	& ^SUBJ(#3, #2)
+	)
+	SUBJ_PASSIVE(#5, #2),
+	SUBJ_PASSIVE(#5, #1).
+//	DOMIN_PASSIVE(#3, #4),
+//	DOMIN_PASSIVE(#4, #5).
+
+// Io vengo promosso; 
+| SC{NP{?*, #1[pron:+, nom:+]}, ?*, FV{?*, #2[lemma:venire, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if(
+	  #1[number]:#2[number]
+	& #1[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #2[number]:#3[number]
+	& ^SUBJ(#2, #1)
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+// la macchina non viene accettata.
+| SC{NP{?*, noun#1[last:+]}, ?*, FV{?*, #2[lemma:venire, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #1[number]:#3[number]
+	& #1[gender]:#3[gender]
+	& #2[number]:#3[number]
+	& ^SUBJ(#2, #1)
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+// 7.10.2008 (SM):
+// alcune 'piramidi' non verranno travolte
+| NP{?*, noun#1[last:+]}, ?*, SC{?*, FV{?*, #2[lemma:venire, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #1[gender]:#3[gender]
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+// Il giornalista dichiara di essere stato riconosciuto.
+| SC{NP{?*, noun#1[last:+]}, FV{?*, #2[form:~fessere, last:+]}}, IV{?*, #3[form:fessere, last:+]},
+ NFV{?*, #4[form:fessere, pastpart:+, last:+]}, NFV{?*, #5[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #1[number]:#4[number]
+	& #4[number]:#5[number]
+	& #1[gender]:#4[gender]
+	& SUBJ(#2, #1)
+	)
+//	DOMIN_PASSIVE(#2, #3),
+//	DOMIN_PASSIVE(#3, #4),
+//	DOMIN_PASSIVE(#4, #5),
+	SUBJ_PASSIVE(#5, #1).
+
+// 7.10.2008 (SM):
+// E per motivi di ordine pubblico forse saranno salvate le altre finanziarie in difficoltà.
+| SC{?*[bg:~], FV{?*, #1[form:fessere, last:+]}},
+ NFV{?*, #2[form:~fessere, pastpart:+, last:+, trans:+, erg:~]}, (PP; ADVP)*, NP{?*, noun#3[last:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #2[gender]:#3[gender]
+	)
+	SUBJ_PASSIVE(#2, #3).
+
+// 7.10.2008 (SM):
+// E per motivi di ordine pubblico forse sono state salvate le altre finanziarie in difficoltà.
+| SC{?*[bg:~], FV{?*, #1[form:fessere, last:+]}}, NFV{?*, #4[form:fessere, pastpart:+, last:+]}, (conj; ADVP)*,
+ NFV{?*, #2[form:~fessere, pastpart:+, last:+, trans:+]}, (PP; ADVP)*, NP{?*, noun#3[last:+]} |
+	if (
+	  #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #2[number]:#4[number]
+	& #2[gender]:#3[gender]
+// 4.11.2008 (SM):
+// La ragazza è stata chiamata Maria.
+	& ~SUBJ_PASSIVE(#2, #10)
+	)
+	SUBJ_PASSIVE(#2, #3).
+
+// 7.10.2008 (SM):
+// Tutte le operazioni militari e di polizia sono dirette da Bashkim Gazidede, comandante dei Servizi segreti.
+| NP{?*, noun#3[last:+]}, (PP; ADVP; AP; conj)*, SC{?*[bg:~], FV{?*, #1[form:fessere, last:+]}},
+ NFV{?*, #2[form:~fessere, pastpart:+, last:+, trans:+, erg:~]} |
+	if (
+	  #1[number]:#2[number]
+	& #2[number]:#3[number]
+	& #2[gender]:#3[gender]
+	)
+	SUBJ_PASSIVE(#2, #3).
+
+// 7.10.2008 (SM):
+// in 8 delle 14 città che erano conquistate dal cartello dei partiti di opposizione
+| SC{BG{conjche#1[last:+]}, (PP; ADVP; AP)*, FV{?*[refl:~], #2[form:fessere, last:+]}},
+ NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+, erg:~]} |
+	if ( ^SUBJ(#3, #1) & #2[number]:#3[number] )
+	SUBJ_PASSIVE(#3, #1).
+
+// 7.10.2008 (SM):
+// in 8 delle 14 città che erano state conquistate dal cartello dei partiti di opposizione
+| SC{BG{conjche#1[last:+]}, (PP; ADVP; AP)*, FV{?*[refl:~], #2[form:fessere, last:+]}},
+ NFV{?*, #4[form:fessere, pastpart:+, last:+]}, NFV{?*, #3[form:~fessere, pastpart:+, last:+, trans:+]} |
+	if ( ^SUBJ(#2, #1)
+	& #2[number]:#3[number]
+	& #3[number]:#4[number]
+	& #3[gender]:#4[gender]
+	)
+	SUBJ_PASSIVE(#3, #1).
+
+//------------------------------------------------------------------------------------------------------
+
+// AGENT.
+//past participle followed by agent complement
+|?*, NFV{?*,#1[pastpart:+,last]}, PP#3{prep<lemma:da>}, NP{?, #5[last]} |
+	if(head(#10, #1)
+	& head(#30, #3)
+	&head(#50, #5)
+	& ~VMOD(#1,#3))
+	AGENT(#1, #5).
+
+|?*, NFV#1{?*,#2[pastpart:+,last]}, PP#3{prep<lemma:da>, NP#4{?, #5[last]}} |
+	if(head(#2, #1)
+	&head(#5, #3)
+	& ^VMOD(#1,#5)~ )
+	AGENT(#2, #5).
+
+//Il giornalista è stato aggredito da due uomini.
+| SC{PP*, NP{?*,#1[last]}, ?*, FV{?*,#2[form:fessere,last]}}, NFV{?*,#3[form:fessere,pastpart:+,last]},NFV{?*,#5[pastpart:+,last]}, PP#7{prep[lemma:da]}  |
+	if(head(#70, #7) )
+	AGENT(#5, #70).
+
+//La relazione sarà discussa domani da due esperti del settore.
+//| SC{NP {?*,#1[last]}, FV{?*,#2[form:fessere,last]}}, NFV{?*,#5[pastpart:+,last]}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// OBJ. PEOPLE
+//Il cane (nero/ di Michele) segue Roberto Donadoni perché regala regali.
+| SC{?*, FV{?*, #2[trans:+, last:+, form:~fessere]}}, ?*[punct:~, iv:~, np:~, nfv:~],
+ NP{?*, #4[noun:+, people:+, last:+]} |
+// 9.10.2008 (SM):
+// Finora abbiamo evitato di proposito lo scontro - dice Luca Dini.
+// Lo fa Dashim Shehi, presidente della commissione Industria.
+	if ( ~SUBJ(#2[dicendi:+], #4) & ~OBJ(#2, #4[pron:+]) )
+	OBJ(#2, #4).
+
+// OBJ.
+//Il cane (nero/ di Michele) segue il (suo padrone).
+| SC{?*, FV{?*, #2[trans:+, last:+, form:~fessere]}}, ?*[punct:~, iv:~, np:~, nfv:~],
+ NP{?*, #4[last:+, people:~]} |
+// 9.10.2008 (SM):
+// Lo fa Dashim Shehi, presidente della commissione Industria.
+	if ( ~SUBJ(#2[dicendi:+], #4) & ~OBJ(#2, #10[pron:+]) )
+	OBJ(#2, #4).
+
+// OBJ. PEOPLE
+//Il cane (nero/ di Michele) segue Roberto Donadoni perché regala regali.
+| SC{?*, FV{?*, #2[trans:+, last:+, form:~fessere]}}, ?*[punct:~, iv:~, np:~, nfv:~],
+ SC{?*, NP{?*, #4[noun:+, people:+, last:+]}, ?*} |
+	OBJ(#2, #4).
+
+// 12.9.2008 (SM):
+// Qui non si trova più un seguace del Partito democratico.
+| SC{?*, RFV{?*, #1[trans:+, last:+, form:~fessere]}}, ?*[punct:~, iv:~, np:~, nfv:~], NP{?*, #2[last:+]} |
+//	if ( ~OBJ[refl:+](#1, #10) )
+	OBJ(#1, #2).
+
+// 12.9.2008 (SM):
+// Qui non si è trovato più un seguace del Partito democratico.
+| SC{?*, RFV{?*, #1[last:+, form:fessere]}}, NFV{?*, #3[trans:+, last:+, pastpart:+]},
+ ?*[punct:~, iv:~, np:~, nfv:~], NP{?*, #2[last:+]} |
+//	if ( ~OBJ[refl:+](#3, #10) )
+	OBJ(#3, #2).
+
+// 26.9.2008 (SM):
+// abbiamo evitato di proposito lo scontro
+// la nave ha quindi raggiunto la fregata
+//Il Presidente HA PRESO la scelta migliore
+//| SC{?*, FV{?*, #2[last:+, form:~fessere]}}, NFV{?*, #3[trans:+, last:+, pastpart:+]}, NP{?*, #4[last:+]} |
+| SC{?*, FV{?*, #2[last:+, form:~fessere]}}, (conj), NFV{?*, #3[trans:+, last:+, pastpart:+]}, (advp; pp)*,
+ NP{?*, #4[last:+]} |
+// 9.10.2008 (SM):
+	if ( ~SUBJ(#3[dicendi:+], #4) )
+	OBJ(#3, #4).
+
+//| IV{?*, #2[trans:+, last:+, form:~fessere]}, ?*[conj:~, iv:~, np:~, punct:~], NP{?*, #3[tokenend:~, last:+]} |	
+| IV{?*, #2[trans:+, last:+, form:~fessere]}, ?*[conj:~, iv:~, np:~, punct:~], NP{?*, #3[last:+]} |	
+	if ( ~OBJ_COORD(#2, #3) )
+	OBJ(#2, #3).
+
+//Giovanni vuole passeggiare sulla sabbia.
+| SC{NP{?*, #1[last:+]}, ?*, FV{?*, #2[last:+]}}, IV{?*[prep:~], #3[trans:+, last:+]} |
+	OBJ(#2, #3).
+
+//Ringraziando Tizio Caio   09-06
+| ?*, GV{?*, #1[trans:+, last:+]}, ADVP*, NP{?*, #3[noun:+, prop:+, people:+, last:+]}, ?* |
+	if ( ~OBJ(#1, #3) )
+	OBJ(#1, #3).
+
+//Utilizzando la password   16/05
+//| ?*, GV{?*, #1[trans:+, last:+]}, ADVP*, NP{?*, #3[last:+]}, ?* |
+// 26.9.2008 (SM):
+// calcolando anche i tantissimi operatori economici delle 500 imprese italiane che fanno la spola con l'Italia.
+| GV{?*, #1[trans:+, last:+]}, (conj), (ADVP; PP)*, NP{?*, #2[last:+]} |
+	if ( ~OBJ(#1, #2) & ~EMPTYCOMPL(#1, #2) )
+	OBJ(#1, #2).
+
+// 26.9.2008 (SM):
+// io ti ho mangiato
+if ( ^OBJ(#1, #2) & DOMIN(#1, #3) )
+	OBJ(#3, #2).
+
+//{ADVP{Come} IV{abilitare} Conj{o} IV{disabilitare} NP{il conto} NP{Auditron} AP{esterno} ( NP{servizi} AP{contabilitÃ} ) .}
+| ?*, IV{?*, #1[trans:+, last:+]}, conj#3[coord], IV{?*, #5[trans:+, last:+]}, NP{?*, #7[last:+]}, ?* |
+	if (
+	  ^OBJ(#5, #7)
+	& ~V_COORD_OBJ(#1, #7)
+	)
+	V_COORD_OBJ(#1, #7),
+	V_COORD_OBJ(#5, #7).
+
+
+// 8.10.2008 (SM):
+// dice di andare allo stadio
+| SC{?*, FV{?*, verb#1[subinf:+]}; RFV{?*, verb#1[subinf:+]}}, IV{?*, verb#2[inf:+]} |
+	OBJ[sentential=+](#1, #2).
+
+// 8.10.2008 (SM):
+// ha detto di andare allo stadio
+| NFV{?*, verb#1[subinf:+]}, IV{?*, verb#2[inf:+]} |
+	OBJ[sentential=+](#1, #2).
+
+// 8.10.2008 (SM):
+// ricordando di andare allo stadio
+| GV{?*, verb#1[subinf:+]}, IV{?*, verb#2[inf:+]} |
+	OBJ[sentential=+](#1, #2).
+
+// 8.10.2008 (SM):
+// dice di andare allo stadio
+| IV{prep#1[lemma:di]; prep#1[lemma:a], ?*, verb#2[inf:+]} |
+	if ( OBJ[sentential:+](#10, #2) )
+	CONNECT(#2, #1).
+
+// 8-9.10.2008 (SM):
+// dice che andranno allo stadio, dice quante persone sono venute
+| SC{?*, FV{?*, verb#1[subfin:+]}}, SC{BG{conjche[lemma:che]; conj[lemma:come]}; NP{AP{adj[lemma:quanto]}},
+ ?*[fv:~], FV{?*, verb#2[last:+]}} |
+	OBJ[sentential=+](#1, #2).
+
+// 8-9.10.2008 (SM):
+// ha detto che andranno allo stadio, ha detto quante persone sono venute
+| NFV{?*, verb#1[subfin:+]}, SC{BG{conjche[lemma:che]; conj[lemma:come]}; NP{AP{adj[lemma:quanto]}},
+ ?*[fv:~], FV{?*, verb#2[last:+]}} |
+	OBJ[sentential=+](#1, #2).
+
+// 8-9.10.2008 (SM):
+// ricordando che andranno allo stadio, ricordando quante persone sono venute
+| GV{?*, verb#1[subfin:+]}, SC{BG{conjche[lemma:che]; conj[lemma:come]}; NP{AP{adj[lemma:quanto]}},
+ ?*[fv:~], FV{?*, verb#2[last:+]}} |
+	OBJ[sentential=+](#1, #2).
+
+// 8.10.2008 (SM):
+// dice che andranno allo stadio
+| SC{BG{conjche#1; conj#1[rel:+]}, ?*[fv:~], FV{?*, verb#2[last:+]}} |
+	if ( OBJ[sentential:+](#10, #2) )
+	CONNECT(#2, #1).
+
+// 9.10.2008 (SM):
+// Finora abbiamo evitato di proposito lo scontro - dice il ministro degli Esteri Sheu - .
+| SC{?*, FV{?*, verb#1[last:+]}}, ?*, (punct), SC{?*, FV{?*, verb#2[last:+, dicendi:+, subfin:+]}};
+ NFV{verb#2[last:+, dicendi:+, subfin:+]} |
+	if ( ~DOMIN(#1, #2) )
+	OBJ[sentential=+](#2, #1).
+
+// 9.10.2008 (SM):
+if ( ^OBJ(#1, #2) & DOMIN(#1, #3) )
+	OBJ(#3, #2).
+
+// 9.10.2008 (SM):
+if ( ^OBJ(#1, #2) & DOMIN(#2, #3) )
+	OBJ(#1, #3).
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//OBJ_COORD
+//{ADVP{Come} IV{modificare} NP{il PIN} e NP{i privilegi} PP{di NP{un amministratore}} NP{Auditron} ( NP{servizi} AP{contabilitÃ} ) .}
+| ?*, IV{?*, #1[trans:+, last:+]}, NP{?*, #3[last:+]}, conj#5[coord:+], NP{?*, #7[last:+]}, ?*[verb:~] |
+	if (
+	  ~OBJ_COORD(#1, #7)
+	& ^OBJ(#1, #3)
+	)
+	OBJ_COORD(#1, #3),
+	OBJ_COORD(#1, #7).
+
+//Aprire e chiudere tutti gli sportelli e le coperture.	/Problems with V_Coord_Obj rules: the one or the other one??\
+| ?*, IV{?*, #1[trans:+, last:+]}, conj[coord:+], IV{?*, #2[trans:+, last:+]}, NP{?*, #3[last:+]},
+ conj[coord:+], NP{?*, #7[last:+]} |	
+	OBJ_COORD(#1, #3),
+	OBJ_COORD(#1, #7).
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//OBJPRED: nominal part of the verb
+//Nelle grandi città il traffico è INTENSO; Milano è UNA CITTÀ
+//| SC{ ?*, FV{?*,#2[last,form:fessere]}}, ?*[punct:~,iv:~,np:~], NP{?*,#3[noun:+,prop:~,adj:+,pron:~,last]} |
+//	OBJPRED(#2,#3).
+
+// 3.11.2008 (SM):
+// renamed in PREDCOMPL_SUBJ, see below
+// 1.10.2008 (SM):
+// c'è una persona
+//| SC{ ?*, FV{?*,#2[last,form:fessere]}}, NP{?*,#3[last]} |
+//| SC{?*, FV{?*[pron:~], #2[last:+, form:fessere]}}, NP{?*, #3[last]} |
+//	OBJPRED(#2, #3).
+//
+// 3.11.2008 (SM):
+// renamed in PREDCOMPL_SUBJ, see below
+//| SC{ ?*, FV{?*,#2[last,form:fessere]}}, AP{?*,#3[last]} |
+//	OBJPRED(#2,#3).
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// PREDCOMPL_SUBJ
+// 3.11.2008 (SM):
+// Nelle grandi città il traffico è intenso
+| SC{?*, FV{?*, verb#1[last:+, atts:+]}}; NFV{?*, verb#1[last:+, atts:+]}, AP{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~OBJ(#1, #10) )
+	PREDCOMPL_SUBJ(#1, #2).
+
+// 4.11.2008 (SM):
+// è stata chiamata Maria
+// 28.11.2008 (SM):
+// è solo una copertura per riciclare
+| SC{?*, FV{?*, verb#1[last:+, atts:+]}; RFV{?*, verb#1[last:+, atts:+]}}; NFV{?*, verb#1[last:+, atts:+]},
+ (ADVP), NP{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~NMOD(#2, #10) & ~SUBJ(#1, #2) & ~OBJ(#1, #2) )
+	PREDCOMPL_SUBJ(#1, #2).
+
+// 5.11.2008 (SM):
+// Io mi chiamo Maria
+| SC{?*, FV{?*, verb#1[last:+, atts:+]}; RFV{?*, verb#1[last:+, atts:+]}}; NFV{?*, verb#1[last:+, atts:+]},
+ NP{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~NMOD(#2, #10) & ~SUBJ(#1, #2) & ^OBJ(#1, #2[prop:+]) )
+	PREDCOMPL_SUBJ(#1, #2).
+
+// 4.11.2008 (SM):
+// è stata chiamata Maria
+| SC{?*, FV{?*, verb#1[last:+, atts:+]}; RFV{?*, verb#1[last:+, atts:+]}}; NFV{?*, verb#1[last:+, atts:+]},
+ NP{?*, #2[last:+]} |
+	if ( ^SUBJ_PASSIVE(#1, #2) & PREDCOMPL_SUBJ(#1, #2) )
+	~.
+
+// 4.11.2008 (SM):
+// la tesi è stata dimostrata falsa
+| SC{?*, FV{?*, verb[last:+, form:fessere]}; RFV{?*, verb[last:+, form:fessere]}},
+ (NFV{?*, verb[last:+, form:fessere]}), NFV{?*, verb#1[last:+]}, AP{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~PREDCOMPL_SUBJ(#1, #2) )
+	PREDCOMPL_SUBJ(#1, #2).
+
+// 4.11.2008 (SM):
+// Giovanni si è dimostrato un professore.
+| SC{?*, FV{?*, verb[last:+, form:fessere]}; RFV{?*, verb[last:+, form:fessere]}},
+ (NFV{?*, verb[last:+, form:fessere]}), NFV{?*, verb#1[last:+]}, NP{?*, #2[last:+]} |
+	if ( #1[number]:#2[number] & ~PREDCOMPL_SUBJ(#1, #2) & ~NMOD(#2, #10) & ~SUBJ(#1, #2) )
+	PREDCOMPL_SUBJ(#1, #2).
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// PREDCOMPL_OBJ
+// 3.11.2008 (SM):
+// Considero Giovanni un pericoloso criminale.
+// Ha reso le strade scivolose.
+| SC{?*, FV{?*, verb#1[last:+, atto:+]}}; NFV{?*, verb#1[last:+, atto:+]},
+ NP{?*, #2[last:+]}, (punct[quote:+]), AP{?*, #3[last:+]}; NP{?*, #3[last:+]} |
+	if ( OBJ(#1, #2) & #2[number]:#3[number] )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 4.11.2008 (SM):
+// a rendere percorribili alcune strade
+| IV{?*, verb#1[last:+, atto:+]}, AP{?*, #3[last:+]}; NP{?*, #3[last:+]}, NP{?*, #2[last:+]} |
+	if ( OBJ(#1, #2) & #2[number]:#3[number] )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 3.11.2008 (SM):
+// Lo hanno chiamato scemo
+| SC{?*, FV{?*, verb#1[last:+, atto:+]}}; NFV{?*, verb#1[last:+, atto:+]}, AP{?*, #3[last:+]} |
+	if ( OBJ(#1, #2[pron:+]) & #2[number]:#3[number] )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 3.11.2008 (SM):
+// Ho visto la nave affondare.
+| SC{?*, FV{?*, verb#1[last:+, percept:+]}}; NFV{?*, verb#1[last:+, percept:+]},
+ NP{?*, #2[last:+]}, AP{?*, #3[last:+]}; IV{?*, verb#3[last:+]} |
+	if ( OBJ(#1, #2) & ~PREPOBJ(#3, #10[lemma:di]) )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 3.11.2008 (SM):
+// Ho visto affondare la nave.
+| SC{?*, FV{?*, verb#1[last:+, percept:+]}; RFV{?*, verb#1[last:+, percept:+]}};
+ NFV{?*, verb#1[last:+, percept:+]}, IV{?*, verb#3[last:+]} |
+	if ( ^OBJ[sentential:+](#1, #3) & ~PREPOBJ(#3, #10[lemma:di]) )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 4.11.2008 (SM):
+// e li vedeva caricare le armi
+| SC{?*, FV{?*, verb#1[last:+, percept:+]}}; NFV{?*, verb#1[last:+, percept:+]},
+ IV{?*, verb#3[last:+]}, NP{?*, #2[last:+]} |
+	if ( PREDCOMPL_OBJ(#1, #3) & ~OBJ(#10, #2) )
+	OBJ(#1, #2).
+
+// 3.11.2008 (SM):
+// Ho visto il vicino che telefonava.
+| SC{?*, FV{?*, verb#1[last:+, percept:+]}}; NFV{?*, verb#1[last:+, percept:+]},
+ NP{?*, #2[last:+, lemma:~ciò]}, SC{BG{conjche}, FV{?*, verb#3[last:+]}} |
+	if ( OBJ(#1, #2) )
+	PREDCOMPL_OBJ(#1, #3).
+
+// 4.11.2008 (SM):
+// presidente della commissione Industria , eletto qui deputato
+| SC{?*, FV{?*, verb#1[last:+, atto:+, percept:~]}}; NFV{?*, verb#1[last:+, atto:+, percept:~]}, (ADVP),
+ NP{?*, #2[last:+]} |
+	if ( ~PREDCOMPL_OBJ(#1, #10) & ~PREDCOMPL_SUBJ(#1, #20) & ~SUBJ(#1, #2) & ~OBJ(#1, #2) )
+	PREDCOMPL_OBJ(#1, #2).
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//VMOD.
+//Il Dipartimento di Stato consiglia di seguire le notizie della settimana VMOD(consiglia,seguire)
+| SC{ ?*, FV{?*,#2[last]}}, IV{prep,#3[last]}|
+	VMOD(#2,#3).
+
+//Il Dipartimento di Stato consiglia di seguire ATTENTAMENTE le notizie della settimana
+| IV{prep,#3[last]}, ADVP{?*,#4[last]} |
+	VMOD(#3,#4).
+
+// nella mia scuola funziona COSI'
+| SC{ ?*, FV{?*,#3[last]}}, ADVP{?*,#4[last]} |
+	VMOD(#3,#4).
+
+// 27.8.2008 (SM):
+// Qui hanno riciclato i dollari della mafia locale.
+| ADVP{?*, #1[last:+]}, SC{?*, FV{?*, #2[last:+]}} |
+	VMOD(#2, #1).
+
+// 13.3.2009 (SM):
+// felicemente si lava.
+| ADVP{?*, #1[last:+]}, SC{?*, RFV{?*, #2[last:+]}} |
+	VMOD(#2, #1).
+
+// nella mia scuola si usa COSI' ; NB: "si usa" is Not a refl.verb, but now I don't know ho to do...!!!
+| SC{ ?*, RFV{?*,#3[last]}}, ADVP{?*,#4[last]} |
+	VMOD(#3,#4).
+
+//Il professore offre un libro ALLA RAGAZZA.
+// 17.10.2008 (SM):
+// mangia andando alla stazione
+//| SC{ ?*, FV{?*,#2[last]}}, ?*{?*[iv:~,fv:~]}, PP#4{prep[lemma:a], np{?*,#5[last]} } |	
+| SC{?*, FV{?*, #1[last:+]}}, ?*[iv:~, fv:~, gv:~], PP#2{prep[lemma:a], NP{?*, #3[last:+]}} |	
+	if ( HEAD(#3, #2) )
+	VMOD(#1, #3).
+
+//L'auto ((gialla) di Marco) è nel parcheggio.
+// 17.10.2008 (SM):
+// mangia andando alla stazione
+//| SC{ ?*, FV{?*,#2[form:~favere,last]}}, ?*[iv:~,fv:~,nfv:~], PP#4{prep, np{?*,#5[last]} } |	
+| SC{?*, FV{?*, #1[form:~favere, last:+]}}, ?*[iv:~, fv:~, nfv:~, gv:~], PP#2{prep, NP{?*, #3[last:+]}} |	
+	if ( HEAD(#3, #2) & ~VMOD(#1,#3) )
+	VMOD(#1, #3).
+
+//Il professore prende un libro DALLA TAVOLA, L'auto ((gialla) di Marco) è nel parcheggio.
+| SC{ ?*, FV{?*,#2[last]}}, ?*[iv:~,fv:~,nfv:~], PP#4{prep[lemma:da], np{?*,#5[last]} } |	
+	if (HEAD(#5,#4)
+	& ~VMOD(#2,#5))
+	VMOD(#2,#5).
+
+//Il ragazzo ha camminato sulla sabbia
+| NFV{?*,#3[last,pastpart]}, PP#4{prep, np{?*,#5[last]}} |	
+	if (~AGENT(#3,#5))	
+	VMOD(#3,#5).
+
+// 11.3.2009 (SM):
+// le camere sono arredate elegamente
+| NFV{?*, #1[last:+, pastpart:+]}, ADVP{?*, adv#2[last:+]} |
+	VMOD(#1, #2).
+
+// 13.3.2009 (SM):
+// Non posso dire di più . 
+| IV{?*, #1[last:+]}, ADVP{?*, adv#2[last:+]} |
+	VMOD(#1, #2).
+
+//Giovanni vuole passeggiare sulla sabbia.
+| SC{ (PP), NP{?*,#1[last]}, ?*, FV{?*,#2[modal,last]}}, IV{?*[prep:~],#3[last]}, PP#4{prep, np{?*,#5[last]}}|
+	if(^VMOD(#2,#5)~ )
+	VMOD(#3,#5).
+
+// Come stampare da una workstation
+| IV{?*[prep:~],#3[last]}, PP#4{prep, np{?*,#5[last]}}|
+ 	VMOD(#3,#5).
+
+//Rumore proveniente dall'area di uscita delle copie   16/05
+|NFV{?*,#5[prespart,last]}, ADVP*, PP#7{prep, NP{?*,#8[last]}}|
+	VMOD(#5,#8).
+
+//Nella mela c'era un verme.
+| FV{#3[adv,lemma:ci],#5[form:fessere]} |
+	VMOD(#5,#3).
+
+//verbes avec des prépositions "a"
+| ?{?*, #1verb[prepa,last]}, pp{prep[lemma:a], NP{?, #2[noun,last]}} |
+	VMOD(#1,#2).
+
+// 17.10.2008 (SM):
+// 22.10.2008 (SM):
+// mangia perché non nuota
+| SC{?*, FV{?*, #1[last:+]}; RFV{?*, #1[last:+]}}, ?*[fv:~, rfv:~, fv:~], SC{BG{conj#2[subord:+]}, ?*,
+ FV{?*, #3[last:+]}; RFV{?*, #3[last:+]}} |
+	VMOD(#1, #3).
+
+// 17.10.2008 (SM):
+// mangia andando alla stazione
+| SC{?*, FV{?*, #1[last:+]}; RFV{?*, #1[last:+]}}, ?*[fv:~, rfv:~, fv:~], GV{?*, #2[last:+]} |
+	VMOD(#1, #2).
+
+// 7.11.2008 (SM):
+// le persone (a) cui parlo
+| SC{?*, FV{?*, pron#1[rel:+], verb#2[last:+]}} |
+	VMOD(#2, #1).
+
+// 7.11.2008 (SM):
+// le persone (a) cui ho parlato
+| SC{?*, FV{?*, pron#1[rel:+], verb#2[last:+]}}, (ADVP), NFV{verb#3[last:+]} |
+	if ( VMOD(#2, #1) & DOMIN(#2, #3) )
+	VMOD(#3, #1).
+
+// VMOD_NEG:
+
+//Giovanni non accetta le scuse. 16/05
+| FV{#3[neg], #5[verb,last]} |
+	VMOD_NEG(#5,#3).
+
+// 10.3.2009 (SM):
+// Riscaldamento non funzionante.
+| NFV{#1[neg:+], verb#2[last:+]} |
+	VMOD_NEG(#2, #1).
+
+// 27.8.2008 (SM):
+// non c'è tempo
+| FV{neg#1, pron, verb#2[form:fessere]} |
+	VMOD_NEG(#2, #1).
+
+// 13.3.2009 (SM):
+// Non si passa .
+| RFV{neg#1, ?*, #2[last:+]} |
+	VMOD_NEG(#2, #1).
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//NMOD.
+//Immagine obliqua o storta sulle copie.  16/05
+| NP{?*,#1[last]}, AP{?*,#3[last]}, conj#5[coord], AP{#7[last]}, PP#8{prep, np{?*,#10[last]}} |
+NMOD(#1,#7),
+NMOD(#1,#10).
+
+//Il Dipartimento MINISTERIALE consiglia di seguire le notizie FALSE della stampa.
+| NP{?*,#3[last]},  AP{?*,#5[last]} |
+	NMOD(#3,#5).
+
+| NP{?*,#2[last]}, conj#4[coord], NP{?*,#6[last]}, PP#8{prep, np{?*,#10[last]}}, PP#12{prep, np{?*,#14[last]}}|
+	NMOD(#6,#14),
+	NMOD(#2,#14).
+
+// E' stato investito da una valanga di neve.
+| PP#2{prep, np{?*,#3[last]}}, PP#4{prep, np{?*,#5[last]}}|
+	NMOD(#3,#5).
+
+//Delle reti digitali
+| PP#2{prep, np{?*,#3[last]}},  AP{?*,#5[last]}|
+	NMOD(#3,#5).
+
+//Nelle GRANDI città il traffico è intenso.
+|NP{?*, AP{?*,#2[last]}, #3[last]} |
+	NMOD(#3,#2).
+
+//Nel CENTRO delle grandi CITTA' il traffico è intenso
+| SC{ PP#1{prep, np{?*,#2[last]}},  PP#5{prep, np{?*,#6[last]}}, NP{?*,#7[last]}, ?*, FV{?*,#8[last]}} |
+	NMOD(#2,#6).
+
+//La modifica DELLE IMPOSTAZIONI predefinite
+|NP#1{?*,#3[last]}}, PP#4{prep[lemma:di], np{?*,#5[last]}}|
+	if( ~NMOD(#3,#5) )	
+	NMOD(#3,#5).
+
+//Del numero di telefono........I tassi d'interesse hanno ancora spazio per scendere lentamente.
+|NP#1{?*,#3[last]}}, PP#4{prep[lemma:di], np{?*[tokenend:~],#5[last]}}|
+if( ~NMOD(#3,#5) )	
+NMOD(#3,#5).
+
+//L'auto gialla di MARCO è nel parcheggio.
+//| NP{?*,#3[last]},  AP{?*,#5[last]}, PP#5{prep, np{?*,#6[last]}}, ?*|
+//	NMOD(#3,#6).
+
+//Rumore stridente
+| NP{?*,#3[last]},  NFV{?*,#5[prespart,last]},?*{?*[art:~]}|
+	NMOD(#3,#5).
+
+//Modifica delle impostazioni PREDEFINITE
+| PP{?,NP{?*,#3[last]}},  NFV{?*,#5[verb,pastpart]} |
+if(~NMOD(#3,#5))	
+NMOD(#3,#5).
+
+//relation {Il Principe} {Alberto ...}
+//1> nn(#1_HEADNOUN,#2_NOUNMODIFIER) =     noun#1[argnn=+],noun#2.
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//APPOSITIONS: NMOD_APP
+//la [[società] [Francesco Cambuli Srl]]
+| SC{ NP{?*,#2[noun,last,premod,org]}, NP{#6[noun,mwe,prop,org]}, ?*}|
+	if ( ~NMOD_APP(#2,#6) 
+	 & ORG(#6) )
+	NMOD_APP(#2,#6).
+
+//Il console Cicerone; Il Principe Alberto
+|NP{?*,#2[noun,last, prof]}, (adj[poss:~]), NP{#6[noun,prop]}|
+	if ( ~NMOD_APP(#2,#6) )
+	NMOD_APP(#2,#6).
+
+//Il console Cicerone; Il Principe Alberto di Monaco
+|NP{?*,#2[noun,last, title]}, (adj[poss:~]), NP{#6[noun,people,mwe]}|
+	if ( ~NMOD_APP(#2,#6) )
+	NMOD_APP(#2,#6).
+
+//Come attivare il SERVIZIO AuDITRON interno (SERVIZI CONTABILITA').
+//Il DISPOSITIVO di riconoscimento ottico dei il caratteri TEXTBRIDGE non riconosce righe e colonne in Microsoft Excel .
+// 9.10.2008 (SM):
+//|NP{?*,#2[noun,last]}, punct[sent:~], ?*{?*[iv:~,fv:~]}, NP{#6[noun,last]}|
+| NP{?*, #1[noun:+, last:+]}, punct[sent:~], NP{#2[noun:+, last:+]} |
+	if ( ~NMOD_APP(#1, #2) )
+	NMOD_APP(#1, #2).
+
+//Come modificare i privilegi DI UN AMMINISTRATORE AuDITROn (servizi contabilità).
+|PP#1{prep, np{?*,#2[last]}}, NP{#6[noun,last]}|
+	if ( ~NMOD_APP(#2,#6) )	
+	NMOD_APP(#2,#6).
+
+//Il DISPOSITIVO di riconoscimento ottico dei caratteri TEXTBRIDGE non riconosce righe e colonne in Microsoft Excel .
+//|NP{?*,#2[noun,prop:~,last]},  PP, AP*, PP*, NP{#6[noun,prop]}}|
+//	NMOD_APP(#2,#6).
+
+//Alimentatore, alta capacità. :   16/05
+|NP{?*,#2[noun,last]},  NP#3{#4[adj],#6[noun,last]}|
+	NMOD_APP(#2,#3).
+
+// Vassoio 1, 2, 3 o 4 16/05
+| NP{?*,#1[noun,last]}, NP{#4[num,last]} |
+	 NMOD_APP(#1,#4).
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//ADJMOD.
+//La PIU' BeLLA tra le mie amiche è Giovanna.
+|AP#1{#2[neg:~,art:~], #4[last]}|
+	if (HEAD(#4,#1) )
+	ADJMOD(#4,#2).	
+
+// 27.8.2008 (SM):
+// non molto brutto
+| AP#1{adv; neg, #2[neg:~,art:~], #4[last:+]} |
+	if ( HEAD(#4, #1) )
+	ADJMOD(#4, #2).	
+
+//Messaggio non disponibile     16/05
+|AP#1{#2[neg], #4[last]}|
+	if (HEAD(#4,#1) )
+	ADJMOD_NEG(#4,#2).
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////NUMD
+////circa mille persone: numd(persone, mille)
+//|np#1{?*, num#2, ?*, ?[last]}| 
+//	if(head(#10, #1)) 
+//	NUMD(#10, #2).
+//
+// 12.9.2008 (SM):
+// NUMD -> NMOD
+// circa mille persone: NMOD(persone, mille)
+| NP#1{?*, num#2, ?*, ?[last:+]} | 
+	if ( head(#10, #1) ) 
+	NMOD(#10, #2).
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//QUANTD
+|np#1{?*, quant#2, ?+}| 
+	if(head(#10,#1)) 
+	QUANTD(#10, #2).
+
+
+
+//////////////////////////////  COORDINATION ///////////////////////////////////////////////////////////
+// 10.11.2008 (SM):
+// all commented, new file dep-coord.xip for coordination
+
+// 26.8.2008 (SM): same rules as above (ca. 360) ???
+//// Giovanni mangia e beve
+//| NP{?*,#1[last]}, ?*, FV{#2[last]}}, ADVP*,  conj#3[coord], ADVP*,  SC{ FV{#4[last]}}|
+//	if ( ~SUBJ(#2,#1) )
+//	COORDITEMS (#2,#4),
+//	SUBJ(#2,#1),	
+//	SUBJ(#4,#1).
+//
+//// Giovanni mangia e beve
+//| NP{?*,#1[last]}, ?*, FV{#2[last]}}, ADVP*,  conj#3[coord], ADVP*,  SC{ FV{#4[last]}}|
+//	if(~SUBJ(#2,#1) )
+//	COORDITEMS (#2,#4),
+//	SUBJ(#2,#1),	
+//	SUBJ(#4,#1).
+//
+
+// Coordination: IV
+//{ADVP{Come} IV{abilitare} Conj{o} IV{disabilitare} NP{il conto} NP{Auditron} AP{esterno} ( NP{servizi} AP{contabilitÃ} ) .}
+//| ?*, IV{?*,#1[last]}, conj#3[coord], IV{?*,#5[last]}, NP{?*,#7[last]} |
+//	if (~COORD_Verb(#3,#5) )
+//	COORD_Verb(#3,#5).
+
+////{ADVP{Come} IV{modificare} NP{il PIN} e NP{i privilegi} PP{di NP{un amministratore}} NP{Auditron} ( NP{servizi} AP{contabilitÃ} ) .}     16/05
+//| ?*, IV{?*,#1[last]}, NP{?*,#3[last]}, AP*, conj#5[coord], NP{?*,#7[last]}, ?*[verb:~] |
+//	if ( ~COORDITEMS(#3,#7) )
+//	COORDITEMS(#3,#7).
+
+////Verificare la correttezza della selezione rapida o del numero di telefono utilizzati.	17/05
+//| ?*, NP{?*,#1[last]}, PP{?*,np{?*[tokenend:~],#3[last]}}, AP*, conj#5[coord], PP{?*,np{?*[tokenend:~], #7[last]}}, ?*[verb:~] |
+//	if ( ~COORDITEMS(#3,#7) 
+//	& NMOD(#1,#3) )
+//	COORDITEMS(#3,#7),
+//	NMOD(#1,#7).
+
+////Verificare la correttezza della selezione rapida o del numero di telefono utilizzati. NMOD Selezione,utilizzati ###Numero,utilizzati--- /ok, mais je n'arrive pas à enlever l'article!!!\      17/05
+//| ?*, PP#2{?*[tokenend:~],#3[last]}}, AP*, conj#5[coord], PP#6{?*[tokenend:~],#7[last]}}, PP*, NFV{?*, #9[pastpart,pl,last]}|
+//	if ( ~COORDITEMS(#3,#7) )
+//	COORDITEMS(#3,#7),
+//	NMOD(#3,#9),
+//	NMOD(#7,#9).
+
+////Sostituire i rulli di alimentazione dell' alimentatore automatico e azzerare il contatore.: Sostituire COORDITEMS azzerare  17/05
+//| IV{?*,#1[last]}, ?*, conj#3[coord], ?*{?*[verb:~]}}, IV{?*,#5[last]} |
+//	if ( ~COORDITEMS(#1,#5) )
+//	COORDITEMS(#1,#5).
+
+////Immagine obliqua o storta sulle copie. Obliqua coord Storta.     16/05
+//| AP{?*,#1[last]}, conj#3[coord], AP{#4[last]} |
+//COORDITEMS(#1,#4).
+
+//// Giovanni e Mario mangiano
+//| SC{ NP{?*,#1[last]}, conj#3[coord], NP{#4[last]}, (adv), FV{#5[last]}}|
+//	if (#5[3p,pl])
+//	SUBJ(#5,#4),
+//	COORD (#3,#1),
+//	COORD (#3,#4),
+//	COORDITEMS (#1,#4).
+
+//| PP{prep#1[lemma:tra], NP{?*,#2[noun,prop]}}, conj#3[coord], NP{?*,#4[noun,prop]}}|
+//COORDITEMS(#2,#4).
+
+//{ADVP{Come} IV{modificare} NP{il PIN} e NP{i privilegi} PP{di NP{un amministratore}} NP{Auditron} ( NP{servizi} AP{contabilitÃ} ) .}
+//| ?*, IV{?*,#1[last]}, NP{?*,#3[last]}, conj#5[coord], NP{?*,#7[last]}, ?*[verb:~] |
+//	COORDITEMS(#3,#7).
+	
+// Giovanni non mangia ma beve
+//| SC{ NP{?*,#1[last]}, ?*, FV#2{#3[neg],#4[last]}}, conj#5[coord], SC{~NP, FV{#6[last]}}|
+	//SUBJ(#2,#1),
+	//SUBJ(#6,#1),
+	//COORD (#5,#6),
+	//COORDITEMS (#4,#6),
+	//VMOD(#4,#3).
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//ADVMOD: ieri, domani  _ mattina, sera
+|ADVP{?*,adv#1[tempadv:+,last]}, NP{noun#2[period:+]} |
+	ADVMOD(#2,#1)
+
+// 27.8.2008 (SM):
+// non molto brutto
+| neg#1, adv#2 |
+	ADVMOD(#2, #1).
+
+// 27.8.2008 (SM):
+// molto più bella
+| adv#1, adv#2 |
+	ADVMOD(#2, #1).
+
+// 27.8.2008 (SM):
+// funziona veramente bene
+| ADVP{?*, adv#1[last:+]}, ADVP{?*, adv#2[last:+]} |
+	ADVMOD(#2, #1).
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//RMOD+RELCL
+// 10.10.2008 (SM):
+// Questa é ancora 'terra di nessuno', sotto, sulla discesa che schiude l'orizzonte al mare, 
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, (NFV{verb[pastpart:+]}; AP)*, (punct[quote:+]), (punct),
+ SC{BG{conjche; conj[rel:+]}, *[fv:~, rfv:~], FV{?*, verb#2[last:+]};
+ RFV{?*, verb#2[last:+]}} |
+	RMOD_RELCL(#1, #2).
+
+// 10.10.2008 (SM):
+// A Valona, dove ieri é stata convocata un'altra manifestazione di protesta cui hanno partecipato 5.000 persone, l'atmosfera é meno elettrica.
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, (NFV{verb[pastpart:+]}; AP)*, (punct[quote:+]), (punct),
+ (prep), SC[rel:+]{?*, FV{?*, verb#2[last:+]}; RFV{?*, verb#2[last:+]}} |
+	RMOD_RELCL(#1, #2).
+
+// 10.10.2008 (SM):
+// le 'tigri' di Arkan, le cui milizie sono acquartierate all' Hotel Grand di Pristina.
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, (NFV{verb[pastpart:+]}; AP)*, (punct[quote:+]),
+ (punct), NP[rel:+], SC{?*, FV{?*, verb#2[last:+]}; RFV{?*, verb#2[last:+]}} |
+	RMOD_RELCL(#1, #2).
+
+// 17.10.2008 (SM):
+// In sostanza, il datore di lavoro chiama chi vuole o chi conosce.
+| SC[rel:+]{?*, FV{?*, pron#1[lemma:chi], verb#2[last:+]}} |
+	RMOD_RELCL(#1, #2).
+
+// 17.10.2008 (SM):
+// C'è chi lo chiama
+| SC[rel:+]{?*, NP{?*, pron#1[lemma:chi]}, FV{?*, verb#2[last:+]}} |
+	RMOD_RELCL(#1, #2).
+
+// 10.10.2008 (SM):
+// Questa é ancora 'terra di nessuno', sotto, sulla discesa che ha schiuso l'orizzonte al mare, 
+if ( ^RMOD_RELCL(#1, #2) & DOMIN(#2, #3) )
+	RMOD_RELCL(#1, #3).
+
+// 10.10.2008 (SM):
+// Ma se sarà messo con le spalle al muro dai clan che si stanno scontrando nel suo partito
+if ( ^RMOD_RELCL(#1, #2) & STARE(#2, #3) )
+	RMOD_RELCL(#1, #3).
+
+
+//RMOD+RELCL+REDUC
+// 17.10.2008 (SM):
+// Un brutto colpo per i traffici illegali che alimentano il benessere gonfiato del porto.
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, AP*, (punct), ADVP*, NFV{?*, verb#2[pastpart:+, trans:+]} |
+	if ( #1[number]:#2[number] & #1[gender]:#2[gender] )
+	RMOD_RELCL_REDUC(#1, #2).
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// DIVERS
+
+// che SUBJ/OBJ
+// 7.11.2008 (SM):
+// le persone che hanno mangiato, le persone che ho visto
+if ( ^SUBJ(#1, #2) & RMOD_RELCL(#3, #1) & ( DOMIN(#4, #1) | STARE(#4, #1) )
+ & ~(#4[number]:#3[number]) & ~(#4[person]:#3[person]) )
+	OBJ(#1, #2).
+
+// 7.11.2008 (SM):
+// le persone che mangiano, le persone che vedo
+if ( ^SUBJ(#1, #2) & RMOD_RELCL(#3, #1) & ~(#1[number]:#3[number]) & ~(#1[person]:#3[person])
+ & ~DOMIN(#4, #1) & ~STARE(#4, #1) )
+	OBJ(#1, #2).
+
+
+// punctuation
+// 5.11.2008 (SM):
+// ' Dietro di me , diceva , c' é una persona competente ' . 
+| punct#1[quote:+], ?*[quote:~], SC{?*, FV{?*, verb#2[last:+]}}; IV{?*, verb#2[last:+]}, ?*[quote:~],
+ punct#3[quote:+] |
+	if ( ~OPEN_QUOTES(#10, #1) & ~CLOSE_QUOTES(#10, #1) )
+	OPEN_QUOTES(#2, #1),
+	CLOSE_QUOTES(#2, #3).
+
+// 5.11.2008 (SM):
+// C' é una struttura costituita da militanti ' coperti ' da attività legali e un' altra illegale...
+| punct#1[quote:+], ?*[quote:~], NFV{?*, verb#2[last:+]}, ?*[quote:~, nfv:~], punct#3[quote:+] |
+	if ( ~OPEN_QUOTES(#10, #1) & ~CLOSE_QUOTES(#10, #1) )
+	OPEN_QUOTES(#2, #1),
+	CLOSE_QUOTES(#2, #3).
+
+// 6.11.2008 (SM):
+// ' La causa degli degli albanesi é la mia ' .
+| SC{punct#1[quote:+], ?*[quote:~], FV{?*, verb#2[last:+]}}, ?*[quote:~], punct#3[quote:+] |
+	if ( ~OPEN_QUOTES(#10, #1) & ~CLOSE_QUOTES(#10, #1) )
+	OPEN_QUOTES(#2, #1),
+	CLOSE_QUOTES(#2, #3).
+
+// 5.11.2008 (SM):
+// Questa é ancora ' terra di nessuno ' , sotto , sulla discesa che schiude l' orizzonte al al mare...
+// 7.11.2008 (SM):
+// Il giovane continua a proporre servizi, finalmente si vede affidare una serie di articoli " di costume ".
+| punct#1[quote:+], ?*[quote:~], NP{?*, noun#2[last:+]}; AP{?*, adj#2[last:+]}; PP{?*, NP{?*, noun#2[last:+]}},
+ ?*[quote:~], punct#3[quote:+] |
+	if ( ~OPEN_QUOTES(#10, #1) & ~CLOSE_QUOTES(#10, #1) )
+	OPEN_QUOTES(#2, #1),
+	CLOSE_QUOTES(#2, #3).
+
+// 5.11.2008 (SM):
+// in particolare con quella di Meksude Kademi , la ' zingara ' .
+| NP{?*, punct#1[quote:+], ?*[quote:~], noun#2[last:+]}; PP{?*, NP{?*, punct#1[quote:+], ?*[quote:~],
+ noun#2[last:+]}}, ?*[quote:~], punct#3[quote:+] |
+	if ( ~OPEN_QUOTES(#10, #1) & ~CLOSE_QUOTES(#10, #1) )
+	OPEN_QUOTES(#2, #1),
+	CLOSE_QUOTES(#2, #3).
+
+// 7.11.2008 (SM):
+// ha affermato Wojtyla, "l'ho fatto come parte della mia missione universale, e così deve essere visto ".
+if ( OPEN_QUOTES$1(#1, #2) & CLOSE_QUOTES$2(#1, #3) & DOMIN(#1, #4) )
+	^OPEN_QUOTES$1(#4, #2),
+	^CLOSE_QUOTES$2(#4, #3).
+
+
+// 5.11.2008 (SM):
+// ' Dietro di me , diceva , c' é una persona competente ' .
+| punct#1[comma:+]; SC{?*, punct#1[comma:+], FV{?*, verb#2[last:+]}}, ?*[comma:~],
+ punct#3[comma:+]; SC{?*, punct#3[comma:+], ?*} |
+	if ( ~OPEN_PARENTHETICAL(#10, #1) & ~CLOSE_PARENTHETICAL(#10, #1) )
+	OPEN_PARENTHETICAL(#2, #1),
+	CLOSE_PARENTHETICAL(#2, #3).
+
+// 10.11.2008 (SM):
+// E improvvisamente quell' irruzione , subito definita un esodo biblico , ...
+| NP{?*, noun#1[last:+]}; PP{?*, NP{?*, noun#1[last:+]}}, ?*[comma:~, np:~, pp:~], punct#2[comma:+],
+ ?*[comma:~], punct#3[comma:+]; SC{?*, punct#3[comma:+], ?*} |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#10, #2) )
+	OPEN_PARENTHETICAL(#1, #2),
+	CLOSE_PARENTHETICAL(#1, #3).
+
+// 7.11.2008 (SM):
+// le ambiguità possono essere di tipo lessicale ( se differenti categorie sono associate ad una parola )
+| NP{?*, noun#1[last:+]}; PP{?*, NP{?*, noun#1[last:+]}}, ?*[paren:~, np:~, pp:~],
+ SC{?*, punct#2[paren:+], ?*}, ?*[paren:~], punct#3[paren:+] |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#10, #2) )
+	OPEN_PARENTHETICAL(#1, #2),
+	CLOSE_PARENTHETICAL(#1, #3).
+
+// 7.11.2008 (SM):
+// E lo studio é stato confermato dal direttore del servizio centrale operativo ( Sco ) della polizia.
+// Ma tuttavia sta lì con la Banca d'Italia che sempre interviene ( e lo ha fatto anche ieri ) ...
+| NP{?*, noun#1[last:+]}; PP{?*, NP{?*, noun#1[last:+]}}, ?*[paren:~, np:~, pp:~],
+ (SC{?*[np:~, pp:~]}), ?*[paren:~, np:~, pp:~], punct#2[paren:+], ?*[paren:~], punct#3[paren:+] |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#10, #2) )
+	OPEN_PARENTHETICAL(#1, #2),
+	CLOSE_PARENTHETICAL(#1, #3).
+
+// 24.11.2008 (SM):
+// A Valona si é rotto un patto tra la criminalità e questo Governo che aveva consentito tutti i traffici
+// illegali - dalla droga, alla prostituzione, alle armi e ai clandestini - che arricchivano le finanziarie . 
+| NP{?*, noun#1[last:+]}; PP{?*, NP{?*, noun#1[last:+]}}, ?*[punct:~, np:~, pp:~], punct#2[lemma:-],
+ ?*[lemma:~-], ?[num:~], punct#3[lemma:-]; SC{punct#3[lemma:-]} |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#10, #2) )
+	OPEN_PARENTHETICAL(#1, #2),
+	CLOSE_PARENTHETICAL(#1, #3).
+
+// 10.11.2008 (SM):
+// Anni fa , ha ricordato il direttore dello Sco , anche in Campania c' erano ...
+if ( OPEN_PARENTHETICAL$1(#1, #2) & CLOSE_PARENTHETICAL$2(#1, #3) & DOMIN(#1, #4) )
+	^OPEN_PARENTHETICAL$1(#4, #2),
+	^CLOSE_PARENTHETICAL$2(#4, #3).
+
+// 24.11.2008 (SM):
+// " Nemmeno lo 007 dell' Ufficio indagini l' ha visto , però sono stato sospeso per trenta giorni " . 
+| ?{?*, verb#1[last:+]}; SC{?*, FV{?*, verb#1[last:+]}}, (ADVP; AP)*, SC{punct#2[end:~, quote:~]} |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#11, #2) )
+	SEPARATOR(#1, #2).
+
+// 24.11.2008 (SM):
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, (ADVP; AP)*, SC{punct#2[end:~, quote:~]} |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#11, #2) )
+	SEPARATOR(#1, #2).
+
+// 24.11.2008 (SM):
+// Il malloppo é sparito così , sulle onde dell' Adriatico .
+| ?{?*, verb#1[last:+]}; SC{?*, FV{?*, verb#1[last:+]}}, (ADVP; AP)*, punct#2[end:~, quote:~] |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#11, #2) )
+	SEPARATOR(#1, #2).
+
+// 24.11.2008 (SM):
+// e si é sfogata contro ogni simbolo del potere centrale , inviperita per i morti e i feriti
+| NP{?*, #1[last:+]}; PP{?*, NP{?*, #1[last:+]}}, (ADVP; AP)*, punct#2[end:~, quote:~] |
+	if ( ~OPEN_PARENTHETICAL(#10, #2) & ~CLOSE_PARENTHETICAL(#11, #2) )
+	SEPARATOR(#1, #2).
+
+
+// 9.10.2008 (SM):
+// skip arguments of DOMIN and rename it AUX_TENSE
+if ( ^DOMIN(#1, #2) )
+	AUX_TENSE(#2, #1).
+
+//------------------------------------------------------------------------------------------------------
+
+// modified 19.8.2008 (Sigrid Maurel, CELI France):
+// test "#1[number]:#2[number]" of the SUBJ rule commented (ca. 260-265, 310-315), too restrictive for
+// named entities and coordination
+// problem: SUBJ is now also extractes for sentences like *"Il cane di Michele mangiano."
+
+// modified 20.8.2008 (SM):
+// "~NFV" in the context of SUBJ commented (ca. 240), doesn't work with it, but reason unknown ?
+// coordination rule corrected, add of "SC{" and "COORDITEMS" (ca. 360)
+// it's a little bit strange that the rule didn't create a compilation error with a "}" bracket too much!
+// other rules don't have the final point or are present twice ???
+
+// modified 26.8.2008 (SM):
+// commented double coordination rules (ca. 935-950)
+
+// modified 27.8.2008 (SM):
+// added rule for DETD if det is * (ca. 210)
+// added rule for ADJMOD (ca. 900)
+// added rules for ADVMOD (ca. 1040-1055)
+// added rule for VMOD_NEG (ca. 755)
+// added rule for VMOD (ca. 695)
+// corrected rule for DOMIN, with avere the test "#1[number]:#2[number]" is not necessary! (ca. 660)
+
+// modified 10.9.2008 (SM):
+// modified rules for SUBJ_PASSIVE (ca. 365-490)
+
+// modified 11.9.2008 (SM):
+// modified rule for reflexive SUBJ, add of "form:~fessere" (ca. 355)
+// added rule for reflexive SUBJ (ca. 360-365)
+// remodified SUBJ rule, reaccept test of number (ca. 260-265, 310-315),
+// added SUBJ rules for guessed nouns (ca. 265-270, 315-320)
+
+// modified 12.9.2008 (SM):
+// modified SUBJ rule, add of "?*[fv:~]" to SC (ca. 290-300)
+// modified SUBJ rule, add of "?*[fv:~]" to SC (ca. 320-325)
+// modified rules of most SUBJ, add of "[coord:~]"
+// added rule for "sta" plus gerund (ca. 400-410)
+// modified rule NUMD -> NMOD (ca. 960-965)
+// added rules for reflexive OBJ (ca. 600, 605)
+// added "trans:+" to all OBJ rules
+
+// modified 16.9.2008 (SM):
+// modified rules of most SUBJ, replace of "[coord:~]" by "[np:~]"
+
+// modified 26.9.2008 (SM):
+// modified rule for OBJ, add of "(adv), (pp)" (ca. 675)
+// added OBJ rules for reflexive verbs (ca. 255, 260, 265)
+// changed place of DOMIN rules, now before SUBJ and OBJ (ca. 185-210)
+// added OBJ rule (ca. 700)
+// added rule for DOMIN (ca. 210-215)
+// added SUBJ rule (ca. 435)
+// modified OBJ rule for GV (ca. 700)
+
+// modified 1.10.2008 (SM):
+// modified OBJPRED rule, should not work with pron (ca. 640)
+// added SUBJ rule for "ci" (ca. 380)
+
+// modified 2.10.2008 (SM):
+// added rule for relative SUBJ (ca. 380)
+// modified DOMIN rule (ca. 155)
+
+// modified 3.10.2008 (SM):
+// added SUBJ rule for GV (ca. 390)
+
+// modified 6.10.2008 (SM):
+// added SUBJ rule for pron (ca. 245)
+// added SUBJ rule for "ci" (ca. 390)
+
+// modified 7.10.2008 (SM):
+// added SUBJ_PSSIVE rules for posposted subj (ca. 535-555)
+
+// modified 8.10.2008 (SM):
+// added rules for sentential OBJ and CONNECT (ca. 700-745)
+
+// modified 9.10.2008 (SM):
+// added SUBJ rule for "dicendi" verbs (ca. 410, 415)
+// modified OBJ rule (ca. 650, 660, 690)
+// added OBJ sentential rules for  "dicendi" verbs (ca. 750-765)
+// added OBJ rules for DOMIN (ca. 780, 785)
+// added rule to skip arguments of DOMIN and to rename it to AUX_TENSE (ca. 1200)
+// modified OBJ rule for reflex, restriction for "si" (ca. 210)
+// modified NMOD_APP rule (ca. 985)
+// added DOMIN rule (ca. 175)
+// added OBJ sentential rule (ca. 775)
+
+// modified 10.10.2008 (SM):
+// added rules for relative clauses (ca. 1165-1190)
+// added rules for STARE (ca. 140-150)
+// added SUBJ rule for stare (ca. 440)
+
+// modified 15.10.2008 (SM):
+// modified rules for relative clauses, added optional quote (ca. 1165-1190)
+
+// modified 17.10.2008 (SM):
+// added rule for reduced relative clause (ca. 1230)
+// added rule for CONJOBJ (ca. 210-215)
+// added rules for VMOD (ca. 925-935)
+// modified VMOD rules (ca. 875-885)
+
+// modified 22.10.2008 (SM):
+// modified rules for VMOD, add of " ?*[fv:~, rfv:~, fv:~]," and "RFV" (ca. 925-935)
+
+// modified 31.10.2008 (SM):
+// modified REFLEX rules, inclusion of feature "pronom" on verbs (ca. 230-255)
+// modified SUBJ_PASSIVE rules, inclusion of feature "erg" on verbs (ca. 460-660)
+// added rules for SUBJ_IMPERS (ca. 260-270)
+
+// modified 3.11.2008 (SM):
+// added rules for PREDCOMPL_OBJ and PREDCOMPL_SUBJ (ca. 895-950)
+
+// modified 4.11.2008 (SM):
+// added rules for PREDCOMPL_OBJ (ca. 950, 975, 990)
+// added rules for PREDCOMPL_SUBJ (ca. 910-940)
+
+// modified 5.11.2008 (SM):
+// modified PREDCOMPL rules
+// added rules for punctuation (ca. 1440-1480)
+
+// modified 6.11.2008 (SM):
+// added rule for punctuation (ca. 1455)
+// added rule for OBJ[refl:+]/SUBJ_IMPERS (ca. 270)
+// added rules for postposed SUBJ (ca. 490-510)
+
+// modified 7.11.2008 (SM):
+// added rules for punctuation (ca. 1485, 1500, 1525, 1540)
+// added rules for "che" (ca. 1440-1450)
+// added rule for PREPOBJ (ca. 210)
+// added rules for punctuation (ca. 1140-1150)
+
+// modified 10.11.2008 (SM):
+// added rule for punctuation (ca. 1525)
+// new file for coordination: dep-coord.xip
+
+// modified 24.11.2008 (SM):
+// added rules for SEPARATOR (ca. 1565-1585)
+// added rule for OPEN/CLOSE_PARENTHETICAL (ca. 1550)
+
+// modified 28.11.2008 (SM):
+// modified PREDCOMPL_SUBJ rule (ca. 960)
+
+// modified 19.12.2008 (SM):
+// modified NMOD rule
+
+// modified 10.3.2009 (SM):
+// added rules for pron SUBJ (ca. 330, 515)
+
+// modified 11.3.2009 (SM):
+// added rule for VMOD (ca. 1130)
+// added rule for VMOD_NEG (ca. 1195)
+
+// modified 13.3.2009 (SM):
+// added rule for VMOD_NEG (ca. 1185)
+// added rules for VMOD (ca. 1090, 1135)

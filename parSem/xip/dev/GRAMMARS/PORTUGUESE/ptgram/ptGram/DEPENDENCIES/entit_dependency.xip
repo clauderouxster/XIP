@@ -1,0 +1,724 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : entit_dependency.xip                                        !
+//!   author     : C. Hagege                                                   !
+//!   Date       : 2007/November                                               !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!                                                                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/17
+// Changed all "SEM-Hcompany" occurrences to "institution", in order to comply with the new set of directives
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+//DCO, 2010/08/22
+// Changed all "local" occurrences to "location"
+
+//CH, 2008/04/08
+// Problem for HAREM when quantity are included within a flat PP
+// Example: (dos 90 por cento)
+// The structure is flat in the PP and we need to have a node around "90 por cento" that
+// builds a NE of type quantity.
+// So, for those special cases, we have to rebuild it
+
+Reshuffling:
+
+// Example: mais de 39,2 por cento dos votos
+//1> PP{prep#1, (art#2), num#3, #4[SEM-unitype,t-meas:~]} = PP{#1, #2, NP[quant=+]{#3, #4}} .
+// VERIFICAR (Nuno comentou esta regra, mas se eu a comentar, deixa de me apanhar 29,2 por cento com um todo.
+// usa a regra  da line:362) :/afs/l2f/home/njm/xip/ptGram/LOCALGRAMS/LGNumber.xip
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO, last update: 2010/09/22
+// CATEGORY: AMOUNT
+// TYPES: QUANTITY, CURRENCY, CLASSIFICATION, SPORTS_RESULTS
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2010/06/14 (last update: 2010/09/22)
+// QUANTITY: "12 metros", "a 12 metros"
+| NP#1{?*, num;?[lemma:meio];art[lemma:um], ?#2[SEM-unitype,time:~,t-meas:~,t-focus:~]} ; PP#1{?*, num;?[lemma:meio], ?#2[SEM-unitype,time:~,t-meas:~,t-focus:~]} |
+  if ( ~NE(#1) & #2[SEM-currency:~] )
+  NE[quant=+,num=+](#1)
+
+//DCO, 2011/07/13
+//Adicionada parte do PP
+// números isolados, e.g. '10', 'cinquenta e cinco'
+| NP#1{num[card,last,time:~]} ; PP#1{?*, num[card,last,time:~]} |
+   if ( ~NE[quant,num](#1) )
+   NE[quant=+,num=+](#1)
+
+//DCO, 2011/06/30
+| NP#1{num[card], ?#2[last]} |
+   if ( ~NE[quant,num](#1) & #2[SEM-currency:~] )
+   NE[quant=+,num=+](#1)
+
+//DCO, 2011/07/07
+// Regra corrigida: adicionada restrição ord:~ para não suportar números ordinais
+// NOTA: com a restrição quant no nó de topo, "várias dezenas" não é marcado como entidade. Tirando a restrição já é marcado!
+//| NP#1[quant]{?*, num[time:~,rom:~,t-meas:~,sports_results:~,virtual:~,classific:~]} |
+| NP#1{?*, num[time:~,rom:~,t-meas:~,sports_results:~,virtual:~,classific:~]} |
+   if ( ~NE[quant,num](#1) )
+   NE[quant=+,num=+](#1)
+
+//DCO, 2010/06/24 (last update: 2010/09/22)
+// QUANTITY
+// Example: "12 cães" (e não "12" cães)
+// Example: "para 45 pessoas" (e não para "45" pessoas)
+// Resultados desportivos, e.g., 2-0, não são classificados como QUANTIDADE
+//DCO, 2011/06/30
+//Regra corrigida para suportar o novo traço SEM-currency
+| NP#1[time:~,SEM-Hpeople:~,SEM-Hcollective:~,location:~]{?*, num#2[lemma:~"(%d+\-%d+)",ord:~,rom:~,time:~,t-meas:~,sports_results:~,virtual:~,classific:~], ?#3[last]} ;
+  PP#1[time:~,SEM-Hpeople:~,SEM-Hcollective:~,location:~]{?*, num#2[lemma:~"(%d+\-%d+)",ord:~,rom:~,time:~,t-meas:~,sports_results:~,virtual:~,classific:~], ?#3[last]}
+|
+   if ( ~NE[quant,num](#1) & ~NE[quant,num](#2) & #3[SEM-currency:~] )
+   NE[quant=+,num=+](#1)
+
+//DCO, 2011/03/03
+//NJM+VERA, 2012/01/16   Added PP option
+| NP#1{?*, num#2, ?*, noun[SEM-currency,quant:~,ord:~,time:~,t-meas:~,virtual:~,classific:~,sports_results:~]};
+  PP#1{?*, num#2, ?*, noun[SEM-currency,quant:~,ord:~,time:~,t-meas:~,virtual:~,classific:~,sports_results:~]}
+|
+if ( ~NE[quant,SEM-currency](#1) & ~NE[quant,num](#2) )
+    NE[quant=+,curr=+](#1)
+
+//DCO, 2010/07/10 (last update: 2010/09/22)
+// CURRENCY
+// Example: "19 euros", "por 10 dólares"
+// Adicionada a parte do PP, para que expressões como "com 1 dinar argelino" ou "face a 10 dólares" também sejam anotadas como VALOR-MOEDA
+| NP#1[quant]{num, (prep), ?[SEM-currency,t-meas:~]} ; PP#1[quant]{?*, (prep), num, ?[SEM-currency,t-meas:~]} |
+   if ( ~NE[quant,curr](#1) )
+   NE[quant=+,curr=+](#1)
+
+//DCO, 2011/06/20
+// e.g. € 10, EUR 10
+| NP#1[quant]{?*, ?[SEM-currency], num} ; PP#1[quant]{?*, ?[SEM-currency], num} |
+   if ( ~NE[quant,curr](#1) )
+   NE[quant=+,curr=+](#1)
+
+// CURRENCY
+| #2[time:~]{?*, #1[num,curr,ord:~,time:~,t-meas:~], ?*} |
+   if ( ~NE(#1) & ~NE[quant](#2) )
+   NE[quant=+,curr=+](#1)
+
+//DCO, 2011/04/04
+// STOCK INDEX
+|?[np]{?*, noun#1[quant,SEM-stock,SEM-stockindex]} ; ?[pp]{?*, noun#1[quant,SEM-stock,SEM-stockindex]} ; noun[mwe,proper,untyped]{?*, noun#1[quant,SEM-stock,SEM-stockindex]}|
+   if ( ~NE[quant,SEM-stock,SEM-stockindex](#1) )
+      NE[quant=+,SEM-stock=+,SEM-stockindex=+](#1)
+
+//DCO, 2011/04/04
+// STOCK
+|?[np]{?*, noun#1[quant,SEM-stock,SEM-stockindex:~]} ; ?[pp]{?*, noun#1[quant,SEM-stock,SEM-stockindex:~]} ; noun[mwe,proper,untyped]{?*, noun#1[quant,SEM-stock,SEM-stockindex:~]}|
+   if ( ~NE[quant,SEM-stock](#1) )
+      NE[quant=+,SEM-stock=+](#1)
+
+//DCO, 2010/07/26
+// CLASSIFICATION
+// Example: O Benfica subiu <EM>para o primeiro lugar</EM>
+| NP#1{?*, noun#2[quant,classific]} ; PP#2{?*, noun#1[quant,classific]} |
+   if ( ~NE[quant,classific](#1) & ~NE[quant,classific](#2) )
+   NE[quant=+,classific=+](#2)
+
+//DCO, 2010/07/27
+// CLASSIFICATION
+// Example: "Ele ficou/alcançou/obteve/etc. em primeiro lugar/na primeira posição"
+// Cuidado com casos tipo "Em primeiro lugar, gostaria de dizer que ..." - tratado!
+| #1[lemma:"em enésimo lugar",quant,classific] ; #1[lemma:"em enésimo posição",quant,classific] ; #1[lemma:"enésimo lugar",quant,classific] |
+   if ( ~NE[quant,classific](#1) )
+   NE[quant=+,classific=+](#1)
+
+//DCO, 2010/07/27
+// CLASSIFICATION
+// Example: Eles ficaram em primeiro lugar ex-equo
+| adv#1[quant,classific]{adv, adv[lemma:ex-equo]} |
+  if ( ~NE[quant,classific](#1) )
+  NE[quant=+,classific=+](#1)
+
+//DCO, 2010/07/28 (last update: 2010/12/29)
+// SPORTS_RESULTS
+| NP#2{?*, num#1[quant,sports_results]} ; PP#1{?*, num#2[quant,sports_results]} |
+  if ( ~NE[quant,sports_results](#1) & ~NE[quant,sports_results](#2) )
+  NE[quant=+,sports_results=+](#1)
+
+// Se só tiver o traço num, é VALOR QUANTIDADE à mesma
+if ( ^NE[num, curr:~, quantity:~, classific:~, quant:~](#1) )
+   NE[quant=+](#1)
+
+// if a NE_NUM(#1) is included in a NE_QUANT(#2), the NE_NUM(#1) is erased
+| #2{?*,#1,?*} |
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?{?*,#1,?*}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?*, ?{?*,#1,?*}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?*, ?{?*, ?{?*,#1,?*}}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+| #2{?*, ?{?*, ?{?*, ?{?*, ?*,#1,?*}}}}|
+if ( ^NE[num](#1) & NE[quant](#2) )
+ ~
+
+///////////////////
+// END OF AMOUNT //
+///////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO, last update: 2010/09/22
+// CATEGORY: HUMAN
+// TYPE: INDIVIDUAL
+// SUBTYPES: PERSON, POSITION (aka CARGO)
+////////////////////////////////////////////////////////////////////////////////
+
+// CARGO
+// mwe tagged as a title, that has been left alone
+//
+// Example: Capitao de Terra e Mar
+// Example: Ministro dos Negocios Estrangeiros
+//
+| ?[np]{?*, noun#1[title,mwe,last]}; PP{?*, noun#1[title,mwe,last]} |
+if ( ~NE[people,cargo](#1) )
+   NE[people=+,cargo=+](#1).
+
+// noun corresponding to a cargo alone
+// Example: Primeiro-Ministro
+| ?[np]{?*, noun#1[SEM-Hcargo,proper,last]}; PP{?*, noun#1[SEM-Hcargo,proper,last]} |
+if ( ~NE[people,cargo](#1) )
+   NE[people=+,cargo=+](#1).
+
+//VERA, 2012/02/03
+// Example: Secretário de Estado do Tesouro e Finanças
+| ?[np]{noun#1[SEM-Hcargo,SEM-Hprofession,title]}; PP{noun#1[SEM-Hcargo,SEM-Hprofession,title]} |
+if ( ~NE[people,cargo](#1) )
+   NE[people=+,cargo=+](#1).
+
+//| ?[np]{?*, noun#1[SEM-Hpeople,postpeople]} ; ?[pp]{?*, noun#1[SEM-Hpeople,postpeople]} ; noun[proper,mwe,untyped]{?*, noun#1[SEM-Hpeople,postpeople]} |
+//if ( ~NE[people,cargo](#1) )
+// NE[people=+,cargo=+](#1)
+
+| ?[np]{?*, noun#1[SEM-Hpeople,SEM-Hcargo]} ; ?[pp]{?*, noun#1[SEM-Hpeople,SEM-Hcargo]} ; noun[proper,mwe,untyped]{?*, noun#1[SEM-Hpeople,SEM-Hcargo]} |
+if ( ~NE[people,cargo](#1) )
+   NE[people=+,cargo=+](#1)
+
+// INDIVIDUAL
+// Lonely proper noun at higher level
+| ?[np]{?*,noun#1[proper,fam,SEM-Hindgroup:~]};?[pp]{?*,noun#1[proper,fam,SEM-Hindgroup:~]};noun[proper,mwe,untyped]{?*,noun#1[proper,fam,SEM-Hindgroup:~]} |
+if ( ~$1(#1) )
+   NE[people=+,individual=+](#1)
+
+// complex proper noun at higher level
+//DCO, 2011/07/21 adicionada restrição location
+| ?[np]{?*, noun#1[SEM-Hpeople,SEM-Hindividual,SEM-Hgroup:~,location:~,sem-stock:~,SEM-Hinstitution:~]} ;
+            ?[pp]{?*,noun#1[SEM-Hpeople,SEM-Hindividual,SEM-Hgroup:~,location:~,sem-stock:~,SEM-Hinstitution:~]} ;
+            noun[proper,mwe,untyped]{?*,noun#1[SEM-Hpeople,SEM-Hindividual,SEM-Hgroup:~,location:~,sem-stock:~,SEM-Hinstitution:~]}
+|
+if ( ~NE[people,individual](#1) )
+   NE[people=+,individual=+](#1)
+
+// rainha Isabel II
+| ?[np]{?*,noun#1[mwe,proper,SEM-Hpeople]}; PP{?*,noun#1[mwe,proper,SEM-Hpeople]} |
+if ( ~NE[people](#1) )
+   NE[people=+,individual=+](#1).
+
+// guessed upper case nouns that are just before comma then followed by relative link of another person name
+// e.g: Xywsdfs, o filho de Clara Rojas
+| ?[np]{?*,noun#1[proper,last,guess]}; PP{?*,noun#1[proper,last,guess]}, punct[comma], NP{?*,?[last,relative]}, PP#3{prep[lemma:de]} |
+if ( ~NE[people](#1) )
+   NE[people=+,individual=+](#1)
+
+// idem as above but with complex untyped mwe proper nouns.
+| ?[np]{?*,noun#1[proper,last,mwe,untyped]}; PP{?*,noun#1[proper,last,mwe,untyped]}, punct[comma], NP{?*,?[last,relative]}, PP#3{prep[lemma:de]} |
+if ( ~NE[people](#1) )
+   NE[people=+,individual=+](#1)
+
+/////////////////////////////
+// END OF HUMAN INDIVIDUAL //
+////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO, 2010/August
+// Last update: 2010/09/21
+// CATEGORY: HUMAN
+// TYPE: COLLECTIVE
+// SUBTYPES: ADMINISTRATION, INSTITUTION, GROUP
+////////////////////////////////////////////////////////////////////////////////
+
+// INSTITUTION (political parties)
+| ?[NP]{?*, noun#1[SEM-Hpartido]} ; ?[PP]{?*, noun#1[SEM-Hpartido]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-Hpartido]} |
+   if ( ~NE[partido](#1) )
+   NE[collective=+,institution=+,partido=+](#1)
+
+// INSTITUTION (universities)
+| ?[NP]{?*, noun#1[SEM-Huniversity]} ; ?[PP]{?*, noun#1[SEM-Huniversity]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-Huniversity]} |
+   if ( ~NE[university](#1) )
+   NE[collective=+,institution=+,university=+](#1)
+
+//DCO, 2011/07/13
+//Regra corrigida
+// INSTITUTION (schools)
+| ?[NP]{?*, noun#1[SEM-Hinstitution,sem-school]} ; ?[PP]{?*, noun#1[SEM-Hinstitution,sem-school]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-Hinstitution,sem-school]} ; noun#1[SEM-Hinstitution,sem-school] |
+   if ( ~NE[collective,institution,school](#1) )
+   NE[collective=+,institution=+,school=+](#1)
+
+// INSTITUTION (newspapers)
+| ?[NP]{?*, noun#1[SEM-Hjornal]} ; ?[PP]{?*, noun#1[SEM-Hjornal]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-Hjornal]} |
+   if ( ~NE[jornal](#1) )
+   NE[collective=+,institution=+,jornal=+](#1)
+
+// INSTITUTION (private organizations)
+| ?[np]{?*,noun#1[soc]} ; ?[pp]{?*, noun#1[soc]} ; noun[mwe,proper,untyped]{?*, noun#1[soc]} |
+   if ( ~NE[soc,institution](#1) )
+   NE[collective=+,soc=+,institution=+](#1)
+
+//DCO, 2011/02/09
+// words now need to have BOTH the 'SEM-Hcollective' and 'SEM-Hinstitution' features in order to be marked as named entities
+// INSTITUTION (other than political parties, universities, schools, newspapers and private organizations)
+| ?[NP]{?*, noun#1[collective,SEM-Hinstitution,SEM-Hpartido:~,SEM-Huniversity:~,SEM-school:~,school:~,SEM-Hjornal:~,soc:~]} ;
+  ?[PP]{?*, noun#1[SEM-Hcollective,SEM-Hinstitution,SEM-Hpartido:~,SEM-Huniversity:~,SEM-school:~,school:~,SEM-Hjornal:~,soc:~]} ;
+   noun[mwe,proper,untyped]{?*, noun#1[SEM-Hcollective,SEM-Hinstitution,SEM-Hpartido:~,SEM-Huniversity:~,SEM-school:~,school:~,SEM-Hjornal:~,soc:~]}
+|
+   if ( ~NE[collective,institution](#1) )
+   NE[collective=+,institution=+](#1)
+
+// Igreja Católica, Protestante, etc., são INSTITUIÇÕES
+// problem because have been considered as CULTURE in LGCulture.xip
+// We correct this problem here
+| ?[np]{?*, noun#1[monument,culture]{?[lemma:igreja], ?[maj,last]}} ; ?[pp]{?*, noun#1[monument,culture]{?[lemma:igreja], ?[maj,last]}} |
+   if ( ~NE[institution](#1) )
+   NE[collective=+,institution=+](#1)
+
+// ADMINISTRATION
+//DCO, 2011/02/09
+// words now need to have BOTH the 'SEM-Hcollective' and 'SEM-Hadministration' features in order to be marked as named entities
+| ?[np]{?*, noun#1[SEM-Hcollective,SEM-Hadministration]} ; ?[pp]{?*, noun#1[SEM-Hcollective,SEM-Hadministration]}; noun[mwe,proper,untyped]{?*, noun#1[SEM-Hcollective,SEM-Hadministration]} |
+   if ( ~NE[collective,administration](#1) )
+   NE[collective=+,administration=+](#1)
+
+// Musical groups (bands)
+| ?[NP]{?*, noun#1[SEM-Hgroup]} ; ?[PP]{?*, noun#1[SEM-Hgroup]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-Hgroup]} |
+  if ( ~NE[group](#1) )
+  NE[collective=+,group=+](#1)
+
+// HUMAN COLLECTIVE (general)
+| ?[NP]{?*, noun#1[SEM-Hcollective,SEM-Hinstitution:~,SEM-Hadministration:~,SEM-Hgroup:~]} ; ?[PP]{?*, noun#1[SEM-Hcollective,SEM-Hinstitution:~,SEM-Hadministration:~,SEM-Hgroup:~]} |
+  if ( ~NE[collective](#1) )
+  NE[collective=+](#1)
+
+/////////////////////////////
+// END OF HUMAN COLLECTIVE //
+////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO,
+// Last update: 2010/09/21
+// CATEGORY: LOCATION
+// TYPE: CREATED
+// SUBTYPES: COUNTRY, DIVISION, REGION, STREET and CONSTRUCTION
+////////////////////////////////////////////////////////////////////////////////
+
+// COUNTRY
+//DCO, 2011/03/09
+// Removed proper,mwe,untyped
+| ?#2[NP]{?*, noun#1[location,admin_area,country]} ; ?#2[PP]{?*, noun#1[location,admin_area,country]} ; noun#2{?*, noun#1[location,admin_area,country]} |
+if ( ~NE[location,admin_area,country](#1) & ~NE[people,individual](#2) )
+   NE[location=+,admin_area=+,country=+](#1)
+
+// DIVISION (GENERAL)
+//DCO, 2011/02/09
+// Added "proper" restriction to PP
+//DCO, 2011/03/09
+// Added ~NE[location,admin_area,division](#2)
+| ?[np]{?*, noun#1[location,admin_area,division,proper]} ; ?[pp]{?*, noun#1[proper,location,admin_area,division]} ; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,division]} |
+if ( ~NE[location,admin_area,division](#1) )
+   NE[location=+,admin_area=+,division=+](#1)
+
+// DIVISION (CITY)
+//DCO, 2011/03/09
+// Removed proper,mwe,untyped
+// Added ~NE[people,individual](#2)
+| ?#2[NP]{?*, noun#1[proper,location,admin_area,city,SEM-Hpeople:~]} ; ?#2[PP]{?*, noun#1[proper,location,admin_area,city,SEM-Hpeople:~]} ; noun#2[mwe:~]{?*, noun#1[location,admin_area,city,SEM-Hpeople:~]} |
+if ( ~NE[location,admin_area,city](#1) & ~NE[people,individual](#2) )
+   NE[location=+,admin_area=+,city=+](#1)
+
+// DIVISION (STATE)
+| ?[NP]{?*, noun#1[location,admin_area,state]} ; ?[PP]{?*, noun#1[location,admin_area,state]} ; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,state]} |
+if ( ~NE[location,admin_area,state](#1) )
+   NE[location=+,admin_area=+,state=+](#1)
+
+// REGION
+| ?[NP]{?*, noun#1[proper,location,admin_area,region]} ; ?[PP]{?*, noun#1[proper,location,admin_area,region]}; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,region]} |
+if ( ~NE[location,admin_area,region](#1) )
+   NE[location=+,admin_area=+,region=+](#1)
+
+// STREET
+| ?[np]{?*, noun#1[location,admin_area,street]} ; ?[pp]{?*, noun#1[location,admin_area,street]} ; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,street]} |
+if ( ~NE[location,admin_area,street](#1) )
+   NE[location=+,admin_area=+,street=+](#1)
+
+// CONSTRUCTION
+| ?[np]{?*, noun#1[proper,location,admin_area,building]} ; ?[pp]{?*, noun#1[proper,location,admin_area,building]} ; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,building]} |
+if ( ~NE[location,admin_area,building](#1) )
+   NE[location=+,admin_area=+,building=+](#1)
+
+// LOCATION CREATED (general)
+//DCO, 2011/07/21 Adicionada restrição people:~
+| ?[NP]{?*, noun#1[proper,location,admin_area,SEM-Hpeople:~]} ; ?[PP]{?*, noun#1[proper,location,admin_area,SEM-Hpeople:~]} ; noun[proper,mwe,untyped]{?*, noun#1[location,admin_area,SEM-Hpeople:~]} |
+if ( ~NE[location,admin_area](#1) )
+   NE[location=+,admin_area=+](#1)
+
+
+
+
+
+// ROAD
+| ?[np]{?*, noun#1[location,road]} ; ?[pp]{?*, noun#1[location,road]} ; noun[proper,mwe,untyped]{?*, noun#1[location,road]} |
+if ( ~NE[location,road](#1) )
+   NE[location=+,road=+](#1)
+
+
+
+
+
+
+
+
+/////////////////////////////
+// END OF LOCATION CREATED //
+/////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO,
+// Last update: 2010/09/21
+// CATEGORY: LOCATION
+// TYPE: PHYSICAL
+// SUBTYPES: WATERCOURSE, WATERMASS, RELIEF, PLANET, ISLAND, NATURALREGION
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/02/09
+// Removed "proper" restriction
+
+// WATERCOURSE
+| NP{?*, noun#1[location,geographic,watercourse]} ; PP{?*, noun#1[location,geographic,watercourse]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,watercourse]} |
+if ( ~NE[location,geographic,watercourse](#1) )
+   NE[location=+,geographic=+,watercourse=+](#1)
+
+// WATERMASS
+| ?[np]{?*, noun#1[location,geographic,watermass]} ; ?[pp]{?*, noun#1[location,geographic,watermass]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,watermass]} |
+if ( ~NE[location,geographic,watermass](#1) )
+  NE[location=+,geographic=+,watermass=+](#1)
+
+// RELIEF
+| ?[np]{?*, noun#1[location,geographic,relief]} ; ?[pp]{?*, noun#1[location,geographic,relief]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,relief]} |
+if ( ~NE[location,geographic,relief](#1) )
+   NE[location=+,geographic=+,relief=+](#1)
+
+// PLANET
+| ?[np]{?*, noun#1[location,geographic,celestialbody]} ; ?[pp]{?*, noun#1[location,geographic,celestialbody]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,celestialbody]} |
+if ( ~NE[location,geographic,celestialbody](#1) )
+   NE[location=+,geographic=+,celestialbody=+](#1)
+
+// ISLAND
+| ?[np]{?*, noun#1[location,geographic,island]} ; ?[pp]{?*, noun#1[location,geographic,island]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,island]} |
+if ( ~NE[location,geographic,island](#1) )
+   NE[location=+,geographic=+,island=+](#1)
+
+// NATURALREGION
+| ?[np]{?*, noun#1[location,geographic,region-natural]} ;
+  ?[pp]{?*, noun#1[location,geographic,region-natural]} ;
+  noun[proper,mwe,untyped]{?*, noun#1[location,geographic,region-natural]}
+|
+if ( ~NE[location,geographic,region-natural](#1) )
+   NE[location=+,geographic=+,region-natural=+](#1)
+
+// LOCATION PHYSICAL (general)
+| ?[np]{?*, noun#1[location,geographic,admin_area:~,virtual:~]} ; ?[PP]{?*, noun#1[location,geographic,admin_area:~,virtual:~]} ; noun[proper,mwe,untyped]{?*, noun#1[location,geographic,admin_area:~,virtual:~]} |
+if ( ~NE[location,geographic](#1) )
+   NE[location=+,geographic=+](#1)
+
+// LOCATION (general)
+| ?[NP]{?*, noun#1[location,admin_area:~,geographic:~,virtual:~]} ; ?[PP]{?*, noun#1[location,admin_area:~,geographic:~,virtual:~]} ; noun[mwe,proper,untyped]{?*, noun#1[location,admin_area:~,geographic:~,virtual:~]} |
+if ( ~NE[location](#1) )
+   NE[location=+](#1)
+
+//////////////////////////////
+// END OF LOCATION PHYSICAL //
+//////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO,
+// Last update: 2010/09/21
+// CATEGORY: LOCATION
+// TYPE: VIRTUAL
+// SUBTYPES: SITE and DOCUMENTS
+////////////////////////////////////////////////////////////////////////////////
+
+| ?[np]{?*, noun#1[location,virtual,site]} ; ?[pp]{?*, noun#1[location,virtual,site]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,site]} |
+if ( ~NE[location,virtual,site](#1) )
+   NE[location=+,virtual=+,site=+](#1)
+
+| NP{?*, noun#1[location,virtual,documents];num#1[location,virtual,documents]} ; PP{?*, noun#1[location,virtual,documents]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,documents]} |
+if ( ~NE[location,virtual,documents](#1) )
+  NE[location=+,virtual=+,documents=+](#1)
+
+//DCO, 2011/01/17
+// As referências bíblicas também são LOCAL VIRTUAL DOCUMENTOS
+| NP{?*, noun#1[location,virtual,biblical]} ; PP{?*, noun#1[location,virtual,biblical]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,biblical]} |
+if ( ~NE[location,virtual,biblical](#1) )
+  NE[location=+,virtual=+,biblical=+](#1)
+
+//DCO, 2011/01/17
+// Os Decretos-Lei também são LOCAL VIRTUAL DOCUMENTOS
+| NP{?*, noun#1[location,virtual,legal]} ; PP{?*, noun#1[location,virtual,legal]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,legal]} |
+if ( ~NE[location,virtual,legal](#1) )
+  NE[location=+,virtual=+,legal=+](#1)
+
+//DCO, 2011/01/17
+// LOCAL VIRTUAL EMAIL
+| NP{?*, noun#1[location,virtual,email]} ; PP{?*, noun#1[location,virtual,email]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,email]} |
+if ( ~NE[location,virtual,email](#1) )
+  NE[location=+,virtual=+,email=+](#1)
+
+//DCO, 2011/01/17
+// LOCAL VIRTUAL TEL-FAX
+| NP{?*, noun#1[location,virtual,phone-fax]} ; PP{?*, noun#1[location,virtual,phone-fax]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,phone-fax]} |
+if ( ~NE[location,virtual,phone-fax](#1) )
+  NE[location=+,virtual=+,phone-fax=+](#1)
+
+//DCO, 2011/01/17
+// LOCAL VIRTUAL IP
+| NP{?*, noun#1[location,virtual,ip]} ; PP{?*, noun#1[location,virtual,ip]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,ip]} |
+if ( ~NE[location,virtual,ip](#1) )
+  NE[location=+,virtual=+,ip=+](#1)
+
+// LOCATION VIRTUAL (general)
+| ?[np]{?*, noun#1[location,virtual,site:~,documents:~];num#1[location,virtual,site:~,documents:~]} ; ?[pp]{?*, noun#1[location,virtual,site:~,documents:~]} ; noun[mwe,proper,untyped]{?*, noun#1[location,virtual,site:~,documents:~]} |
+if ( ~NE[location,virtual](#1) )
+   NE[location=+,virtual=+](#1)
+
+/////////////////////////////
+// END OF LOCATION VIRTUAL //
+/////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+// DATUM                                                                      //
+//   - NIB, IBAN, BIC/SWIFT, ISBN-10, ISBN-13, ISSN                           //
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/01/17
+// DATUM NIB
+| NP{?*, noun#1[SEM-datum-nib]} ; PP{?*, noun#1[SEM-datum-nib]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-nib]} |
+if ( ~NE[SEM-datum-nib](#1) )
+  NE[SEM-datum-nib=+](#1)
+
+//DCO, 2011/01/17
+// DATUM IBAN
+| NP{?*, noun#1[SEM-datum-iban]} ; PP{?*, noun#1[SEM-datum-iban]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-iban]} |
+if ( ~NE[SEM-datum-iban](#1) )
+  NE[SEM-datum-iban=+](#1)
+
+//DCO, 2011/01/17
+// DATUM BIC-SWIFT
+//DCO, 2011/04/26
+//Não podemos dizer que o BIC tem de ser um noun, porque às vezes sai como ADJ, nem que tem de estar num NP, porque pode estar num AP
+| ?{?*, ?#1[SEM-datum-bic]} ; ?[mwe,proper,untyped]{?*, ?#1[SEM-datum-bic]} |
+if ( ~NE[SEM-datum-bic](#1) )
+  NE[SEM-datum-bic=+](#1)
+
+//DCO, 2011/01/17
+// DATUM ISBN
+| NP{?*, noun#1[SEM-datum-isbn]} ; PP{?*, noun#1[SEM-datum-isbn]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-isbn]} |
+if ( ~NE[SEM-datum-isbn](#1) )
+  NE[SEM-datum-isbn=+](#1)
+
+//DCO, 2011/01/17
+// DATUM ISSN
+| NP{?*, noun#1[SEM-datum-issn]} ; PP{?*, noun#1[SEM-datum-issn]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-issn]} |
+if ( ~NE[SEM-datum-issn](#1) )
+  NE[SEM-datum-issn=+](#1)
+
+//DCO, 2011/01/17
+// DATUM MATRICULA
+| NP{?*, noun#1[SEM-datum-plate]} ; PP{?*, noun#1[SEM-datum-plate]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-plate]} |
+if ( ~NE[SEM-datum-plate](#1) )
+  NE[SEM-datum-plate=+](#1)
+
+//DCO, 2011/01/17
+// DATUM OUTROS
+| NP{?*, noun#1[SEM-datum-other]} ; PP{?*, noun#1[SEM-datum-other]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-datum-other]} |
+if ( ~NE[SEM-datum-other](#1) )
+  NE[SEM-datum-other=+](#1)
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+// THIS CATEGORY NO LONGER EXISTS                                             //
+// COMPETITION is now EVENT ORGANIZED SPORTS                                  //
+// ARENA       is now LOCATION ADMIN_AREA BUILDING                            //
+// SPORT       is now DISCIPLINE SPORTS                                       //
+// CLAQUE      is now HUMAN COLLECTIVE GROUP                                  //
+// AWARD       is now AWARD SPORTS                                            //
+//                                                                            //
+//DCO, 2011/02/04                                                             //
+// DESPORTO                                                                   //
+//   - COMPETICAO, ARENA, MODALIDADE, CLAQUE, PREMIO                          //
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/02/04
+// DESPORTO COMPETICAO
+//| NP{?*, noun#1[SEM-sport-comp]} ; PP{?*, noun#1[SEM-sport-comp]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-sport-comp]} |
+//if ( ~NE[SEM-sport-comp](#1) )
+//  NE[SEM-sport-comp=+](#1)
+//
+//// DESPORTO ARENA
+//| NP{?*, noun#1[SEM-sport-arena]} ; PP{?*, noun#1[SEM-sport-arena]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-sport-arena]} |
+//if ( ~NE[SEM-sport-arena](#1) )
+//  NE[SEM-sport-arena=+](#1)
+//
+//// DESPORTO MODALIDADE
+//| NP{?*, noun#1[SEM-sport-sport]} ; PP{?*, noun#1[SEM-sport-sport]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-sport-sport]} |
+//if ( ~NE[SEM-sport-sport](#1) )
+//  NE[SEM-sport-sport=+](#1)
+//
+//// DESPORTO CLAQUE
+//| NP{?*, noun#1[SEM-sport-claq]} ; PP{?*, noun#1[SEM-sport-claq]} ; noun[mwe,proper,untyped]{?*, noun#1[SEM-sport-claq]} |
+//if ( ~NE[SEM-sport-claq](#1) )
+//  NE[SEM-sport-claq=+](#1)
+//
+//// DESPORTO PREMIO
+////DCO, 2011/03/10
+//// Removed mwe,proper,untyped
+//| NP{?*, noun#1[SEM-sport-award]} ; PP{?*, noun#1[SEM-sport-award]} ; noun{?*, noun#1[SEM-sport-award]} |
+//if ( ~NE[SEM-sport-award](#1) )
+//  NE[SEM-sport-award=+](#1)
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//========================================================
+//DCO, 2011/04/01
+//========================================================
+// EVENT CATEGORY       (EVENTO)
+// + ORGANIZED          (ORGANIZADO)
+//   + + POLITICAL      (POLITICO)
+//   + + SPORTS         (DESPORTIVO)
+//   + + SCIENTIFIC     (CIENTIFICO)
+//   + + ARTISTIC       (ARTISTICO)
+//   + + OTHER          (OUTRO)
+// + NATURAL            (NATURAL)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// EVENT ORGANIZED
+|?[np]{?*, noun#1[event,organized,political:~,sports:~,scientific:~,artistic:~,event-other:~]} ;
+ ?[pp]{?*, noun#1[event,organized,political:~,sports:~,scientific:~,artistic:~,event-other:~]} ;
+  noun[mwe,proper,untyped]{?*, noun#1[event,organized,political:~,sports:~,scientific:~,artistic:~,event-other:~]}
+|
+   if ( ~NE[event,organized](#1) )
+      NE[event=+,organized=+](#1)
+
+// EVENT ORGANIZED POLITICAL
+|?[np]{?*, noun#1[event,organized,political]} ; ?[pp]{?*, noun#1[event,organized,political]} ; noun[mwe,proper,untyped]{?*, noun#1[event,organized,political]}|
+   if ( ~NE[event,organized,political](#1) )
+      NE[event=+,organized=+,political=+](#1)
+
+// EVENT ORGANIZED SPORTS
+|?[np]{?*, noun#1[event,organized,sports]} ; ?[pp]{?*, noun#1[event,organized,sports]} ; noun[mwe,proper,untyped]{?*, noun#1[event,organized,sports]}|
+   if ( ~NE[event,organized,sports](#1) )
+      NE[event=+,organized=+,sports=+](#1)
+
+// EVENT ORGANIZED SCIENTIFIC
+|?[np]{?*, noun#1[event,organized,scientific]} ; ?[pp]{?*, noun#1[event,organized,scientific]} ; noun[mwe,proper,untyped]{?*, noun#1[event,organized,scientific]}|
+   if ( ~NE[event,organized,scientific](#1) )
+      NE[event=+,organized=+,scientific=+](#1)
+
+// EVENT ORGANIZED ARTISTIC
+|?[np]{?*, noun#1[event,organized,artistic]} ; ?[pp]{?*, noun#1[event,organized,artistic]} ; noun[mwe,proper,untyped]{?*, noun#1[event,organized,artistic]}|
+   if ( ~NE[event,organized,artistic](#1) )
+      NE[event=+,organized=+,artistic=+](#1)
+
+// EVENT ORGANIZED OTHER
+|?[np]{?*, noun#1[event,organized,event-other]} ; ?[pp]{?*, noun#1[event,organized,event-other]} ; noun[mwe,proper,untyped]{?*, noun#1[event,organized,event-other]}|
+   if ( ~NE[event,organized,event-other](#1) )
+      NE[event=+,organized=+,event-other=+](#1)
+
+// EVENT NATURAL
+|?[np]{?*, noun#1[event,natural]} ; ?[pp]{?*, noun#1[event,natural]} ; noun[mwe,proper,untyped]{?*, noun#1[event,natural]}|
+   if ( ~NE[event,natural](#1) )
+      NE[event=+,natural=+](#1)
+
+// EVENT
+|?[np]{?*, noun#1[event,organized:~,political:~,sports:~,scientific:~,artistic:~,event-other:~,natural:~]} ;
+ ?[pp]{?*, noun#1[event,organized:~,political:~,sports:~,scientific:~,artistic:~,event-other:~,natural:~]} ;
+  noun[mwe,proper,untyped]{?*, noun#1[event,organized:~,political:~,sports:~,scientific:~,artistic:~,event-other:~,natural:~]}
+|
+   if ( ~NE[event](#1) )
+      NE[event=+](#1)
+
+//========================================================
+//DCO, 2011/04/04
+//========================================================
+// AWARD CATEGORY           (PREMIO)
+// + POLITICAL              (POLITICO)   (inactivo)
+// + SPORTS                 (DESPORTIVO)
+// + SCIENTIFIC             (CIENTIFICO) (inactivo)
+// + OTHER                  (OUTRO)
+
+// AWARD
+|?[np]{?*, noun#1[award,sports-award:~,award-other:~]} ; ?[pp]{?*, noun#1[award,sports-award:~,award-other:~]} ; noun[mwe,proper,untyped]{?*, noun#1[award,sports-award:~,award-other:~]}|
+   if ( ~NE[award](#1) )
+      NE[award=+](#1)
+
+// AWARD SPORTS-AWARD
+|?[np]{?*, noun#1[award,sports-award]} ; ?[pp]{?*, noun#1[award,sports-award]} ; noun[mwe,proper,untyped]{?*, noun#1[award,sports-award]}|
+   if ( ~NE[award,sports-award](#1) )
+      NE[award=+,sports-award=+](#1)
+
+// AWARD OTHER
+|?[np]{?*, noun#1[award,award-other]} ; ?[pp]{?*, noun#1[award,award-other]} ; noun[mwe,proper,untyped]{?*, noun#1[award,award-other]}|
+   if ( ~NE[award,award-other](#1) )
+      NE[award=+,award-other=+](#1)
+
+////////////////////////////////////////////////////////////////////////////////
+//                                                                            //
+//DCO, 2011/04/04                                                             //
+// DISCIPLINA                                                                 //
+//   - DESPORTO, CIENCIA, ARTE                                                //
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+|?[np]{?*, noun#1[discipline,sports-discipline:~,science-discipline:~,art-discipline:~]} ; ?[pp]{?*, noun#1[discipline,sports-discipline:~,science-discipline:~,art-discipline:~]} ; noun[mwe,proper,untyped]{?*, noun#1[discipline,sports-discipline:~,science-discipline:~,art-discipline:~]}|
+   if ( ~NE[discipline](#1) )
+      NE[discipline=+](#1)
+
+|?[np]{?*, noun#1[discipline,sports-discipline]} ; ?[pp]{?*, noun#1[discipline,sports-discipline]} ; noun[mwe,proper,untyped]{?*, noun#1[discipline,sports-discipline]}|
+   if ( ~NE[discipline,sports-discipline](#1) )
+      NE[discipline=~,sports-discipline=+](#1)
+
+|?[np]{?*, noun#1[discipline,science-discipline]} ; ?[pp]{?*, noun#1[discipline,science-discipline]} ; noun[mwe,proper,untyped]{?*, noun#1[discipline,science-discipline]}|
+   if ( ~NE[discipline,science-discipline](#1) )
+      NE[discipline=~,science-discipline=+](#1)
+
+|?[np]{?*, noun#1[discipline,art-discipline]} ; ?[pp]{?*, noun#1[discipline,art-discipline]} ; noun[mwe,proper,untyped]{?*, noun#1[discipline,art-discipline]}|
+   if ( ~NE[discipline,art-discipline](#1) )
+      NE[discipline=~,art-discipline=+](#1)
+

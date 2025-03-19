@@ -1,0 +1,189 @@
+//######################################\\
+//				PERSONNE				\\
+//######################################\\
+
+Séquence:
+
+// marche seulement en debut de phrase
+2> noun[mwe=+, proper=+, person=+] = | | noun[proper:+,lieu=~];noun[toutmaj:+,lieu=~,region=~],noun[acron:+];noun[lemme:"?."].	// PLOUF J.M. ou PLOUF P.
+// CH rajout si le nom est cr2
+2> noun[mwe=+, proper=+, person=+] = noun[proper:+,lieu=~,cr2:+];noun[toutmaj:+,lieu=~,region=~,cr2:+],noun[acron:+,cr:~];noun[lemme:"?.",cr:~].	// PLOUF J.M. ou PLOUF P.
+
+// idem si precede par tit_med suivi de :
+// Docteur : PLOUF J.
+2> noun[mwe=+, proper=+, person=+] = | ?[tit_med], punct | noun[proper:+,lieu=~];noun[toutmaj:+,lieu=~,region=~],noun[acron:+];noun[lemme:"?."].	// PLOUF J.M. ou PLOUF P.
+
+
+
+// pour eviter probleme dans cas <punct> Jean PLOUF Jean PLOUF
+2> noun[person=+,proper=+,mwe=+] = |noun[person,proper,mwe]| noun[pren:+],?[toutmaj:+].
+
+
+// CH
+// Dans le cas <patronyme inconnu> suivi de <prénom connu> 
+// si patronyme inconnu précédé par mot avec cr:+ ou cr2:+ ou début de phrase alors patronyme inconnu devient nom de famille
+// et prénom inconnu n'a pas le trait cr:+ ou cr2:+
+// eg: Abricotwer Jean
+// Devrait permettre de solutionner une partie des erreurs relevées par Rouen (bug_report janvier 2010)
+2> noun[mwe=+, proper=+, person=+] = | | noun[proper:+,guessed:+], noun[proper:+,pren:+, cr:~, cr2:~] .
+2> noun[mwe=+, proper=+, person=+] =   noun[proper:+,guessed:+,cr2:+], noun[proper:+,pren:+, cr:~, cr2:~] .
+
+// CH - mars 2010
+// CCA Hématologie n'est pas une personne
+2> ? = | noun[lemme:CCA] | #2[person=~,person=~,guessed:~] .
+
+
+
+
+
+//######################################\\
+//				  LIEU     				\\
+//######################################\\
+
+Séquence:
+
+2> noun[mwe=+,lieu=+] @= noun[lemme:centre];noun[surface:CENTRE],adj[lemme:hospitalier],(prep),?[lieu:+];?[region:+].
+2> noun[lieu=+,mwe=+] = |noun[lemme:SAMU]| num[surface:"%d%d",cr:~]. // SAMU 38
+2> noun[mwe=+,lieu=+] = num[surface:"%d%d%d%d%d"] , ?+[cr:~], noun[lemme:CEDEX]. // 69495 PIERRE BENITE CEDEX
+	
+
+
+//######################################\\
+//				  EVENEMENT     		\\
+//######################################\\
+
+Séquence:
+
+// la course à vélo "l'Ardechoise"
+10> noun[mwe=+,event=+] @=	(det),
+								noun[debutEvent],
+								(prep),
+								noun[sport],
+								(punct[form:FQUOTES]),
+								(
+									det;
+									prep;
+									?[maj]
+								)+,
+								(punct[form:FQUOTES]).
+
+
+								
+
+//######################################\\
+//				  DATE		     		\\
+//######################################\\
+						
+Marqueur:
+
+// le 14/09
+11> det , num[date=+,time=+,mwe=+,relative=+]{
+		num[numjourpot],
+		punct,
+		num[lemme="?"] ; num[lemme="0?"] ; num[lemme="10"] ; num[lemme="11"] ; num[lemme="12"]
+	}.
+
+// du 14/09
+11> prep[form:FDE,def:+] , num[date=+,time=+,mwe=+,relative=+]{
+		num[numjourpot],
+		punct,
+		num[lemme="?"] ; num[lemme="0?"] ; num[lemme="10"] ; num[lemme="11"] ; num[lemme="12"]
+	}.
+
+// au 15/09
+11> prep[form:FA, def:+], num[date=+,time=+,mwe=+,relative=+]{
+		num[numjourpot],
+		punct,
+		num[lemme="?"] ; num[lemme="0?"] ; num[lemme="10"] ; num[lemme="11"] ; num[lemme="12"]
+	}.
+
+
+
+// le 10 12 2005
+11> det, num[mwe=+,date=+,absolue=+,complete=+]{
+		num[numjourpot:+],
+		num[lemme:"?"] ; num[lemme:"?."] ; num[lemme:"10"] ; num[lemme:"11"] ; num[lemme:"12"],
+		num[lemme:"20??"] ; num[lemme:"19??"] ; num[lemme:"??"].
+	}.
+	
+	
+// du 10 12 2005
+11> prep[form:FDE,def:+], num[mwe=+,date=+,absolue=+,complete=+]{
+		num[numjourpot:+],
+		num[lemme:"?"] ; num[lemme:"?."] ; num[lemme:"10"] ; num[lemme:"11"] ; num[lemme:"12"],
+		num[lemme:"20??"] ; num[lemme:"19??"] ; num[lemme:"??"].
+	}.
+	
+
+// CH - Mars 2009.
+// enlever date si dans contexte de decret ou loi
+11> prep[lemme:"conformément à"], (det), noun[lemme:"décret"];noun[lemme:"loi"], (noun), 
+      	(num), prep[sfde:+], noun[tempexpr=~,date=~,time=~,absolue=~] .
+11> prep[lemme:"conformément à"], noun[surface:"Decrêt"], (noun), 
+      	(num), prep[sfde:+], noun[tempexpr=~,date=~,time=~,absolue=~] .
+
+
+// CH 4/12/09
+// Probleme lorsque initiale prénom est M. (ambiguité avec titre, les règles générales ne s'appliquent pas)
+// e.g. Pr M. RAUCOULE-AIME ne fonctionne pas vs Pr P. RAUCOULE-AIME
+// Il faut enlever le trait tit de "M." 
+11> noun[mwe,proper,person]{noun[surface:"M.",tit=~],noun+} .
+			
+
+	
+
+Reconstructeur:
+
+//Aide (s) :J. MARTIN [CR] Anesthésiste : Dr J. MARTIN
+// retirer Anesthesiste du noeud noun person
+// added CH 01/10
+12> noun[person]{#1,#3,#4,#2[cr:+,guessed:~]} = noun[person=+,mwe=+,proper=+]{#1,#3,#4}, #2.
+12> noun[person]{#1,#3,#2[cr:+,guessed:~]} = noun[person=+,mwe=+,proper=+]{#1,#3}, #2.
+12> noun[person]{#1[cr:~],#2[cr:+,guessed:~]} = #1[proper=+,person=+], #2.
+
+
+
+
+
+
+
+// retirer le titre du noeud noun person
+12> noun[person]{#1[tit], noun#2[last]} = #1, #2 .
+
+// retirer le jour de la semaine du noeud DATE   |noun#1[date:+,relative:+]{(noun[jour])}|
+12> noun#1[date:+,relative:+]{#2[jour,first] ,num#3,noun#4[mois,last]} = #1{#2,noun[date:+,relative:+]{#3,#4}} .
+
+// 5 novembre au soir
+12> noun#1[date:+,relative:+]{num#2[first],noun#3[mois],prep#4,noun#5[last]} = #1{noun[date:+,relative:+]{#2,#3},#4,#5} .
+
+
+// C. HAGEGE Sept. 2009
+// filtre pour eviter d'integrer a l'interieur de nom de personne des elements 
+// contenant des chiffres
+// eg. "Pr MOYEN U33"
+15> noun[mwe:+,proper:+,person:+]{ noun#1, noun#2, noun#4, noun#3[lemme:"?+%d+?*"] }  = noun[mwe=+,person=+,proper=+]{#1,#2, #4}, #3 .
+15> noun[mwe:+,proper:+,person:+]{ noun#1, noun#2, noun#3[lemme:"?+%d+?*"] }  = noun[mwe=+,person=+,proper=+]{#1,#2}, #3 .
+ 
+15> noun#1[mwe:+,proper:+,person:+]{ noun#2, noun#3[lemme:"?+%d+?*"] }  =
+				noun#2[proper=+,person=+], noun#3 .
+
+
+// CH Janv 2010
+// enlever d'un nom propre le mot CR quand il se retrouve en debut de ligne (le + et * ne fonctionnent pas dans reshuffling visiblement)
+15> noun[mwe:+,proper:+,person:+]{#1,#3,#4,#2[cr:+,lemme:"CR"]} = noun[mwe:+,proper:+,person:+]{#1,#3,#4}, #2 . 
+15> noun[mwe:+,proper:+,person:+]{#1,#3,#2[cr:+,lemme:"CR"]} = noun[mwe:+,proper:+,person:+]{#1,#3}, #2 . 
+//15> noun[mwe:+,proper:+,person:+]{#1+,#2[cr:+,lemme:"CR"]} = noun[mwe:+,proper:+,person:+]{#1}, #2 . 
+
+
+// CH Fev 2010
+// Région Périnéeene n'est pas une entité géographique
+15> noun[mwe:+,region:+] { #1[lemme:"région"], #2[maj:+,inconnu:+]} = #1, #2[proper=~] .
+
+
+
+// Pour rajouter les traits sur l'entite personne si personnel medical
+
+Séquence:
+
+18> ? = | ?[tit_med:+] | noun[proper,person,medecin=+] .
+18> ? = | ?[tit_med:+], punct[surface:":"] | noun[proper,person,medecin=+] .

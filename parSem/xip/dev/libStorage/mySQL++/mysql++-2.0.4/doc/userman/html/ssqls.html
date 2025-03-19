@@ -1,0 +1,432 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>5. Specialized SQL Structures</title><link rel="stylesheet" href="userman.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.58.1"><link rel="home" href="index.html" title="MySQL++ User Manual"><link rel="up" href="index.html" title="MySQL++ User Manual"><link rel="previous" href="tquery.html" title="4. Template Queries"><link rel="next" href="unicode.html" title="6. Using Unicode with MySQL++"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">5. Specialized SQL Structures</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="tquery.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="unicode.html">Next</a></td></tr></table><hr></div><div class="sect1" lang="en"><div class="titlepage"><div><h2 class="title" style="clear: both"><a name="ssqls"></a>5. Specialized SQL Structures</h2></div></div><p>The Specialized SQL Structure (SSQLS) feature lets you
+	easily define C++ structures that match the form of your SQL
+	tables. Because of the extra functionality that this feature
+	builds into these structures, MySQL++ can populate them
+	automatically when retrieving data from the database; with
+	queries returning many records, you can ask MySQL++ to populate
+	an STL container of your SSQLS records with the results. When
+	updating the database, MySQL++ can use SSQLS structures to match
+	existing data, and it can insert SSQLS structures directly into
+	the database.</p><p>You define an SSQLS using one of several macros. (These
+	are in the file custom.h, and in the file that it includes,
+	custom-macros.h.) There are a bunch of different macros, for
+	different purposes. The following sections will discuss each
+	macro type separately, beginning with the easiest and most
+	generally useful.</p><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874470"></a>5.1. sql_create</h3></div></div><p>This is the most basic sort of SSQLS declaration:</p><pre class="programlisting">
+sql_create_5(stock, 0, 0,     
+    string, item,
+    int, num,                  
+    double, weight,  
+    double, price,  
+    mysqlpp::Date, date)</pre><p>This creates a C++ structure called 'stock'
+		containing five member variables, along with some
+		constructors and other member functions useful with
+		MySQL++.</p><p>One of the generated constructors takes a reference
+		to a mysqlpp::Row object, allowing you to easily populate
+		a vector of stocks like so:</p><pre class="programlisting">
+vector&lt;stock&gt; result; 
+query.storein(result);</pre><p>That's all there is to it. The only requirements
+		are that the table structure be compatible with the
+		SSQLS's member variables, and that the fields are in
+		the same order.</p><p>The general format of this set of macros is:</p><pre class="programlisting">
+sql_create_#(NAME, KEYS, INITPARMS, TYPE1, ITEM1, ... TYPE#, ITEM#)</pre><p>Where # is the number of member variables,
+		NAME is the name of the structure you wish to create,
+		TYPE<span class="emphasis"><em>x</em></span> is the type name for a
+		member variable, and ITEM<span class="emphasis"><em>x</em></span> is that
+		variable's name.</p><p>The KEYS and INITPARMS arguments can always be zero,
+		to keep things simple. We will discuss what happens if
+		you use different values in the next few sections.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874560"></a>5.2. sql_create with Compare</h3></div></div><p>SSQLS structures can also have member functions that
+		allow you to compare one structure to another. You simply
+		change the first 0 in the previous example (KEYS) to a
+		higher value. If this number is N, then two structures
+		are considered equal if the first N members of each
+		are equal.</p><p>For example:</p><pre class="programlisting">
+sql_create_5(stock, 1, 0,     
+    string, item,
+    int, num,                  
+    double, weight,  
+    double, price,  
+    mysqlpp::Date, date)</pre><p>Here we are saying that the 'item' field is a kind
+		of key field: it is always unique between any two 'stock'
+		items, so if two stock records have equal item values,
+		they are the same stock item.</p><p>That change adds the following members to the
+		SSQLS:</p><pre class="programlisting">
+struct stock {
+    ...  
+    stock(const std::string &amp;p1); 
+    set(const std::string &amp;p1); 
+    bool operator ==(const stock &amp;other) const;  
+    bool operator !=(const stock &amp;other) const;   
+    bool operator &gt;(const stock &amp;other) const;   
+    bool operator &lt;(const stock &amp;other) const;   
+    bool operator &gt;=(const stock &amp;other) const;   
+    bool operator &lt;=(const stock &amp;other) const;   
+    int cmp(const stock &amp;other) const;  
+    int compare(const stock &amp;other) const;  
+}  
+      
+int compare(const stock &amp;x, const stock &amp;y);</pre><p>The global
+		<tt>compare()</tt>
+		function compares x to y and returns &lt;0 if
+		x &lt; y, 0 if x = y, and &gt;0 if x &gt; y.
+		<tt>stock::cmp()</tt> and
+		<tt>stock::compare()</tt>
+		are the same thing as <tt>compare(*this,
+		other)</tt>.</p><p>The additional constructor initializes the key
+		fields of the structure and leaves the other member
+		variables undefined. This is useful for creating temporary
+		objects to use for comparisons like <tt>x
+		&lt;= stock(&quot;Hotdog&quot;)</tt>.</p><p>Because stock is now less-than-comparable you
+		can store the query results in an STL associative
+		container:</p><pre class="programlisting">
+std::set&lt;stock&gt; result;   
+query.storein(result);</pre><p>And you can now use it like any other set:</p><pre class="programlisting">
+cout &lt;&lt; result.lower_bound(stock(&quot;Hamburger&quot;))-&gt;item &lt;&lt; endl;</pre><p>This will return the first item that begins with
+		&quot;Hamburger&quot;.</p><p>You can also use it will any STL algorithm that
+		require the values to be less-than-comparable.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874717"></a>5.3. sql_create with Additional Initializers</h3></div></div><p>If third parameter for this macro (INITPARMS) is
+		nonzero, the SSQLS will have two additional members
+		functions that make it easier to initialize the
+		structure's data members. For example:</p><pre class="programlisting">
+sql_create_5(stock, 1, 5,   
+    string, item,
+    int, num,                  
+    double, weight,  
+    double, price,  
+    mysqlpp::Date, date)</pre><p>will add these functions to the structure relative to
+		that in the previous example:</p><pre class="programlisting">
+struct stock {   
+    ...  
+    stock(const string&amp;, const int&amp;, const double&amp;,  
+            const double&amp;, const mysqlpp::Date&amp;);
+    void set(const string&amp;, const int&amp;, const double&amp;,  
+            const double&amp;, const mysqlpp::Date&amp;);  
+}</pre><p>There is one trick with this: because each SSQLS
+		has at least one other constructor besides the one
+		defined by this feature, not every logical value for
+		INITPARMS results in working code. A simple example is
+		setting KEYS and INITPARMS to the same value: you get
+		two identical constructor definitions, so the compiler
+		refuses to compile the code. If you are getting compiler
+		errors having to do with duplicate definitions, try
+		changing this value to zero.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874774"></a>5.4. An Important Limitation of sql_create</h3></div></div><p>The features described in the two previous sections
+		work together nicely most of the time. However, if you try
+		to use the same value for the second and third parameters to
+		<tt>sql_create_N</tt>, your
+		program will fail to compile.</p><p>Why is this?</p><p>The second parameter sets up SSQLS comparisons,
+		one aspect of which defines a constructor taking just
+		the table's key fields. The third parameter sets up
+		an initialization constructor, taking as many fields
+		as you request. When these two values are equal,
+		you get two identical constructor definitions,
+		which is illegal in C++.</p><p>The solution is to use 0 for the third
+		parameter, indicating that you do not need
+		a separate full-initialization constructor.
+		<tt>examples/custom6.cpp</tt> illustrates
+		this:</p><pre class="programlisting">
+#include &quot;util.h&quot;
+
+#include &lt;mysql++.h&gt;
+#include &lt;custom.h&gt;
+
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+
+using namespace std;
+using namespace mysqlpp;
+
+// To store a subset of a row, we define an SSQLS containing just the
+// fields that we will store.  There are complications here that are
+// covered in the user manual.
+sql_create_1(stock_subset,
+             1, 0,
+             string, item)
+
+int
+main(int argc, char *argv[])
+{
+    try {                       
+        // Establish the connection to the database server.
+        Connection con(use_exceptions);
+        if (!connect_to_db(argc, argv, con)) {
+            return 1;
+        }
+
+        // Retrieve a subset of the stock table, and store the data in
+        // a vector of 'stock_subset' SSQLS structures.
+        Query query = con.query();
+        query &lt;&lt; &quot;select item from stock&quot;;
+        vector&lt;stock_subset&gt; res;
+        query.storein(res);
+
+        // Display the result set
+        cout &lt;&lt; &quot;We have:&quot; &lt;&lt; endl;
+        vector&lt;stock_subset&gt;::iterator it;
+        for (it = res.begin(); it != res.end(); ++it) {
+            cout &lt;&lt; '\t' &lt;&lt; it-&gt;item &lt;&lt; endl;
+        }
+    }
+    catch (const BadQuery&amp; er) {
+        // Handle any query errors
+        cerr &lt;&lt; &quot;Query error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return -1;
+    }
+    catch (const BadConversion&amp; er) {
+        // Handle bad conversions; e.g. type mismatch populating 'stock'
+        cerr &lt;&lt; &quot;Conversion error: &quot; &lt;&lt; er.what() &lt;&lt; endl &lt;&lt;
+                &quot;\tretrieved data size: &quot; &lt;&lt; er.retrieved &lt;&lt;
+                &quot;, actual size: &quot; &lt;&lt; er.actual_size &lt;&lt; endl;
+        return -1;
+    }
+    catch (const Exception&amp; er) {
+        // Catch-all for any other MySQL++ exceptions
+        cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+		</pre><p>This example shows one other thing, which
+		is how to retrieve a subset of a table using
+		SSQLS. Because we wanted only one column from the
+		table, we had to pass 0 for the third parameter to
+		<tt>sql_create_N</tt> to get
+		the code to compile.</p><p>(See the simple1 example in the <a href="tutorial.html">Tutorial</a> for another way to accomplish
+		the same thing.)</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874872"></a>5.5. Additional Features of Specialized SQL Structures</h3></div></div><p>Up to this point, we haven't been using
+		all of the features in the SSQLS structures
+		we've been generating. We could have used the
+		<tt>sql_create_basic_*</tt>
+		macros instead, which would have worked just as well
+		for what we've seen so far, and the generated code would
+		have been smaller.</p><p>Why is it worth ignoring the &quot;basic&quot; variants of
+		these macros, then? Consider this:</p><pre class="programlisting">
+query.insert(s);</pre><p>This does exactly what you think it does:
+		it inserts 's' into the database. This is possible
+		because a standard SSQLS has functions that the
+		query object can call to get the list of fields
+		and such, which it uses to build an insert query.
+		<tt>query::update()</tt> and
+		<tt>query::replace()</tt> also
+		rely on this SSQLS feature. A basic SSQLS lacks these
+		functions.</p><p>Another feature of standard SSQLSes you might find
+		a use for is changing the table name used in queries. By
+		default, the table in the MySQL database is assumed to
+		have the same name as the SSQLS structure type. But if
+		this is inconvenient, you can globally change the table
+		name used in queries like this:</p><pre class="programlisting">
+stock::table() = &quot;MyStockData&quot;;</pre></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2874951"></a>5.6. Harnessing SSQLS Internals</h3></div></div><p>Continuing the discussion in the
+		previous section, there is a further set of
+		methods that the non-&quot;basic&quot; versions of the
+		<tt>sql_create</tt> macros
+		define for each SSQLS. These methods are mostly for
+		use within the library, but some of them are useful
+		enough that you might want to harness them for your
+		own ends. Here is some pseudocode showing how the
+		most useful of these methods would be defined for the
+		<tt>stock</tt> structure used
+		in all the <tt>custom*.cpp</tt>
+		examples:</p><pre class="programlisting">
+// Basic form
+template &lt;class Manip&gt;   
+stock_value_list&lt;Manip&gt; value_list(cchar *d = &quot;,&quot;,
+    Manip m = mysqlpp::quote) const;  
+
+template &lt;class Manip&gt;   
+stock_field_list&lt;Manip&gt; field_list(cchar *d = &quot;,&quot;,   
+    Manip m = mysqlpp::do_nothing) const;  
+
+template &lt;class Manip&gt;   
+stock_equal_list&lt;Manip&gt; equal_list(cchar *d = &quot;,&quot;,
+    cchar *e = &quot; = &quot;, Manip m = mysqlpp::quote) const;  
+
+
+// Boolean argument form
+template &lt;class Manip&gt;
+stock_cus_value_list&lt;Manip&gt; value_list([cchar *d, [Manip m,] ]   
+    bool i1, bool i2 = false, ... , bool i5 = false) const;  
+
+// List form  
+template &lt;class Manip&gt;
+stock_cus_value_list&lt;Manip&gt; value_list([cchar *d, [Manip m,] ]  
+    stock_enum i1, stock_enum i2 = stock_NULL, ...,
+    stock_enum i5 = stock_NULL) const;  
+
+// Vector form  
+template &lt;class Manip&gt;
+stock_cus_value_list&lt;Manip&gt; value_list([cchar *d, [Manip m,] ]  
+    vector&lt;bool&gt; *i) const;  
+
+...Plus the obvious equivalents for field_list() and equal_list()</pre><p>Rather than try to learn what all of these methods
+		do at once, let's ease into the subject. Consider this
+		code:</p><pre class="programlisting">
+stock s(&quot;Dinner Rolls&quot;, 75, 0.95, 0.97, &quot;1998-05-25&quot;);   
+cout &lt;&lt; &quot;Value list: &quot; &lt;&lt; s.value_list() &lt;&lt; endl;  
+cout &lt;&lt; &quot;Field list: &quot; &lt;&lt; s.field_list() &lt;&lt; endl;  
+cout &lt;&lt; &quot;Equal list: &quot; &lt;&lt; s.equal_list() &lt;&lt; endl;</pre><p>That would produce something like:</p><pre class="programlisting">
+Value list: 'Dinner Rolls',75,0.95,0.97,'1998-05-25'   
+Field list: item,num,weight,price,date  
+Equal list: item = 'Dinner Rolls',num = 75,weight = 0.95, price = 0.97,date = '1998-05-25'</pre><p>That is, a &quot;value list&quot; is a list of data member
+		values within a particular SSQLS instance, a &quot;field list&quot;
+		is a list of the fields (columns) within that SSQLS,
+		and an &quot;equal list&quot; is a list in the form of an SQL
+		equals clause.</p><p>Just knowing that much, it
+		shouldn't surprise you to learn that
+		<tt>Query::insert()</tt> is
+		implemented more or less like this:</p><pre class="programlisting">
+*this &lt;&lt; &quot;INSERT INTO &quot; &lt;&lt; v.table() &lt;&lt; &quot; (&quot; &lt;&lt; v.field_list() &lt;&lt;
+        &quot;) VALUES (&quot; &lt;&lt; v.value_list() &lt;&lt; &quot;)&quot;;</pre><p>where 'v' is the SSQLS you're asking the
+		Query object to insert into the database.</p><p>Now let's look at a complete example,
+		which uses one of the more complicated forms of
+		<tt>equal_list()</tt>. This
+		example builds a query with fewer hard-coded strings
+		than the most obvious technique requires, which
+		makes it more robust in the face of change. Here is
+		<tt>examples/custom5.cpp</tt>:</p><pre class="programlisting">
+#include &quot;util.h&quot;
+
+#include &lt;mysql++.h&gt;
+#include &lt;custom.h&gt;
+
+#include &lt;iostream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+
+using namespace std;
+using namespace mysqlpp;
+
+sql_create_5(stock,
+             1, 5,
+             string, item,
+             longlong, num,
+             double, weight,
+             double, price,
+             Date, sdate)
+
+int
+main(int argc, char *argv[])
+{
+    try {
+        Connection con(use_exceptions);
+        if (!connect_to_db(argc, argv, con)) {
+            return 1;
+        }
+
+        // Get all the rows in the stock table.
+        Query query = con.query();
+        query &lt;&lt; &quot;select * from stock&quot;;
+        vector&lt;stock&gt; res;
+        query.storein(res);
+
+        if (res.size() &gt; 0) {
+            // Build a select query using the data from the first row
+            // returned by our previous query.
+            query.reset();
+            query &lt;&lt; &quot;select * from stock where &quot; &lt;&lt;
+                res[0].equal_list(&quot; and &quot;, stock_weight, stock_price);
+
+            // Display the finished query.
+            cout &lt;&lt; &quot;Custom query:\n&quot; &lt;&lt; query.preview() &lt;&lt; endl;
+        }
+    }
+    catch (const BadQuery&amp; er) {
+        // Handle any query errors
+        cerr &lt;&lt; &quot;Query error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return -1;
+    }
+    catch (const BadConversion&amp; er) {
+        // Handle bad conversions
+        cerr &lt;&lt; &quot;Conversion error: &quot; &lt;&lt; er.what() &lt;&lt; endl &lt;&lt;
+                &quot;\tretrieved data size: &quot; &lt;&lt; er.retrieved &lt;&lt;
+                &quot;, actual size: &quot; &lt;&lt; er.actual_size &lt;&lt; endl;
+        return -1;
+    }
+    catch (const Exception&amp; er) {
+        // Catch-all for any other MySQL++ exceptions
+        cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; er.what() &lt;&lt; endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+		</pre><p>This example uses the list form of
+		<tt>equal_list()</tt>. The
+		arguments <tt>stock_weight</tt>
+		and <tt>stock_price</tt>
+		are enum values equal to the position of these columns
+		within the <tt>stock</tt> table.
+		<tt>sql_create_</tt><span class="emphasis"><em>x</em></span>
+		generates this enum for you automatically.</p><p>The boolean argument form of that
+		<tt>equal_list()</tt> call would
+		look like this:</p><pre class="programlisting">
+query &lt;&lt; &quot;select * from stock where &quot; &lt;&lt;
+        res[0].equal_list(&quot; and &quot;, false, false, true, true, false);</pre><p>It's a little more verbose, as you can
+		see. And if you want to get really complicated,
+		use the vector form:</p><pre class="programlisting">
+vector&lt;bool&gt; v(5, false);
+v[stock_weight] = true;
+v[stock_price] = true;
+query &lt;&lt; &quot;select * from stock where &quot; &lt;&lt;
+        res[0].equal_list(&quot; and &quot;, v);</pre><p>This form makes the most sense if you are
+		building many other queries, and so can re-use that
+		vector object.</p><p>Many of these methods accept manipulators and custom
+		delimiters. The defaults are suitable for building SQL
+		queries, but if you're using these methods in a different
+		context, you may need to override these defaults. For
+		instance, you could use these methods to dump data to a
+		text file using different delimiters and quoting rules
+		than SQL.</p><p>At this point, we've seen all the major aspects
+		of the SSQLS feature. The final sections of this chapter
+		look at some of the peripheral aspects.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2875251"></a>5.7. Alternate Creation Methods</h3></div></div><p>If for some reason you want your SSQLS data members to
+		have different names than used in the MySQL database, you can do
+		so like this:</p><pre class="programlisting">
+sql_create_c_names_5(stock, 1, 5,        
+    string, item, &quot;item&quot;,
+    int, num, &quot;quantity&quot;,  
+    double, weight, &quot;weight&quot;,  
+    double, price, &quot;price&quot;  
+    mysqlpp::Date, date, &quot;shipment&quot;)</pre><p>If you want your SSQLS to have its data members
+		in a different order from those in the MySQL table,
+		you can do it like this:</p><pre class="programlisting">
+sql_create_c_order_5(stock, 2, 5,   
+    mysqlpp::Date, date, 5,
+    double, price, 4,   
+    string, item, 1,    
+    int, num, 2,   
+    double, weight, 3)</pre><p>You can combine the custom names and custom ordering like
+		this:</p><pre class="programlisting">
+sql_create_complete_5(stock, 2, 5,   
+    mysqlpp::date, date, &quot;shipment&quot;, 5,
+    double, price, &quot;price&quot;, 4,
+    string, item, &quot;item&quot;, 1,
+    int, num, &quot;quantity&quot;, 2,
+    double, weight, &quot;weight&quot;, 3)</pre><p>All three of these macro types have &quot;basic&quot;
+		variants that work the same way. Again, basic SSQLSes
+		lack the features necessary for automatic insert, update
+		and replace query creation.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2875317"></a>5.8. Expanding SSQLS Macros</h3></div></div><p>If you ever need to see the code that a given SSQLS
+		declaration expands out to, use the utility
+		<tt>doc/ssqls-pretty</tt>, like so:</p><pre class="programlisting">
+ssqls-pretty &lt; myprog.cpp |less</pre><p>This locates the first SSQLS declaration in that
+		file and uses the C++ preprocessor to expand that
+		macro. You may have to change the script to tell it
+		where your MySQL++ header files are.</p></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2875356"></a>5.9. Extending the SSQLS Mechanism</h3></div></div><p>The SSQLS headers &#8212; custom.h and
+		custom-macros.h &#8212; are automatically generated
+		by the Perl script custom.pl. Although it is possible
+		to change this script to get additional functionality,
+		it's usually better to do that through inheritance.</p><p>A regular user may find it helpful to change
+		the the limit on the maximum number of SSQLS data
+		members allowed.  It's 25 out of the box. A smaller
+		value may speed up compile time, or you may require
+		a higher value because you have more complex tables
+		than that. Simply change the
+		<tt>max_data_members</tt>
+		variable at the top of custom.pl and say 'make'.
+		The limit for Visual C++ is 31, according to one
+		report. There doesn't seem to be a practical limit
+		with GCC 3.3 at least: I set the limit to 100 and
+		the only thing that happened is that custom-macros.h
+		went from 1.3 MB to 18 MB and the build time for
+		<tt>examples/custom.*</tt> got a lot
+		longer.</p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="tquery.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="unicode.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4. Template Queries </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 6. Using Unicode with MySQL++</td></tr></table></div></body></html>

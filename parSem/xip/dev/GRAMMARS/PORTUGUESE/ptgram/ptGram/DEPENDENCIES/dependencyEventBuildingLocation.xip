@@ -1,0 +1,118 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyBuildinLocation.xip                               !
+//!   Date       : 2010/July                                                   !
+//!   Author     : Daniel Santos                                               !
+//!   Revised by : Diogo Oliveira (2010/August)                                !
+//!   Revised by : Vera Cabarrão (2011/January)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating the extraction of building location relations   !
+//!                                                                            !
+//!   Dependencies handled in this file:  BUILDING-LOCATION                    !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/17
+// Changed all "company" occurrences to "SEM-Hinstitution" in order to comply with the new set of directives.
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+DependencyRules:
+
+//////////////////////////////////////////////////////////////////////////////
+// Building Location Relations                                              //
+//////////////////////////////////////////////////////////////////////////////
+
+// Example: A Torre de Belém fica em Lisboa.
+// Example: A Torre de Belém situa-se em Lisboa.
+// Example: A Torre de Belém está situada em Lisboa.
+// Example: A Torre de Belém fica situada em Lisboa.
+// Example: A Torre de Belém fica localizada em Lisboa.
+// Example: A Torre de Belém localiza-se em Lisboa.
+// Example: Situa-se em Lisboa.
+// Example: Está situada em Lisboa.
+// Example: Fica situada em Lisboa.
+// Example: Fica localizada em Lisboa.
+// Example: Localiza-se em Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:ficar],#1) || SUBJ[PRE](#2[lemma:ficar],#1[monument]) ||
+       SUBJ[ELIPS](#2[lemma:situar],#1) || SUBJ[PRE](#2[lemma:situar],#1[monument]) ||
+       SUBJ[ELIPS](#2[lemma:localizar],#1) || SUBJ[PRE](#2[lemma:localizar],#1[monument])) &
+       MOD[POST](#2,#3[location]) & ~MOD[NEG](#2,?))
+   BUILDING-LOCATION(#1,#3)
+
+// Example: A Torre de Belém pode ser visitada em Lisboa.
+  if( (SUBJ[PRE](#2[lemma:visitar],#1[monument]) || SUBJ[PRE](#2[lemma:ver],#1[monument])) &
+       MOD[POST](#2,#3[location]) & VDOMAIN(#4[lemma:poder],#2) & ~MOD[NEG](#2,?)  & ~BUILDING-LOCATION(#1,#3))
+   BUILDING-LOCATION(#1,#3)
+
+// Example: Em Lisboa é possível visitar a Torre de Belém.
+// Example: É possível encontrar a Torre de Belém em Lisboa.
+// Example: Em Lisboa podemos ver a Torre de Belém.
+// Example: Em Lisboa é possível ver a Torre de Belém.
+   | PP{?,noun#1[location]} |
+   if ( (CDIR[POST](#5[lemma:visitar],#6[monument]) || CDIR[POST](#5[lemma:encontrar],#6[monument]) || CDIR[POST](#5[lemma:ver],#6[monument])) &
+        ~MOD[NEG](#3,#7) & ~BUILDING-LOCATION(#6,#1))
+   BUILDING-LOCATION(#6,#1)
+
+// Example: Em Lisboa pode-se visitar a Torre de Belém.
+// Example: Em Lisboa pode-se ver a Torre de Belém.
+   | PP{?,noun#1[location]}, VMOD{verb#2[lemma:poder]},NP{?[lemma:eu]} |
+   if ( (MOD[POST](#3[lemma:visitar],#4[monument]) || MOD[POST](#3[lemma:encontrar],#4[monument]) || MOD[POST](#3[lemma:ver],#4[monument])) &
+        ~MOD[NEG](#3,?) & ~BUILDING-LOCATION(#4,#1))
+   BUILDING-LOCATION(#4,#1)
+
+// Example: Pode-se visitar a Torre de Belém em Lisboa.
+// Example: Pode-se ver a Torre de Belém em Lisboa.
+   if ( (MOD[POST](#3[lemma:visitar],#4[monument]) || MOD[POST](#3[lemma:encontrar],#4[monument]) || MOD[POST](#3[lemma:ver],#4[monument])) &
+        MOD[POST](#3,#1[location]) & ~MOD[NEG](#3,?) & ~BUILDING-LOCATION(#4,#1))
+   BUILDING-LOCATION(#4,#1)
+
+// Example: A Microsoft está sedeada em Lisboa.
+// Example: Está sedeada em Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:sedear],#1) || SUBJ[PRE](#2[lemma:sedear],#1[SEM-Hinstitution]) || SUBJ[PRE](#2[lemma:sedear],#1[SEM-Hcollective])) &
+  MOD[POST](#2,#3[location]) & VLINK(#4[lemma:estar],#2) & ~MOD[NEG](#1,?) & ~BUILDING-LOCATION(#1,#3))
+   BUILDING-LOCATION(#1,#3)
+
+// "sedeada em Lisboa" deveria sair como APPOSIT
+// Example: A Microsoft, sedeada em Lisboa, tem muito lucro.
+   | NP{?,noun#1[SEM-Hinstitution]} |
+   if (MOD[POST](#2[lemma:sedear],#3[location]) & ~BUILDING-LOCATION(#1,#3))
+   BUILDING-LOCATION(#1,#3)
+
+// Example: A sede da Microsoft é em Lisboa.
+// Example: A sede da Microsoft localiza-se em Lisboa.
+// Example: A sede da Microsoft fica em Lisboa.
+// Example: A sede da Microsoft situa-se em Lisboa.
+// Example: A redacção do Jornal de Notícias está instalada na Avenida da Liberdade.
+// Example: A redacção do Jornal de Notícias transferiu-se para a Avenida da Liberdade.
+// Example: A redacção do Jornal de Notícias está instalada na Avenida da Liberdade.
+// Example: O departamento administrativo da Worten situa-se na Avenida da Liberdade.
+   if( (SUBJ[PRE](#2,#1[lemma:"sede ?+"]) || SUBJ[PRE](#2,#1[lemma:"redação ?+"]) || SUBJ[PRE](#2,#1[lemma:"departamento ?+"]) || SUBJ[PRE](#2,#1[lemma:"recursos humanos ?+"])) &
+       (MOD[POST](#2[lemma:ser],#3[location]) || MOD[POST](#2[lemma:localizar],#3[location]) || MOD[POST](#2[lemma:transferir],#3[location])
+        MOD[POST](#2[lemma:ficar],#3[location]) || MOD[POST](#2[lemma:situar],#3[location])  || MOD[POST](#2[lemma:instalar],#3[location]) ) &
+    )
+   BUILDING-LOCATION(#1,#3)
+
+// Example: A redacção está instalada na Avenida da Liberdade.
+// Example: A sede está instalada na Avenida da Liberdade.
+  if ( (SUBJ[PRE](#2,#1[lemma:sede]) || SUBJ[PRE](#2,#1[lemma:redação])) &
+       (MOD[POST](#2[lemma:ser],#3[location]) || MOD[POST](#2[lemma:localizar],#3[location]) || MOD[POST](#2[lemma:transferir],#3[location])
+        MOD[POST](#2[lemma:ficar],#3[location]) || MOD[POST](#2[lemma:situar],#3[location])  || MOD[POST](#2[lemma:instalar],#3[location]) ) &
+    )
+   BUILDING-LOCATION(#1,#3)
+
+// Example: A Microsoft tem a sua sede em Lisboa.
+  if ((SUBJ[PRE](#2[lemma:ter],#1[SEM-Hinstitution]) || SUBJ[PRE](#2[lemma:ter],#1[SEM-Hcollective])) & CDIR[POST](#2,#3[lemma:sede]) & MOD[POST](#2,#4[location]) &  ~MOD[NEG](#2,?))
+   BUILDING-LOCATION(#1,#4)
+
+// Example: Tem a sua sede em Lisboa.
+// Example: Tem a sede em Lisboa.
+  if (SUBJ[ELIPS](#2[lemma:ter],#1) & CDIR[POST](#2,#3[lemma:sede]) & MOD[POST](#2,#4[location]) &  ~MOD[NEG](#2,?))
+   BUILDING-LOCATION(#3,#4)
+
+
+

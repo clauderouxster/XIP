@@ -1,0 +1,156 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	terms.xip
+//! Content:	local grammar rules for the german XIP grammar
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//!
+//! Created: 	22-Oct-2008
+//! Updated: 	30-Oct-2009
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Sequence:
+
+// truncated nouns
+//:: Kinder-, Jugend- und Altenarbeit
+5> noun[pl3=+] @= (trunc[cap], ?[coord];punct[comma,coord_np=+])+, ?#1[noun],
+	where ( #0[features1] = {#1} ).
+
+
+// truncated adjectives
+//:: Groß- oder kleingeschriebene Wörter
+5> adj @= (trunc[start];trunc[cap:~], ?[coord];punct[comma,coord_ap=+])+, ?#1[adj,compd_level],
+	where ( #0[features1] = {#1} ).
+
+// TO DO:
+//:: teure Jugend- und noch teurere Altenarbeit
+6> ap[attr=+] = | trunc[cap], ?[coord];punct[comma,coord_np=+] | (adv;adj[pred])*, ?#1[adj,attr,invar] | noun#2[common] |.
+//	where ( #0[features1] = {#2} ).
+
+6> ap[attr=+] = | trunc[cap], ?[coord];punct[comma,coord_np=+] | (adv;adj[pred])*, ?#1[adj,attr,invar:~] | noun#2[common] |.
+//	where ( 	#1[nagr]:#2[nagr] & #0[nagr] = {#1&#2} ).
+ 
+7> noun @= (trunc[cap], ?[coord,coord_np=+];punct[comma,coord_np=+])+, ap, noun#1,
+	where ( #0[features1] = {#1} ).
+
+
+// :: ----------------------------------------------------------------------------
+//:: zum Beispiel
+//!: er fügte zum Beispiel seines Vaters ein weiteres hinzu.
+10> adv[sadv=+, mod_wie=+] = prep[det,lemma:zu], noun[lemma:Beispiel].
+
+//:: vor allem
+//!: vor allem anderen
+
+10> adv[sadv=+] = prep[lemma:vor], pron[lemma:alle, dat, sg, neut] ~|?<neut,dat,sg>;?<masc,dat,sg> |.
+
+//:: ab und zu
+//:! er reist ab und zu Ostern kommt er wieder
+10> adv[sadv=+] = adv[lemma:ab], conj[lemma:und], adv[lemma:zu].
+
+//:: unter anderem
+//!: unter anderem Schrott
+10> adv[sadv=+] = prep[lemma:unter], pron[lemma:andere, dat, sg, neut] ~|?<neut,dat,sg>;?<masc,dat,sg> |.
+
+//:: mehr als sieben Teile
+10> adv[predet=+,prenum=+] = adv[quant,comp], conj[lemma:als] | ?[card] |.
+
+//:: weniger als jeder dritte
+10> adv[predet=+,prenum=+] = adv[quant,comp], conj[lemma:als] | (det;adj[pronom]), ?[ord] |.
+
+
+//:: ohne dass sie es will
+//:: anstatt dass sie ihm heilft
+//:: so dass es ihr bald besser geht
+10> conj[subord=+] = prep[lemma:ohne];prep[lemma:anstatt];adv[lemma:so], conj[lemma:dass].
+
+
+// negation "gar nicht"
+10> negat= adj[pred,pos,lemma:gar], negat.
+
+// quantifiers
+//:: er hat ein (kleines) bisschen Zeit
+//:: er ist ein bisschen schneller als vorher
+//:: er schläft ein wenig
+
+10> adj[pred=+,attr=+,quant=+] = det[neut,sg], adj*, adj[quant,lemma:bisschen].  
+10> adj[pred=+,attr=+,quant=+] = det[neut,sg,indef], adj*, adv[quant,lemma:wenig,pos].  
+
+//:: 20 Millionen -> num
+//:! BUT: ein Drittel -> noun
+10> num[card=+] = num[card], noun[num,fract:~].
+
+//:: bis zu 20 $
+10> adv[prenum=+] = prep[lemma:bis], prep[lemma:zu] | num[card] |.
+
+//:: bis zum Wochenende
+10> prep[case:!] = prep[lemma:bis], prep[lemma:zu,!case:!].
+//:: bis auf seinen Vater
+10> prep[acc=+] = prep[lemma:bis], prep[acc].
+
+//:: bis nach Spanien
+10> prep[dat=+] = prep[lemma:bis], prep[lemma:nach].
+
+//:: anhand von Beispielen
+10> prep[dat=+] = prep[lemma:anhand], prep[lemma:von].
+
+
+// ------------------------------------------------------------------------------------------
+// TIME EXPRESSIONS
+20> noun[time=+,invar=+] @= num[time], (noun[lemma:Uhr]).
+
+20> noun[time=+,invar=+] @= num[hour], noun[lemma:Uhr], (num[minute]).
+
+21> noun[time=+,invar=+] =  num[hour] | ?[coord];punct[comma], ?[time] |.
+
+// ------------------------------------------------------------------------------------------
+// DATES
+
+//:: 3. April 2005; 3. 4. 2009
+30> noun[date=+,masc=+,sg3=+] @= num[day], noun[month];num[month], (num[year]),
+	where (flexMasc(#0) ).
+
+//:: 3.4.2009
+30> noun[date=+,masc=+,sg3=+] = num[date],
+	where (flexMasc(#0) ).
+
+//:: Ostern 2008
+//:: im Juni 2007
+//!BUT:: am Montag 18 Uhr
+
+30> noun[date=+,holiday:!,nagr:!] = noun[is_date,day:~,!holiday:!,!nagr:!], num[year] | ?[common:~] |.
+30> noun[date=+,holiday:!,nagr:!] = noun[is_date,day:~,!holiday:!,!nagr:!], num[year,last].
+
+31> noun[date=+,masc=+,invar=+] = num[day] | ?[coord];punct[comma], ?[date] |.
+
+
+//:: Montag, der 13.
+32> noun[date=+, day=+,masc=+,sg3=+] = | noun[day], (punct[comma]), (det[def,masc]) | num[day] ,
+	where (flexMasc(#0) ).
+
+
+//:: Christi Himmelfahrt, Tag der Arbeit, etc.
+33> noun[date=+,holiday=+, temporal=+] = noun[lemma:Christi];noun[lemma:Maria], noun[lemma:"Himmel?Fahrt"].
+33> noun[date=+,holiday=+, temporal=+] = noun[lemma:Maria], noun[lemma:"Empfängnis"].
+33> noun[date=+,holiday=+, temporal=+] = trunc[lemma:Buße], conj[lemma:und], noun[lemma:"beten?Tag"].
+33> noun[date=+,holiday=+, temporal=+] = adj[ord], noun[lemma:"Weihnacht?*tag"].
+33> noun[date=+,holiday=+, temporal=+] = adj[lemma:heilig], num[lemma:drei], noun[lemma:"König",pl].
+33> noun[date=+,holiday=+, temporal=+] = adj[lemma:heilig,cap], noun[lemma:"Abend",sg].
+
+33> noun[date=+,holiday=+, temporal=+] = noun[lemma:Tag], det[def,fem,sg,gen], noun[lemma:"Arbeit",sg].
+33> noun[date=+,holiday=+, temporal=+] = noun[lemma:Tag], det[def,fem,sg,gen], adj[lemma:deutsch], noun[lemma:"Einheit",sg].
+
+Sequence:
+//:: Im Jahre 999; anno 1756
+34> ?[date=+,year=+] = | prep[det,lemma:in],noun[lemma:Jahr,dat] | num[card].
+34> ?[date=+,year=+] = | adv[lemma:anno] | num[card].
+
+//:: 800 v.Chr.
+35> num[year=+] = num[card], adv[postmod,year].
+

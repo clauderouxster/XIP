@@ -1,0 +1,122 @@
+# ===================================================================
+# CONTENT:	Tool for construction of multi-word staplers
+# AUTHOR:	Anne Schiller 
+# ===================================================================
+# Usage:	xfst 	-s <MultiWord.FST>
+#		     	-s <BasicTokenizer>
+#			-l <ThisFile>
+
+# ===================================================================
+system date
+
+define MWE
+define TOK
+
+echo >>> define token separator
+define BOUND	"\n";
+
+echo >>> normalize multi-words
+
+regex
+[ 
+	[ 0 <- "\n" || _ .#. ] 
+.o.	[ TOK .o. MWE ] 
+];
+cleanup net
+
+define MWE
+
+echo >>> define auxiliary markers
+define LEFT0	"<<";
+define LEFT	"<*";
+define RIGHT0	">>";
+define RIGHT	"*>";
+
+define MARKUP	[LEFT0|LEFT|RIGHT0|RIGHT];
+
+define Char	\[BOUND|MARKUP];
+define Word	[Char]+;
+
+define Token	(0:[LEFT0]) Word 0:[RIGHT0] ;
+
+# ===================================================================
+echo >>> define INPUT
+define INPUT	~$[MARKUP] .o. [BOUND]* [(Token) BOUND]* (Token) ;
+
+# ===================================================================
+echo >>> define multi-token sequence
+define SeqMWE	Word [ 0:[RIGHT0] BOUND (0:[LEFT0]) Word ]* ;
+
+echo >>> define UPPER0
+define UPPER0	[MWE.1 .o. SeqMWE].2 ;
+
+echo >>> define UPPER1
+define UPPER1	[UPPER0 .o. [RIGHT0 (->) 0] ].2 ;
+
+echo >>> define UPPER2
+define UPPER2	[UPPER1 .o. [RIGHT0 -> RIGHT] .o. [LEFT0 -> LEFT]].2 ;
+
+# ========================================================
+echo >>> define initial left bracketing
+
+read regex
+[
+  [ LEFT0 => _ UPPER0 RIGHT0 ]
+  .o.
+  ~$[BOUND UPPER0 RIGHT0] & ~[UPPER0 RIGHT0 ?*]
+];
+define INITLEFT
+
+# ========================================================
+echo >>> define left to right replacement
+
+read regex
+[
+ [ [ ~$[LEFT0] [LEFT0]:[LEFT] UPPER1 [RIGHT0]:[RIGHT] ]* ~$[LEFT0] ]
+ .o.
+ [ LEFT0 -> [] .o. RIGHT0 -> [] ]
+];
+define LEFT2RIGHT
+
+# ========================================================
+echo >>> define longest match
+read regex
+[ ~$[ LEFT [UPPER2 & $[RIGHT] ] (RIGHT) BOUND ] ];
+define LONGESTMATCH
+
+# ========================================================
+echo >>> define replacement
+read regex
+[
+  [ ~$[LEFT] [LEFT]:0 MWE [RIGHT]:0 ]* ~$[LEFT]
+];
+define REPLACE
+
+
+# ========================================================
+echo >>> ... compose 
+read regex 
+[
+	INPUT		.o.
+	INITLEFT	.o.
+	LEFT2RIGHT	.o.
+	LONGESTMATCH	.o.
+	REPLACE
+];
+
+# ===================================================================
+echo >>> invert transducer
+invert net
+
+define STAP
+
+read regex `[ `[ `[` [STAP, ">>", ?], "<<", ?], "*>", ?], "<*", ?];
+ 
+define STAP
+
+system date
+
+# ===================================================================
+echo >>> compose with basic tokenizer
+
+regex STAP .o. TOK;

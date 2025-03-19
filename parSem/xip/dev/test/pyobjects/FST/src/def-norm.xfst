@@ -1,0 +1,389 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      definitions for normalizers
+# 
+# LANGUAGE:     (FRENCH)
+#
+# AUTHOR:       S. Aït-Mokhtar, A.Schiller
+#
+# CREATED:      07-Sep-1999 (SAM)
+# UPADTED:	31-Jan-2006 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -l [ThisFile] -l [norm[1,2,3}.xfst]
+# ============================================================================
+
+
+#
+# Aliases
+
+define BLANK  %  ;
+define NL [ ("\r") "\n" ] ;
+define TAB "\t" ;
+
+define Space [ BLANK | NL | TAB ] ;
+
+define LowerCase [
+        a | à | â | b | c | ç | d | e | é | è | ê | f | g | h |
+        i | î | ï | j | k | l | m | n | ñ | o | ô | p | q | r | s |
+        t | u | û | ü | v | w | x | y | z
+];
+
+define UpperCase [
+     A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R | S | T | U | V | W | X | Y | Z | 
+     À | Â | Ç | È | É | Ê | Î | Ï | Ñ | Ô | Ö | Û | Ü | ÿ 
+ 	
+
+
+];
+
+define Letter [ LowerCase | UpperCase ]; 
+
+define Separator [
+        %, | %; | %: | %. | %! | %? | %- | %" | %' | %` | %( | %)
+];
+
+
+define UpperToOneMin [
+	À:à | 
+	Â:â | 
+	Ç:ç |
+	È:è |
+	É:é |
+	Ê:ê |
+	Î:î |
+	Ï:ï |
+	Ô:ô |
+	Ö:ö |
+	Û:û |
+	Ü:ü |
+	ÿ:ÿ |
+        A:a |
+        B:b |
+        C:c |
+        D:d |
+        E:e |
+        F:f |
+        G:g |
+        H:h |
+        I:i |
+        J:j |
+        K:k |
+        L:l |
+        M:m |
+        N:n |
+        O:o |
+        P:p |
+        Q:q |
+        R:r |
+        S:s |
+        T:t |
+        U:u |
+        V:v |
+        W:w |
+        X:x |
+        Y:y |
+        Z:z 
+];
+
+#
+# Upper-case letter interpretations
+#####################################
+
+define UpperAnalysis [
+
+	À:à | 
+	Â:â | 
+	Ç:ç |
+	È:è |
+	É:é |
+	Ê:ê |
+	Î:î |
+	Ï:ï |
+	Ô:ô |
+	Ö:ö |
+	Û:û |
+	Ü:ü |
+	ÿ:ÿ |
+        A:A | A:a | A:à | A:â |
+        B:B | B:b |
+        C:C | C:c |
+        D:D | D:d |
+        E:E | E:e | E:é | E:è | E:ê | E:É | E:È | E:Ê |
+        F:F | F:f |
+        G:G | G:g |
+        H:H | H:h |
+        I:I | I:i | I:î | I:ï | I:Î |
+        J:J | J:j |
+        K:K | K:k |
+        L:L | L:l |
+        M:M | M:m |
+        N:N | N:n | N:ñ |
+        O:O | O:o | O:ô | O:ö |
+        P:P | P:p |
+        Q:Q | Q:q |
+        R:R | R:r |
+        S:S | S:s |
+        T:T | T:t |
+        U:U | U:u | U:ù | U:û |
+        V:V | V:v |
+        W:W | W:w |
+        X:X | X:x |
+        Y:Y | Y:y |
+        Z:Z | Z:z  	
+];
+
+
+# extended recognition of capital letter: this is to avoid normalising C' as ç' (rather than c') during the first normalisation phase
+
+define UpperAnalysis2 UpperAnalysis | C:ç ;
+
+#define InCapToMin [
+#       Letter [ UpperToOneMin | LowerCase ]+ 
+#];
+
+
+define SentEnd [ %. | %! | %? ] ;
+define WordLimits [Space | %' | %` | %" | %( ] ; 
+ 
+# the following will lowercase initial capital, if appearing at beg. of sentence
+define FirstCapToLowx [
+        UpperAnalysis
+        LC [
+                [ WordLimits+  SentEnd] |    # after an end of sentence
+                [ WordLimits* NL ] |          # after a newline 
+                [ WordLimits* BOT ]           # right after beginning of text
+           ]
+        RC [ LowerCase | %- ]* [ WordLimits | EOT | %,]
+];
+
+# the following will lowercase initial capital, if appearing at beg. of sentence or in middle of sentence
+define FirstCapToLow [
+        UpperAnalysis
+        LC [
+#                [ WordLimits+  SentEnd] |    # after an end of sentence
+                [ WordLimits] |    # in middle of sentence
+                [ WordLimits* NL ] |          # after a newline 
+                [ WordLimits* BOT ]           # right after beginning of text
+           ]
+#        RC [ LowerCase | %- ]* [ WordLimits | EOT | %,]
+# added "SentEnd" - otherwise words at end of sentence are not normalized !! (AnS)
+        RC [ LowerCase | %- ]* [ WordLimits | EOT | %, | SentEnd]
+];
+
+# the following will lowercase initial capital, in middle of sentence
+define FirstCapToLow2 [
+        UpperAnalysis2  LC [
+                [ WordLimits  ] 
+           ]
+        RC [ LowerCase | %- ]* [ WordLimits | EOT | %,]
+];
+
+
+
+##define FirstCapToCapOrLow [
+##        [ UpperAnalysis | Letter ]
+##        LC WordLimits
+##        RC UpperCase
+##];
+
+#echo >>> AllCapToLow
+define AllCapToLow [
+        UpperAnalysis2   
+];
+
+
+
+define NoDiacritic [
+	a:a |
+	a:à | 
+	a:â | 
+	c:c |
+	c:ç |
+	e:e |
+	e:è |
+	e:é | 
+	e:ê |
+	e:ë |
+	i:i |
+	i:î |
+	i:ï |
+	o:o |
+	o:ô |
+	o:ö |
+	u:u |
+	u:û |
+	u:ü |
+	y:y |
+	y:ÿ 
+];
+#
+# Blank sequences
+#################
+
+define SpaceNoNL [ BLANK | TAB ];
+
+
+define SpacesAnalysis [
+        [ [ SpaceNoNL ]+ .x. [ %  ] ] |
+        [ [ SpaceNoNL .x. 0 ]*  NL [ SpaceNoNL .x. 0 ]* ]+ |
+        [ [ SpaceNoNL .x. 0 ]*  NL:%  [ SpaceNoNL .x. 0 ]* ]+
+];
+
+#
+# Hyphenation interpretations: with carriage return
+##############################
+define Hyphenation [%- Space* NL Space*] ;
+
+define HyphenAnalysis [
+        [
+         [ Hyphenation .x. 0 ]  |
+         [ Hyphenation .x. [%-] ] 
+        ]
+        [ LC Letter ]
+]; 
+
+
+
+# Hyphenation interpretations: without carriage return (e.g. en-semble)
+##############################
+
+
+define HyphenAnalysis2 [
+
+#         [ %- .x. 0 ] 
+	[ %-:0 LowerCase]
+        LC Letter Letter
+        RC Letter Letter
+]; 
+
+
+# ============================================================================
+# translations of specific XML coding in ISO characters
+
+define XmlCar [
+	[[%& a g r a v e %;] 	.x. [à]]
+|	[[%& A g r a v e %;] 	.x. [À]]
+|	[[%& a c i r c %;] 	.x. [â]]
+|	[[%& a r i n g %;] 	.x. [a]]
+|	[[%& A r i n g %;] 	.x. [A]]
+|	[[%& A c i r c %;] 	.x. [Â]]
+|	[[%& a u m l %;] 	.x. [ä]]
+|	[[%& A u m l %;] 	.x. [Ä]]
+|	[[%& A t i l d e %;] 	.x. [ã]]
+|	[[%& a a c u t e %;] 	.x. [á]]
+|	[[%& a b r e v e %;] 	.x. [a]]
+|	[[%& A b r e v e %;] 	.x. [A]]
+|	[[%& A a c u t e %;] 	.x. [Á]]
+|	[[%& a c a r o n %;] 	.x. [a]]
+|	[[%& A c a r o n %;] 	.x. [A]]
+|	[[%& c c a r o n %;] 	.x. [c]]
+|	[[%& C c a r o n %;] 	.x. [C]]
+|	[[%& c c e d i l %;] 	.x. [ç]]
+|	[[%& C c e d i l %;] 	.x. [Ç]]
+|	[[%& c a c u t e %;] 	.x. [c]]
+|	[[%& c b r e v e %;] 	.x. [c]]
+|	[[%& e a c u t e %;] 	.x. [é]]
+|	[[%& e c a r o n %;] 	.x. [e]]
+|	[[%& E c a r o n %;] 	.x. [E]]
+|	[[%& %#  2 3 3 %;] 	.x. [é]]
+|	[[%& E a c u t e %;] 	.x. [É]]
+|	[[%& e g r a v e %;] 	.x. [è]]
+|	[[%& E g r a v e %;] 	.x. [È]]
+|	[[%& e c i r c %;] 	.x. [ê]]
+|	[[%& E c i r c %;] 	.x. [Ê]]
+|	[[%& e u m l %;] 	.x. [ë]]
+|	[[%& E u m l %;] 	.x. [Ë]]
+|	[[%& e b r e v  e %;] 	.x. [e]]
+|	[[%& e c e d i l %;] 	.x. [e]]
+|	[[%& e t i l d e %;] 	.x. [e]]
+|	[[%& s u p 2 e %;] 	.x. [e]]
+|	[[%& g b r e v e %;] 	.x. [g]]
+|	[[%& g c a r o n %;] 	.x. [g]]
+|	[[%& i c i r c %;] 	.x. [î]]
+|	[[%& I c i r c %;] 	.x. [Î]]
+|	[[%& i u m l %;] 	.x. [ï]]
+|	[[%& I u m l %;] 	.x. [Ï]]
+|	[[%& i a c u t e %;] 	.x. [í]]
+|	[[%& I a c u t e %;] 	.x. [Í]]
+|	[[%& i g r a v e %;] 	.x. [ì]]
+|	[[%& l s t r o k %;] 	.x. [l]]
+|	[[%& m i c r o %;] 	.x. [µ]]
+|	[[%& n a c u t e %;] 	.x. [n]]
+|	[[%& n t i l d e %;] 	.x. [ñ]]
+|	[[%& o g r a v e %;] 	.x. [ò]]
+|	[[%& o r d m %;] 	.x. [%.]]
+|	[[%& o t i l d e %;] 	.x. [õ]]
+|	[[%& o e l i g %;] 	.x. [o e]]
+|	[[%& o c i r c %;] 	.x. [ô]]
+|	[[%& O c i r c %;] 	.x. [Ô]]
+|	[[%& o s l a s h %;] 	.x. [o]]
+|	[[%& O u m l %;] 	.x. [Ö]]
+|	[[%& o a c u t e %;] 	.x. [ó]]
+|	[[%& O a c u t e %;] 	.x. [Ó]]
+|	[[%& O E l i g %;] 	.x. [O E]]
+|	[[%& %# 3 3 9 %;] 	.x. [o e]]
+|	[[%& p e r m i l %;] 	.x. [p o u r %   m i l l e]]
+|	[[%& p l u s m n %;] 	.x. [%+ %/ %-]]
+|	[[%& p r i m e %;] 	.x. [%']]
+|	[[%& r b r e v e %;] 	.x. [r]]
+|	[[%& r c a r o n %;] 	.x. [r]]
+|	[[%& s a c u t e %;] 	.x. [s]]
+|	[[%& S a c u t e %;] 	.x. [S]]
+|	[[%& s b r e v e %;] 	.x. [s]]
+|	[[%& S b r e v e %;] 	.x. [S]]
+|	[[%& S c e d i l %;] 	.x. [S]]
+|	[[%& s c e d i l %;] 	.x. [s]]
+|	[[%& s c a r o n %;] 	.x. [s]]
+|	[[%& s u p 1 e %;] 	.x. [e]]
+|	[[%& s u p 2 e %;] 	.x. [è m e]]
+|	[[%& s u p 3 e %;] 	.x. [è r e]]
+|	[[%& t i m e s %;] 	.x. [X]]
+|	[[%& t r a d  e %;] 	.x. [T M]]
+|	[[%& u a c u t e %;] 	.x. [ú]]
+|	[[%& u g r a v e %;] 	.x. [ù]]
+|	[[%& U g r a v e %;] 	.x. [Ù]]
+|	[[%& u u m l %;] 	.x. [ü]]
+|	[[%& U u m l %;] 	.x. [Ü]]
+|	[[%& u c i r c %;] 	.x. [û]]
+|	[[%& U c i r c %;] 	.x. [Û]]
+|	[[%& v v %;] 	.x. [v]]
+|	[[%& y a c u t e %;] 	.x. [ý]]
+|	[[%& Y a c u t e %;] 	.x. [Y]]
+|	[[%& z b r e v  e %;] 	.x. [z]]
+|	[[%& Z b r e v e %;] 	.x. [Z]]
+|	[[%& l a q u o %;] 	.x. [«]]
+|	[[%& %# 1 7 1 %;] 	.x. [«]]
+|	[[%& %# 1 8 7 %;] 	.x. [»]]
+|	[[%& r a q u o %;] 	.x. [»]]
+|	[[%& n b s p %;] 	.x. [% ]]
+|	[[%& y u m l %;] 	.x. [ÿ]]
+|	[[%& %# 3 4 %;] 	.x. [%"]]
+|	[[%& l s q u o %;] 	.x. [%"]]
+|	[[%& l t %;] 		.x. [%<]]
+|	[[%& m i n u s %;] 	.x. [%-]]
+|	[[%& d e g %;] 		.x. [°]]
+|	[[%& m i d d o t %;] 	.x. [X]]
+|	[[%& p i %;] 		.x. [p i]]
+|	[[%& P i %;] 		.x. [P I]]
+|	[[%& m u %;] 		.x. [µ]]
+|	[[%& r s q b %;] 	.x. [%]]]
+|	[[%& h e l l i p %;] 	.x. [%.%.%.]]
+|	[[%& %# 8 2 1 1 %;] 	.x. [%-]]
+|	[[%& m d a s h %;] 	.x. [%-]]
+|	[[%& n d a s h %;] 	.x. [%-]]
+|	[[%& n s d o t %;] 	.x. [%.]]
+|	[[%& n s c o m m a %;] 	.x. [%,]]
+|	[[%& m l d r %;] 	.x. [%.%.%.]]
+|	[[%& s i a l o r s %;] 	.x. [%= %>]]
+|	[[%& %# 1 6 0 %;] 	.x. [%.]]
+|	[[%& n s a p o s %;] 	.x. [%']]
+|	[[%& n u m s p %;] 	.x. [%.]]
+|	[[%& a m p %;] 		.x. [%&]]
+|	[[%& %# 8 2 1 2 %;] 	.x. [%~]]
+|	[[%& t i %;] 		.x. [%-]]
+|	[[%& c o  p  y %;] 	.x. [©]]
+|	[[%& f r a  c 1 2 %;] 	.x. [1 %/ 2]]
+|	[[%& %# 3 9 %;] 	.x. [%']] 
+];
+

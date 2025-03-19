@@ -1,0 +1,205 @@
+<project name="languageGuesser" default="compile" basedir=".">
+
+<property name="name"	 		value="languageGuesser" />
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"			value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}/../../common" />
+<import file="${common.dir}/buildInclude.xml" />
+
+<!-- project properties -->
+<!-- archive -->
+<property name="archive.name"		value="archive-${languageGuesser.version}-${curDate.now}" />
+<property name="archive.zip.file"	location="${archive.root}/${archive.name}.zip" />
+<!-- delivery -->
+<property name="delivery.name"		value="${name}-${languageGuesser.version}" />
+<property name="delivery.dir"		location="${delivery.root}/${delivery.name}" />
+<property name="delivery.zip.file"	location="${delivery.root}/${delivery.name}.zip" />
+<!-- ftp -->
+<property name="ftp.login" 		value="ftp-lg" />
+<property name="ftp.password" 		value="lg23pt05" />
+<property name="ftp.login.client" 	value="" />
+<property name="ftp.password.client" 	value="" />
+<property name="ftp.remote.dir"		value="/pub/ftp-lguesser" />
+<!-- debug,log -->
+<property name="cc.debug"               value="${cc.debug.common}" />
+<property name="log.level"              value="verbose" />
+<!-- name -->
+<!-- define -->
+<property name="define.common"          value="" />
+<property name="define.windows"         value="XIPDLL_EXPORT" />
+<property name="define.solaris"         value="" />
+<property name="define.linux"           value="" />
+<property name="define.64bits"          value="ARCH64BITS" />
+<!-- dir -->
+<property name="sourceLangData.dir"   location="${source.dir}/langdata" />
+<property name="sourceStrhash.dir"    location="${source.dir}/strhash" />
+<!-- source file names -->
+<property name="source.files1" value="guess_lib.c" />
+<property name="source.files2" value="string2id.c" />
+<!-- if this list will be updated the file language.c must be also updated using language.c.ref
+ cze.c				Czech
+ dan.c dau.c:   		Danish_iso1, Danish_utf8
+ dut.c : 			Dutch
+ eng.c : 			English
+ fin.c fiu.c :			Finnish_iso1, Finnish_utf8
+ fre.c freU.c fru.c :		French_iso1, French, French_utf8
+ gre.c gru.c			Greek_iso7, "Greek_UTF8
+ hun.c huu.c			Hungarian_iso2, Hungarian_UTF8
+ ger.c gmu.c :			German_iso1, German_utf8
+ ita.c itaU.c itu.c :		Italian_iso, Italian, Italian_utf8
+ nor.c nou.c :			Norwegian_iso1, Norwegian_utf8
+ plu.c pol.c pow.c		Polish_utf8, Polish_ascii, Polish_cp1250
+ por.c porU.c pou.c :		Portuguese_iso1, Portuguese, Portuguese_utf8
+ rui.c ruk.c ruu.c ruw.c :	Russian_iso5, Russian_koi8r, Russian_utf8, "Russian_cp1251
+ spa.c spaU.c spu.c :		Spanish_iso1, Spanish, Spanish_utf8
+ swe.c swu.c :			Swedish_iso1, Swedish_utf8
+-->
+<property name="source.files3" value="languages.c cze.c dan.c dau.c dut.c eng.c fin.c fiu.c fre.c freU.c fru.c gre.c gru.c hun.c huu.c ger.c gmu.c ita.c itaU.c itu.c nor.c nou.c plu.c pol.c pow.c por.c porU.c pou.c rui.c ruk.c ruu.c ruw.c spa.c spaU.c spu.c swe.c swu.c "/> 
+
+<target name="all" depends="clean, compile, test" description=" clean + compile And Link (shared and static)" />
+
+
+<target name="test" depends="compile" description=" ">
+	<ant antfile="build.xml" dir="${basedir}/test/test1" target="test" inheritAll="false" />
+</target>
+
+<!-- ********************************************  build  delivery ************************************* -->
+<target name="delivery" depends="" description=" build the delivery">
+	 <condition property="compilation.complete">
+                <and>
+			<available file="${lib.dirs}/linux/staticLib/lib${name}.a"/>
+			<available file="${lib.dirs}/solaris/staticLib/lib${name}.a"/>
+			<available file="${lib.dirs}/windows/staticLib/${name}.lib"/>
+			<!--
+			<available file="${lib.dirs}/linux/sharedLib/lib${name}.so"/>
+			<available file="${lib.dirs}/solaris/sharedLib/lib${name}.so"/>
+			<available file="${lib.dirs}/windows/sharedLib/${name}.dll"/>
+			-->
+                </and>
+        </condition>
+        <fail unless="compilation.complete" message="compilation not completed" />
+	<delete dir="${delivery.dir}" />
+	<mkdir dir="${delivery.dir}" />
+	<copy todir="${delivery.dir}/lib">
+    		<fileset dir="${lib.dirs}" excludes="**/history.xml,*.rsp"/>
+  	</copy>
+	<copy todir="${delivery.dir}/sample">
+    		<fileset dir="${sample.dir}" excludes=""/>
+  	</copy>
+	<copy file= "${include.dir}/guess_lib.h" todir="${delivery.dir}/include" />
+	<copy file= "${include.dir}/globals.h" todir="${delivery.dir}/include" />
+	<copy file= "${doc.dir}/api.doc" todir="${delivery.dir}/doc" />
+	<delete file="${delivery.zip.file}" />
+	<zip destfile="${delivery.zip.file}" >
+		<zipfileset dir="${delivery.dir}" prefix="${delivery.name}"/>
+	</zip>
+</target>
+
+
+<!-- ********************************************  compile and link(shared and static lib)  code  ************************************* -->
+<!--
+<target name="compile" depends=" sharedLib" description="compile And Link (shared and static)" >
+-->
+<target name="compile" depends=" staticLib,sharedLib" description="compile And Link (shared and static)" >
+</target>
+
+<!-- ********************************************  library: compile and link(static lib)  code  ************************************* -->
+<target name="staticLib" depends="setCommonProperties" description="compile and link (static lib) ">
+	<property name="static.lib.obj.dir.name" value="staticLib" />
+        <property name="staticLib.record.file" value="${log.dir}/${static.lib.obj.dir.name}" />
+        <record name="${staticLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="static.lib.obj.dir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.obj.dir}" />
+        <property name="static.lib.dir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.dir}" />
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${static.lib.obj.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="static" runtime="dynamic" outfile="${static.lib.dir}/${name}">
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<compilerarg value="${compiler.arg}" location="start" />
+			<compilerarg value="${compiler.arg.64b}" location="start" if="arch64bits" />
+			<fileset dir="${source.dir}" includes="${source.files1}" />
+			<fileset dir="${sourceStrhash.dir}" includes="${source.files2}" />
+			<fileset dir="${sourceLangData.dir}" includes="${source.files3}" />  
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+			<defineset define="${define.common}"/>
+			<defineset define="${define.64bits}" if="arch64bits"/>
+                        <defineset define="${define.windows}" if="windows"/>
+                        <defineset define="${define.solaris}" if="solaris"/>
+                        <defineset define="${define.linux}" if="linux"/>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+		</linker>
+	</cc>
+        <record name="${staticLib.record.file}" action="stop"/>
+</target>
+
+<!-- ********************************************  library: compile and link(shared lib)  code  ************************************* -->
+<target name="sharedLib" depends="setCommonProperties" description="compile and link (shared lib) ">
+	<property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <property name="sharedLib.record.file" value="${log.dir}/${shared.lib.obj.dir.name}" />
+        <record name="${sharedLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="shared.lib.obj.dir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.obj.dir}" />
+        <property name="shared.lib.dir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.dir}" />
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${shared.lib.obj.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="shared" runtime="dynamic" outfile="${shared.lib.dir}/${name}">
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<compilerarg value="${compiler.arg}" location="start" />
+			<compilerarg value="${compiler.arg.64b}" location="start" if="arch64bits" />
+			<fileset dir="${source.dir}" includes="${source.files1}" />
+			<fileset dir="${sourceStrhash.dir}" includes="${source.files2}" />
+			<fileset dir="${sourceLangData.dir}" includes="${source.files3}" />  
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+			</includepath>
+			<defineset define="${define.common}"/>
+			<defineset define="${define.64bits}" if="arch64bits"/>
+                        <defineset define="${define.windows}" if="windows"/>
+                        <defineset define="${define.solaris}" if="solaris"/>
+                        <defineset define="${define.linux}" if="linux"/>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<linkerarg value="${linker.shared.arg}" location="start" />
+			<linkerarg value="${linker.arg.64b}" location="start" if="arch64bits" />
+			<syslibset libs="${system.libC.names}" />
+			<!-- we use the static lib for the extern lib -->
+		</linker>
+	</cc>
+        <record name="${sharedLib.record.file}" action="stop"/>
+</target>
+
+<target name="srcMin" depends="" description="">
+        <delete dir="${basedir}/application" />
+        <delete dir="${basedir}/doc" />
+        <delete dir="${basedir}/java" />
+        <delete dir="${basedir}/sample" />
+        <delete dir="${basedir}/sample" />
+        <delete dir="${basedir}/test" />
+</target>
+
+<!-- ********************************************  property  ************************************* -->
+<target name="setCommonProperties" depends="platformSetting" description="action before compiling">
+	<property name="lib.dir" location="${lib.dirs}/${platform-arch}" />
+        <property name="obj.dir" location="${obj.dirs}/${platform-arch}" />
+        <property name="bin.dir" location="${bin.dirs}/${platform-arch}" />
+        <property name="log.dir" location="${log.dirs}/${platform-arch}" />
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${obj.dir}" />
+        <mkdir dir="${bin.dir}" />
+        <mkdir dir="${log.dir}" />
+</target>
+
+<target name="localCleanAll" depends="" >
+	<ant antfile="build.xml" dir="${basedir}/test/test1" target="cleanAll" inheritAll="false" />
+</target>
+
+<target name="localClean" depends="" >
+</target>
+
+</project>
+

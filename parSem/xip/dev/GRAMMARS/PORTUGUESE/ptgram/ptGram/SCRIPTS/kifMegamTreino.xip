@@ -1,0 +1,68 @@
+//Main file to be leaded in the potuguese.xip grammar
+
+kif:
+
+//loadin("/afs/l2f/home/travanca/tese-kif-test/ptGram/SCRIPTS/kifMegamFeatureExtraction.kif");
+
+string outputPath=_paths[1]+"/megamTreino.tmp";
+file outputFile;
+
+/////////////////////////////////////////////
+// Print viper classes sentences
+/////////////////////////////////////////////
+
+function printViperClass(node first, node last){
+	node currNode = first;
+	string class="";
+	
+	while(currNode.number() < last.number()){
+		class+=currNode.surface();
+		currNode = getNextNode(currNode);
+	}
+	
+	outputFile.write("#viper-class",":",class,_endl);
+}
+
+/////////////////////////////////////////////
+// Print megam entry
+/////////////////////////////////////////////
+
+function printEntries(string lemma, list megamFeatures){
+	
+	string megamFeaturesString = megamFeatures.join(" 1.0 ");
+	//must add the last one manually! join() only adds the separator string inbetween elements
+	megamFeaturesString += " 1.0";
+	
+	outputFile.write("#treino","\t",lemma,"\t",megamFeaturesString,_endl);
+}
+
+
+/////////////////////////////////////////////
+// entry function called from the grammar
+/////////////////////////////////////////////
+function buildMegamTreino(node n){
+	
+	string lemma=n.lemma(); //more than one value can be returned return(true);
+	string pos=n.pos();
+	
+	if(debugMegam==true){ println(_endl,"*** Build Treino: ",n, "lemma: ",lemma); }
+	
+	list megamFeatures=buildFeatureList(n);
+	
+	printEntries(lemma,megamFeatures);
+}
+
+function initialize(){
+	try{
+		outputFile.openappend(outputPath);
+	}
+	catch(){
+		outputFile.openwrite(outputPath);
+	}
+}
+
+
+function finish(){	
+	outputFile.close();
+	cleanDependencies();
+}

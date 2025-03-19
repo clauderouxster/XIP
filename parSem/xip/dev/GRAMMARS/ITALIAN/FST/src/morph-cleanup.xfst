@@ -1,0 +1,482 @@
+# ============================================================================
+# ENCODING:	UTF-8
+# TYPE:		(x)fst script 
+# CONTENT:	modifying morph. lexicon (for tagger)
+#
+# LANGUAGE:	ITALIAN
+#
+# AUTHOR:	A. Schiller
+#
+# CREATED:	28-Oct-1999	
+# UDATED:	20-Apr-2005	 (by A.Schiller)
+#		- modified boundary symbols
+#
+# UPDATED:	19-Jan-2006
+#		- added unicode alternatives for %'and %-
+#		- added unicode punctuations
+# UPDATED:	03-Apr-2006 	(AS: changed to utf-8)
+# ============================================================================
+# USAGE:	xfst -s <LexFST> -l [ThisFile]
+# ============================================================================
+set quit-on-fail ON
+
+define LEX
+
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+# ----------------------------------------------------------------------------
+echo >>> remove some elided forms (as they are separated by the tokenizer)
+
+regex [
+#	~$[ CBD ?* [ %+Noun | %+Prop | %+Verb | %+Num | %+Dig | %+Adj ] ]
+	
+# remove Prep + Pron (-> tokenizer)			## CHECK !!!
+# .o.
+#	~$[%+Prep CBD ?* [%+Pron | %+Quant |  %+QuantPron | %+PreDet] ]
+
+# remove Pron + Pron (-> tokenizer)			## CHECK !!! --> NO!
+# .o.	
+#	~$[ [ %+Pron | %+Conj ] ?* CBD ?* %+Pron ]
+
+# remove Pron + ne
+#.o.
+#	~$[ %+Pron ?* CBD n e %+Adv ]			## CHECK !!!
+
+# .o.	
+	~$[ %+Art ?* CBD ]
+
+.o.
+	~[ [ {anche} | {quando} ] %+Adv CBD ?* ]
+
+.o.	
+	~$[ CBD {altro} %+QuantPron ]
+
+.o.
+	~$[ CBD e %+Conj ]
+
+.o.	
+	~$[ e x SPC ?* [%+Noun|%+Adj] ?* ]
+.o.	~$[ e x %- $[SPC] ]
+.o.
+	LEX
+];
+define LEX
+
+# ----------------------------------------------------------------------------
+echo >>> define entries to be removed
+
+define REMOVE [
+  $%+Punc	|		# AS@28/10/99
+
+  ?* %+WordPart |		# AS@23/07/96
+# eliminate word parts
+
+  p u n t o %+Adv |
+# Archaic usage. 
+# Confusion with the noun and the verbal forms which are more likely.
+
+  i o %+Noun %+Masc [%+Pl | %+Sg ] 			|
+# Specialistic usage (psychoanalysis Ego). Confusion with the 1PSg Nom Pron.
+
+  m e n a r e %+Verb %+PresInd %+1P %+Sg 		|
+# meno = familiar and regional form suppressed to avoid confusion with
+# the widespread adverb and quantifier.
+
+  v a r i o %+QuantPron [ %+Masc | %+Fem ] %+Pl 	|
+  d i v e r s o %+QuantPron [ %+Masc | %+Fem ] %+Pl	|
+# Syntactical undistinguishable from Adjs. 
+# Even native speakers could hesitate in giving  a judgement in some cases.
+  
+
+ t a n t o %+Noun ?*  					|
+# tanto deletion
+# Only seldom used as noun (un tanto), often familiarly used its diminutive 
+# (un tantino). Discutable usage tagging it as Adj.
+# The behaviour of "tanto/a/i/e" as a Dem Pron is realised by the a tag 
+# temporarily called PRONINDSG/PL which also takes care of the 
+# IndefinitePron-side 
+# (tanto (=questo->DEM) ti serva di replica /
+# / tanto (deictic->IND) vale che ce ne andiamo subito).
+# I could guess the better solution is to keep only PRONINDPL for "tanti/e" 
+# because they are probably more often used as indefinite subjects or objects 
+# (tanti non sono d'accordo; se ti piacciono i dolci, qui ne troverai tanti) 
+# and to keep DEMSG too for "tanto" because it is often used as deictic or 
+# demonstrative
+# (tanto vale andarsene subito; tanto di guadagnato!).
+# 	  tanto = CONJ: è inutile gridare tanto non ti sente nessuno
+# 		= ADV: tanto va la gatta al lardo che ci lascia lo zampino
+#		= Correlation adverb: è tanto bella quanto modesta.
+# Hard to disambiguize.
+ 
+
+ c h e c c h è %+Pron %+Rel %+MF %+SP			|
+
+ c h i u n q u e %+Pron %+Rel %+MF %+Sg			|
+
+ q u a l u n q u e %+Conj				|
+ q u a l s i a s i %+Conj				|
+
+
+ t u t t o %+Adv 					|
+# removes all unwanted declined forms tutta/i/e but removes tutto too.
+# => reenter tutto ADV!
+
+ m o l t i s s i m o %+QuantPron [%+Masc|%+Fem] %+Sg	|
+# removes moltissimo/a as PRONIND because only the plural forms 
+# are used this way.
+
+ t a n t i s s i m o %+QuantPron [%+Masc|%+Fem] %+Sg	|
+# removes tantissimo/a as PRONIND because only the plural forms 
+# are used this way.
+
+ i d e m %+Pron %+Dem %+MF %+SP 			|
+# It would be the only indeclinable demonstrative and the tag 
+# would need to be doubled in DEMSG and DEMPL. Besides this remark,
+# it rests to say that the usage of this borrow as DEM is limited to
+# comments and items whereas the other tag ADV can be found 
+
+
+ b e n e %+Interj 					|
+ m a g a r i %+Interj 					|
+
+ m e n o %+Noun %+Masc %+Sg  				|
+ p i ù %+Noun %+Masc %+Sg 				|
+ p o c o %+Noun %+Masc %+Sg 				|
+ m o l t o %+Noun %+Masc %+Sg 				|
+ t u t t o %+Noun %+Masc %+Sg 				|
+ s o l o %+Noun %+Masc %+Sg 				|
+ p r o p r i o %+Noun %+Masc %+Sg 			|
+# Adverbs or quantifiers employed as nouns. This employment is not so rare, but 
+# always rare compared to the other possibilities. Everytime that such an usage
+# happens it could be possible to be detected by checking up the presence of a
+# Determiner before. Unfortunately it's not possible to bias only a given set of 
+# surface forms and so, keeping these forms brings the tagger to too many 
+# mistakes. 
+
+ [ c i | v i | c %' | v %' | n e ]  %+Adv (CBD ?*)	|
+ [ l o | c i | v i | c %' | v %' | n e ]  %+Pron %+Dem ?*	|		# AS@15/11/99
+# All these forms are gathered in CLIT thanks to the usage of the lexicon 
+# elided.fst
+
+ [ A | E | I | O | a | e | i | o]  %+Let 		| 
+# The LET tag is not corresponding to a syntactical category.
+# Particurarly these ones are very bothering because they engender a big 
+# confusion for all the corresponding very widespread parts-of-speech. 
+ 
+ [ d o | m i | f a | l a | s i ]   %+Noun %+Masc [%+Sg|%+Pl ]	|
+# Also these nouns, defining musical notes, are a little bit bothering because 
+# of their ambiguity with: 
+# dare+Verb+PresInd+1P+Sg, io+Pron+Acc+Aton, fare+Verb+PresInd+3P+Sg, 
+# lo+Art+Def+Fem, si+Pron+Refl+Aton.
+
+ u n (o) %+Num %+Card (%+Apos)				|
+# Removed because of a bad mapping for the singular.
+
+ [ v i | m i | i | I | c i | d i | D I |  l i ] %+Dig %+Rom	|
+# These roman numbers, if mapped to NSG and ADJSG, are very bothering 
+# because they engender a nasty confusion set for all the corresponding 
+# very widespread parts-of-speech which are Pron, Det, Prep. 
+
+ [ a n c h e | n e a n c h e | p u r e | n e p p u r e | n e m m e n o |
+   c o m e | d o v e | q u a n d o | t a n t o | q u a s i | a l l o r a |
+   v i c e v e r s a | a l t r i m e n t i | a l SPC c o n t r a r i o ] %+Conj
+# All these forms are actually adverbs with sometimes a weak function of 
+# conjunction.
+];
+
+
+define LEX 	~[REMOVE] .o. LEX;
+
+# -------------------------------------------------------------------------------
+echo >>> modify categories (AS 29-Oct-1999)
+define LEX [ 
+	%+Symbol <- [..] || \[%+Dig] _ %+Curr .#. 
+.o. 	LEX
+];
+
+# -------------------------------------------------------------------------------
+echo >>> elided word forms
+define ELID	[
+ [ {che} %+Conj %+Elided ]:[ {ch'} ]	|
+ [ {che} %+Pron %+Rel %+MF %+Sg %+Elided ]:[ {ch'} ]	|
+ [ {che} %+Pron %+Rel %+MF %+Pl %+Elided ]:[ {ch'} ]	|
+
+ [ {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {l'} ]	|
+ [ {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {l'} ]	|
+ [ {gli} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {gl'} ]	|
+ [ {uno} %+Art %+Indef %+Fem %+Sg %+Elided ]:[ {un'} ]	|
+
+ [ {di} %+Prep %+Elided ]:[ {d'} ]	|
+
+ [ {sotto} %+Prep %+Elided ]:[ {sott'} ]	|
+ [ {di} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {dell'} ]	|
+ [ {da} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {dall'} ]	|
+ [ {con} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {coll'} ]	|
+ [ {a} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {all'} ]	|
+ [ {su} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {sull'} ]	|
+ [ {in} %+Prep CBD {lo} %+Art %+Def %+Masc %+Sg %+Elided ]:[ {nell'} ]	|
+
+ [ {di} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {dell'} ]	|
+ [ {da} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {dall'} ]	|
+ [ {con} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {coll'} ]	|
+ [ {a} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {all'} ]	|
+ [ {su} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {sull'} ]	|
+ [ {in} %+Prep CBD {lo} %+Art %+Def %+Fem %+Sg %+Elided ]:[ {nell'} ]	|
+
+ [ {di} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {degl'} ]	|
+ [ {da} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {dagl'} ]	|
+ [ {con} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {cogl'} ]	|
+ [ {a} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {agl'} ]	|
+ [ {su} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {sugl'} ]	|
+ [ {in} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {negl'} ]	|
+ [ {per} %+Prep CBD {lo} %+Art %+Def %+Masc %+Pl %+Elided ]:[ {pegl'} ]	|
+
+ [ {ci} %+Adv %+Elided ]:[ {c'} ]	|
+# [ {ci} %+Pron %+Dem %+Elided ]:[ {c'} ]	|
+ [ {noi} %+Pron %+Acc %+Aton %+1P %+MF %+Pl %+Elided ]:[ {c'} ]	|
+ [ {noi} %+Pron %+Dat %+Aton %+1P %+MF %+Pl %+Elided ]:[ {c'} ]	|
+ [ {vi} %+Adv %+Elided ]:[ {v'} ]	|
+# [ {vi} %+Pron %+Dem %+Elided ]:[ {v'} ]	|
+ [ {voi} %+Pron %+Acc %+Aton %+2P %+MF %+Pl %+Elided ]:[ {v'} ]	|
+ [ {voi} %+Pron %+Dat %+Aton %+2P %+MF %+Pl %+Elided ]:[ {v'} ]	|
+ [ {ne} %+Adv %+Elided ]:[ {n'} ]	|
+ [ {ne} %+Pron %+Ne %+MF %+SP %+Elided ]:[ {n'} ]	|
+
+ [ {io} %+Pron %+Acc %+Aton %+1P %+MF %+Sg %+Elided ]:[ {m'} ]	|
+ [ {io} %+Pron %+Dat %+Aton %+1P %+MF %+Sg %+Elided ]:[ {m'} ]	|
+ [ {tu} %+Pron %+Acc %+Aton %+2P %+MF %+Sg %+Elided ]:[ {t'} ]	|
+ [ {tu} %+Pron %+Dat %+Aton %+2P %+MF %+Sg %+Elided ]:[ {t'} ]	|
+ [ {si} %+Pron %+Refl %+Aton %+3P %+MF %+SP %+Elided ]:[ {s'} ]	|
+ [ {si} %+Conj %+Elided ]:[ {s'} ]	|
+
+ [ {lui} %+Pron %+Dat %+Aton %+3P %+MF %+Sg CBD 
+   {lui} %+Pron %+Acc %+Aton %+3P %+Masc %+Sg %+Elided ]:[ {gliel'} ]	|
+ [ {lui} %+Pron %+Dat %+Aton %+3P %+MF %+Sg CBD 
+   {lui} %+Pron %+Acc %+Aton %+3P %+Fem %+Sg %+Elided ]:[ {gliel'} ]	|
+ [ {lui} %+Pron %+Acc %+Aton %+3P %+Masc %+Sg %+Elided ]:[ {l'} ]	|
+ [ {lui} %+Pron %+Acc %+Aton %+3P %+Fem %+Sg %+Elided ]:[ {l'} ]	|
+
+ [ {questo} %+Det %+Masc %+Sg %+Elided ]:[ {quest'} ]	|
+ [ {quello} %+Det %+Masc %+Sg %+Elided ]:[ {quell'} ]	|
+
+ [ {questo} %+Det %+Fem %+Sg %+Elided ]:[ {quest'} ]	|
+ [ {quello} %+Det %+Fem %+Sg %+Elided ]:[ {quell'} ]	|
+
+ [ {quando} %+Adv %+Elided ]:[ {quand'} ]	|
+ [ {quando} %+Conj %+Elided ]:[ {quand'} ]	|
+ [ {anche} %+Adv %+Elided ]:[ {anch'} ]	|
+ [ {senza} %+Prep %+Elided ]:[ {senz'} ]	|
+
+ [ {io} %+Pron %+Dat %+Aton %+1P %+MF %+Sg %+Preclit ]:[ {me} ]	|
+ [ {tu} %+Pron %+Dat %+Aton %+2P %+MF %+Sg %+Preclit ]:[ {te} ]	|
+ [ {noi} %+Pron %+Dat %+Aton %+1P %+MF %+Pl %+Preclit ]:[ {ce} ]	|
+ [ {voi} %+Pron %+Dat %+Aton %+2P %+MF %+Pl %+Preclit ]:[ {ve} ]	|
+ [ {si} %+Pron %+Refl %+Aton %+3P %+MF %+SP %+Preclit ]:[ {se} ]	|
+
+ [ {ci} %+Adv ]:[ {ce} ]	|
+ [ {vi} %+Adv ]:[ {ve} ]	|
+
+
+ [ {come} %+Adv %+Elided ]:[ {com'} ]	|
+ [ {come} %+Conj %+Elided ]:[ {com'} ]	|
+
+ [ {dove} %+Adv %+Elided ]:[ {dov'} ]	|
+ [ {dove} %+Conj %+Elided ]:[ {dov'} ]	|
+
+ [ {anche} %+Adv %+Elided ]:[ {anch'} ]	|
+ [ {anche} %+Conj %+Elided ]:[ {anch'} ]	|
+
+ [ {cosa} %+Pron %+Interrog %+MF %+Sg %+Elided ]:[ {cos'} ]	|
+
+ [ {tutto} %+QuantPron %+Masc %+Sg %+Elided ]:[ {tutt'} ]	|
+
+ [ {quanto} %+QuantPron %+Masc %+Sg %+Elided ]:[ {quant'} ]	|
+ [ {tanto} %+QuantPron %+Masc %+Sg %+Elided ]:[ {tant'} ]	|
+ [ {tanto} %+Pron %+Dem %+Masc %+Sg %+Elided ]:[ {tant'} ]	|
+ 
+ [ {santo} %+Noun %+Masc %+Sg %+Elided ]:[ {sant'} ]	|
+
+ [ {mezzo} %+Adj %+Masc %+Sg %+Elided ]:[ {mezz'} ]	|
+ [ {mezzo} %+Adj %+Fem %+Sg %+Elided ]:[ {mezz'} ]	|
+
+ [ {bello} %+Adj %+Masc %+Sg %+Elided ]:[ {bell'} ]	|
+ [ {bello} %+Adj %+Fem %+Sg %+Elided ]:[ {bell'} ]	|
+
+ [ {dovere} %+Verb %+PresInd %+3P %+Sg %+Elided ]:[ {dev'} ]	|
+
+ [ {venire} %+Verb %+PresInd %+3P %+Sg %+Apoc ]:[ {vien} ]	|
+ [ {solere} %+Verb %+PresInd %+3P %+Sg %+Apoc ]:[ {suol} ]	|
+ [ {avere} %+Verb %+PresInd %+3P %+Pl %+Apoc ]:[ {han} ]	|
+
+ [ {colore} %+Noun %+Masc %+Sg %+Apoc ]:[ {color} ]	|
+ [ {amore} %+Noun %+Masc %+Sg %+Apoc ]:[ {amor} ]	|
+ [ {ora} %+Adv %+Apoc ]:[ {or} ]	|
+ [ {piano} %+Noun %+Masc %+Sg %+Apoc ]:[ {pian} ]	
+];
+
+
+# ----------------------------------------------------------------------------
+
+echo >>> more lexicon entries
+define SP 	[SPC:% ] ;
+
+define ADDLEX [ 
+  e x 				%+Adj:0 %+WordPart:0 	|
+! ex 
+
+ t u t t o 			%+Adv:0 |
+# removing all the unwanted declined forms tutta/i/e cause 
+# the tutto's removing too.	 => here it's reentered
+
+
+  d a l SP m o m e n t o 	%+PreConj:0 |
+  d a t o 			%+PreConj:0 |
+  d o p o 			%+PreConj:0 |
+  p r i m a 			%+PreConj:0 |
+  s e m p r e 			%+PreConj:0 |
+  v i s t o 			%+PreConj:0 |
+  a m m e s s o 		%+PreConj:0 |
+  s o l o 			%+PreConj:0 |
+  s e n z a 			%+PreConj:0 |
+  s e c o n d o 		%+PreConj:0 |
+# All these forms appear in a multiword conjunction and they are added here to 
+# allow a separate analysis. 
+# This definition will allow the exploitation of the "favor" bias function.
+
+  v i c i n o 			%+PrePrep:0 |
+  s o t t o 			%+PrePrep:0 |
+  s o p r a 			%+PrePrep:0 |
+  r i g u a r d o 		%+PrePrep:0 |
+  r i s p e t t o 		%+PrePrep:0 |
+  p r i m a 			%+PrePrep:0 |
+  p r e s s o 			%+PrePrep:0 |
+  p e r SP m e z z o 		%+PrePrep:0 |
+  l u n g i 			%+PrePrep:0 |
+  l o n t a n o 		%+PrePrep:0 |
+  i n s i e m e 		%+PrePrep:0 |
+  i n t o r n o 		%+PrePrep:0 |
+  i n n a n z i 		%+PrePrep:0 |
+  i n v e c e 			%+PrePrep:0 |
+  i n c o n t r o 		%+PrePrep:0 |
+  i n SP r e l a z i o n e 	%+PrePrep:0 |
+  i n SP r a p p o r t o 	%+PrePrep:0 |
+  i n SP p r o p o r z i o n e 	%+PrePrep:0 |
+  g r a z i e 			%+PrePrep:0 |
+  f u o r i 			%+PrePrep:0 |
+  f i n o 			%+PrePrep:0 | 
+  d o p o 			%+PrePrep:0 |
+  d i s c o s t o 		%+PrePrep:0 |
+  d i n a n z i 		%+PrePrep:0 |
+  d i SP f r o n t e 		%+PrePrep:0 |
+  d e n t r o 			%+PrePrep:0 |
+  d i e t r o 			%+PrePrep:0 |
+  d a v a n t i 		%+PrePrep:0 |
+  c o n t r o 			[ %+PrePrep:0 | %+Prep:0] |
+  a v a n t i 			%+PrePrep:0 | 
+  a t t o r n o 		%+PrePrep:0 |
+  a s s i e m e 		%+PrePrep:0 |
+  a l SP d i SP s o t t o 	%+PrePrep:0 |
+  a l SP d i SP s o p r a 	%+PrePrep:0 |
+  a l SP d i SP q u a 		%+PrePrep:0 |
+  a l SP d i SP l à		%+PrePrep:0 |
+  a l SP d i SP f u o r i 	%+PrePrep:0 |
+  a c c a n t o 		%+PrePrep:0 |
+  a SP s c a p i t o 		%+PrePrep:0 |
+  a SP p r o p o s i t o 	%+PrePrep:0 |
+  a SP m e n o 			[ %+PrePrep:0 | %+PreConj:0 ] |
+  a SP f a v o r e 		%+PrePrep:0 |
+  a SP c a u s a 		%+PrePrep:0 |
+  a SP c a g i o n e 		%+PrePrep:0 
+# All these forms appear in a multiword preposition and they are added here 
+# to allow a separate analysis. 
+# This definition will allow the exploitation of the "favor" bias function.
+];
+
+
+# -------------------------------------------------------------------------
+echo >>> punctuations and symbols + misc
+
+define Sent     [ %. | %! | %?  | %: | %. %. %. 
+		| "\u2026"	# HORIZONTAL ELLIPSIS
+		] ;
+
+define Comma    [ %, ];
+define Left     [ %( | %{ | %[ | %< ];
+define Right    [ %) | %} | %] | %> ];
+define Quote    [ %" | %` (%`) | %' (%') 
+		| "\u00AB"      # LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+		| "\u00BB"      # RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+		| "\u2018"	# LEFT SINGLE QUOTATION MARK
+	 	| "\u2019" 	# RIGHT SINGLE QUOTATION MARK
+		| "\u201A" 	# SINGLE LOW-9 QUOTATION MARK
+		| "\u201C"	# LEFT DOUBLE QUOTATION MARK
+		| "\u201D"	# RIGHT DOUBLE QUOTATION MAR
+		| "\u201E"	# DOUBLE LOW-9 QUOTATION MARK
+		| "\u2019" "\u2019" 
+		| "\u2018" "\u2018" 
+		];
+
+
+define Spec     [ %; | %~ | %= | %- | %_ | %+ | %^ | %/ | %\ 
+		| %¿ | %¡ | %|
+		| "\u00B1"      # PLUS-MINUS SIGN
+		| "\u2013" 	# EN DASH
+		| "\u2014" 	# EM DASH
+		| "\u2022" 	# BULLET
+		| "\u2039"	# SINGLE LEFT-POINTING ANGLE QUOTATION MARK
+		| "\u203A"	# SINGLE RIGHT-POINTING ANGLE QUOTATION MAR
+		];
+
+define Sym      [ %%  | %* | %& | %# | %@ ];
+
+# added by AS 19/01/2006
+define CURR 	[ %$ 
+		| "\u00A2"      # CENT SIGN
+		| "\u00A3"      # POUND SIGN
+		| "\u00A4"      # CURRENCY SIGN
+		| "\u00A5"      # YEN SIGN
+		| "\u20A0"      # EURO-CURRENCY SIGN
+		| "\u20AC"      # EURO SIGN
+		];
+
+# Added by KF 11/05/2002
+define NOUNMASC	[ %+Noun:0 %+Masc:0 %+Sg:0 
+		| %+Noun:0 %+Masc:0 %+Pl:s 	
+		];
+define EMAIL	[ {e-mail} | {email} ];
+
+define NOUNMASCINV	[ %+Noun:0 %+Masc:0 %+SP:0 
+			];
+define CDROM	[ {cd} | {CD} | {cd-rom} | {CD-ROM} ];
+
+define PUNCT [
+  Sent                  %+Punct:0 %+Sent:0
+| Comma                 %+Punct:0 %+Comma:0
+| Left                  %+Punct:0 %+Paren:0
+| Right                 %+Punct:0 %+Paren:0
+| Quote                 %+Punct:0 %+Quote:0
+| Spec+                 %+Punct:0 %+Spec:0
+| Sym+                  %+Symbol:0
+| CURR                  %+Symbol:0 %+Curr:0 
+| EMAIL			NOUNMASC
+| CDROM			NOUNMASCINV
+];
+
+# -------------------------------------------------------------------------
+echo >>> combine
+
+define LEX 	[ LEX | ELID | ADDLEX | PUNCT ];
+
+# -------------------------------------------------------------------------
+echo >>> add alternatives for apostrophes and hyphens
+define APO	[ "\u2018" 	# LEFT SINGLE QUOTATION MARK
+		| "\u2019" 	# RIGHT SINGLE QUOTATION MARK
+		];
+define DASH	[ "\u2013"	# EN DASH
+		| "\u2014" 	# EM DASH 
+		];
+
+regex [ LEX .o. [ %' (->) APO ] .o. [ %- (->) DASH ] ] ;
+

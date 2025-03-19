@@ -1,0 +1,202 @@
+# ============================================================================
+# CONTENT:      mapping for HMM tags
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      25-Jan-2008
+# ============================================================================
+# USAGE:        xfst 	-l LEX.fst 
+#			-l [ThisFile]
+# ============================================================================
+
+define LEX
+
+# determine tags and characters
+read regex LEX ;
+single char sigma net
+define SIG
+regex SIG .o. [ %+ ?+ ];
+multi char sigma net
+define TAG
+
+
+define MAIN	[ %+Adj
+		| %+Adv 
+		| %+Noun
+		| %+Prop 
+
+		| %+Det | %+Pron | %+PronDet | %+Quant
+		| %+Conj 
+		| %+Prep
+		| %+Verb | %+Aux | %+Modal 
+		| %+Ptcl	
+
+		| %+Dig
+		| %+Num
+		| %+Symbol
+		| %+Punct
+		];
+
+
+
+define CHAR	\[TAG] ;
+
+define SEQ	[ TAG - MAIN ]*;
+
+
+# ---------------------------------------------------------------------
+
+echo >>> define default mapping
+
+define MAP1 CHAR* [
+# ---- adjectives ---------------------------------------------------------------
+  %+Adj [SEQ & $%+Pos]			"+ADJ":0
+| %+Adj [SEQ & $%+Comp]			"+ADJCMP":0
+| %+Adj [SEQ & $%+Sup]			"+ADJSUP":0
+
+# ---- nouns --------------------------------------------------------------------
+| %+Noun SEQ				"+NOUN":0
+
+# ---- proper names--------------------------------------------------------------
+| %+Prop SEQ				"+NOUN":0
+
+# ---- verbs --------------------------------------------------------------------
+| %+Verb [SEQ & $[%+Pres|%+Inf|%+Imp]]	"+VERB":0
+| %+Verb [SEQ & $%+Past]		"+VPAST":0
+| %+Verb [SEQ & $%+PPast]		"+VPAP":0
+| %+Verb [SEQ & $%+PPres ]		"+VPROG":0
+
+| %+Modal SEQ 				"+VAUX":0
+
+# ---- adverbs ------------------------------------------------------------------
+| %+Adv [SEQ & $%+Pos]			"+ADV":0
+| %+Adv [SEQ & $%+Mod]			"+ADV":0
+| %+Adv [SEQ & $%+Dem]			"+ADV":0
+| %+Adv [SEQ & $%+Neg]			"+NOT":0
+| %+Adv [SEQ & $%+VPart]		"+ADV":0
+| %+Adv [SEQ & $%+Comp]			"+ADVCMP":0
+| %+Adv [SEQ & $%+Sup]			"+ADVSUP":0
+| %+Adv [SEQ & $%+Wh]			"+WADV":0
+| %+Adv [SEQ & $%+Conn]			"+COADV":0
+
+# ---- quantifiers --------------------------------------------------------------
+| %+Quant SEQ 				"+QUANT":0
+
+# ---- determiners --------------------------------------------------------------
+| %+Det [SEQ & ~$%+Wh]			"+DET":0
+| %+Det [SEQ & $%+Wh]			"+WDET":0
+| %+PronDet [SEQ & ~$%+Wh]		"+DET":0
+| %+PronDet [SEQ & $%+Wh]		"+WDET":0
+
+# ---- pronouns -----------------------------------------------------------------
+| %+Pron [SEQ & $%+Refl]		"+PRONREFL":0
+| %+Pron [SEQ & $%+Pers]		"+PRONPERS":0
+| %+Pron [SEQ & ~$%+Gen & $%+Rel]	"+PRONREL":0
+| %+Pron [SEQ & $%+Gen & $%+Rel]	"+DETREL":0	# whose
+| %+Pron [SEQ & ~$%+Gen & $%+Wh]	"+WPRON":0
+| %+Pron [SEQ & $%+Gen & $%+Wh]		"+WDET":0	# whose
+
+| %+PronDet [SEQ & ~$%+Wh]		"+PRON":0
+| %+PronDet [SEQ & $%+Wh]		"+WPRON":0
+
+| %+Pron [SEQ & ~$[%+Pers|%+Refl|%+Rel|%+Wh]]	"+PRON":0
+
+# ---- conjunctions -------------------------------------------------------------
+| %+Conj [SEQ & $%+Coord]		"+COORD":0
+| %+Conj [SEQ & $%+Sub]			"+COSUB":0
+
+
+# ---- prepositions -------------------------------------------------------------
+| %+Prep SEQ				"+PREP":0
+
+# ---- numerals -----------------------------------------------------------------
+| %+Dig [SEQ & ~$[%+DlrAmt|%+Ord]]	"+CARD":0
+| %+Dig [SEQ & $%+DlrAmt]		"+MONEY":0
+| %+Dig [SEQ & $%+Ord]			"+ORD":0
+| %+Num [SEQ & $%+Ord]			"+ORD":0
+| %+Num [SEQ & $%+Card]			"+CARD":0
+
+# ---- punctuations -------------------------------------------------------------
+| %+Punct %+Sent SEQ			"+SENT":0
+| %+Punct %+Comma SEQ			"+CM":0
+| %+Punct [SEQ & ~$[%+Sent|%+Comma]]	"+PUNCT":0
+
+# ---- other --------------------------------------------------------------------
+| %+Symbol [SEQ & ~$[%+Meas]]		"+NOUN":0
+| %+Symbol [SEQ & $%+Meas]		"+MEAS":0
+| %+Ptcl %+Gen SEQ			"+POSS":0
+| %+Ptcl %+Infto SEQ			"+INFTO":0
+
+#| AnyStem %+For				MARK	"+NOUN":0
+#| AnyStem %+Init			MARK	"+NOUN":0
+#| AnyStem %+Let SEQ			MARK	"+NOUN":0
+#| AnyStem %+Deg TAG			MARK	"+NOUN":0
+#| AnyStem %+Interj			MARK	"+ITJ":0
+#| AnyStem %+Onom			MARK	"+ITJ":0
+#| AnyStem %+Meas SEQ			MARK	"+MEAS":0
+#| AnyStem %+Markup			MARK	"+SGML":0		# ???
+#| AnyStem %+Expr SEQ			MARK	"+ADV":0
+#| AnyStem %+Sgml %+Sent			MARK	"+SENT":0
+#| AnyStem %+Sgml SIMPLEPUNCT		MARK	"+SGML":0
+
+
+];
+
+# ------------------------------------------------------------------------------
+# special categories
+define SPEC CHAR* [
+  [%+Noun|%+Adj] [SEQ & $%+NAdj]	"+NADJ":0
+| %+Prop %+Title %+Abbr			"+TIT":0
+];
+
+# ------------------------------------------------------------------------------
+
+define VPRES3S	%+Pres %+3sg %+Elid SEQ ;
+define VPRES	[ SEQ & $[%+Pres|%+Inf] ] - VPRES3S ;
+define VAUX	[ %+Verb | %+Aux ];
+
+
+# special words
+define WORDS [
+  {other} [%+Adj|%+Noun] SEQ		"+ADJPRON":0
+| {same} %+Adj SEQ			"+ADJPRON":0
+| {such} %+PronDet SEQ			"+PREDET":0
+| {one} [%+Noun|%+Pron] SEQ		"+PRONONE":0
+| {one} %+Num %+Card			"+CARDONE":0
+
+| {as} [%+Adv|%+Prep]  SEQ		"+PREPADVAS":0
+| {as} %+Prep SEQ			"+PREPADVAS":0
+| {than} %+Prep SEQ			"+COTHAN":0
+| %& %+Symbol SEQ			"+COORD":0
+
+
+| {be} %+Aux [SEQ & $%+Inf ]		"+VBI":0
+| {be} %+Aux VPRES			"+VBPRES":0
+| {be} %+Aux VPRES3S			"+VS":0		# 's
+| {be} %+Aux [SEQ & $%+Past]		"+VBPAST":0
+| {be} %+Aux [SEQ & $%+PPast]		"+VBPAP":0
+| {be} %+Aux [SEQ & $%+PPres]		"+VBPROG":0
+
+| {do} %+Aux [SEQ & $[%+Pres|%+Inf]]		"+DO":0
+| {do} %+Aux [SEQ & $%+Past]		"+VDPAST":0
+| {do} %+Aux [SEQ & $%+PPast]		"+VDPAP":0
+| {do} %+Aux [SEQ & $%+PPres]		"+VDPROG":0
+
+| {have} VAUX VPRES			"+HAVE":0
+| {have} VAUX VPRES3S			"+VS":0		# 's
+| {have} VAUX [SEQ & $%+Past]		"+VHPAST":0
+| {have} VAUX [SEQ & $%+PPast]		"+VHPAP":0
+| {have} VAUX [SEQ & $%+PPres]		"+VHPROG":0
+
+];
+
+
+
+echo >>> apply mappings
+regex WORDS .p. SPEC .p. MAP1 ;
+
+define MAP2
+regex [ MAP2 .o. LEX ]  ;
+

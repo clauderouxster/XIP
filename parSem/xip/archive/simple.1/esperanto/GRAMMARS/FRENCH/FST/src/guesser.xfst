@@ -1,0 +1,289 @@
+# ============================================================================
+# TYPE:		(x)fst script
+# CONTENT:      morphological guesser
+# 
+# LANGUAGE:     FRENCH
+#
+# AUTHOR:       J.P.Chanod, A.Schiller
+#
+# CREATED:      11-Jul-2003 (JPC)
+# UPADTED:	31-Jan-2006 (AS)
+#
+# ============================================================================
+# USAGE:        xfst -l [ThisFile]
+# ============================================================================
+
+
+
+read regex
+[ a | à | â | ä | á | å | b | c | ç | d | e | é | è | ê | ë | f | g | h | i | î | ï | j | k | l | m | n | ñ | o | ô | ö |Ó |  p | q | r | s | t | u | ù | û | ü
+| v | w | x | y | z | %' | %_]
+;
+define Letter ;
+
+
+read regex
+[ b | c | ç | d | f | g | h | j | k | l | m | n | p | q | r | s | t | v | w | x | y | z ]
+;
+define Cons ;
+
+read regex
+[ B | C | Ç | D | F | G | H | J | K | L | M | N | P | Q | R | S | T | V | W | X | Y | Z ]
+;
+define CONS;
+
+
+define Number %0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ;
+
+define ops [  %, | %. |  %> | %< |  %* | %( | %) | %- | %+ | %/ | %= | %% ] ;
+
+
+
+
+read regex
+[ A | À | Â | Ä | Á | Å | B | C | Ç | D | E | É | È | Ê | Ë | F | G | H | I | Î | Ï | J | K | L | M | N | Ñ | O | Ô | Ö | P | Q | R | S | T | U | Ù | Û | Ü
+| V | W | X | Y | Z ]
+;
+define Capital;
+
+
+define AllLetter Letter | Capital ;
+
+# define words that do not end with apostrophe
+define WordNoCap [Letter+ - [?* %']] ;
+define WordAndCap [AllLetter+ - [?* %']] ;
+
+# add Adverbs
+read regex
+[WordAndCap [e | a m | e m | i]  m e n t]  | 
+ WordAndCap  [E | A M | E M | I] M E N T ;
+define Adv ;
+
+
+
+
+read regex
+WordAndCap [Cons e r | Cons i r | Cons i r e | [n| o u] d r e | t t r e  | 
+		 CONS E R | CONS I R | CONS I R E | [N | O U] D R E | T T R E ] ;
+ 
+define VerbInf  ;
+
+define VerbInf VerbInf - [Capital $[Letter]] ;
+
+define VerbPRP [ WordNoCap Cons a n t |  Capital+ A N T] ;
+
+################################################################################################
+#
+#		The following section describes finite verbs without tense distinctions
+#
+################################################################################################
+#
+#
+################################################################################################
+#
+#		The following section describes finite verbs with tense distinctions
+#
+################################################################################################
+
+
+define VerbIP1sg [[WordNoCap [Cons Cons e | è l e | è m e | è r e | è t e ]] - WordNoCap [ i e n n e ]] (%-);
+define VerbIF1sg [WordNoCap [ e r a i | i r a i] ] (%-);
+
+
+
+
+define VerbIP2sg [[WordNoCap  [Cons Cons e s | è l e s | è m e s | è r e s | è t e s ]] - WordNoCap [ i e n n e s]] (%-);
+define VerbIF2sg [WordNoCap [ e r a s |  i r a s ]] (%-);
+
+define VerbIP12 [WordNoCap [Cons i s]] (%-);
+define VerbCO12 [WordNoCap [[e|i] r a i s]] (%-)   -  [Capital ?* a i s] ;
+define VerbII12 [WordNoCap [ a i s]] (%-)   -  [[Capital ?* a i s] |  VerbCO12] ;
+
+
+read regex
+[
+[WordNoCap  [Cons Cons e | è l e | è m e | n e | i s e | è t e ]] - [WordNoCap [i e n n e ]]
+] 
+([%- | %- t %-])
+;
+define VerbIP3sg ;
+define VerbIP3sg VerbIP3sg  - [Capital ?* [a | t t e | s s e | n n e | i n e]] ;
+
+define VerbIF3sg  [WordNoCap [ e r a | i r a] ([%- | %- t %-])] - [Capital ?* a] ;
+define VerbCO3sg [WordNoCap [[e|i] r a i t]] (%-)  ;
+define VerbII3sg [WordNoCap [ a i t] (%-)]   -  VerbCO3sg ;
+
+
+
+
+define VerbIP1pl [WordNoCap [c h o n s | e l o n s | e m o n s | n o n s | s o n s | e t o n s ]] (%-) ;
+define VerbIF1pl [WordNoCap [ e r o n s | i r o n s]] (%-) ;
+define VerbCO1pl [WordNoCap [ e | i ] r i o n s (%-)] ;
+define VerbII1pl [WordNoCap  i o n s (%-)] -  VerbCO1pl ;
+
+define VerbIP2pl [WordNoCap [Cons Cons e z | e l e z | e m e z | n e z | s e z | e t e z ]] (%-) ;
+define VerbIF2pl [WordNoCap [ e r e z | i r e z]] (%-) ;
+define VerbCO2pl [WordNoCap [ e | i ] r i e z (%-)] ;
+define VerbII2pl [WordNoCap  i e z (%-)] -  VerbCO2pl ;
+
+
+
+
+define  VerbIP3pl WordNoCap [Cons Cons e n t | è l e n t | e l l e n t | è m e n t | è n e n t | è r e n t |  i s e n t | è t e n t] ([%- | %- t %-]) ;
+define VerbIF3pl [WordNoCap [ e r o n t | i r o n t]] (%-) ;
+define VerbCO3pl [WordNoCap [ e | i ] r a i e n t (%-)] ;
+define VerbII3pl [WordNoCap  a i e n t (%-)] -  VerbCO3pl ;
+
+
+
+################################################################################################
+#
+#		END OF SECTION describing finite verbs
+#
+################################################################################################
+
+
+
+define PapSg WordNoCap [c é | c h é | d é | g é  | l é | m é | n é | p é | q u é | r é | s é | t é | v é | f i t | f a i t | d i t | t i] ;
+
+
+define PapMS PapSg ;
+define PapFS [WordNoCap Cons i s e] | PapSg e ;
+define PapMP  PapSg s ;
+define PapFP [WordNoCap Cons i s e s] | PapSg e s ;
+define PapMI WordNoCap Cons i s ;
+
+
+read regex
+WordAndCap [a b l e | a i r e | a i s e |                                    
+	a l | a l e | a n t | a n t e | a u d |                  
+	â t r e | e l | e l l e | e t | e t t e | e u r | e u s e |           
+        è r e | è t e | i b l e | i e n | i e n n e |                        
+        i e r | i f | i l e  |  i q u e | i s t e | i v e |                  
+        o i r e | o i s e | o l e | o t | o t t e | r i c e | u |     
+        [d | g | Cons i | l | r | s c | u] [e n t | e n t e] |      
+        [Cons- [g | q]] u e ];
+
+define AdjSg ;
+define AdjSg AdjSg - [?* q u] ;
+
+
+read regex
+WordAndCap [a b l e s |  a i r e s | a i s e s |  a l e s |  a n t s |  a n t e s|
+	a u d s |  a u x |  â t r e s |  e l s |  e l l e s |  e t s |  
+	e t t e s |  e u r s |  e u s e s |  è r e s |  è t e s | i b l e s |
+	i e n s |  i e n n e s |  i e r s |  i f s |  i l e  s |   i q u e s |
+	i s t e s |  i v e s |  o i r e s |  o l e s | o t s | o t t e | 
+	r i c e s | u s |               
+	[d | g | Cons i | l | r | s c | u] e n t [s | e s] |
+        [Cons- [g | q]] u e s ]
+;
+define AdjPl ;
+define AdjPl AdjPl - WordAndCap [e | i] r a i s ;
+
+define AdjInv WordAndCap [e u x | o i s | a i s] ;
+
+
+define NounSg WordAndCap  [a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | t | u | v | w | y | é] ;
+define NounSg NounSg - [WordAndCap  [ i q u e m e n t |  a b l e m e n t |  i b l e m e n t |  i v e m e n t |  i r a |  e r a |  i r a s |  e r a s | e r a i |  i r a i |  r a i s |  r i o n s |  a i t |  a i e n t |  m e n  | è m e n t | Cons i r]] ;
+
+
+define NounPl WordAndCap [s | a u x | m e n] - WordAndCap [a|o] i s ;
+
+define NounInv [WordAndCap [x | z | [a|o] i s]  - [WordAndCap a u x]] | %% |                                 (%*) Capital [AllLetter | Capital | Number]* ;
+
+define NounInv NounInv - [?* %'] ;
+
+
+read regex 
+[ Adv 	%+Guessed:0	%+ADV:0         %+ADV:0 | 
+# The following lines describe finite verbs with tense markings
+  VerbIP1sg 	%+avoir:0  %+SN:0 %+IndP:0 %+SG:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbIF1sg 	%+avoir:0  %+SN:0 %+Fut:0 %+SG:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+##  VerbII1sg 	%+avoir:0  %+SN:0 %+IndI:0 %+SG:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+##  VerbCO1sg 	%+avoir:0  %+SN:0 %+Cond:0 %+SG:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+
+  VerbIP2sg 	%+avoir:0  %+SN:0 %+IndP:0 %+SG:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbIF2sg 	%+avoir:0  %+SN:0 %+Fut:0 %+SG:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 | 	
+##  VerbII2sg 	%+avoir:0  %+SN:0 %+IndI:0 %+SG:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 | 	
+##  VerbCO2sg 	%+avoir:0  %+SN:0 %+Cond:0 %+SG:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+
+  VerbIP12 	%+avoir:0  %+SN:0 %+IndP:0 %+SG:0 [%+P1:0 | %+P2:0] %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+##  VerbIF12 	%+avoir:0  %+SN:0 %+Fut:0 %+SG:0  [%+P1:0 | %+P2:0] %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbII12 	%+avoir:0  %+SN:0 %+IndI:0 %+SG:0 [%+P1:0 | %+P2:0] %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbCO12 	%+avoir:0  %+SN:0 %+Cond:0 %+SG:0 [%+P1:0 | %+P2:0] %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+
+  VerbIP3sg 	%+avoir:0  %+SN:0 %+IndP:0 %+SG:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3SG:0 |
+  VerbIF3sg 	%+avoir:0  %+SN:0 %+Fut:0 %+SG:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3SG:0 | 	
+  VerbII3sg 	%+avoir:0  %+SN:0 %+IndI:0 %+SG:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3SG:0 | 	
+  VerbCO3sg 	%+avoir:0  %+SN:0 %+Cond:0 %+SG:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3SG:0 |
+
+  VerbIP1pl 	%+avoir:0  %+SN:0 %+IndP:0 %+PL:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbIF1pl 	%+avoir:0  %+SN:0 %+Fut:0 %+PL:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbII1pl 	%+avoir:0  %+SN:0 %+IndI:0 %+PL:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbCO1pl 	%+avoir:0  %+SN:0 %+Cond:0 %+PL:0 %+P1:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+
+  VerbIP2pl 	%+avoir:0  %+SN:0 %+IndP:0 %+PL:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbIF2pl 	%+avoir:0  %+SN:0 %+Fut:0 %+PL:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbII2pl 	%+avoir:0  %+SN:0 %+IndI:0 %+PL:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+  VerbCO2pl 	%+avoir:0  %+SN:0 %+Cond:0 %+PL:0 %+P2:0 %+Guessed:0 %+Verb:0 %+VERB%_P1P2:0 |
+
+  VerbIP3pl 	%+avoir:0  %+SN:0 %+IndP:0 %+PL:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3PL:0 |
+  VerbIF3pl 	%+avoir:0  %+SN:0 %+Fut:0 %+PL:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3PL:0 |
+  VerbII3pl 	%+avoir:0  %+SN:0 %+IndI:0 %+PL:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3PL:0 |
+  VerbCO3pl 	%+avoir:0  %+SN:0 %+Cond:0 %+PL:0 %+P3:0 %+Guessed:0 %+Verb:0 %+VERB%_P3PL:0 |
+
+# END of finite verbs
+  VerbInf 	%+avoir:0 %+SN:0 %+Inf:0 %+Guessed:0 %+Verb:0 %+VERB%_INF:0 |
+  VerbPRP 	%+avoir:0 %+SN:0 %+PrPrt:0  %+Guessed:0 %+Verb:0   %+VERB%_PRP:0 |      
+  PapMS		%+avoir:0 %+SN:0 %+PaPrt:0  %+Masc:0 %+SG:0  %+Guessed:0 %+Verb:0    %+PAP%_SG:0 | 
+  PapFS		%+avoir:0 %+SN:0 %+PaPrt:0  %+Fem:0  %+SG:0  %+Guessed:0 %+Verb:0    %+PAP%_SG:0 | 
+  PapMP		%+avoir:0 %+SN:0 %+PaPrt:0  %+Masc:0 %+PL:0  %+Guessed:0 %+Verb:0    %+PAP%_PL:0 | 
+  PapFP		%+avoir:0 %+SN:0 %+PaPrt:0  %+Fem:0  %+PL:0  %+Guessed:0 %+Verb:0    %+PAP%_PL:0 | 
+  PapMI		%+avoir:0 %+SN:0 %+PaPrt:0  %+Masc:0 %+InvPL:0 %+Guessed:0 %+Verb:0  %+PAP%_INV:0 | 
+
+  AdjSg		%+InvGen:0 %+SG:0 	%+Guessed:0 %+Adj:0      %+ADJ%_SG:0 |
+  AdjPl		%+InvGen:0 %+PL:0 	%+Guessed:0 %+Adj:0      %+ADJ%_PL:0 |
+  AdjInv	%+InvGen:0 %+InvPL:0 	%+Guessed:0 %+Adj:0      %+ADJ%_INV:0 |
+  NounSg   	%+InvGen:0 %+SG:0	%+Guessed:0 %+Noun:0   %+NOUN%_SG:0 |
+  NounPl 	%+InvGen:0 %+PL:0 	%+Guessed:0 %+Noun:0   %+NOUN%_PL:0 |
+  NounInv   	 %+InvGen:0 %+InvPL:0 	%+Guessed:0 %+Noun:0   %+NOUN%_INV:0 
+];
+
+
+
+read regex
+[T h e | t h e]     %+InvGen:0 %+InvPL:0  %+Det:0         %+DET%_SG:0          | 
+[ o f | O f | O F | w i t h ]       %+Prep:0        %+PREP:0  |
+q u		                %+ConjQue:0     %+CONJQUE:0 |
+[q u o i | p u i s | l o r s] q u       %+SConj:0        %+CONN:0 
+;
+
+
+
+# numerical expressions
+read regex [$Number & [Number|ops]+] %+Num:0 %+NUM:0 ;
+
+
+#some more num. expressions with brackets:  12)   (123-125)
+read regex
+[
+  [ 
+   [%<|%(] [Number|ops]+ | 
+   [Number|ops]+ [%>|%)] |
+   [%<|%(] [Number|ops|% ]+ [%>|%)] 
+  ]
+& $[Number]
+] 
+%+Num:0 %+NUM:0 
+;
+
+
+union net
+
+
+
+
+
+
+

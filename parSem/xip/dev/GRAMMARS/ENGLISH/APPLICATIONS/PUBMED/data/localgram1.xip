@@ -1,0 +1,159 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : localgram1.xip
+//!   Date       : 10/02/2003
+//!   Author     : Francois Trouilleux - Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+/------------ HYPHENS ---------------------------\
+
+
+Sequence:
+
+
+/------------Some dig nodes---------------\
+
+/A funny test 
+/1> noun[tutu=+] =  noun#1[lemme:"bank%c+"], prep, noun#2,
+                             where (#1[lemme]:#2[lemme]).\
+
+
+// To treat stuff like "T&N" as a unique noun
+
+1> noun[maj:+] = noun[maj];meas[maj], noun[lemme="&"],  noun[maj];meas[maj]. 
+
+
+4> dig = dig[ord], conj[coord], dig[ord,!features:!].
+
+
+// ADJ{first - choice}, ADJ{second - hand}
+5> adj[mwe=+] = num[ord] , punct[form:fhyph,left,right], ? .
+
+// three-day summit -> ADJ{three - day}
+// 12-year-old -> ADJ{12 - year} - old
+// 12-year old -> ADJ{12 - year} old
+5> adj[quant=+,meas=+,mwe=+] = num[card,rom:~];dig[ord:~] , 
+                               punct[form:fhyph,left,right], 
+                               meas; noun[sg]; nadj[adj=~,sg] 
+                               | (punct[form:fhyph]), adj;noun;nadj |.
+
+/------Some  Proper Name Nodes ------\
+/-- with hyphens ... ---\
+
+
+
+// three tokens
+
+8> noun[proper=+,mwe=+] = noun[proper];noun[maj,guess];?[toutmaj], 
+                    punct[form:fhyph,left,right],
+                    ?[maj],
+                    punct[form:fhyph,left,right],
+                    ?[guess];noun[proper];noun[let];?[maj].
+
+// To treat elements like Italo-Irish 
+
+8> nadj[mwe:+,country:+] =  noun[proper];noun[maj,guess];nadj[maj],
+                         punct[form:fhyph,left,right],
+                         nadj[country].
+
+// Iran-Iraq
+8> noun[proper=+,mwe=+,country=+,place=+] = noun[proper,country:+], 
+        punct[form:fhyph,left,right], 
+        noun[proper,country].
+
+// Complex firstnames 
+
+//special case: first token is a proper name, second is a japanese title like "Sato-san" 
+
+8> noun[proper=+,mwe=+,person:+] =  noun[proper];noun[maj,guess],  punct[form:fhyph,left,right], noun[title]. 
+
+
+8> noun[proper=+,mwe=+,firstname:+] = noun[proper,particlename:~,firstname],
+                    punct[form:fhyph,left,right],
+                    ?[guess];noun[proper].
+
+// first token is a proper name 
+8> noun[proper=+,mwe=+,maj=+] = noun[proper,particlename:~,prefix:~];noun[maj,guess];?[toutmaj,particlename:~], 
+                    punct[form:fhyph,left,right],
+                    ?[guess];noun[proper];noun[let];?[maj].
+
+// special case: first token is a proper name, second word is known and lower-case (e.g. Tae-woo)
+8> noun[proper=+,mwe=+,maj=+] = | ?[maj,det:~] |
+                           noun[proper,particlename:~];noun[maj,guess];?[toutmaj,particlename:~], 
+                           punct[form:fhyph,left,right],
+                           ?[maj:~].
+
+// first token is a common noun
+8> noun[proper=+,mwe=+,maj=+] = noun[maj,proper:~];nadj[maj], 
+                           punct[form:fhyph,left,right],
+                           ?[guess];noun[proper];noun[let].
+
+// CH - Jan. 2003
+//8> noun[mwe=+,proper=+] = | det[def,maj:~] | noun[maj], noun[maj] | ?[maj:~] | .
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Affixes with hyphenation
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// CH 17th September
+// Grouping prefixes with base forms
+15> nadj[features:!] = ?[prefix:+], punct[form:fhyph,left:+,right:+], nadj[!features:!].
+
+15> adj[features:!] = ?[prefix:+], punct[form:fhyph,left:+,right:+], adj[!features:!].
+
+15> noun[features:!] = ?[prefix:+], punct[form:fhyph,left:+,right:+], noun[!features:!].
+
+15> verb[features:!] = ?[prefix:+], punct[form:fhyph,left:+,right:+], verb[!features:!].
+
+
+
+IDRules:
+
+
+
+// 56 (899) as a digit : the last element
+// can be a parenthesis,
+// need to be careful with the overlap with the last rule 
+
+13> dig[mwe=+,date=+] -> dig[first,year,day:~],
+                         punct*[form:fhyph,first:~,last:~],
+                         dig+[first:~,rom:~,time:~].
+
+
+13> dig[mwe=+] -> dig+[last:~,rom:~,day:~],
+                  punct*[form:fopar],
+                  punct*[form:fcpar,first:~],
+                  punct*[form:fhyph,first:~,last:~],
+                  dig[first:~,rom:~,time:~].
+
+// digit compounds
+// Same rule as after but I need the feature time ...
+
+13> dig[mwe=+,time=+] -> | ?[form:~fslash] | dig[last:~,time:+,rom:~,day:~],dig*[last:~,rom:~],
+                  punct*[form:fopar],
+                  punct*[form:fcpar,first:~],
+                  punct*[form:fhyph,first:~],
+                  dig[last,first:~,rom:~,time:~].
+
+
+// for phone numbers ??? (by Francois)
+
+13> dig[mwe=+] -> dig+[last:~,rom:~,day:~],
+                  punct*[form:fopar],
+                  punct*[form:fcpar,first:~],
+                  punct*[form:fhyph,first:~],
+                  dig[last,first:~,rom:~,time:~].
+
+
+
+
+
+

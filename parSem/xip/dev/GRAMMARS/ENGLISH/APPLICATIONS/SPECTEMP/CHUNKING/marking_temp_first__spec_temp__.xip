@@ -1,0 +1,261 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2004 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English Normalization Temporal XIP grammar
+//!   filename   : marking_temp_first.xip
+//!   Date       : October 2006
+//!   Author     : Caroline Hagege
+//!   Description : Marking rules for complex Temporal expressios 
+//!			in order to be able to deal with chunker_temp.xip
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+Marker:
+
+
+// CORRECTION
+//  a PP composed with a prep and a NP[tempexpr] is not a tempexpr
+//   if the prep has no temp_rel (this tempexpr feature is given in the chunker)
+1> PP[tempexpr=~,c_dur=~,period=~]{prep[temp_rel:~], NP[tempexpr]}.
+
+
+
+// a NP composed by only one noun 
+// XT
+//  => propagate the temporal features (only if these features are not already set)
+//  first: after the tempexpr noun inside, anything but nouns
+1> NP#2[c_dur:~, date:~, c_set:~, hour:~, c_anchor:~, tempexpr=+]{?*[noun:~], #1[noun, tempexpr], ?*[noun:~], ?[last, noun:~]},
+	where(#2[temp_level]={#1} & #2[date]={#1} & #2[c_dur]={#1} & #2[hour]={#1} & #2[c_anchor]={#1}
+		& (copy(#1, #2) || 1:1)).
+
+//  second: after the tempexpr noun inside, nothing at all
+1> NP#2[c_dur:~, date:~, c_set:~, hour:~, c_anchor:~, tempexpr=+]{?*[noun:~], #1[noun, tempexpr, last]},
+	where(#2[temp_level]={#1} & #2[date]={#1} & #2[c_dur]={#1} & #2[hour]={#1} & #2[c_anchor]={#1} &
+		#2[indef]={#1} &
+		(copy(#1, #2) || 1:1)).
+
+
+// BG composed by a temp_rel conj
+// XT
+//  => propagate the temporal features 
+1> BG#2{conj#1[temp_rel]}, 
+	where(#2[temp_rel]={#1} & #2[temp_ref]={#1} & copy(#1, #2)).
+
+
+// XT NP finishing by a time_span
+// the ... period
+// tempexpr:~ to avoid "the 1998 period", already treated.
+1> NP#1[tempexpr=+,date=+]{?*[tempexpr:~], noun[time_span,last]}, 
+	where(add_empty_date(#1, "")).
+
+
+// special: temp preposition + not tempexpr and time_span_n
+//   not temp anymore !
+// XT
+// commented and treated in dependency_temp_before_link
+//  eg: after the war OK, after the river KO
+//2> PP{prep[temp_rel, temp_rel=~, temp_ref=~], ?*[tempexpr:~], ?{?*, noun[time_span_n, last]}}.
+// if temp preposition + location, not temp anymore
+//2> PP{prep[temp_rel, temp_rel=~, temp_ref=~], ?*[tempexpr:~], ?{?*, noun[location, last]}}.
+
+
+// special, preposition 'of' before a date or a duration gets temp_rel=during
+// XT
+2> PP[temp_rel=during, temp_ref=r]{prep#1[form:fof], ?[tempexpr]},
+	where(SetFeature(#1, "temp_rel", "during") & SetFeature(#1, "temp_ref", "r") & add_temporal_relation(#1)).
+
+
+// the coming period, the coming month
+//   see localgram_temp
+// XT
+2> adj#1[temp_rel, temp_ref, c_anchor],
+	where(add_temporal_relation(#1)).
+
+
+
+
+
+
+
+
+// XT
+// after the 12th : "the 12th" is a tempexpr (not before because of ambiguities,
+//                                              but still ambiguous)
+3> PP{prep[temp_rel], NP{?*[noun:~], dig[date,tempexpr=+, last]}}.
+
+3> ?[c_dur,hour,hour=~].
+
+// an hour is tagged date
+4> #1[hour, date=+].
+
+
+
+/////////////////
+// a PP beginning by a temp_rel preposition and a date
+//   gets the feature stand_alone
+// XT
+//  This means that it must not be mixed with another tempexpr in interpretation
+//  eg: in September
+5> PP[stand_alone=+]{prep[form:~fof, temp_rel], ?*, ?[date]}.
+
+
+//////////////////
+// MISC
+// 
+// the first time
+//5> NP[time_span=+, tempexpr=+]{det[def], num[ord], ?[lemme:time]}.
+
+// for the first time
+//5> PP[time_span=+, tempexpr=+]{prep[form:ffor], NP{det[def], num[ord], ?[lemme:time]}}.
+
+
+
+// add c_anchor to tempexpr PPs beginning by a prep having temp_rel 
+// also propagate temp_rel and temp_ref
+6> PP#1[c_anchor=+,tempexpr=+]{prep#2[temp_rel], ?*, #3[tempexpr,last]}, 
+	where(#1[temp_level]={#3} & #1[temp_rel]={#2} & #1[temp_ref]={#2}).
+
+
+DependencyRules: 
+
+
+// XT
+| NP#1[tempexpr=+]{?*, #2[tempexpr, last, adj:~]} |
+    if (~key_exists(#1) & key_exists(#2) & copy(#2, #1))
+	~.
+
+//| PP#1{prep#2, NP#3} |
+//    if (merge_anchor_date_and_date(#2, #3, #1) )
+//	~.
+
+//| PP#1[tempexpr=+]{prep#2[first], #3[tempexpr]} |
+//    if (key_exists(#2) & copy(#2, #1))   
+//	~.
+
+//| PP#1[tempexpr=+]{prep[first,temp_rel:~], #2[tempexpr]} |
+//    if (key_exists(#2) & copy(#2, #1))   
+//	~.
+
+
+
+// Marking certain elements with temporal features in a certain context
+
+//| NP[tempexpr=+,time_span=+]{?*,?[last,time_span]} |
+//~
+
+//| PP[tempexpr=+,time_span=+]{prep,NP[time_span]} |
+//~
+
+
+| NP[period=+]{?*,noun[last,period]} |
+~
+| PP[period=+]{prep,NP[period]} |
+~
+
+
+| NP[day=+]{?*,noun[last,day]} |
+~
+| PP[day=+]{prep,NP[day]} |
+~
+
+
+| NP[ord=+]{?*,?[last,ord]} |
+~
+
+| NP[hour=+]{?[first,last,hour]} | 
+~
+| PP[hour=+]{prep,NP[hour]} | 
+~
+
+
+Marker:
+
+// XT added test on dictionary key (and for this transformed the rule into a Marker rule)
+//   eg: He arrived the second   is not a date !
+
+5> NP#1[c_anchor:~, c_set:~, c_dur:~]{?*, ?[date,last]},
+	where(key_exists(#1) & SetFeature(#1, "date", "+")). 
+
+5> PP#1[date=+, c_set:~, c_dur:~]{?*, ?[date]},
+	where(key_exists(#1) & SetFeature(#1, "date", "+")).
+
+
+
+DependencyRules:
+
+
+| NP[c_set=+]{?*,?[c_set, last]} |
+~
+| PP[c_set=+]{?*,?[c_set, last]} |
+~
+
+// XT added c_anchor:~
+| NP[tempexpr,c_dur=+, c_anchor:~]{?*,?[c_dur, last]} |
+~
+| PP[tempexpr,c_dur=+]{?*,?[c_dur, last]} |
+~
+
+// XT added c_anchor
+| PP[c_anchor=+]{?*,?[c_anchor, last]} |
+~
+
+
+// XT for t_age
+| NP[tempexpr,t_age=+]{?*,?[t_age, last]} |
+~
+| PP[tempexpr,t_age=+]{?*,?[t_age, last]} |
+~
+
+
+
+
+
+| NP[firstdig=+]{?[first,dig,last:~];?[first,card,last:~]} |
+~
+| NP[hasadv=+]{?[adv]} |
+~
+| NP[firstquant=+]{?[first,quant,last:~]} |
+~
+| NP[posttime=+]{?*,?[posttime,last]} |
+~
+
+// FORMS OF PREPOSITION
+| PP[form=fof]{prep[lemme:of]} | 
+~
+| PP[form=fin]{prep[lemme:in]} | 
+~
+| PP[form=fto]{prep[lemme:to]} | 
+~
+| PP[form=ftill]{prep[lemme:till]} | 
+~
+| PP[form=funtil]{prep[lemme:until]} | 
+~
+| PP[form=fthrough]{prep[lemme:through]} | 
+~
+| PP[form=fbetween]{prep[lemme:between]} | 
+~
+| PP[form=fat]{prep[lemme:at]} | 
+~
+
+| PP[form=ffrom]{prep[lemme:from]} | 
+~
+
+| PP[year=+]{prep,dig[year]} |
+~
+
+// PP introduced by "after" "before" have feature reftime:+
+| PP[reftime=+]{prep[reftime]} |
+	if ( HEAD(#2[tempexpr],#1) )
+		~
+
+// Keep PREPD relation between preposition and lexical head even when the PP is a tempexpr
+| PP[tempexpr]{prep#2,NP{?*,#3[last,noun]}} |
+  PREPD(#2,#3)
+

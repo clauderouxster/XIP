@@ -1,0 +1,703 @@
+# ========================================================================
+# XFT-Script for tagger lexicon construction (FRENCH)
+# ========================================================================
+# Author:       Anne Schiler, Jean-Pierre Chanod
+# Update:       27/03/00
+# ========================================================================
+# USAGE:  fst -l PosTag.script -l MorTag.script -l <Thisfile>
+ 
+echo >>> define morphological tags
+define MorTag ;
+ 
+echo >>> define part-of-speech tags
+define PosTag ;
+ 
+clear stack
+ 
+# the following includes characters and subcategorization tags
+define NotMorphTag     \[MorTag|PosTag] ;
+ 
+
+define Char [
+A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R |
+S | T | U | V | Z | a | b | c | d | e | f | g | h | i | j | k | l | m |
+n | o | p | q | r | s | t | u | v | w | x | y | z | %" | %" | %' | %- | %. |
+%/ | à | â | ç | è | é | ê | ë | î | ï | ô | ö| ù | û | ü | %0 | 1 | 2 | 3 | 4
+| 5 | 6 | 7 | 8 | 9 | %@ | %  | %% | %_ | %, | %$ | %# | %& | %* 
+] ;
+
+define SubCatTag \[Char|MorTag|PosTag] ;
+
+echo >>> auxiliary definitions
+define GEND 	[ %+Fem | %+Masc | %+InvGen | %+MascFem] ;
+define NUMB	[ %+SG | %+PL | %+InvPL ] ;
+define CASE	[ %+Nom | %+Acc ] ;
+
+define PPERS	[ %+PP1S | %+PP2S | %+PP3S | %+PP1P | %+PP2P | %+PP3P ] ;
+
+define DETTYPE [%+Quant | %+Def | %+Indef | %+Int | %+Quant %+Dem | %+Dem | %+Poss ] ;
+define P12	[ %+P1 | %+P2 ] ;
+
+define PROTYPE1 [%+Def |  %+Dem ([%+Dist|%+Prox]) | %+Indef | %+Quant ] ;
+
+define Wposs	[l e %  [ [m|t|s] i e n | [n|v] ô t r e | l e u r ] ] ;
+
+define CLIT	[ %+Dem %+WordPart ] ;
+
+#define TYPEINV	[ %+Date|%+Heure|%+Time ]
+#define TYPEN	[ %+Day|%+Location|%+Month|%+Ord|%+Time|%+Tit ]
+
+# Noun type  w/o gender or number tags
+define TYPEN1   [%+Card %+Measure] ;
+# Other noun types
+define TYPEN	[? - PosTag ]* ;
+define TYPEN TYPEN - %+Card ;
+
+define TYPEPROPER TYPEN [[%+Abr | %+PreN] %+Proper | %+Proper ] TYPEN ;
+#  %+Card is not listed in the type list as %+Card nouns are converted to +NUM
+# %+Tit  is not listed in the type list as %+Tit nouns are converted to +NOUN_TIT
+
+
+define TENSE	[ %+Cond|%+Fut|%+Imp|%+IndI|%+IndP|%+PasS|%+SubjI|%+SubjP ] ;
+
+define Adjs [%+ADJ%_MS |%+ADJ%_FS | %+ADJ%_MP | %+ADJ%_FP | %+ADJ%_MI |  %+ADJ%_FI | %+ADJ%_MI | %+ADJ%_FI | %+ADJ%_II] ;
+define PapAdjs [%+PAPADJ%_MS |%+PAPADJ%_FS | %+PAPADJ%_MP | %+PAPADJ%_FP | %+PAPADJ%_MI |  %+PAPADJ%_FI | %+PAPADJ%_MI | %+PAPADJ%_FI | %+PAPADJ%_II] ;
+
+define AllAdjs Adjs | PapAdjs ;
+
+echo >>> define mapping
+regex
+[
+# =========================================================================
+# Contracted word forms
+# =========================================================================
+# Contracted possessives "du mien"
+# %+Prep %= Wposs PPERS GEND NUMB %+Poss %+Pro		%+PRON:0	| # ???
+
+# Contracted determiner
+%+Prep %= l e GEND NUMB %+Def %+Prep		 %+PREP%_DE:0 |
+%+Prep %= l e d i t GEND NUMB %+Def %+Prep	 %+PREP%_DE:0 |
+
+# Contracted relative pronoun
+%+Prep %= l e q u e l ? GEND NUMB %+Rel %+Int %+Pro     %+RELPRO:0 |
+
+# =========================================================================
+# Determiner
+# =========================================================================
+
+# abbreviated determiners (qqs) and possessive ["mon", "leur" ...]
+
+# most determiners:  abbreviated (qqs) possessive ["mon", "leur" ...]def., indef., dem, quantif.
+#exception: interrogative determ. (quel)
+([%+Abr | PPERS]) %+Masc   %+SG  [DETTYPE - %+Int]  %+Det	        %+DET%_SG:0	|
+([%+Abr | PPERS]) %+Masc   %+PL  [DETTYPE - %+Int]  %+Det		%+DET%_PL:0	|
+([%+Abr | PPERS]) %+Fem    %+SG  [DETTYPE - %+Int]  %+Det		%+DET%_SG:0	|
+([%+Abr | PPERS]) %+Fem    %+PL  [DETTYPE - %+Int]  %+Det		%+DET%_PL:0	|
+([%+Abr | PPERS]) %+InvGen %+SG  [DETTYPE - %+Int]  %+Det		%+DET%_SG:0	|
+([%+Abr | PPERS]) %+InvGen %+PL  [DETTYPE - %+Int]  %+Det		%+DET%_PL:0	|
+
+
+# interrogative determiner
+%+Masc %+SG %+Int %+Det			%+DET%_SG:0	|
+%+Masc %+PL %+Int %+Det			%+DET%_PL:0	|
+%+Fem %+SG %+Int %+Det			%+DET%_SG:0	|
+%+Fem %+PL %+Int %+Det			%+DET%_PL:0	|
+
+
+
+# =========================================================================
+# Pronouns
+# =========================================================================
+# abbreviations (qqn, qqc
+%+Abr %+Masc %+SG %+Indef %+Pro 	%+PRON:0	|
+
+
+# possessive
+PPERS %+Masc %+SG %+Poss %+Pro	   	%+PRON:0	|
+PPERS %+Masc %+PL %+Poss %+Pro		%+PRON:0	|
+PPERS %+Fem %+SG %+Poss %+Pro	    	%+PRON:0	|
+PPERS %+Fem %+PL %+Poss %+Pro		%+PRON:0	|
+PPERS %+InvGen %+SG %+Poss %+Pro	%+PRON:0	|
+PPERS %+InvGen %+PL %+Poss %+Pro     	%+PRON:0	|
+
+# relative pronouns 
+# "qui/qu' est-ce qui/que"
+[%+Chose|%+Hum] CASE %+InvGen %+SG %+Int %+Pro      %+RELPRO:0	|
+
+# "qui"
+%+Nom %+InvGen %+InvPL %+Rel %+Int %+Pro	%+RELPRO:0	|
+# "dont"
+%+Gen %+InvGen %+InvPL %+Rel %+Pro	%+RELPRO:0	|
+
+# "quel(s)/quelle(s)"
+%+InvCase %+Masc %+SG %+Int %+Pro   %+RELPRO:0	|	
+%+InvCase %+Fem  %+SG %+Int %+Pro    %+RELPRO:0	|	
+%+InvCase %+Masc %+PL %+Int %+Pro   %+RELPRO:0	|	
+%+InvCase %+Fem  %+PL %+Int %+Pro   %+RELPRO:0	|	
+
+# "lequel/lesquels/laquelle/lesquelles"
+%+InvCase %+Masc %+SG  %+Rel %+Int %+Pro  %+RELPRO:0	|	
+%+InvCase %+Fem  %+SG  %+Rel %+Int %+Pro    %+RELPRO:0	|	
+%+InvCase %+Masc %+PL  %+Rel %+Int %+Pro    %+RELPRO:0	|	
+%+InvCase %+Fem  %+PL  %+Rel %+Int %+Pro   %+RELPRO:0	|	
+# "quoi"
+%+InvCase %+InvGen %+InvPL %+Rel %+Int %+Pro		%+RELPRO:0	|
+# "où"
+%+Loc %+InvGen %+InvPL %+Rel %+Int %+Pro	%+RELPRO:0	|
+
+# "l'un" "l'une" "les uns" "les unes"
+# demonstratives "celle", "ceci" ...
+# indefinite
+%+Masc    %+SG PROTYPE1 %+Pro		%+PRON:0	|
+%+Fem     %+SG PROTYPE1 %+Pro		%+PRON:0	|
+%+Masc    %+PL PROTYPE1 %+Pro		%+PRON:0	|
+%+Fem     %+PL PROTYPE1 %+Pro		%+PRON:0	|
+%+InvGen  %+SG PROTYPE1 %+Pro		%+PRON:0	|
+%+InvGen  %+PL PROTYPE1 %+Pro		%+PRON:0	|
+%+InvGen  %+InvPL PROTYPE1 %+Pro	%+PRON:0	|
+
+
+
+# tonic personal pronouns, including reflexive "moi/toi/lui/...-même(s)"
+#%+InvCase GEND NUMB %+P3 %+PToni %+Refl %+Pro	%+PRON:0	|
+#%+InvCase GEND NUMB P12 %+PToni %+Refl (%+Polit) %+Pro %+PRON%_P1P2:0 |
+
+[%+InvCase | %+Nom | %+NNom] GEND %+SG %+P1 %+PToni (%+Refl)  %+Pro         %+PRON%_P1P2:0 |
+[%+InvCase | %+Nom | %+NNom] GEND %+SG %+P2 %+PToni (%+Refl)  %+Pro           %+PRON%_P1P2:0 |
+[%+InvCase | %+Nom | %+NNom] %+Masc %+SG %+P3 %+PToni (%+Refl)  %+Pro            %+PRON:0 |
+[%+InvCase | %+Nom | %+NNom] %+Fem %+SG %+P3 %+PToni (%+Refl)  %+Pro             %+PRON:0 |
+[%+InvCase | %+Nom | %+NNom] GEND %+PL %+P1 %+PToni (%+Refl)  %+Pro            %+PRON%_P1P2:0 |
+[%+InvCase | %+Nom | %+NNom] GEND %+PL %+P2 %+PToni (%+Refl) (%+Polit) %+Pro         %+PRON%_P1P2:0 |
+[%+InvCase | %+Nom | %+NNom] %+Masc %+PL %+P3 %+PToni (%+Refl)  %+Pro               %+PRON:0 |
+[%+InvCase | %+Nom | %+NNom] %+Fem %+PL %+P3 %+PToni (%+Refl)  %+Pro            %+PRON:0 |
+[%+InvCase | %+Nom | %+NNom] %+InvGen %+InvPL %+P3 %+PToni (%+Refl)  %+Pro             %+PRON:0 |
+
+# Clitic pronouns
+
+# "l'/le/la/les"
+#%+Acc GEND NUMB %+P3 %+PC			%+PC:0	|
+%+Acc %+Masc %+SG %+P3 %+PC			%+PC:0	|
+%+Acc %+Fem %+SG %+P3 %+PC			%+PC:0	|
+%+Acc %+InvGen %+SG %+P3 %+PC			%+PC:0	|
+%+Acc %+InvGen %+PL %+P3 %+PC		0	%+PC:0	|
+
+# "lui/leur"
+%+Dat %+InvGen %+SG %+P3 %+PC			%+PC:0	|
+%+Dat %+InvGen %+PL %+P3 %+PC			%+PC:0	|
+
+# "en"
+%+Gen %+PC					    %+PC:0	|
+
+# "y"	
+%+Loc %+PC				       %+PC:0	|
+
+# "nous/vous"
+[%+InvCase | %+Nom | %+NNom] %+InvGen %+PL %+P1 %+PC	%+PC:0   |
+[%+InvCase | %+Nom | %+NNom] %+InvGen %+PL %+P2 %+PC	%+PC:0   |
+
+# "me/te/se"
+%+NNom %+InvGen %+SG %+P1 %+PC			%+PC:0	|
+%+NNom %+InvGen %+SG %+P2 %+PC			%+PC:0	|
+%+NNom %+InvGen %+InvPL %+P3 %+Refl %+PC	%+PC:0	|
+
+
+# "je/tu/elle/on"
+%+Nom %+InvGen %+SG %+P1 %+PC			 %+PRON%_P1P2:0 |
+%+Nom %+InvGen %+SG %+P2 %+PC			 %+PRON%_P1P2:0 |
+
+
+# "il(s)/elle(s)"
+%+Nom %+Masc %+SG %+P3 %+PC		 	%+PRON:0 |
+%+Nom %+Fem %+SG %+P3 %+PC		 	%+PRON:0 |
+%+Nom %+Masc %+PL %+P3 %+PC		 	%+PRON:0 |
+%+Nom %+Fem %+PL %+P3 %+PC		 	%+PRON:0 |
+%+Nom %+InvGen %+SG %+P3 %+PC			%+PRON:0 |
+
+
+# =========================================================================
+# Nouns
+# =========================================================================
+# proper names
+
+%+Masc %+SG TYPEPROPER %+Noun (CLIT)	            %+NOUN%_SG:0	        |
+%+Masc %+PL TYPEPROPER %+Noun (CLIT)	           %+NOUN%_PL:0	        |
+%+Masc %+InvPL TYPEPROPER %+Noun (CLIT)	             %+NOUN%_INV:0	|
+%+Fem %+SG TYPEPROPER %+Noun (CLIT)	           %+NOUN%_SG:0 	|
+%+Fem %+PL TYPEPROPER %+Noun (CLIT)	            %+NOUN%_PL:0 	|
+%+Fem %+InvPL TYPEPROPER %+Noun (CLIT)	          %+NOUN%_INV:0	|
+%+InvGen %+SG TYPEPROPER %+Noun (CLIT)	            %+NOUN%_SG:0	        |
+%+InvGen %+PL TYPEPROPER %+Noun (CLIT)	    	         %+NOUN%_PL:0	        |
+%+InvGen %+InvPL TYPEPROPER %+Noun (CLIT)    	%+NOUN%_INV:0	|
+%+MascFem %+SG TYPEPROPER %+Noun (CLIT)	           %+NOUN%_SG:0 	|
+%+MascFem %+PL TYPEPROPER %+Noun (CLIT)	           %+NOUN%_PL:0	        |
+%+MascFem %+InvPL TYPEPROPER %+Noun (CLIT)   	%+NOUN%_INV:0	|
+
+
+
+# common noun
+%+Card %+Measure %+Noun	                                    %+NOUN%_INV:0	|
+
+GEND NUMB %+Card %+Noun (CLIT)			                  %+NUM:0	|
+GEND NUMB %+Tit %+Noun (CLIT)			          %+NOUN%_INV:0	|
+
+#([%+Measure]) %+Masc %+SG (TYPEN) %+Noun (CLIT)	             %+NOUN%_SG:0	|
+#([%+Measure]) %+Masc %+PL (TYPEN) %+Noun (CLIT)	            %+NOUN%_PL:0	|
+#([%+Measure]) %+Masc %+InvPL (TYPEN) %+Noun (CLIT)     %+NOUN%_INV:0	|
+#([%+Measure]) %+Fem %+SG (TYPEN) %+Noun (CLIT)	          %+NOUN%_SG:0	|
+#([%+Measure]) %+Fem %+PL (TYPEN) %+Noun (CLIT)	             %+NOUN%_PL:0	|
+#([%+Measure]) %+Fem %+InvPL (TYPEN) %+Noun (CLIT)	  %+NOUN%_INV:0	|
+#([%+Measure]) %+InvGen %+SG (TYPEN) %+Noun (CLIT)	  %+NOUN%_SG:0	|
+#([%+Measure]) %+InvGen %+PL (TYPEN) %+Noun (CLIT)	    %+NOUN%_PL:0	|
+#([%+Measure]) %+InvGen %+InvPL (TYPEN) %+Noun (CLIT)    %+NOUN%_INV:0	|
+#([%+Measure]) %+MascFem %+SG (TYPEN) %+Noun (CLIT)     %+NOUN%_SG:0	|
+#([%+Measure]) %+MascFem %+PL (TYPEN) %+Noun (CLIT)    %+NOUN%_PL:0	|
+#([%+Measure]) %+MascFem %+InvPL (TYPEN) %+Noun (CLIT)	    %+NOUN%_INV:0	|
+
+(? - PosTag) %+Masc %+SG (TYPEN) %+Noun (CLIT)	             %+NOUN%_SG:0	|
+(? - PosTag) %+Masc %+PL (TYPEN) %+Noun (CLIT)	            %+NOUN%_PL:0	|
+(? - PosTag) %+Masc %+InvPL (TYPEN) %+Noun (CLIT)     %+NOUN%_INV:0	|
+(? - PosTag) %+Fem %+SG (TYPEN) %+Noun (CLIT)	          %+NOUN%_SG:0	|
+(? - PosTag) %+Fem %+PL (TYPEN) %+Noun (CLIT)	             %+NOUN%_PL:0	|
+(? - PosTag) %+Fem %+InvPL (TYPEN) %+Noun (CLIT)	  %+NOUN%_INV:0	|
+(? - PosTag) %+InvGen %+SG (TYPEN) %+Noun (CLIT)	  %+NOUN%_SG:0	|
+(? - PosTag) %+InvGen %+PL (TYPEN) %+Noun (CLIT)	    %+NOUN%_PL:0	|
+(? - PosTag) %+InvGen %+InvPL (TYPEN) %+Noun (CLIT)    %+NOUN%_INV:0	|
+(? - PosTag) %+MascFem %+SG (TYPEN) %+Noun (CLIT)     %+NOUN%_SG:0	|
+(? - PosTag) %+MascFem %+PL (TYPEN) %+Noun (CLIT)    %+NOUN%_PL:0	|
+(? - PosTag) %+MascFem %+InvPL (TYPEN) %+Noun (CLIT)	    %+NOUN%_INV:0	|
+
+# =========================================================================
+# Verbs
+# =========================================================================
+
+
+%+Inf %+Verb				        	%+VERB%_INF:0	|
+
+%+PaPrt %+Masc %+SG %+Verb		       	%+PAP%_SG:0	|
+%+PaPrt %+Fem %+SG %+Verb		      	%+PAP%_SG:0	|
+%+PaPrt %+Masc %+PL %+Verb		      	%+PAP%_PL:0	|
+%+PaPrt %+Fem %+PL %+Verb		     	%+PAP%_PL:0	|
+%+PaPrt %+Masc %+InvPL %+Verb		      	%+PAP%_INV:0	|
+
+#past participles are also disambiguated as ADJs due to specific distribution of ADJs wrt to PAP
+# but the first tag is PAP in any case (as this is how they are normalised in the lexicon,
+# at least for PAPs which are not separately coded as ADJs in the basic morphological analyser)
+%+PaPrt %+Masc %+SG %+Verb		       	%+ADJ%_SG:0	|
+%+PaPrt %+Fem %+SG %+Verb		       	%+ADJ%_SG:0	|
+%+PaPrt %+Masc %+PL %+Verb		     	%+ADJ%_PL:0	|
+%+PaPrt %+Fem %+PL %+Verb		      	%+ADJ%_PL:0	|
+%+PaPrt %+Masc %+InvPL %+Verb		    	%+ADJ%_INV:0	|
+
+%+AlsoAdj %+PaPrt %+Verb			%+PAP%_INV:0	|
+%+AlsoAdj %+PaPrt %+Masc %+SG %+Verb		%+PAP%_SG:0	|
+%+AlsoAdj %+PaPrt %+Fem %+SG %+Verb		%+PAP%_SG:0	|
+%+AlsoAdj %+PaPrt %+Masc %+PL %+Verb			%+PAP%_PL:0	|
+%+AlsoAdj %+PaPrt %+Fem %+PL %+Verb		%+PAP%_PL:0	|
+%+AlsoAdj %+PaPrt %+Masc %+InvPL %+Verb			%+PAP%_INV:0	|
+
+#past participles are also disambiguated as ADJs due to specific distribution of ADJs wrt to PAP
+# but the first tag is PAPADJ in any case (as this is how they are normalised in the lexicon,
+# at least for PAPs which are separately coded as ADJs in the basic morphological analyser)
+%+AlsoAdj %+PaPrt %+Verb			%+ADJ%_SG:0	|
+%+AlsoAdj %+PaPrt %+Masc %+SG %+Verb		%+ADJ%_SG:0	|
+%+AlsoAdj %+PaPrt %+Fem %+SG %+Verb		%+ADJ%_SG:0	|
+%+AlsoAdj %+PaPrt %+Masc %+PL %+Verb		%+ADJ%_PL:0	|
+%+AlsoAdj %+PaPrt %+Fem %+PL %+Verb		%+ADJ%_PL:0	|
+%+AlsoAdj %+PaPrt %+Masc %+InvPL %+Verb		%+ADJ%_INV:0	|
+
+
+%+PaPrt %+Verb						%+PAP%_INV:0	|
+
+%+PrPrt %+Verb				       	%+VERB%_PRP:0	|
+
+
+#TENSE %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+#TENSE %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+#TENSE %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+#TENSE %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+#TENSE %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+#TENSE %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+#TENSE %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+
+%+IndP %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+IndP %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+IndP %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+IndP %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+%+IndP %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+IndP %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+IndP %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+%+Fut %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+Fut %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+Fut %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+Fut %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+%+Fut %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+Fut %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+Fut %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+%+IndI %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+IndI %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+IndI %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+IndI %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+%+IndI %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+IndI %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+IndI %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+%+PasS %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+PasS %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+PasS %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+PasS %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+%+PasS %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+PasS %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+PasS %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+%+Cond %+SG %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+Cond %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+Cond %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+Cond %+SG %+P3 %+Verb				%+VERB%_P3SG:0	|
+%+Cond %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+Cond %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+Cond %+PL %+P3 %+Verb				%+VERB%_P3PL:0	|
+
+%+SubjP %+SG %+P1 %+Verb			%+VERB%_P1P2:0	|
+%+SubjP %+SG %+P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjP %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjP %+SG %+P3 %+Verb			%+VERB%_P3SG:0	|
+%+SubjP %+PL %+P1 %+Verb			%+VERB%_P1P2:0	|
+%+SubjP %+PL %+P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjP %+PL %+P3 %+Verb			%+VERB%_P3PL:0	|
+
+%+SubjI %+SG %+P1 %+Verb			%+VERB%_P1P2:0	|
+%+SubjI %+SG %+P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjI %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjI %+SG %+P3 %+Verb			%+VERB%_P3SG:0	|
+%+SubjI %+PL %+P1 %+Verb			%+VERB%_P1P2:0	|
+%+SubjI %+PL %+P2 %+Verb			%+VERB%_P1P2:0	|
+%+SubjI %+PL %+P3 %+Verb			%+VERB%_P3PL:0	|
+
+
+
+%+Imp %+SG %+P2 %+Verb				%+VERB%_P1P2:0	|
+%+Imp %+SG %+P1P2 %+Verb			%+VERB%_P1P2:0	|
+%+Imp %+PL %+P1 %+Verb				%+VERB%_P1P2:0	|
+%+Imp %+PL %+P2 %+Verb				%+VERB%_P1P2:0	|
+
+
+
+
+# =========================================================================
+# Adjectives
+# =========================================================================
+GEND %+SG (TYPEN) %+Adj	        	%+ADJ%_SG:0	|
+GEND %+PL (TYPEN) %+Adj	       		%+ADJ%_PL:0	|
+GEND %+InvPL (TYPEN) %+Adj	       		%+ADJ%_INV:0	|
+
+
+# =========================================================================
+# Adverbs
+# =========================================================================
+%+APrMod				      %+ADV:0		|
+([%+Abr | %+Ord]) %+Adv			       %+ADV:0		|	
+[ %+CoordAdv ] %+Adv		    		%+ADV:0		|
+%+PsNeg %+Adv				     %+ADV:0		|
+%+AdvInt				   	%+CONN:0	|
+
+# =========================================================================
+# Other
+# =========================================================================
+
+(%+Abr) %+Coord				       %+COORD:0	|
+(%+Abr) %+Prep					%+PREP:0        |
+%+PrepInf					%+PREP:0        |
+%+Card						%+NUM:0	        |
+%+ConjComme					%+COMME:0	|
+%+ConjComp					%+CONN:0        |
+%+ConjQue				     	%+CONJQUE:0	|
+%+Estceque				     	 %+MISC:0	|
+([%+Onomat|%+Salut]) %+Interj		        %+MISC:0	|
+%+Neg						%+NEG:0		|
+%+Numeral					%+NUM:0		|
+%+Percent					%+NOUN%_INV:0	|
+(%+PreConj) %+WordPart				%+MISC:0	|
+%+SConj						%+CONN:0	|
+%+Voicila					%+VOICILA:0	
+];
+
+define TagMap ;
+
+define Map 	NotMorphTag* TagMap ;
+
+echo >>> define replacements
+
+define AuxAv	[ a v o i r] [SubCatTag]*  [MorTag]* ;
+define AuxEt	[ê t r e ] [SubCatTag]* [MorTag]* ;
+define Aux AuxAv | AuxEt ;
+
+regex
+[
+ b e a u | b o n | c h e r | m a u v a i s | p e t i t |
+ e x t r ê m e | f u t u r | g r a n d |  c o u r t | l o n g | l a r g e |
+ g r o s | j e u n e | v i e u x | n o u v e a u | a n c i e n | 
+ b a s | h a u t | p r o c h a i n | p r o p r e |
+ p r e m i e r | d e r n i e r | p r i n c i p a l | s a g e
+]  [SubCatTag]* [MorTag]*
+;
+
+define Adj2 ;
+
+regex 
+[ 
+ b a s | m a u v a i s |  g r o s | v i e u x
+] [SubCatTag]*  [MorTag]*;
+
+define Adj2Inv ;
+
+
+
+# converts the final tag for auxiliary verbs (to be used by the HMM disamb.)
+
+regex
+[
+ [ %+VAUX%_P3SG <- %+VERB%_P3SG || .#. Aux _ ] .o.
+ [ %+VAUX%_P3PL <- %+VERB%_P3PL || .#. Aux _ ] .o.
+ [ %+VAUX%_P1P2 <- %+VERB%_P1P2 || .#. Aux _ ].o. 
+ [ %+VAUX%_INF <- %+VERB%_INF || .#. Aux _ ] .o.
+ [ %+VAUX%_PRP <- %+VERB%_PRP || .#. Aux _ ] .o.
+ [ %+VAUX%_PAP <- [%+PAP%_SG | %+PAP%_PL | %+PAP%_INV] || .#. Aux  _ ] 
+] ;
+
+
+define Repl1 ;
+
+
+
+regex
+[
+ [ %+PREP%_A <- [%+PREP%_DE|%+PREP]	|| .#. à %+Prep  ?* _	] .o.
+# next conversion for jusqu'a jusqu'au
+ [ %+PREP <- [%+PREP%_DE]	||      .#. [MorTag]+ à %+Prep  ?* _	] .o.
+ [ %+PREP%_DE <- %+PREP			|| .#. d e %+Prep ?* _	] .o.
+ [ %+PREP%_EN <- %+PREP			|| .#. e n %+Prep [MorTag]* _	] .o.
+
+ [ %+ADJ2%_SG <- %+ADJ%_SG || .#. Adj2  _ ] .o.
+ [ %+ADJ2%_INV <- %+ADJ%_INV || .#. Adj2Inv  _ ] .o.
+ [ %+ADJ2%_PL <- %+ADJ%_PL || .#. Adj2 _ ] 
+] ;
+define Repl2 ;
+
+
+###regex
+###[
+#### converts the first tag for aux. verbs (to be used as output/display tag)
+### [ %+AVOIR%_IP%_P1SG <- %+VERB%_IP%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P2SG <- %+VERB%_IP%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P12SG <- %+VERB%_IP%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P3SG <- %+VERB%_IP%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P1PL <- %+VERB%_IP%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P2PL <- %+VERB%_IP%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IP%_P3PL <- %+VERB%_IP%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_IF%_P1SG <- %+VERB%_IF%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P2SG <- %+VERB%_IF%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P12SG <- %+VERB%_IF%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P3SG <- %+VERB%_IF%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P1PL <- %+VERB%_IF%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P2PL <- %+VERB%_IF%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IF%_P3PL <- %+VERB%_IF%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_II%_P1SG <- %+VERB%_II%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P2SG <- %+VERB%_II%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P12SG <- %+VERB%_II%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P3SG <- %+VERB%_II%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P1PL <- %+VERB%_II%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P2PL <- %+VERB%_II%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_II%_P3PL <- %+VERB%_II%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_IS%_P1SG <- %+VERB%_IS%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P2SG <- %+VERB%_IS%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P12SG <- %+VERB%_IS%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P3SG <- %+VERB%_IS%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P1PL <- %+VERB%_IS%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P2PL <- %+VERB%_IS%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IS%_P3PL <- %+VERB%_IS%_P3PL || .#. AuxAv _ ] 
+###] ;
+###END;
+###def Repl2
+
+
+###regex
+###[
+### [ %+AVOIR%_CO%_P1SG <- %+VERB%_CO%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P2SG <- %+VERB%_CO%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P12SG <- %+VERB%_CO%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P3SG <- %+VERB%_CO%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P1PL <- %+VERB%_CO%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P2PL <- %+VERB%_CO%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_CO%_P3PL <- %+VERB%_CO%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_SP%_P1SG <- %+VERB%_SP%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P2SG <- %+VERB%_SP%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P12SG <- %+VERB%_SP%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P3SG <- %+VERB%_SP%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P1PL <- %+VERB%_SP%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P2PL <- %+VERB%_SP%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SP%_P3PL <- %+VERB%_SP%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_SI%_P1SG <- %+VERB%_SI%_P1SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P2SG <- %+VERB%_SI%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P12SG <- %+VERB%_SI%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P3SG <- %+VERB%_SI%_P3SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P1PL <- %+VERB%_SI%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P2PL <- %+VERB%_SI%_P2PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_SI%_P3PL <- %+VERB%_SI%_P3PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_IM%_P2SG <- %+VERB%_IM%_P2SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IM%_P12SG <- %+VERB%_IM%_P12SG || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IM%_P1PL <- %+VERB%_IM%_P1PL || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_IM%_P2PL <- %+VERB%_IM%_P2PL || .#. AuxAv _ ] .o.
+###
+### [ %+AVOIR%_INF <- %+VERB%_INF || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_PRP <- %+VERB%_PRP || .#. AuxAv _ ] .o.
+### [ %+AVOIR%_PAP <- [%+PAP%_MS | %+PAP%_FS | %+PAP%_MP | %+PAP%_FP] || .#. AuxAv _ ] 
+###];
+###END;
+###def Repl3
+
+
+
+###regex
+###[
+### [ %+ETRE%_IP%_P1SG <- %+VERB%_IP%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P2SG <- %+VERB%_IP%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P12SG <- %+VERB%_IP%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P3SG <- %+VERB%_IP%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P1PL <- %+VERB%_IP%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P2PL <- %+VERB%_IP%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IP%_P3PL <- %+VERB%_IP%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_IF%_P1SG <- %+VERB%_IF%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P2SG <- %+VERB%_IF%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P12SG <- %+VERB%_IF%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P3SG <- %+VERB%_IF%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P1PL <- %+VERB%_IF%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P2PL <- %+VERB%_IF%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IF%_P3PL <- %+VERB%_IF%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_II%_P1SG <- %+VERB%_II%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P2SG <- %+VERB%_II%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P12SG <- %+VERB%_II%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P3SG <- %+VERB%_II%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P1PL <- %+VERB%_II%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P2PL <- %+VERB%_II%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_II%_P3PL <- %+VERB%_II%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_IS%_P1SG <- %+VERB%_IS%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P2SG <- %+VERB%_IS%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P12SG <- %+VERB%_IS%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P3SG <- %+VERB%_IS%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P1PL <- %+VERB%_IS%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P2PL <- %+VERB%_IS%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IS%_P3PL <- %+VERB%_IS%_P3PL || .#. AuxEt _ ] 
+###];
+###END;
+###def Repl4
+###
+###
+###
+###regex
+###[
+### [ %+ETRE%_CO%_P1SG <- %+VERB%_CO%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P2SG <- %+VERB%_CO%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P12SG <- %+VERB%_CO%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P3SG <- %+VERB%_CO%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P1PL <- %+VERB%_CO%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P2PL <- %+VERB%_CO%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_CO%_P3PL <- %+VERB%_CO%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_SP%_P1SG <- %+VERB%_SP%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P2SG <- %+VERB%_SP%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P12SG <- %+VERB%_SP%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P3SG <- %+VERB%_SP%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P1PL <- %+VERB%_SP%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P2PL <- %+VERB%_SP%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SP%_P3PL <- %+VERB%_SP%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_SI%_P1SG <- %+VERB%_SI%_P1SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P2SG <- %+VERB%_SI%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P12SG <- %+VERB%_SI%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P3SG <- %+VERB%_SI%_P3SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P1PL <- %+VERB%_SI%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P2PL <- %+VERB%_SI%_P2PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_SI%_P3PL <- %+VERB%_SI%_P3PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_IM%_P2SG <- %+VERB%_IM%_P2SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IM%_P12SG <- %+VERB%_IM%_P12SG || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IM%_P1PL <- %+VERB%_IM%_P1PL || .#. AuxEt _ ] .o.
+### [ %+ETRE%_IM%_P2PL <- %+VERB%_IM%_P2PL || .#. AuxEt _ ] .o.
+###
+### [ %+ETRE%_INF <- %+VERB%_INF || .#. AuxEt _ ] .o.
+### [ %+ETRE%_PRP <- %+VERB%_PRP || .#. AuxEt _ ] .o.
+### [ %+ETRE%_PAP <- [%+PAP%_II] || .#. AuxEt _ ] 
+###];
+###END;
+###def Repl5
+
+
+
+
+#### change some past participle tags to corresponding adjectival tags
+#### the lemmas will be changed later as well
+#### assigns parfait and rusé to adjectival rather than verbal lemma
+###
+### [  %+ADJ%_MS <-  %+PAPADJ%_MS ||  .#. p a r f a i r e [SubCatTag]* [MorTag]* _ [%+ADJ%_SG | %+PAP%_SG]] .o.
+### [  %+ADJ%_FS <-  %+PAPADJ%_FS ||  .#. p a r f a i r e [SubCatTag]* [MorTag]* _ [%+ADJ%_SG | %+PAP%_SG]] .o.
+### [  %+ADJ%_MP <-  %+PAPADJ%_MP ||  .#. p a r f a i r e [SubCatTag]* [MorTag]* _ [%+ADJ%_PL | %+PAP%_PL]] .o.
+### [  %+ADJ%_FP <-  %+PAPADJ%_FP ||  .#. p a r f a i r e [SubCatTag]* [MorTag]* _ [%+ADJ%_PL | %+PAP%_PL]] .o.
+### [  %+ADJ%_MS <-  %+PAPADJ%_MS ||  .#. r u s e r [SubCatTag]* [MorTag]* _ [%+ADJ%_SG]] .o.
+### [  %+ADJ%_FS <-  %+PAPADJ%_FS ||  .#. r u s e r [SubCatTag]* [MorTag]* _ [%+ADJ%_SG | %+PAP%_SG]] .o.
+### [  %+ADJ%_MP <-  %+PAPADJ%_MP ||  .#. r u s e r [SubCatTag]* [MorTag]* _ [%+ADJ%_PL | %+PAP%_PL]] .o.
+### [  %+ADJ%_FP <-  %+PAPADJ%_FP ||  .#. r u s e r [SubCatTag]* [MorTag]* _ [%+ADJ%_PL | %+PAP%_PL]]
+###];
+###END;
+###def Repl6
+
+echo >>> apply replacements 
+
+define Replace Repl1 .o. Repl2 ;
+
+
+
+echo >>> apply replacements
+regex Replace .o. Map ;
+
+define Map2 ;
+
+
+# change some base forms
+
+regex
+[
+ [  t <- r e   ||  .#. p a r f a i _ [SubCatTag]* [MorTag]* AllAdjs [%+ADJ%_SG | %+ADJ%_PL | %+PAP%_SG | %+PAP%_PL]] .o.
+ [  é <- e r   ||  .#. r u s _ [SubCatTag]* [MorTag]* AllAdjs [%+ADJ%_SG | %+ADJ%_PL | %+PAP%_SG | %+PAP%_PL]] 
+]
+;
+define Replace2
+
+echo >>> apply replacements of base forms
+regex Replace2 .o. Map2 ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

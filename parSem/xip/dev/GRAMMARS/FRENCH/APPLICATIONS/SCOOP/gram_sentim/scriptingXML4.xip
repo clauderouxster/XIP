@@ -1,0 +1,79 @@
+Variables:
+
+int nb_phrase=0 ;
+int int_compteur = 0 ;
+int nbw1pos = 0 ;
+int nbw2pos = 0 ;
+int nbw1neg = 0 ;
+int nbw2neg = 0 ;
+int nbrelpos = 0 ;
+int nbrelneg = 0
+string _enrichment = "" ;
+string _adjs="" ;
+string _nouns="" ;
+dictionary dico ;
+
+Script: 
+
+|GROUPE#1|{
+        nb_phrase=nb_phrase + 1 ;
+        }
+
+
+if (SENTIMENT[negative](#1,#2[fictivenode],#3)){
+	_enrichment =  "opinion-neg(" + #1[lemme] + ",unkn)\n";
+	@_current(/userreview/xipopi)->Create(_enrichment);
+	}
+
+if (SENTIMENT[positive](#1,#2[fictivenode],#3)){
+	_enrichment =  "opinion-pos(" + #1[lemme] + ",unkn)\n";
+	@_current(/userreview/xipopi)->Create(_enrichment);
+	}
+
+if (SENTIMENT[negative](#1,#2[fictivenode:~],#3)){
+	_enrichment =  "opinion-neg(" + #1[lemme] + "," + #2[lemme] + ")\n" ;
+	@_current(/userreview/xipopi)->Create(_enrichment);
+	}
+
+if (SENTIMENT[positive](#1,#2[fictivenode:~],#3)){
+	_enrichment= "opinion-pos(" + #1[lemme] + "," +  #2[lemme] + ")\n" ;
+	@_current(/userreview/xipopi)->Create(_enrichment);
+	}
+
+if (NMOD(#1[noun,sents:~,proper:~,measure:~],#2[sents:~,adj,nat:~,neutral:~,ord:~,card:~]) & ~NEGAT(#2) & ~NEGAT(#1)){
+   _enrichment="collocs(" + #1[lemme] + "," +  #2[lemme] + ")\n" ;
+   @_current(/userreview/xipopi)->Create(_enrichment);
+   }
+
+if (NMOD(#1[noun,sents:~,proper:~,measure:~],#2[sents:~,adj,nat:~,neutral:~,ord:~,card:~]) & ( NEGAT(#2) | NEGAT(#1) )){
+   _enrichment="collocs-neg(" + #1[lemme] + "," +  #2[lemme] + ")\n" ;
+   @_current(/userreview/xipopi)->Create(_enrichment);
+   }
+
+if (SUBJ(#3,#1[noun, sents:~,proper:~,measure:~]) & OBJ[spred](#3,#2[sents:~,adj,nat:~,neutral:~,ord:~,card:~]) & ~NEGAT(#2)){
+   _enrichment="collocs(" + #1[lemme] + "," +  #2[lemme] + ")\n" ;
+    @_current(/userreview/xipopi)->Create(_enrichment);
+   }
+
+if (SUBJ(#3,#1[noun,sents:~,proper:~,measure:~]) & OBJ[spred](#3,#2[sents:~,adj,nat:~,neutral:~,ord:~,card:~]) & NEGAT(#2)){
+   _enrichment="collocs-neg(" + #1[lemme] + "," +  #2[lemme] + ")\n" ;
+   @_current(/userreview/xipopi)->Create(_enrichment);
+   }
+
+|ADJ#1| {
+        _adjs="adj(" + #1[lemme] +")\n" ;
+        @_current(/userreview/xipopi)->Create(_adjs);
+        }
+
+|NOUN#1| {
+        _nouns="noun(" + #1[lemme] +")\n" ;
+        @_current(/userreview/xipopi)->Create(_nouns);
+        }
+
+
+Final:
+
+print("sauvegarde\n");
+print ("NB PHRASES:",nb_phrase);
+print(@pathname);
+@_current()->save("resXIP.xml","UTF-8"); 

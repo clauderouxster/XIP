@@ -1,0 +1,71 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb_entit.xip
+//! Content:	rules for POS disambiguation - envolving information on NE
+//!
+//! Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//! Author:	C. Hagege
+//!
+//! Date: 	October-2008	:: initial version
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Tagging:
+
+
+// A string in upper case on the right of "van (der)" is not a verb but a noun[lastname]
+// e.g. Marco van Basten
+10> verb[maj:+,toutmaj:~] %= | prep[surface:"van"], (?[surface:"der"]) | noun[prop=+,maj=+,lastname=+] .
+
+// Luna if preceeded by article corresponds to moon and not lastname
+10> noun<lastname>, noun<lemma:luna,maj> = | art[def] | noun<lastname:~> .
+
+// Tierra if preceed by article corresponds to earth and not a proper name
+10> noun<lemma:tierra,maj>, noun<prop> = | art[def] | noun<prop:~> .
+
+// Venus if not followed by something with uppercase is a common noun (planet)
+10> noun<lemma:"Venus",toutmaj:~> %= noun[fem:+,sg:+] | ?[maj:~] | .
+
+// CH an ambiguous noun[profession];adj followed by a word having feature nationality. In this case we choose the noun tag for the first element and adj for the last
+// e.g. El promotor noruego
+10> adj, noun<profession:+> = noun | ?[nationality:+] | .
+10> adj, noun<nationality:+> = | noun[adj:~] | adj .
+
+// if an ambiguous noun/adj having feature profession, is followed by a proper noun, then it is a nounx
+// e.g. El promotor Bjorn Lyng
+10> noun<profession:+,maj:~>, adj = | ?[noun:~] | noun | noun[maj] | . 
+
+// Zapatero
+// before another word in upper case having feature human and followed by something which is not with upper case.
+10> noun<lemma:zapatero,maj:+, toutmaj:~> %= | ?[human:+] | noun[prop=+,lastname=+,human=+] | ?[maj:~] | .
+
+// Lago
+// after a non cap word and before a cap guessed word is lake
+// after a firstname is a lastname
+10> noun<lastname:+>, noun<maj:+,lemma:lago> = | | noun<lastname:~> | ?[maj] | .
+10> noun<lastname:+>, noun<maj:+,lemma:lago> = | ?[maj:~] | noun<lastname:~> | ?[maj] | .
+
+// Pico when followed by "La Miel" is a noun
+10> noun<lemma:pico,maj:+>, verb = noun | art[def:+,fem:+], noun[lemma:"miel"] | .
+
+
+// Sierra is a common name and not a lastname when followed by (de) ?[maj] and not preceeded by a firstname
+10> noun<lemma:sierra,maj>, noun<prop:+> = | ?[firstname:~] | noun<prop:~> | (prep[lemma:de]), ?[maj] | .
+10> noun<lemma:sierra,maj>, noun<prop:+> = | | noun<prop:~> | (prep[lemma:de]), ?[maj] | .
+
+
+// A person name preceeded by local name and comma, and followed by comm and local name is a local name
+// e.g. Talca, Concepción, Temuco
+10> noun[firstname:+] %= | noun[prop,location], punct[comma] | noun[prop,location=+] | punct[comma], noun[location] | .
+
+// A persson name preceeded by local and y is a place
+// e.g. Valparaíso y Concepción
+10> noun[firstname:+] %= | noun[prop,location,human:~], conj[lemma:"y"] | noun[prop,location=+] .
+
+// Ambiguity between person lastname and location
+10> noun<lastname:+>, noun<location:+,maj:+,toutmaj:~> = | prep[lemma:"en"] | noun[location:+] .

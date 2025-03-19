@@ -1,0 +1,396 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : english grammar for political risk detection
+//!   filename   : dependency_loc_pr.xip
+//!   Date       : October 2006
+//!   Author     : Aude Rebotier, Ágnes Sándor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+// X is going -> SUBJ[going,X]
+//SUBJ_PRE(are,inspectors)
+//NUCL_VLINK_PROGRESS(are,pushing)
+
+if (^SUBJ[pre](#1[form:fbe],#2) & NUCL[vlink,progress](#1,#3) )
+	 SUBJ[pre](#3,#2).
+
+// eliminate HEAD if there is no other word in the chunk
+
+
+if ( HEAD(#1[noun],#2) & S0(#1[noun],#3[verb]) )
+	POTCORE(#1).
+
+if ( HEAD(#1[noun],#2) & Sto(#1[noun],#3[verb]) )
+	POTCORE(#1).
+
+if ( HEAD(#1[noun],#2) & S2(#1[noun],#3[verb]) )
+	POTCORE(#1).
+
+if ( HEAD(#1[evnt],#2) & ~POTCORE(#1) )
+	POTCORE(#1).
+
+
+//| #1[first,last] |
+//if ( ^HEAD(#1,#2) )
+//	~.
+
+/////////////////////////////////////////////////////
+// NOUNS
+/////////////////////////////////////////////////////
+//AR j'ai déplacé ce passage, qui se trouvait plus bas\
+
+if ( POTCORE(#1) & MOD[pre](#1,#2[proper]) )
+	COORDDEP[pre=+,nomevent=+](#1,#2).
+
+if ( POTCORE(#1) & MOD[pre](#1,#2[hmm_tit]) )
+	COORDDEP[pre=+,nomevent=+](#1,#2).
+
+if ( POTCORE(#1) & MOD[pre](#1,#2[country,adj]) )
+	COORDDEP[pre=+,nomevent=+](#1,#2).
+
+// reports of U.S. commandos
+
+if ( POTCORE(#1) & MOD[post](#1,#2[proper]) )
+	COORDDEP[post=+,nomevent=+](#1,#2).
+
+if ( POTCORE(#1) & MOD[post](#1,#2[hmm_tit]) )
+	COORDDEP[post=+,nomevent=+](#1,#2).
+
+if ( POTCORE(#1) & MOD[post](#1,#2[country,adj]) )
+	COORDDEP[post=+,nomevent=+](#1,#2).
+
+//******************************
+
+
+if ( POTCORE(#1) & HEAD(#1,#2) )
+	POTCORE[ext=+](#2).
+
+
+//************ AR light verbs (verbes supports)************
+/ pour le moment j'ai choisi le verbe support pour être le noyau, dans ce cas il faudra ajouter le nom dans les arguments ; mais on peut aussi choisir le nom.
+
+à terme ce passage devrait utiliser les dépendances COORDDEP créées précédemment, c'est à dire les informations sur l'acteur associé à un nom d'événement
+\
+
+
+//on identifie les relations noms d'événement - verbes supports\
+
+|verb#1[lemme:carry]|
+	if((MOD(#1,#2[p_out]) | NUCL(#1,#2[p_out])) & OBJ-N(#1,#3[supp:carry_out]))
+	LIGHT[obj=+](#1,#3).
+
+|verb#1[lemme:carry]|
+	if((MOD(#1,#2[p_out]) | NUCL(#1,#2[p_out])) & OBJ-N(#1,#3) & POTCORE(#3) & ~LIGHT(#1,#3))
+	LIGHT[obj=+](#1,#3).
+
+if (SUBJ-N(#1[supp:subj],#2) & POTCORE(#2) & ~LIGHT(#1,#2))
+	LIGHT[subj=+](#1,#2)
+
+if (OBJ(#1[lemme:take], #2[lemme:place]) & SUBJ-N(#1,#3) & POTCORE(#3))
+	LIGHT[subj=+](#1,#3)
+
+//on établit une relation (de sujet) entre le nom d'événement et son acteur
+// ! il faut encore ajouter la condition que le nom ne soit pas un noeud fictif
+
+if (SREL(#1,#2) & SUBJ-N(#2,#3))
+	COORDDEP[Nsubj=+](#1,#3)
+
+//le sujet du nom d'événement n'est plus un autre argument de ce nom
+if (COORDDEP[Nsubj](#1,#2) & ^COORDDEP[Nsubj:~](#1,#2))
+	~
+
+if (~COORDDEP[Nsubj](#1,#2) & COORDDEP[pre](#1,#3))
+	COORDDEP[Nsubj=+](#1,#3)
+
+// Le sujet grammatical d'un verbe support n'est pas l'acteur si c'est un nom d'événement
+if (LIGHT[subj](#1,#2) & ^COORDDEP[subj](#1,#2))
+	~
+
+//l'acteur associé à un nom d'événement est l'acteur du verbe support associé à ce nom
+if (LIGHT[subj](#1,#2) & COORDDEP[Nsubj](#2,#4) & ~COORDDEP[subj](#1,#4))
+	COORDDEP[subj=+](#1,#4)
+
+if (POTCORE(#1) & ^COORDDEP[Nsubj](#1,#2) & HEAD(#1,#3) & POTCORE[ext](#3))
+	COORDDEP[Nsubj=+](#3,#2)
+if (POTCORE(#1) & ^COORDDEP[post](#1,#2) & HEAD(#1,#3) & POTCORE[ext](#3))
+	COORDDEP[post=+](#3,#2)
+if (POTCORE(#1) & ^COORDDEP[pre](#1,#2) & HEAD(#1,#3) & POTCORE[ext](#3))
+	COORDDEP[pre=+](#3,#2)
+
+
+	
+if(POTCORE[ext](#1) & COORDDEP[Nsubj](#1,#2) & COORDDEP[post](#1,#3))
+	TEEST(#2,#1,#3)
+
+if(POTCORE[ext](#1) & COORDDEP[Nsubj](#1,#2))
+	TEEEST(#2,#1)
+
+
+//*********************
+
+
+
+// eliminate shorter head
+
+if ( ^HEAD[prep_modif:~](#1,#2) & HEAD[prep_modif](#1,#3) )
+	~.	
+
+
+
+// create dependence for CORE verbs that are non-finite
+
+| iv{(?[form:finfto]), #1[verb]} |
+	CORE[modality=+,nonf=+](#1).
+
+| iv{?[form:fnot], #1[verb]} |
+	CORE[modality=+,nonf=+](#1).
+
+| ?[form:finfto], fv{#1[verb]} |
+	CORE[modality=+,nonf=+](#1).
+
+| nfv{#2[lemme:be,inf], ?*, #1[last]} |
+//if ( ~NUCL(#2,#1) )
+	CORE[modality=+,nonf=+](#1).
+
+| nfv{#2[lemme:have,inf], ?*, #1[last]} |
+//if ( ~NUCL(#2,#1) )
+	CORE[modality=+,nonf=+](#1).
+
+
+| nfv{#2} |
+if ( ~CORE[modality](#2) & NUCL[vlink,progress](#1,#2) )
+	CORE(#2).
+
+| nfv{#2} |
+if ( ~CORE[modality](#2) & NUCL[vlink,perfect](#1,#2) )
+	CORE(#2).
+
+| nfv{#2} |
+if ( ~CORE[modality](#2) & NUCL[vlink,passive](#1,#2) )
+	CORE(#2).
+
+| nfv{?[inf:~], ?*, #2} |
+if ( ~CORE[modality](#2) & NUCL[vlink,passive](#1,#2) )
+	CORE(#2).
+// mark verbs that don't have a modality
+
+| fv{#1[verb]} |
+if ( ~CORE(#1) )
+	CORE[main=+](#1).
+
+//if ( ^CORE[modality:~](#1) & ~NUCL(1,#2) )
+if ( ^CORE[modality:~](#1) )
+	CORE[main=+](#1).
+
+// auxiliaries are not CORE
+
+if ( NUCL[vlink,progress](#1,#2) | NUCL[vlink,perfect](#1,#2) | NUCL[vlink,passive](#1,#2) & ^CORE(#1) )
+	~.
+
+| fv{#1[form:fhave,inf:~]}, nfv{?+} |
+if ( ^CORE(#1) )
+	~.
+	
+| ?{?+, fv{#1[form:fdo,inf:~]}}, iv{?+} |
+if ( ^CORE(#1) )
+	~.
+	
+
+// modality of embedded sentence
+
+if ( EMBED(#1[verb],#2) & ^CORE(#1) )
+	CORE[modality=+,embed=+,main=~](#1).
+
+
+
+
+// inspect modality drivers that are finite verbs
+
+if ( CORE(#1) & $1(#1,#2) & CORE(#2) & ~CORE[drive](#2,#1) & #2 < #1 )
+	CORE[drive=+](#2,#1).
+	
+if ( CORE(#1) & $1(#2,#1) & CORE(#2) & ~CORE[drive](#2,#1) & #2 < #1 )
+	CORE[drive=+](#2,#1).
+	
+//if ( ^CORE[drive](#2,#1) & CORE[modality:~](#2) )
+//	CORE[main=+](#2,#1).
+
+// inspect modality drivers that are modal verbs
+
+
+if ( VDOMAIN[modal](#1,#2) & CORE[nonf,modality](#1) )
+	CORE[drive=+](#2,#1).
+
+
+	
+// eliminate SUBJ between a subject and  "have" of present perfect and modals 
+
+if ( NUCL[vlink,perfect](#1,#2) & ^SUBJ(#1,#3) )
+	~.
+
+if ( ^SUBJ(#1,#2) & NUCL[vlink,modal](#1,#3) )
+	~.
+
+
+
+/////
+// the arguments in the dependencies should be the chunks and not the heads
+////
+
+if ( SUBJ(#1,#2) & HEAD(#2,#3) )
+	SUBJ[ext=+](#1,#3).
+
+if ( SUBJ-N(#1,#2) & HEAD(#2,#3) )
+	SUBJ-N[ext=+](#1,#3).
+
+
+if ( OBJ(#1,#2) & HEAD(#2,#3) )
+	OBJ[ext=+](#1,#3).
+
+if ( OBJ-N(#1,#2) & HEAD(#2,#3) )
+	OBJ-N[ext=+](#1,#3).
+
+if ( MOD(#1,#2) & HEAD(#2,#3) )
+	MOD[ext=+](#1,#3).
+
+if ( MOD(#2,#1) & HEAD(#2,#3) )
+	MOD[ext=+](#3,#1).
+
+
+// merge SUBJ and SUBJ-N and OBJ and OBJ-N
+
+if ( SUBJ[ext](#1[form:~fbe,form:~fhave],#2) | SUBJ-N[ext](#1[form:~fbe,form:~fhave],#2) )
+	COORDDEP[subj=+](#1,#2).
+
+if ( OBJ[ext](#1[form:~fbe,form:~fhave],#2) | OBJ-N[ext](#1[form:~fbe,form:~fhave],#2) )
+	COORDDEP[obj=+](#1,#2).
+
+// the modifiers that are arguments of the core are not premodifiers and are not adverbs
+
+if ( MOD[pre:~,ext](#1,#2[adv:~]) & COORDDEP[subj](#1,#3) & ~COORDDEP[obj](#1,#4) )
+	COORDDEP[modif=+](#1,#2).
+
+
+// mark SUBJ and OBJ and MOD with non-finite verbs
+
+if ( ^COORDDEP[subj](#1,#2) & CORE[modality](#1) )
+	COORDDEP[modality=+](#1,#2).
+
+if ( ^COORDDEP[obj](#1,#2) & CORE[modality](#1) )
+	COORDDEP[modality=+](#1,#2).
+
+if ( ^COORDDEP[modif](#1,#2) & CORE[modality](#1) )
+	COORDDEP[modality=+](#1,#2).
+
+// when "to" is not in the IV
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDDEP[subj](#1,#2) )
+	COORDDEP[modality=+](#1,#2).
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDDEP[obj](#1,#2) )
+	COORDDEP[modality=+](#1,#2).
+
+
+| ?[form:finfto], fv{#1} |
+if ( ^COORDDEP[modif](#1,#2) )
+	COORDDEP[modality=+](#1,#2).
+
+// mark OBJ if it is a verb: in this case it may have and OBJ MOD and NUCL
+
+// Create a the POLEVENT (political event) dependency that contains a subject, a verb and an object/modifier
+
+if ( COORDDEP[subj](#1,#2) & COORDDEP[obj](#1,#3) )
+	POTPOLEVENT[subj=+,obj=+](#2,#1,#3).
+
+if ( COORDDEP[subj](#1,#2) & COORDDEP[modif](#1,#3)  )
+	POTPOLEVENT[subj=+,modif=+](#2,#1,#3).
+
+
+// mark POTPOLEVENT with modality
+
+if ( ^POTPOLEVENT(#1,#2,#3) & CORE[modality](#2) )
+	POTPOLEVENT[modality=+](#1,#2,#3).
+
+
+// POTPOLEVENT with nouns
+
+if ( COORDDEP[pre,nomevent](#1,#2) & COORDDEP[post,nomevent](#1,#3) )
+	POTPOLEVENT[pre=+,post=+](#2,#1,#3).
+
+// Iran resumes enrichment - needs to be refined
+
+//if ( COORDDEP[subj](#1,#2[proper]) & COORDDEP[obj](#1,#3) & POTCORE(#3) & ~COORDDEP[pre:~,nomevent=+](#3,#4) )
+//	COORDDEP[pre=+,nomevent=+,tmp=+](#3,#2).
+
+
+
+///////////////////////////////////
+// add the element that expresses the modality to events that are marked [modality], i.e. events that have a subordinate expression
+///////////////////////////////////
+
+
+if ( POTPOLEVENT[modality](#1,#2,#3) & CORE[drive](#8,#2) )
+	POTPOLEVENT[withmodality=+](#8,#1,#2,#3).
+
+// mark events where the first verb expressing modality has a modality
+
+if ( ^POTPOLEVENT[withmodality](#8,#1,#2,#3) & CORE[modality](#8) )
+	POTPOLEVENT[modality=+](#8,#1,#2,#3).
+
+//  mark events where the first verb has modality but we have not extracted it yet
+
+if ( ^POTPOLEVENT[modality](#1,#2,#3) & ~CORE[drive](#8,#2) & CORE(#2) )
+	POTPOLEVENT[withoutmodality=+](#1,#2,#3).
+
+// mark events where the first verb has no modality
+
+if ( ^POTPOLEVENT[withmodality](#8,#1,#2,#3) & CORE[main](#8) )
+	POTPOLEVENT[main=+](#8,#1,#2,#3).
+
+/////////////////////////////////////////////////
+// mark events that have no modality
+///////////////////////////////////////////////
+
+
+if ( ^POTPOLEVENT(#1,#2,#3) & CORE[main](#2) & ~POTPOLEVENTSENT[mainevent=+](#8) )
+	POTPOLEVENT[mainevent=+](#1,#2,#3).
+
+| TOP#8 { ?+ } |
+if ( POTPOLEVENT[mainevent](#1,#2,#3) )
+	POTPOLEVENTSENT[mainevent=+](#8).
+
+
+
+
+
+/////////////////////////////
+
+// mark heads whose head is an SREL or a word given by Thales
+
+	
+if ( ^HEAD(#1[evnt,th,xrx],#3) )
+	HEAD[evnt=+,th=+,xrx=+](#1,#3).
+
+if ( ^HEAD(#1[th,evnt,xrx:~],#3) )
+	HEAD[evnt=+,th=+](#1,#3).
+
+if ( ^HEAD(#1[th:~,evnt,xrx],#3) )
+	HEAD[evnt=+,xrx=+](#1,#3).
+
+
+
+// visits to the Bushehr nuclear power plant.
+
+//MOD_POST_T_RELAT(visits_XRX:+_EVNT:+_TH:+,plant)
+//HEAD(plant,to the Bushehr nuclear power plant)
+//POTCORE(visits_XRX:+_EVNT:+_TH:+)

@@ -1,0 +1,405 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>7. Incompatible Library Changes</title><link rel="stylesheet" href="userman.css" type="text/css"><meta name="generator" content="DocBook XSL Stylesheets V1.58.1"><link rel="home" href="index.html" title="MySQL++ User Manual"><link rel="up" href="index.html" title="MySQL++ User Manual"><link rel="previous" href="unicode.html" title="6. Using Unicode with MySQL++"><link rel="next" href="licenses.html" title="8. Licensing"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">7. Incompatible Library Changes</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="unicode.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="licenses.html">Next</a></td></tr></table><hr></div><div class="sect1" lang="en"><div class="titlepage"><div><h2 class="title" style="clear: both"><a name="breakages"></a>7. Incompatible Library Changes</h2></div></div><p>This chapter documents those library changes since
+	the epochal 1.7.9 release that break end-user programs. You
+	can dig this stuff out of the ChangeLog, but the ChangeLog
+	focuses more on explaining and justifying the facets of each
+	change, while this section focuses on how to migrate your
+	code between these library versions.</p><p>Since pure additions do not break programs, those
+	changes are still documented only in the ChangeLog.</p><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2875919"></a>7.1. API Changes</h3></div></div><p>This section documents files, functions,
+		methods and classes that were removed or changed
+		in an incompatible way. If your program uses the
+		changed item, you will have to change something in
+		your program to get it to compile after upgrading to
+		each of these versions.</p><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2875935"></a>v1.7.10</h4></div></div><p>Removed
+			<tt>Row::operator[]()</tt>
+			overloads except the one for
+			<tt>size_type</tt>,
+			and added
+			<tt>Row::lookup_by_name()</tt>
+			to provide the &quot;subscript by
+			string&quot; functionality.	In practical
+			terms, this change means that the
+			<tt>row[&quot;field&quot;]</tt>
+			syntax no longer works; you must use the new
+			<tt>lookup_by_name</tt>
+			method instead.</p><p>Renamed the generated
+			library on POSIX systems from
+			<tt>libsqlplus</tt> to
+			<tt>libmysqlpp</tt>.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2876005"></a>v1.7.19</h4></div></div><p>Removed
+			<tt>SQLQuery::operator=()</tt>,
+			and the same for its
+			<tt>Query</tt>
+			subclass. Use the copy constructor instead, if you need to copy
+			one query to another query object.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2876034"></a>v1.7.20</h4></div></div><p>The library used to have two names for
+			many core classes: a short one, such as
+			<tt>Row</tt>
+			and a longer one,
+			<tt>MysqlRow</tt>. The
+			library now uses the shorter names
+			exclusively.</p><p>All symbols within MySQL++ are in the
+			<tt>mysqlpp</tt>
+			namespace now if you use the new
+			<tt>mysql++.h</tt>
+			header. If you use the older
+			<tt>sqlplus.hh</tt>
+			or <tt>mysql++.hh</tt>
+			headers, these symbols are hoist up into the
+			global namespace. The older headers cause the
+			compiler to emit warnings if you use them,
+			and they will go away someday.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2876100"></a>v2.0.0</h4></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876107"></a>Connection class changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p><tt>Connection::create_db()</tt>
+					and
+					<tt>drop_db()</tt>
+					return
+					<tt>true</tt>
+					on success. They returned
+					<tt>false</tt>
+					in v1.7.<span class="emphasis"><em>x</em></span>!
+					This change will only
+					affect your code if
+					you have exceptions
+					disabled.</p></li><li><p>Renamed
+					<tt>Connection::real_connect()</tt>
+					to
+					<tt>connect()</tt>,
+					made several more
+					of its parameters
+					default, and removed the old
+					<tt>connect()</tt>
+					method, as it's now a strict
+					subset of the new one. The
+					only practical consequence is
+					that if your program was using
+					<tt>real_connect()</tt>,
+					you will have to change it to
+					<tt>connect()</tt>.</p></li><li><p>Replaced
+					<tt>Connection::read_option()</tt>
+					with new
+					<tt>set_option()</tt>
+					mechanism. In addition
+					to changing the name,
+					programs using this function
+					will have to use the new
+					<tt>Connection::Option</tt>
+					enumerated values, accept a
+					<tt>true</tt>
+					return value as meaning
+					success instead of 0, and
+					use the proper argument
+					type. Regarding the latter,
+					<tt>read_option()</tt>
+					took a <tt>const
+					char*</tt>
+					argument, but because it was
+					just a thin wrapper over
+					the MySQL C API function
+					<tt><a href="http://dev.mysql.com/doc/mysql/en/mysql-options.html">mysql_options()</a></tt>, the actual
+					value being pointed to could
+					be any of several types. This
+					new mechanism is properly
+					type-safe.</p></li></ul></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876273"></a>Exception-related changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p>Classes
+					<tt>Connection</tt>,
+					<tt>Query</tt>,
+					<tt>Result</tt>,
+					<tt>ResUse</tt>,
+					and
+					<tt>Row</tt>
+					now derive from
+					<tt><a href="../../refman/html/classmysqlpp_1_1OptionalExceptions.html">OptionalExceptions</a></tt>
+					which gives these classes a
+					common interface for disabling
+					exceptions. In addition,
+					almost all of the per-method
+					exception-disabling flags were
+					removed. The preferred method
+					for disabling exceptions on
+					these objects is to create
+					an instance of the new
+					<tt><a href="../../refman/html/classmysqlpp_1_1NoExceptions.html">NoExceptions</a></tt>
+					class on the stack, which
+					disables exceptions on an
+					<tt>OptionalExceptions</tt>
+					subclass as long as the
+					<tt>NoExceptions</tt>
+					instance is in
+					scope. You can instead call
+					<tt>disable_exceptions()</tt>
+					on any of these objects,
+					but if you only want them
+					disabled temporarily, it's
+					easy to forget to re-enable
+					them later.</p></li><li><p>In the
+					previous version of MySQL++,
+					those classes that supported
+					optional exceptions that
+					could create instances of
+					other such classes were
+					supposed to pass this flag
+					on to their children. That
+					is, if you created a
+					<tt>Connection</tt>
+					object with exceptions enabled,
+					and then asked it to create a
+					<tt>Query</tt>
+					object, the
+					<tt>Query</tt>
+					object also had exceptions
+					disabled. The problem is, this
+					didn't happen in all cases
+					where it should have in v1.7.
+					This bug is fixed in v2.0. If
+					your program begins crashing
+					due to uncaught exceptions
+					after upgrading to v2.0, this
+					is the most likely cause. The
+					most expeditious fix in this
+					situation is to use the new
+					<tt>NoExceptions</tt>
+					feature to return these
+					code paths to the v1.7
+					behavior. A better fix is
+					to rework your program to
+					avoid or deal with the new
+					exceptions.</p></li><li><p>All
+					custom MySQL++ exceptions
+					now derive from the new
+					<tt><a href="../../refman/html/classmysqlpp_1_1Exception.html">Exception</a></tt>
+					interface.  The practical
+					upshot of this is that the
+					variability between the
+					various exception types has
+					been eliminated. For instance,
+					to get the error string, the
+					<tt>BadQuery</tt>
+					exception had a
+					string member called
+					<tt>error</tt>
+					plus a method called
+					<tt>what()</tt>.
+					Both did the
+					same thing, and the
+					<tt>what()</tt>
+					method is more common, so the
+					error string was dropped from
+					the interface. None of the
+					example programs had to be
+					changed to work with the new
+					exceptions, so if your program
+					handles MySQL++ exceptions
+					the same way they do, your
+					program won't need to change,
+					either.</p></li><li><p>Renamed
+					<tt>SQLQueryNEParams</tt>
+					exception to
+					<tt>BadParamCount</tt>
+					to match style of other
+					exception names.</p></li><li><p>Added
+					<tt><a href="../../refman/html/classmysqlpp_1_1BadOption.html">BadOption</a></tt>,
+					<tt><a href="../../refman/html/classmysqlpp_1_1ConnectionFailed.html">ConnectionFailed</a></tt>,
+					<tt><a href="../../refman/html/classmysqlpp_1_1DBSelectionFailed.html">DBSelectionFailed</a></tt>,
+					<tt><a href="../../refman/html/classmysqlpp_1_1EndOfResults.html">EndOfResults</a></tt>,
+					<tt><a href="../../refman/html/classmysqlpp_1_1EndOfResultSets.html">EndOfResultSets</a></tt>,
+					<tt><a href="../../refman/html/classmysqlpp_1_1LockFailed.html">LockFailed</a></tt>, and
+					<tt><a href="../../refman/html/classmysqlpp_1_1ObjectNotInitialized.html">ObjectNotInitialized</a></tt>
+					exception types,
+					to fix overuse of
+					<tt>BadQuery</tt>.
+					Now the latter is used
+					only for errors on query
+					execution. If your program has
+					a &quot;catch-all&quot; block taking a
+					<tt>std::exception</tt>
+					for each try block containing
+					MySQL++ statements, you
+					probably won't need to change
+					your program. Otherwise,
+					the new exceptions will
+					likely show up as program
+					crashes due to unhandled
+					exceptions.</p></li></ul></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876584"></a>Query class changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p>In
+					previous versions,
+					<tt>Connection</tt>
+					had a querying
+					interface similar to class
+					<tt>Query</tt>'s.
+					These methods
+					were intended only for
+					<tt>Query</tt>'s
+					use; no example ever used
+					this interface directly,
+					so no end-user code is
+					likely to be affected by
+					this change.</p></li><li><p>A more likely
+					problem arising from the above
+					change is code that tests for
+					query success by calling the
+					<tt>Connection</tt>
+					object's
+					<tt>success()</tt>
+					method or by casting it to
+					<tt>bool</tt>.
+					This will now give misleading
+					results, because queries
+					no longer go through the
+					<tt>Connection</tt>
+					object. Class
+					<tt>Query</tt>
+					has the same success-testing
+					interface, so use it
+					instead.</p></li><li><p><tt>Query</tt>
+					now derives from
+					<tt>std::ostream</tt>
+					instead of
+					<tt>std::stringstream</tt>.</p></li></ul></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876700"></a>Result/ResUse class changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p>Renamed
+					<tt>ResUse::mysql_result()</tt>
+					to
+					<tt>raw_result()</tt>
+					so it's database server
+					neutral.</p></li><li><p>Removed
+					<tt>ResUse::eof()</tt>,
+					as it wrapped the deprecated
+					and unnecessary MySQL C API
+					function <tt><a href="http://dev.mysql.com/doc/mysql/en/mysql-eof.html">mysql_eof()</a></tt>. See the
+					<tt>simple3</tt>
+					and
+					<tt>usequery</tt>
+					examples to see the proper
+					way to test for the end of
+					a result set.</p></li></ul></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876772"></a>Row class changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p>Removed
+					&quot;field name&quot; form of
+					<tt>Row::field_list()</tt>.
+					It was
+					pointless.</p></li><li><p><tt>Row</tt>
+					subscripting works more like
+					v1.7.9: one can subscript a
+					<tt>Row</tt>
+					with a string (e.g.
+					<tt>row[&quot;myfield&quot;]</tt>),
+					or with an integer (e.g.
+					<tt>row[5]</tt>).
+					<tt>lookup_by_name()</tt>
+					was removed. Because
+					<tt>row[0]</tt>
+					is ambiguous (0 could mean
+					the first field, or be a null
+					pointer to <tt>const
+					char*</tt>),
+					there is now
+					<tt>Row::at()</tt>,
+					which can look up any field by
+					index.</p></li></ul></div></div><div class="sect4" lang="en"><div class="titlepage"><div><h5 class="title"><a name="id2876864"></a>Miscellaneous changes</h5></div></div><div class="itemizedlist"><ul type="disc"><li><p>Where
+					possible, all distributed
+					Makefiles only build dynamic
+					libraries. (Shared objects on
+					most Unices, DLLs on Windows,
+					etc.) Unless your program
+					is licensed under the GPL or
+					LGPL, you shouldn't have been
+					using the static libraries
+					from previous versions
+					anyway.</p></li><li><p>Removed the
+					backwards-compatibility headers
+					<tt>sqlplus.hh</tt>
+					and
+					<tt>mysql++.hh</tt>.
+					If you were still using these,
+					you will have to change to
+					<tt>mysql++.h</tt>,
+					which will put all symbols
+					in <tt>namespace
+					mysqlpp</tt>.</p></li><li><p>Can no
+					longer use arrow operator
+					(<tt>-&gt;</tt>)
+					on the iterators into the
+					<tt>Fields</tt>,
+					<tt>Result</tt>
+					and
+					<tt>Row</tt>
+					containers.</p></li></ul></div></div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><h3 class="title"><a name="id2876960"></a>7.2. ABI Changes</h3></div></div><p>This section documents those library changes
+		that require you to rebuild your program so that it
+		will link with the new library.  Most of the items
+		in the previous section are also ABI changes, but
+		this section is only for those items that shouldn't
+		require any code changes in your program.</p><p>If you were going to rebuild your program after
+		installing the new library anyway, you can probably
+		ignore this section.</p><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2876984"></a>v1.7.18</h4></div></div><p>The
+			<tt>Query</tt>
+			classes now subclass from
+			<tt>stringstream</tt>
+			instead of the deprecated
+			<tt>strstream</tt>.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2877018"></a>v1.7.19</h4></div></div><p>Fixed several
+			<tt>const</tt>-incorrectnesses
+			in the <tt>Query</tt>
+			classes.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2877045"></a>v1.7.22</h4></div></div><p>Removed &quot;reset query&quot; parameters from
+			several <tt>Query</tt>
+			class members. This is not an API change,
+			because the parameters were given default
+			values, and the library would ignore any value
+			other than the default. So, any program that
+			tried to make them take another value wouldn't
+			have worked anyway.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2877070"></a>v1.7.24</h4></div></div><p>Some freestanding functions didn't
+			get moved into <tt>namespace
+			mysqlpp</tt> when that namespace
+			was created. This release fixed that. It
+			doesn't affect the API if your program's
+			C++ source files say <tt>using
+			namespace mysqlpp</tt> within
+			them.</p></div><div class="sect3" lang="en"><div class="titlepage"><div><h4 class="title"><a name="id2877100"></a>v2.0.0</h4></div></div><p>Removed
+			<tt>Connection::infoo()</tt>.
+			(I'd call this an API change if I thought
+			there were any programs out there actually
+			using this...)</p><p>Collapsed the
+			<tt>Connection</tt>
+			constructor taking a bool (for setting
+			the throw_exceptions flag) and the default
+			constructor into a single constructor using
+			a default for the parameter.</p><p>Classes
+			<tt>Connection</tt>
+			and <tt>Query</tt>
+			are now derived from the
+			<tt>Lockable</tt>
+			interface, instead of implementing their own
+			lock/unlock functions.</p><p>In several instances, functions that
+			took objects by value now take them by const
+			reference, for efficiency.</p><p>Merged
+			<tt>SQLQuery</tt>
+			class's members into class
+			<tt>Query</tt>.</p><p>Merged
+			<tt>RowTemplate</tt>
+			class's members into class
+			<tt>Row</tt>.</p><p>Reordered member variable declarations
+			in some classes. The most common instance is
+			when the private section was declared before
+			the public section; it is now the opposite
+			way. This can change the object's layout in
+			memory, so a program linking to the library
+			must be rebuilt.</p><p>Simplified the date
+			and time class hierarchy.
+			<tt><a href="../../refman/html/structmysqlpp_1_1Date.html">Date</a></tt>
+			used to derive from
+			<tt>mysql_date</tt>,
+			<tt><a href="../../refman/html/structmysqlpp_1_1Time.html">Time</a></tt>
+			used to derive from
+			<tt>mysql_time</tt>,
+			and <tt><a href="../../refman/html/structmysqlpp_1_1DateTime.html">DateTime</a></tt>
+			used to derive from both of those.  All
+			three of these classes used to derive from
+			<tt>mysql_dt_base</tt>.
+			All of the
+			<tt>mysql_*</tt>
+			classes' functionality and data has
+			been folded into the leaf classes,
+			and now the only thing shared between
+			them is their dependence on the
+			<tt><a href="../../refman/html/structmysqlpp_1_1DTbase.html">DTbase</a></tt>
+			template. Since the leaf classes' interface has
+			not changed and end-user code shouldn't have
+			been using the other classes, this shouldn't
+			affect the API in any practical way.</p><p><tt>mysql_type_info</tt>
+			now always initializes its private
+			<tt>num</tt> member.
+			Previously, this would go uninitialized if
+			you used the default constructor. Now there
+			is no default ctor, but the ctor taking one
+			argument (which sets
+			<tt>num</tt>) has
+			a default.</p></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="unicode.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="licenses.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">6. Using Unicode with MySQL++ </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 8. Licensing</td></tr></table></div></body></html>

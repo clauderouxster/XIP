@@ -1,0 +1,1777 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : localdates.xip
+//!   Date       : 12/08/2003
+//!   Author     : C. Brun - minor modifications by CH
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// A local grammar for time expressions and dates, and hours
+
+//STILL A PB ON 1200/1100
+
+
+Marker:
+
+// dig with percent or money loose "hour", "day", "shortyear", "year" features
+2> dig[percent,hour=~,day=~,shortyear=~,year=~].
+2> dig[money,hour=~,day=~,shortyear=~,year=~].
+
+// "a" or "an" after a dig takes the feature c_set ($2 an hour)
+2> dig, det#1[lemme:a,c_set=+];det#1[lemme:an,c_set=+],
+	where(add_quant(#1, "EACH")).
+
+
+Sequence:
+
+
+// year in full words
+// "nineteen ninety-one"
+//1> noun[temp_level:y,tempexpr:+] = | prep[form:fin] | num#1[card,mwe] ~| noun[proper:~] |, where (add_letters_year(#1, #0)).
+
+
+
+// change meas into noun
+//   (h. for example)
+//1> noun[period:!,  period_length:!, lower_unit:!, lower_number:!] = 
+//	meas[!period:!,  !period_length:!, !lower_unit:!, !lower_number:!].
+
+
+// Expressions for dates :
+
+// NOT INTERPRETED
+//  by the day
+// ~= every day,
+//   but do not interpret it, too ambiguous
+5> ADV[tempexpr:+,mwe:+] = prep[form:fby], det[def], noun[period, period:~+] ~| ?[year];prep;noun |.
+// a while
+5> NP[tempexpr:+,c_dur:+] = det[lemme:a], noun[form:fwhile].
+
+
+//////////////////
+
+
+
+
+// 60's
+// negated right context to avoid "1990's first quarter"
+5> noun[temp_level:y,tempexpr:+,decade:+,date:+] =  #1[year];#1[shortyear], part
+	~| #1[ord], noun[lemme:quarter] |,
+	where(add_date_decade(#1, "false") & copy(#1, #0)).
+
+
+6> noun[temp_level=+,tempexpr:+,around_christ=+] = #1[form:fbefore];#1[form:fafter], noun[lemme:Christ], where(add_around_christ(#0, #1)).
+6> noun[temp_level=+,tempexpr:+,around_christ=+] = noun#1[around_christ], where(add_around_christ(#0, #1)).
+
+
+// Numerical dates : I use the feature spec attached to "/" + add fslash
+// Month/Day/Year or Year/Day/Month or Year/Month/Day or Day/Month/Year
+7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#1[month], punct[spec:+,form:fslash], dig#2[day], punct[spec:+,form:fslash], dig#3[year];dig#3[shortyear], 
+		where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#1[month], punct[form:fhyph,left,right], dig#2[day], punct[form:fhyph,left,right], dig#3[year];dig#3[shortyear], 
+		where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#1[year];dig#1[shortyear], punct[spec:+,form:fslash], dig#2[day],punct[spec:+,form:fslash], dig#3[month], 
+		where(merge_3_dates(#1, #2, #3, #0, "y", "d", "m")).
+
+7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#1[year];dig#1[shortyear], punct[spec:+,form:fslash], dig#2[month], punct[spec:+,form:fslash], dig#3[day], 
+		where(merge_3_dates(#1, #2, #3, #0, "y", "m", "d")).
+
+// XT - does this one really happen ?
+//7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = dig#1[year];dig#1[shortyear], punct[form:fhyph,left,right],  dig#2[day],punct[form:fhyph,left,right],  dig#3[month], where(merge_3_dates(#1, #2, #3, #0, "y", "d", "m")).
+
+7> dig[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#1[year];dig#1[shortyear], punct[form:fhyph,left,right], dig#2[month],punct[form:fhyph,left,right], dig#3[day], 
+		where(merge_3_dates(#1, #2, #3, #0, "y", "m", "d")).
+
+// (Wednesday) 28-12-99   (two rules)
+7> noun[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	noun#1[day], dig#2[day], punct[form:fhyph,left,right], dig#3[month], punct[form:fhyph,left,right], dig#4[year];dig#4[shortyear], 
+		where(merge_4_dates(#1, #2, #3, #4, #0, "d", "d", "m", "y")).
+7> noun[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#2[day], punct[form:fhyph,left,right], dig#3[month], punct[form:fhyph,left,right], dig#4[year];dig#4[shortyear], 
+		where(merge_3_dates(#2, #3, #4, #0, "d", "m", "y")).
+
+// (Wednesday) 28/12/99   (two rules)
+7> noun[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	noun#1[day], dig#2[day], punct[spec:+,form:fslash], dig#3[month], punct[spec:+,form:fslash], dig#4[year];dig#4[shortyear], 
+		where(merge_4_dates(#1, #2, #3, #4, #0, "d", "d", "m", "y")).
+7> noun[tempexpr:+,temp_level=d,mwe=+,date=+]  = 
+	dig#2[day], punct[spec:+,form:fslash], dig#3[month], punct[spec:+,form:fslash], dig#4[year];dig#4[shortyear], 
+		where(merge_3_dates(#2, #3, #4, #0, "d", "m", "y")).
+
+
+// 19980126
+// it's a date, it happens sometimes (see corpus CNN)
+// function build_full_date has many constraints
+7> noun[tempexpr:+,temp_level=d,mwe=+,date=+]  = dig#1[time=+, surface:"%d%d%d%d%d%d%d%d"],
+	where(build_full_date(#1, #0)).
+
+
+// "Latin" Dates
+
+// The third century/millennium (after/ before Christ ; AC/BC/AD) (two rules)
+// Rule 37
+7>  noun[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	num#1[ord], noun#2[lemme:century];noun#2[lemme:millennium], noun#3[around_christ], 
+		where(add_century_millennium(#0, #1, #2) & str_type = "" & 
+			merge_dates(#0, #3, #0, "y", str_type)).
+// Rule 38
+7>  noun[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	num#1[ord], noun#2[lemme:century];noun#2[lemme:millennium], 
+		where(add_century_millennium(#0, #1, #2)).
+
+
+// Same rules with "third" written "3rd" (num[ord]=>dig[ord])
+//    cannot be merged (with Rules 37-38) because of the hyphenation
+//    (see Rule 42 merged with 40)
+// Rule 39
+7> noun[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	dig#1[ord], noun#2[lemme:century];#2noun[lemme:millennium], noun#3[around_christ], 
+		where(str_type = "" & add_century_millennium(#0, #1, #2) & 
+			merge_dates(#0, #3, #0, "y", str_type)).
+// Rule 40
+7> noun[tempexpr:+,temp_level=y,mwe=+,date=+] = dig#1[ord], (punct[form:fhyph,left,right]), noun#2[lemme:century];noun#2[lemme:millennium], where(add_century_millennium(#0, #1, #2)).
+
+// 14th and 16th centuries
+// between 15th and 16th centuries
+// XT "15th or 16th" was already grouped in localgram1 in a non-temporal grammar
+//  see pre_local_temp (Marker layer 55) to see how it is handled
+//   the python functions are already called in this file
+8> noun[tempexpr:+, temp_level=y, date:+, mwe:+] @=
+	(prep[form:fbetween]),
+	dig#1[ord, coord],
+	noun[lemme:century],
+	where(copy(#1, #0)).
+
+
+// the year 1998
+7> NP[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	det[def], noun[lemme:year], dig#1[year,money:~];num#1[year],
+	where(copy(#1, #0)).
+
+// the year 800 after/before Christ 
+// rule 41
+7> noun[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	(noun[lemme:year]), dig#1[money:~,rom:~];num#1,  noun#2[around_christ], 
+	where(add_date_year(#1) & str_type = "" & merge_dates(#1, #2, #0, "y", str_type)).
+
+// XT : this rule is merged with  Rule 40
+// Rule 42
+//7>  noun[temp_level=y,mwe=+,date=+] = dig[ord] , (punct[form:fhyph,left,right]) , noun[lemme:century];noun[lemme:millennium].
+
+
+// the 1560s BC
+7> noun[tempexpr:+,temp_level=y,mwe=+,date=+] = 
+	noun#1[decade], noun#2[around_christ], 
+		where(str_type = "" & merge_dates(#1, #2, #0, "y", str_type)).
+
+
+// Set of rules merged with rule 40
+// 800 after before Christ
+//7>  noun[temp_level=y,mwe=+,date=+] = dig, (prep[form:fbefore];prep[form:fafter]), noun[lemme:Christ].
+
+//7>  noun[temp_level=y,mwe=+,date=+] = dig,  noun[lemme:BC,toutmaj].
+
+//7>  noun[temp_level=y,mwe=+,date=+] = dig,  noun[lemme:AC,toutmaj] .
+
+//7>  noun[temp_level=y,mwe=+,date=+] = noun[lemme:AD,toutmaj];noun[lemme:ad,toutmaj], dig .
+
+
+//1898/99 ou 1989/1990
+// problems with 1200/1100
+// Rule 80
+7> dig[tempexpr:+,temp_level=y,mwe:+,date=+,interval=+,year=+] = 
+	dig#1[year], punct[spec:+,form:fslash];punct[form:fhyph,left,right], dig#2[year];dig#2[shortyear]
+	, where(check_year_interval(#1, #2) & add_interval(#1, #2, #0, "y", "y")) .
+
+//7> dig[temp_level=y,mwe:+,date=+] = | ?[form:~fhyph] |  dig[year],  punct[spec:+,form:fslash];punct[form:fhyph,left,right],  dig[year];dig[shortyear] , (dig[year]) .
+
+//2/96
+// XT: REMOVED, no idea of the aim of this rule, 
+//        don't know how to interpret it
+//7>  dig[mwe:+,date=+] = | ?[form:~fhyph] | dig[day],  punct[spec:+,form:fslash],  dig[year];dig[shortyear].
+
+
+
+// The first/second... quarter of 2006
+7> NP[tempexpr:+,temp_level=m,mwe=+,date=+] @= 
+	(det), #1[ord], noun[lemme:quarter], (prep[form:fof]), dig#2[year];dig#2[shortyear];num#2[year];num#2[shortyear], 
+		where(add_quarter(#1, #2, #0)).
+
+// The 1987 ('s) first quarter
+7> NP[tempexpr:+,temp_level=m,mwe=+,date=+] @= 
+	(det), num#2[year];dig#2[year], (part), #1[ord], noun[lemme:quarter],
+		where(add_quarter(#1, #2, #0)).
+
+
+// The (fiscal) first/second... quarter 
+7> noun[tempexpr:+,temp_level=m,mwe=+,date=+] @= (det), (adj[lemme:fiscal]), #1[ord], noun[lemme:quarter], 
+	where(add_quarter_alone(#1, #0)).
+
+// first-quarter
+7> adj[tempexpr:+,temp_level=m,mwe=+,date=+] = #1[ord], punct[form:fhyph, left, right], ?[lemme:quarter],
+	where(add_quarter_alone(#1, #0)).
+
+
+// 15-16 (days) without month before or after
+// noun:~ to avoid Monday-Friday
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,interval=+] = 
+	| noun[period:mo], (punct) |
+	#1[day,noun:~], punct[spec:+,form:fslash];punct[form:fhyph], #2[day,noun:~] 
+	, where(check_days_interval(#1, #2) & add_interval(#1, #2, #0, "d", "d")).
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,interval=+] = 
+	#1[day,noun:~], punct[spec:+,form:fslash];punct[form:fhyph], #2[day,noun:~] 
+	| (punct), noun[period:mo] |
+	, where(check_days_interval(#1, #2) & add_interval(#1, #2, #0, "d", "d")).
+
+
+// 15-16 (days) without context
+// Negated contexts added to avoid 12/01/99 and many ambiguous forms
+// slash not permitted because more rare and too ambiguous with fractions
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,interval=+] = 
+	~| dig;prep[form:~fon,form:~fbefore,form:~fafter];verb;punct[form:fslash];punct[form:fhyph];nadj;noun[period:~];noun[period:~mo] |
+	#1[day,noun:~], punct[form:fhyph], #2[day,noun:~] 
+	~| noun[period:~mo] |
+	, where(check_days_interval(#1, #2) & 
+		month_is_known() & add_interval(#1, #2, #0, "d", "d")).
+
+
+
+
+// Monday-Friday
+8> noun[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,interval=+] = 
+	noun#1[day], punct[spec:+,form:fslash];punct[form:fhyph,left,right], noun#2[day] 
+	, where(add_interval(#1, #2, #0, "d", "d")).
+
+
+// in or Jan 98-99
+//8> dig[tempexpr:+,temp_level=y,mwe=+,year=+,date=+,interval=+] = 
+//	|prep[form:fin];noun[month] | dig#1[shortyear], punct[form:fhyph];punct[form:fslash], dig#2[shortyear],
+//	where(add_interval(#1, #2, #0, "y", "y")).
+
+
+// between 15th and 16th
+// XT "15th or 16th" was already grouped in localgram1 in a non-temporal grammar
+//  see pre_local_temp (Marker layer 55) to see how it is handled
+//   the python functions are already called in this file
+//   14th or 16th (without between) is also treated
+8> ADV[tempexpr:+, date:+, mwe:+] =
+	prep[form:fbetween],
+	dig#1[ord, coord],
+	where(copy(#1, #0)).
+
+
+
+// Coord for days
+// 15 and 16, Monday or Tuesday, the 15th or the 16th
+//  XT separated in several rules (because I can't use ()* any more)
+//   lousy, but...
+// for digs
+////
+// negated right context includes :
+//      posttime:~  ("Monday and Tuesday night")
+//      period:~mo ("12 and 14, July")
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:~fon];verb;noun[period:~] |
+	(det[def]), dig#1[day,ord], 
+	conj#3[coord], (det[def]), dig#2[day,ord]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_dates(#1, #2, #3, #0, "d", "d")).
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:~fon];verb;noun[period:~] |
+	(det[def]), dig#1[day,ord], 
+	punct[comma], (det[def]), dig#2[day,ord], 
+	conj#4[coord], (det[def]), dig#3[day,ord]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "d", "d", "d")).
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:~fon];verb;noun[period:~] |
+	(det[def]), dig#1[day,ord], 
+	punct[comma], (det[def]), dig#2[day,ord], 
+	punct[comma], (det[def]), dig#3[day,ord], 
+	conj#5[coord], (det[def]), dig#4[day,ord]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "d", "d", "d", "d")).
+
+// March 16 and 18 (three rules)
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	| noun[period:mo] |
+	dig#1[day,ord:~], 
+	conj#3[coord], dig#2[day,ord:~]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_dates(#1, #2, #3, #0, "d", "d")).
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	| noun[period:mo] |
+	dig#1[day,ord:~], 
+	punct[comma], dig#2[day,ord:~], 
+	conj#4[coord], dig#3[day,ord:~]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "d", "d", "d")).
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	| noun[period:mo] |
+	dig#1[day,ord:~], 
+	punct[comma], dig#2[day,ord:~], 
+	punct[comma], dig#3[day,ord:~], 
+	conj#5[coord], dig#4[day,ord:~]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "d", "d", "d", "d")).
+// for nouns (Monday, ...)
+////
+8> noun[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:fbetween] |
+	(det[def]), noun#1[day], 
+	conj#3[coord], (det[def]), noun#2[day]
+	, where(concat_dates(#1, #2, #3, #0, "d", "d")).
+8> noun[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:fbetween] |
+	(det[def]), noun#1[day], 
+	punct[comma], (det[def]), noun#2[day], 
+	conj#4[coord], (det[def]), noun#3[day]
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "d", "d", "d")).
+8> noun[tempexpr:+,temp_level=d,mwe=+,day=+,date=+,coord=+] = 
+	~| prep[form:fbetween] |
+	(det[def]), noun#1[day], 
+	punct[comma], (det[def]), noun#2[day], 
+	punct[comma], (det[def]), noun#3[day], 
+	conj#5[coord], (det[def]), noun#4[day]
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "d", "d", "d", "d")).
+
+
+// Between Monday and Friday
+8> ADV[tempexpr:+,temp_level=d,mwe=+,day=+,date=+] = 
+	prep[form:fbetween],
+	(det[def]), noun#1[day], 
+	conj[coord], (det[def]), noun#2[day]
+	, where(add_interval(#1, #2, #0, "d", "d")).
+
+
+Marker:
+// for the later rules (coord for noun[day])
+// if the days are plural, turn the resulting date into a set
+//  Mondays and Tuesdays
+10> noun#1[tempexpr,temp_level:d,mwe,day,date=~,c_set=+,coord]{?*, noun[day,pl]},
+	where(date_to_set(#1)).
+
+// following, coming (not the verb)
+10> ?[verb:~,surface:following,preperiod=+,temp_rel=just_after,temp_ref=r].
+10> ?[verb:~,surface:coming,preperiod=+,temp_rel=just_after,temp_ref=+].
+
+
+
+Sequence:
+
+// 15 to 16
+//  (days)
+8> dig[tempexpr:+,temp_level=d,mwe=+,day=+,date=+] = 
+	~| ?[form:ffrom];?[form:fthrough];?[form:fat];verb;noun[period:~];punct[form:fslash];dig |
+	(det[def]), dig#1[day], 
+	prep#3[form:finfto], (det[def]), dig#2[day]
+	~| noun[spec_period];noun[pl];dig |
+	, where(check_days_interval(#1, #2) & concat_dates(#1, #2, #3, #0, "d", "d")).
+
+
+// date + posttime
+// Monday and Friday afternoons
+//8> noun[temp_level=d,tempexpr=+,mwe=+,date=+] = 
+//	(det[def]), noun#1[day], conj#3[coord], (det[def]), noun#1[day], #2[posttime], where(merge_dates(#1, #2, #0, "d", "p")).
+
+
+
+
+// Coord for shortyears
+// 97, 98 and 99
+//  XT separated in several rules (because I can't use ()* any more)
+8> dig[tempexpr=+,temp_level=y,mwe=+,date=+] =  
+	~| prep[form:~fin];verb;noun, (adj;adv) |
+	dig#1[year];dig#1[shortyear];num#1[year];num#1[shortyear], 
+	conj#3[coord],  dig#2[shortyear];num#2[shortyear]
+	~| prep[form:fof];noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(#0[year]={#1} & #0[shortyear]={#1} &
+		concat_dates(#1, #2, #3, #0, "y", "y")).
+8> dig[tempexpr=+,temp_level=y,mwe=+,date=+] =  
+	~| prep[form:~fin];verb;noun, (adj;adv) |
+	dig#1[year];dig#1[shortyear];num#1[year];num#1[shortyear],
+	punct[comma], dig#2[shortyear];num#2[shortyear], 
+	conj#4[coord],  dig#3[shortyear];num#2[shortyear]
+	~| noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(#0[year]={#1} & #0[shortyear]={#1} &
+		concat_3_dates(#1, #2, #3, #4, #0, "y", "y", "y")).
+8> dig[tempexpr=+,temp_level=y,mwe=+,date=+] =  
+	~| prep[form:~fin];verb;noun, (adj;adv) |
+	dig#1[year];dig#1[shortyear];num#1[year];num#1[shortyear],
+	punct[comma], dig#2[shortyear];num#2[shortyear],
+	punct[comma], dig#3[shortyear];num#2[shortyear],
+	conj#5[coord],  dig#4[shortyear];num#2[shortyear]
+	~| noun[pl];noun[period:~mo];noun[period:mo, spec_period:~] |
+	, where(#0[year]={#1} & #0[shortyear]={#1} &
+		concat_4_dates(#1, #2, #3, #4, #5, #0, "y", "y", "y", "y")).
+// 97 to 99
+// removed because too ambiguous and rare.
+//8> dig[tempexpr=+,temp_level=y,mwe=+,date=+] =  
+//	~| ?[form:ffrom];?[form:fthrough];?[form:fat];verb, (adj;adv) |
+//	dig#1[year];num#1[year], 
+//	dig#1[year];dig#1[shortyear];num#1[year];num#1[shortyear], 
+//	prep#3[form:finfto],  dig#2[shortyear];num#2[shortyear]
+//	~| dig;punct[form:fslash];noun[period:~];noun[period:mo, spec_period:~] |
+//	, where(#0[year]={#1} & #0[shortyear]={#1} &
+//		concat_dates(#1, #2, #3, #0, "y", "y")).
+
+// Coord for years
+// 1997, 1998 and 1999
+//  XT separated in several rules (because I can't use ()* any more)
+8> dig[tempexpr=+,temp_level=y,mwe=+,year=+,date=+,coord:+] =  
+	~| ?[form:fbetween];?[lemme:through] |
+	dig#1[year];num#1[year], 
+	conj#3[coord],  dig#2[year];num#2[year]
+	, where(concat_dates(#1, #2, #3, #0, "y", "y")).
+8> dig[tempexpr=+,temp_level=y,mwe=+,year=+,date=+,coord:+] =  
+	~| ?[form:fbetween];?[lemme:through] |
+	dig#1[year];num#1[year],
+	punct[comma], dig#2[year];num#2[year], 
+	conj#4[coord],  dig#3[year];num#3[year]
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "y", "y", "y")).
+8> dig[tempexpr=+,temp_level=y,mwe=+,year=+,date=+,coord:+] =  
+	~| ?[form:fbetween];?[lemme:through] |
+	dig#1[year];num#1[year],
+	punct[comma], dig#2[year];num#2[year],
+	punct[comma], dig#3[year];num#3[year],
+	conj#5[coord],  dig#4[year];num#4[year]
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "y", "y", "y", "y")).
+// 1997 to 1999
+8> dig[tempexpr=+,temp_level=y,mwe=+,year=+,date=+,coord:+] =  
+	~| ?[form:ffrom];?[form:fthrough] |
+	dig#1[year];num#1[year], 
+	prep#3[form:finfto],  dig#2[year];num#2[year]
+	, where(check_year_interval(#1, #2) & concat_dates(#1, #2, #3, #0, "y", "y")).
+
+
+// Coord for Months
+// January, February and March
+//  XT separated in several rules (because I can't use ()* any more)
+9>  noun[tempexpr=+,temp_level=m,time=+,mwe=+,month=+,date=+,coord:+] = 
+	~| ?[form:fbetween];?[lemme:through] |
+	noun#1[month], 
+	conj#3[coord],  noun#2[month]
+	, where(concat_dates(#1, #2, #3, #0, "m", "m")).
+9>  noun[tempexpr=+,temp_level=m,time=+,mwe=+,month=+,date=+,coord:+] = 
+	~| ?[form:fbetween];?[lemme:through] |
+	noun#1[month], 
+	punct[comma], noun#2[month],
+	conj#4[coord],  noun#3[month]
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "m", "m", "m")).
+9>  noun[tempexpr=+,temp_level=m,time=+,mwe=+,month=+,date=+,coord:+] = 
+	~| ?[form:fbetween];?[lemme:through] |
+	noun#1[month], 
+	punct[comma], noun#2[month],
+	punct[comma], noun#3[month],
+	conj#5[coord],  noun#4[month]
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "m", "m", "m", "m")).
+// Monday to Friday
+9>  noun[tempexpr=+,temp_level=m,time=+,mwe=+,month=+,date=+,coord:+] = 
+	~| ?[form:ffrom];?[form:fthrough] |
+	noun#1[month], 
+	prep#3[form:finfto],  noun#2[month]
+	, where(concat_dates(#1, #2, #3, #0, "m", "m")).
+
+
+
+
+// XT merged with Rule 80
+//8> dig[tempexpr=+,temp_level=y,mwe=+,year=+,date=+] =  dig[year],punct[form:fhyph,left,right], dig[year];dig[shortyear].
+
+/------------ MULTIWORD DATES -------------------\
+
+// April/March (1990) found in corpora
+9>  noun[tempexpr=+,temp_level=m,time=+,mwe=+,month=+,date=+,interval=+] = 
+	noun#1[month], punct[spec:+,form:fslash];punct[form:fhyph,left,right], noun#2[month], 
+	where(add_interval(#1, #2, #0, "m", "m")).
+
+
+// the early 1980's
+// XT Removed
+//11> noun[temp_level=y,time=+,mwe=+,date=+] = |det[def] | ?[time,dig:~] , part;punct[quote], noun[guess,date] .
+
+//11> noun[time=+,mwe=+,date=+] = | det[def] |    
+//                          ?[time,dig:~];?[preperiod,dig:~],
+//                          (punct[form:fhyph,left,right]),dig[year],part,(conj[coord],dig,part) .
+
+//11> noun[time=+,mwe=+,date=+] = | det[def] |    
+//                          ?[time,dig:~];?[preperiod,dig:~],
+//                          (punct[form:fhyph,left,right]),noun[guess,date],(conj[coord],noun[guess,date]) .
+// the 1980's
+//11> noun[time=+,mwe=+,date=+] = | det[def] | dig[year],part,(conj[coord],dig,part)  .
+
+// the 1980s with the guesser
+//11> noun[time=+,mwe=+,date=+] =   noun[guess,date], conj[coord], noun[guess,date] .
+
+//11> noun[time=+,mwe=+] = ?[time,dig:~,month:~], dig[year,date=+].
+
+//11> noun[year=+,mwe=+]  = dig[year],part .
+
+// ! bloque la remontee du trait
+
+// !X:! remonte automatiquement le trait a tout les noeuds au dessus
+
+
+// next August, 31.
+//11> noun[time=+,!month, mwe=+,t_relat=+] @ = ?[preperiod, dig:~], noun[month], (punct[comma:+]), dig[day]. 
+
+
+// early December, mid-December
+// XT treated at the end of the file
+//11> noun[time=+,!month,mwe=+,t_relat=+] = ?[time,dig:~,day:~,month:~,prep:~];?[preperiod,dig:~],
+//                                 (punct[form:fhyph,left,right]),
+//                                  noun[month], prep[form:fof],dig[year].
+
+//11> noun[time=+,!month,mwe=+,t_relat=+] = ?[time,dig:~,day:~,month:~,prep:~];?[preperiod,dig:~],(punct[form:fhyph,left,right]), noun[month].
+
+
+// Monday, August 15th, 2006
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[day], (punct[comma:+]), noun#2[month], (det[def]), #3[day] , (punct[comma:+]), dig#4[year];num#4[year], 
+	where(merge_4_dates(#1, #2, #3, #4, #0, "d", "m", "d", "y")).
+
+// merged with previous one
+//11> noun[time=+,mwe=+,date=+] = noun[day], (punct[comma:+]), noun[month], det[def], dig[day,ord] , (punct[comma:+]), dig[year].
+
+// Monday, December 20
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = noun#1[day], (punct[comma:+]), noun#2[month],(punct[comma:+]), (det[def]), #3[day], where(merge_3_dates(#1, #2, #3, #0, "d", "m", "d")).
+
+// merged with previous one
+//11> noun[time=+,mwe=+,date=+] = noun[day], (punct[comma:+]), noun[month], det[def], dig[day,ord].
+
+
+
+
+// Sunday 21 December 1999 
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	#1[noun,day];#1[adj,day],(punct[comma:+]),#2[day],(punct[comma:+]), noun#3[month],(punct[comma:+]), dig#4[year];num#4[year], 
+	where(merge_4_dates(#1, #2, #3, #4, #0, "d", "d", "m", "y")).
+// Sunday 21 December 
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	#1[noun,day];#1[adj,day], (punct[comma:+]), #2[day], #3[noun,month],
+		where(merge_3_dates(#1, #2, #3, #0, "d", "d", "m")).
+
+// Sunday 21
+//11>  noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+//	#1[noun,day];#1[adj,day], #2[day], 
+//		where(merge_dates(#1, #2, #0, "d", "d")).
+
+
+// Monday the 15th
+// right context to avoid:
+//   [...] ended Wednesday, the third drop in as many weeks .
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	#1[noun,day];#1[adj,day], (punct[comma:+]), (det[def]), #2[day]
+	~ | noun |,
+	where(merge_2_dates(#1, #2, #0, "d", "d")).
+
+
+// 20-FEB-1999
+11> noun[tempexpr=+,temp_level=d,time=+,date=+] = (det), #1[day],(punct[form:fhyph,left,right]),noun#2[month], (punct[form:fhyph,left,right]), dig#3[year];dig#3[shortyear], where(merge_3_dates(#1, #2, #3, #0, "d", "m", "y")).
+
+// 20 of October (1999)
+// Rule 97
+11> noun[tempexpr=+,temp_level=d,time=+,date=+] = (det), #1[day],(prep[form:fof]),noun#2[month], (punct[comma:+]), dig#3[year];dig#3[shortyear], where(merge_3_dates(#1, #2, #3, #0, "d", "m", "y")).
+// Rule 98
+11> noun[tempexpr=+,temp_level=d,time=+,date=+] = (det), #1[day],(prep[form:fof]),noun#2[month], 
+	where(merge_dates(#1, #2, #0, "d", "m")).
+
+// 20 October, 2005
+// Rule 99
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = #1[day], noun#2[month], (punct[comma:+]), dig#3[year,coord:~];num#3[year,coord:~], where(merge_3_dates(#1, #2, #3, #0, "d", "m", "y")).
+
+
+// December 1999 --- 21 December 1999 --- December 21, 1999
+
+// December, 15, 1999
+// Rule 100
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[month], (punct[comma]), #2[day], (punct[comma:+]), dig#3[shortyear,coord:~];dig#3[year,coord:~];num#3[year,coord:~];num#3[shortyear,coord:~], (noun[day]), 
+	where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+// December, the 12th, 1996
+// Rule 101
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[month], (punct[comma:+]), det[def], #2[day,ord], (punct[comma:+]), dig#3[shortyear,coord:~];dig#3[year,coord:~];num#3[year,coord:~];num#3[shortyear,coord:~], 
+	where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+// December 12 1999
+// Removed and merged with Rule 100
+//11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = noun[month], (punct[comma:+]), dig[day], dig[year].
+
+// December the 15th 1996
+// Removed and merge with Rule 101
+//11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = noun[month], (punct[comma:+]), det[def], ?[day,ord], dig[year].
+
+// December 15 '99 + ~noun (XT let it but ?????)
+// Rule 104
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[month], (punct[comma:+]), #2[day], punct[comma:+];punct[quote] ,dig#3[shortyear] |?[noun:~]|, 
+	where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+// December, the 12th, 96
+// cannot be merged with Rule 101 because of the right context
+//   (short year)
+// Rule 105
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[month], (punct[comma:+]), det[def], #2[day,ord], punct[comma:+],dig#3[shortyear];num#3[shortyear]  |?[noun:~]|, 
+	where(merge_3_dates(#1, #2, #3, #0, "m", "d", "y")).
+
+
+// Starting with a year : 1999 August 11
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	dig#1[year];num#1[year], (punct[comma:+]), noun#2[month], (punct[comma:+]), #3[day], 
+	where(merge_3_dates(#1, #2, #3, #0, "y", "m", "d")).
+
+
+// December 12
+// Rule 106
+11> noun[tempexpr=+,temp_level=d,time=+,mwe=+,date=+] = 
+	noun#1[month], (punct[comma]), #2[day],
+		where(merge_dates(#1, #2, #0, "m", "d")).
+
+// December of 1993
+// Rule 107
+11> noun[tempexpr=+,temp_level=m,time=+,mwe=+,date=+] =  
+	noun#1[month], (prep[form:fof];punct[comma:+]), dig#2[year];num#2[year], 
+	where(merge_dates(#1, #2, #0, "m", "y")).
+
+// Rules 108 and 109, same with short year
+11> noun[tempexpr=+,temp_level=m,time=+,mwe=+,date=+] =  
+	noun#1[month], prep[form:fof];punct[comma:+], dig#2[shortyear];num#2[shortyear], 
+	where(merge_dates(#1, #2, #0, "m", "y")).
+
+// month + shortyear is OK only if shortyear is not also a day
+//   (see also Rule 106)
+11> noun[tempexpr=+,temp_level=m,time=+,mwe=+,date=+] =  noun#1[month], dig#2[shortyear,day:~], 
+	where(merge_dates(#1, #2, #0, "m", "y")).
+
+// December 11 99 (???)
+// removed and merged with Rule 100
+//11> noun[temp_level=d,time=+,mwe=+,date=+] = noun[month], (punct[comma:+]), dig[day], dig[shortyear].
+
+// December the 11th 99
+// removed and merged with Rule 101
+//11> noun[temp_level=d,time=+,mwe=+,date=+] = noun[month], (punct[comma:+]), det[def],dig[day,ord], dig[shortyear].
+
+
+// 11 December
+// XT removed: already catched by rule 98
+//11> noun[temp_level=d,time=+,mwe=+,date=+] = dig[day],noun[month].
+
+// XT removed
+//   "24 December, 99" already catched by Rule 97
+//   "December 99", "December, 1999", etc... (3 following rules)
+//             merged with Rule 107
+//12> noun[temp_level=d,time=+,mwe=+,date=+] = (dig[day]), noun[month], punct[comma:+], dig[shortyear].
+//12> noun[temp_level=d,time=+,mwe=+,date=+] = (dig[day]), noun[month], ( punct[comma:+]) ,dig[year].
+//12> noun[temp_level=d,time=+,mwe=+,date=+] = (dig[day]), noun[month], dig[shortyear].
+
+
+
+// December 21 or No : December , 21 dangerous : more context needed : a year : Dec
+//11> noun[time=+,mwe=+,date=+] = noun[month],dig[day]. DONE ABOVE
+
+//12> noun[time=+,mwe=+,date=+] = noun[month], dig[day], (punct[comma:+], dig[year]).
+
+// CH adding a left context in order to avoid the third of {January, 1999}
+// XT removed, already catched by Rule 107
+//12> noun[time=+,mwe=+,date=+] = | ?[comma:~,prep:~] | noun[month], (punct[comma:+]), dig[year].
+// XT ???
+//12> noun[time=+,mwe=+,date=+] = | | noun[month], (punct[comma:+]), dig[year].
+
+
+// 1999 December (without a day)
+12> noun[tempexpr=+,temp_level=m,time=+,mwe=+,date=+] = 
+	dig#1[year], (punct[comma:+]), noun#2[month], where(merge_dates(#1, #2, #0, "y", "m")).
+
+// XT removed: already catched by Rule 107 (see also problem with shortyear
+//                                           in Rules 108-109)
+//12>  noun[temp_level=m,time=+,mwe=+,date=+] = noun[month], dig[year];dig[shortyear].
+
+// Time expressions like Winter 2002 : apply on noun or nadj
+5> noun[temp_level=m,tempexpr=+,mwe=+,date=+] = 
+	(det),
+	#1[period:mo,spec_period, spec_period:~+],
+	(prep[form:fof]),
+	dig#2[year];dig#2[shortyear];num#2[year];num#2[shortyear], 
+	where(merge_dates(#1, #2, #0, "p", "y")).
+
+// XT merged by previous one (three next commented rules)
+//12> noun[tempexpr=+,mwe=+,date=+] = nadj[period], dig[shortyear].
+//12> noun[tempexpr=+,mwe=+,date=+] = noun[period,lemme:~month], dig[year].
+//12> noun[tempexpr=+,mwe=+,date=+] = noun[period,lemme:~month], dig[shortyear].
+
+// the 123rd day of 1999
+12> noun[temp_level=o,tempexpr=+,mwe=+,date=+] = 
+	#1[ord], noun[lemme:day,sg], prep[form:fof], dig#2[year];dig#2[shortyear];num#2[year];num#2[shortyear], 
+	where(add_day_of_the_year(#1) & merge_dates(#1, #2, #0, "o", "y")).
+// the 123rd day of the year
+12> noun[temp_level=o,tempexpr=+,mwe=+,date=+] = 
+	#1[ord], noun[lemme:day,sg], prep[form:fof], (det), noun[lemme:year], 
+	where(add_day_of_the_year(#1)).
+
+
+// the 1st month of 1999
+12> noun[temp_level=m,tempexpr=+,mwe=+,date=+] = 
+	#1[ord], noun[lemme:month,sg], prep[form:fof], dig#2[year];dig#2[shortyear];num#2[year];num#2[shortyear], 
+	where(add_month_of_the_year(#1) & merge_dates(#1, #2, #0, "m", "y")).
+
+// the 1st month of the year
+12> noun[temp_level=m,tempexpr=+,mwe=+,date=+] = 
+	#1[ord], noun[lemme:month,sg], prep[form:fof], (det), noun[lemme:year], 
+	where(add_month_of_the_year(#1) & copy(#1, #0, "DATE", "m")).
+
+
+// the 4th day of December 1999
+// XT ???
+//14> noun[temp_level=d,tempexpr=+,mwe=+,date=+] = dig#1[day:+,ord:+], noun[lemme:"day"], prep[form:fof], noun#2[date].
+
+
+// date + posttime
+// Friday afternoon
+// October 12th, in the afternoon
+//  posttime with sg
+13> noun[temp_level=d,tempexpr=+,mwe=+,date=+] = 
+	noun#1[temp_level:d,c_anchor:~];noun#1[temp_level:o,c_anchor:~], (punct[comma]), (prep[form:fin]), (det), #2[posttime,sg], 
+	where(merge_dates(#1, #2, #0, "d", "p")).
+//  posttime with pl, no coord => SET
+// Fridays nights
+13> noun[temp_level=d,tempexpr=+,mwe=+,c_set=+] = 
+	noun#1[temp_level:d,coord:~];noun#1[temp_level:o,coord:~], (punct[comma]), (prep[form:fin]), (det), #2[posttime,pl], 
+	where(merge_dates(#1, #2, #0, "d", "p") & date_to_set(#0)).
+// posttime with pl, coord => ambiguity!
+//   Monday and Friday nights can be a set or not
+//   considered as a set by default + feature t_ambiguous_analysis
+13> noun[temp_level=d,tempexpr=+,mwe=+,c_set=+,t_ambiguous_analysis=+] = 
+	noun#1[temp_level:d,coord];noun#1[temp_level:o,coord], (punct[comma]), (prep[form:fin]), (det), #2[posttime,pl], 
+	where(merge_dates(#1, #2, #0, "d", "p") & date_to_set(#0)).
+// the night of Friday
+13> noun[temp_level=d,tempexpr=+,mwe=+,date=+] = 
+	(det), #2[posttime], (prep[form:fof]), noun#1[date,temp_level=d];noun#1[date,temp_level=o], 
+	where(merge_dates(#1, #2, #0, "d", "p")).
+
+
+
+
+
+
+
+// the same day
+3> noun[tempexpr=+,c_anchor=+] @=
+	(det[def]), adj[lemme:same];nadj[lemme:same], noun#2[period, spec_period:~, sg],
+	where(str_type=#2[period] & add_anchor_date(#0, str_type, "X", "present", "r")).
+
+
+// the same summer
+3> noun[tempexpr=+,c_anchor=+] @=
+	(det[def]), adj[lemme:same];nadj[lemme:same], noun#2[spec_period, sg],
+	where(str_type=#2[period_frequ_unit] & add_anchor_date(#0, str_type, "X", "present", "r") & merge_anchor_date_and_date(#0, #2, #0)).
+
+
+////////////////////////////////
+// EXPRESSIONS FOR TIME
+////////////////////////////////
+// These 3 rules have been deplaced from Chunker.xip :rules 9>
+// I add the post-hours modifier : PM AM GMT, etc 
+// CB: problems with categories and tokenzation on these items
+
+// 11 o'clock, eleven o'clock
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	num#1[hour];dig#1[hour];noun#2[hour,hour:~+], adv[form:foclock], 
+		where(add_date_hours(#1, #0)).
+
+
+// time with "past" and "to"
+////
+// 10 to 11
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	~| ?[form:ffrom];?[form:fthrough];verb[lemme:~be];?[pl];noun;punct[form:fslash];dig |
+	num#1[card];dig#1[card,money:~,rom:~], 
+	?[lemme:to], 
+	num#2[smallhour];dig#2[smallhour];noun#2[hour,hour:~+]
+	~| ?[posthour];noun[pl];noun[period:~];dig |,
+	where(add_time_with_to(#1, #2, #0)).
+// 3 minutes to four
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	num#1[card];dig#1[card, money:~,rom:~], 
+	noun[period:mi],
+	?[lemme:to], 
+	num#2[smallhour];dig#2[smallhour];noun#2[hour,hour:~+]
+	~| noun[period:~] |,
+	where(add_time_with_to(#1, #2, #0)).
+// quarter/half to 11
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	#1[lemme:quarter];#1[lemme:half], 
+	?[lemme:to], 
+	num#2[smallhour];dig#2[hour];noun#2[hour,hour:~+], 
+	where(add_time_with_to(#1, #2, #0)).
+// 20 past 10, 20 minutes past four
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	num#1[card];dig#1[card, money:~,rom:~], 
+	(noun[period:mi]),
+	?[lemme:past], 
+	num#2[smallhour];dig#2[smallhour];noun#2[hour,hour:~+], 
+	where(add_date_hours(#2, #2) & add_date_minutes(#1, #1) & merge_dates(#1, #2, #0, "t", "t")).
+// quarter/half past three
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	#1[lemme:quarter];#1[lemme:half], 
+	?[lemme:past], 
+	num#2[smallhour];dig#2[smallhour];noun#2[hour,hour:~+], 
+	where(add_date_hours(#2, #2) & add_date_minutes(#1, #1) & merge_dates(#1, #2, #0, "t", "t")).
+
+// 11:02, 11:02:59 without separation before
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = dig#1[time,year:~,rom:~], 
+	where(add_time_with_split_char(#1, #0, ":")).
+
+// 11:02 with separation before
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	dig#1[hour], punct[form:fcolon];punct[lemme:"."], dig#2[card, money:~, rom:~],
+		where(add_date_hours(#1, #1) & add_date_minutes(#2, #2) & 
+			merge_2_dates(#1, #2, #0, "t", "t")).
+
+// 11.02   (found in corpus: The EU-U.S. summit formally starts at 11.00 a.m)
+//    only with right context, otherwise too ambiguous
+//      11.00 is treated in desamb_spec
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = dig#1[time,year:~,rom:~], 
+	where(add_time_with_split_char(#1, #0, ".")).
+
+// 1100 GMT    (found in corpus several times with GMT, EDT, ...)
+//    only with right context, otherwise too ambiguous
+//      1100 is treated in desamb_spec
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = dig#1[time,surface:"%d%d%d%d"] | ?[timezone] |, 
+	where(add_date_hours_and_minutes(#1, #0)).
+
+
+
+
+
+// (Friday at) 10
+//3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+//	| ?[tempexpr];?[temp_level];?[spec_period], ?*, prep[form:fat] | dig#1[hour,year:~, money:~],
+//		where(add_date_hours(#1, #0)).
+
+// (at) 10 (punct), (at 10 or) 11 (punct)
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	| prep[form:fat], (dig#1[smallhour,hour,year:~,money:~], conj[coord]) | 
+	dig#1[smallhour,year:~, money:~] 
+	| punct;prep;?[tempexpr] |,
+		where(add_date_hours(#1, #0)).
+
+
+// (at) 10 (or 11)
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	| prep[form:fat] | 
+	dig#1[smallhour,year:~, money:~] 
+	| conj[coord], dig#1[smallhour,hour,year:~,money:~] |,
+		where(add_date_hours(#1, #0)).
+
+
+// (from) 10 to 11 (punct;PM)
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	| prep[form:ffrom], (dig[smallhour,hour], prep[form:finfto];prep[form:funtil]) | 
+	dig#1[smallhour,year:~, money:~] 
+	| (prep[form:finfto];prep[form:funtil], dig[smallhour]), 
+		?[posthour];punct;prep[form:~finfto,form:~funtil];?[tempexpr] |,
+	where(add_date_hours(#1, #0)).
+
+
+// 11 (PM)
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	~| dig, (punct[form:fcolon];punct[lemme:"."]) | 
+	dig#1[smallhour, year:~, money:~] 
+	| (punct[comma:~];prep[form:fat],dig[rom:~]), ?[posthour,period:~];?[timezone,period:~] |, 
+		where(add_date_hours(#1, #0)).
+
+// 11 (in the morning)
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = 
+	dig#1[smallhour,year:~,money:~] | 
+	(punct;prep, dig), prep, (det), ?[posthour,period:h];?[timezone,period:h] |, 
+		where(add_date_hours(#1, #0)).
+
+
+// midnight, noon...
+3> noun[tempexpr:+,temp_level:t,hour:+,time:+] = noun#1[hour,hour:~+],
+	where(add_date_hours(#1, #0)).
+
+
+
+
+
+////////////////////////////////
+// DURATIONS
+////////////////////////////////
+
+// the first days
+//   Duration + mod
+// see also layer 18, the first nine months
+3> NP[tempexpr:+,c_dur:+,date:+,t_mod:start] @= 
+	(det), #1[ord, surface:first], noun#2[pl, period,period:~+],
+	where(add_duration_x(#2, #0) & SetFeature(#0, "t_mod", "start") & add_mod_alone(#0)).
+
+
+
+// the early hours
+//  => t_mod:start
+// It does not mean that it's hours! (the early hours of the year.)
+3> NP[tempexpr:+,c_dur:+,date:+,t_mod:!] @= 
+	(det), adj#1[t_mod,!t_mod:!], noun#2[pl, period:h].
+
+
+// half an hour
+3> noun[tempexpr:+,c_dur:+,mwe:+] =
+	quant[lemme:half], (det;punct[form:fhyph]), noun#1[period],
+	where(add_duration_half(#0, #1)).
+
+
+
+// 11 hours and a half
+3> NP[tempexpr:+,c_dur:+,mwe:+] = 
+	det#1[indef];dig#1[money:~,rom:~];num#1[card:+], (adj;nadj), noun#2[period],
+	conj[form:fand], (det[indef]), ?[lemme:half],
+	where(add_duration(#1, #2, #1) & add_duration_half(#2, #2) & merge_durations(#1, #2, #0)).
+
+
+// 11-1/2 hours (with a hyphen, found in corpus)
+3> noun[tempexpr:+,c_dur:+,mwe:+] = 
+	dig#1[money:~,rom:~], (punct[form:fhyph]), dig[lemme:1,rom:~], punct[form:fslash], dig[lemme:2,rom:~], (adj;nadj), 
+	noun#2[period],
+	where(add_duration(#1, #2, #1) & add_duration_half(#2, #2) & merge_durations(#1, #2, #0)).
+
+
+
+// 4 or 5 months
+// 10 or 20 years
+//  left context to avoid "from 4 to 5 months" treated just next rule
+// the first add_duration has a fourth argument "1" because the number is more
+//     important than the plural/singular form of the noun.
+3> NP[tempexpr:+,c_dur:+,mwe:+] = 
+	~| prep[form:ffrom] |
+	dig#1[money:~,rom:~];num#1[card:+], conj#4[coord, form:for];prep#4[lemme:to], dig#2[rom:~];num#2[card:+], 
+	(adj;nadj), noun#3[period],
+	where(check_numbers_interval(#1, #2) &
+		add_duration(#1, #3, #1, 1) & 
+		add_duration(#2, #3, #2) & 
+		concat_durations(#1, #2, #4, #0)).
+
+
+// from 4 to 5 months
+3> ADV[tempexpr:+,c_dur:+,mwe:+] = 
+	prep[form:ffrom], 
+	dig#1[money:~,rom:~];num#1[card:+], prep#4[lemme:to], dig#2[rom:~];num#2[card:+], 
+	(adj;nadj), noun#3[period],
+	where(add_duration(#1, #3, #1) & 
+		add_duration(#2, #3, #2) & 
+		concat_durations(#1, #2, #4, #0)).
+
+
+// between 4 and 5 months
+3> ADV[tempexpr:+,c_dur:+] = 
+	prep#4[form:fbetween],
+	dig#1[money:~,rom:~];num#1[card:+], conj[coord, form:fand], dig#2[rom:~];num#2[card:+], 
+	(adj[temp_rel:~];nadj[temp_rel:~]), noun#3[period, spec_period:~],
+	where(add_duration(#1, #3, #1, 1) & add_duration(#2, #3, #2, 1) & concat_durations(#1, #2, #4, #0)).
+
+
+// a couple of months
+//3> NP[tempexpr:+,c_dur:+] = 
+//	quant#1[quant_number],
+//	(adj;nadj),
+//	noun#2[period, spec_period:~],
+//	where(add_duration_from_quant(#1, #2, #0)).
+
+
+
+// "all day long"
+3> noun[tempexpr:+,c_dur:+,mwe:+] = 
+	quant#1[lemme:all], (det),
+	noun#2[period:d,lemme:day], ?[noun,lemme:long],
+	where(add_duration(#1, #2, #0) &#0[temp_level] = {#2} &#0[date] = {#2}).
+
+
+// recent years
+//    !! different from "last years", treated in layer 20
+//         'last' is a preperiod ("last 3 days", etc...)
+//             not recent  ("a recent year", etc...)
+3> noun[tempexpr:+,c_anchor:+,mwe:+] = 
+	#1[adj,preperiod:~,c_set:~,temp_rel],
+	noun#2[period, period:~+, pl];noun#1[spec_period,pl],
+	where(add_duration_x(#2, #2) & merge_anchor_date_and_duration(#1, #2, #0)).
+
+
+// 11 hours
+//   can be a duration or a time (only if dig/num number)
+//   11 hours and a half, only duration, is analysed just before this rule
+//4> NP[temp_level:t,tempexpr:+,hour:+,c_dur:+] = 
+//	quant#1[c_set:~];det#1;dig#1[year:~,money:~];num#1[card:+], 
+//	(adj;nadj), 
+//	noun#2[period:h, spec_period:~],
+//	where((((#1[dig] | #1[num]) & add_date_hours(#1, #0)) | 1:1) & 
+//	       add_duration(#1, #2, #0)).
+
+
+// 10 minutes
+//   can be a duration or a time (only if real number)
+//4> NP[temp_level:t,tempexpr:+,hour:+,c_dur:+] = 
+//	quant#1[c_set:~];det#1;dig#1[year:~,money:~];num#1[card], 
+//	(adj;nadj), 
+//	noun#2[period:mi, spec_period:~],
+//	where((((#1[dig] | #1[num]) & add_date_minutes(#1, #0)) | 1:1) & 
+//	       add_duration(#1, #2, #0)).
+
+// 48 seconds
+//   can be a duration or a time (only if real number)
+// Added a right context because 'second' is ambiguous (the second member, the second one...)
+//4> NP[temp_level:t,tempexpr:+,hour:+,c_dur:+] = 
+//	quant#1[c_set:~];det#1[det:~];dig#1[year:~,money:~];num#1[card:+], 
+//	(adj;nadj), 
+//	noun#2[period:s, spec_period:~]
+//	~| noun;adj;nadj;num |,
+//	where((((#1[dig] | #1[num]) & add_date_seconds(#1, #0)) | 1:1) & 
+//	       add_duration(#1, #2, #0)).
+
+
+
+Marker:
+// time + AM, PM
+// 7 PM
+14> noun#1[hour], #2[posthour], 
+	where(change_hour(#1, #2)).
+
+// 6:30 to 7 PM, 6:30 or 7 PM
+14> noun#1[hour], punct;prep;conj[coord], noun[hour], #2[posthour], 
+	where(change_hour(#1, #2)).
+
+
+
+Sequence:
+
+// intervals 
+// from 6:30 to 7 PM
+15> ADV[tempexpr:+,temp_level:t, hour:+,interval:+] @= 
+	prep[form:ffrom], noun#1[hour], (?[posthour,period:~]), 
+	punct[form:fhyph];prep[form:finfto], 
+	noun#2[hour], (?[posthour,period:~]), (?[timezone]),
+		where(add_interval(#1, #2, #0, "t", "t")).
+// 6:30 to 7 PM
+15> noun[tempexpr:+,temp_level:t, hour:+,interval:+] @= 
+	noun#1[hour], punct[form:fhyph];prep[form:finfto], noun#2[hour],
+	(?[posthour,period:~]), (?[timezone]), 
+		where(add_interval(#1, #2, #0, "t", "t")).
+
+
+// time + AM, PM, GMT... (3 rules)
+// already analysed
+16> noun[tempexpr:+,temp_level:t, hour:+] = noun#1, #2[posthour,period:~], #3[timezone], 
+	where(str_type = "+" & merge_dates(#1, #3, #0, "t", str_type)).
+
+16> noun[tempexpr:+,temp_level:t, hour:+] = noun#1[hour], #2[timezone], 
+	where(str_type = "+" & merge_dates(#1, #2, #0, "t", str_type)).
+16> noun[tempexpr:+,temp_level:t, hour:+] = noun#1, #2[posthour,period:~], 
+	where(copy(#1, #0)).
+// 3 o'clock in the afternoon
+//   (must be at a layer lower than durations, otherwise "the afternoon" will be chunked)
+4> noun[tempexpr:+,temp_level:t, hour:+] = noun#1[hour], prep[form:fin];prep[form:fof], (det[def]), #2[posthour,period:h], 
+	where(change_hour(#1, #2) & copy(#1, #0)).
+
+
+// Complex noun with hour:+ followed by another hour:+
+// e.g. twelve o'clock midnight (found in corpus)
+// adding feature t_absolut on the last element in order to have the feature available for dependency marking
+5> noun[temp_level:t,tempexpr:+] = noun#1[hour:+], noun#2[hour:+], 
+	where(merge_dates(#1, #2, #0, "t", "t")).
+
+// he put in 12-hour to 14-hour days 
+3> adj[tempexpr:+,c_dur:+,mwe:+,t_mod:!] = 
+	dig#1[money:~,rom:~];num#1[card:+], punct[form:fhyph], noun#2[period,period:~+,date:~,sg:+], 
+	prep#5[form:finfto],
+	dig#3[money:~,rom:~];num#3[card:+], punct[form:fhyph], noun#4[period,period:~+,date:~,sg:+], 
+	where(add_duration(#1, #2, #1) & add_duration(#3, #4, #3) & 
+		concat_durations(#1, #3, #5, #0) &
+		 #0[temp_level] = {#4} & #0[date] = {#4}).
+
+
+// the two-day rally
+// number or quant + singular duration noun + noun
+5> adj[tempexpr:+,c_dur:+,mwe:+,t_mod:!] = 
+	quant#1[c_set:~];dig#1[money:~,rom:~];num#1[card:+], 
+	punct[form:fhyph],
+	noun#2[period,period:~+,date:~,sg:+],
+	where(add_duration(#1, #2, #0) & #0[temp_level] = {#2} & #0[date] = {#2}).
+
+
+// the two day rally
+// number or quant + singular duration noun + noun
+// without the hyphen, add a right context to avoid ambiguity
+5> adj[tempexpr:+,c_dur:+,mwe:+,t_mod:!] = 
+	quant#1[c_set:~];dig#1[money:~,rom:~];num#1[card:+], 
+	(punct[form:fhyph]),
+	noun#2[period,period:~+,date:~,sg:+]
+	| noun |,
+	where(add_duration(#1, #2, #0) & #0[temp_level] = {#2}).
+
+
+// Other durations:
+//   2 millenniums
+//   10 years
+//   3 months
+//   4 weeks
+//   etc...
+// only durations (date:~) or plurals (some Tuesdays)
+// quant are taken ("some days") but not all ("each day", "most days") => c_set:~
+6> NP[tempexpr:+,c_dur:+,mwe:+,t_mod:!] = 
+	(det[def]),
+	quant#1[c_set:~];det#1[det_dem:~,def:~,c_set:~];dig#1[money:~,rom:~];num#1[card:+], 
+	(adj[temp_rel:~];nadj[temp_rel:~]), 
+	noun#2[period,period:~+,date:~,time:~];#2[spec_period,date:~,time:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!],
+	where(add_duration(#1, #2, #0) & #0[temp_level] = {#2} & #0[date] = {#2}).
+
+
+
+// duration with a hyphen => adj
+// a 20-minute talk
+//  see above "two-day rally"
+//18> adj[tempexpr:+,c_dur:+,mwe:+,t_mod:!] = 
+//	dig#1[money:~];num#1[card:+],
+//	punct[form:fhyph],
+//	noun#2[period,sg,period:~+, date:~];#2[spec_period,sg,date:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!]
+//	| adj;nadj;noun |,
+//	where(add_duration(#1, #2, #0) & #0[temp_level] = {#2} & #0[date] = {#2}).
+
+
+
+// years, months (without determiner)
+// not hyph on the left to avoid: "70% rise in foreign visitor room-nights"
+18> noun[tempexpr:+,c_dur:+,indef:+,date:+] = 
+	~| det;quant;punct[form:fhyph,right] |
+	noun#1[period, period:~+, pl];noun#1[spec_period,pl],
+	where(add_duration_x(#1, #0)).
+
+
+
+
+// the first nine months, the last seven days
+// date=~ because ambiguous forms like "4 hours" are no longer ambiguous in this case
+//   Duration + mod
+// with first
+18> noun[tempexpr:+,c_dur:+] = 
+	| det | #1[ord, surface:first], #2[noun, tempexpr,c_dur,date=~],
+		where(add_mod_explicit(#2, #2, "start", "DURATION") & copy(#2, #0, "DURATION")).
+// with last
+//18> noun[tempexpr:+,c_dur:+] = 
+//	(det), #1[surface:last], noun#2[tempexpr,c_dur,date=~,temp_level=~],
+//	where(add_mod_explicit(#2, #2, "end", "DURATION") & copy(#2, #0, "DURATION")).
+
+
+
+// duration coordination (and)
+// 3 years and 2 months
+// 10 hours, 20 minutes and 40 seconds 
+//   (3 rules)
+// 4 elements
+19> noun[tempexpr:+,c_dur:+] = 
+	noun#1[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#2[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#3[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#4[c_dur], 
+	where(duration_lt(#4, #3) & merge_4_durations(#1, #2, #3, #4, #0)).
+// 3 elements
+19> noun[tempexpr:+,c_dur:+] = 
+	noun#1[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#2[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#3[c_dur], 
+	where(duration_lt(#3, #2) & merge_3_durations(#1, #2, #3, #0)).
+// 2 elements
+19> noun[tempexpr:+,c_dur:+] = 
+	noun#1[c_dur], 
+	(punct[comma:+];conj[form:fand]), noun#2[c_dur], 
+	where(duration_lt(#2, #1) & merge_durations(#1, #2, #0)).
+
+
+// if the previous coord rules didn't work
+//   concat durations
+// "within 'days or weeks'"
+20> noun[tempexpr:+,c_dur:+,mwe:+] = 
+	noun#1[c_dur], 
+	(punct#3[comma:+];conj#3[form:fand];conj#3[form:for]), noun#2[c_dur],
+	where(concat_durations(#1, #2, #3, #0)).
+
+
+
+// XT merged with previous ones (3 following rules)
+//15> noun[temp_level:t,tempexpr:+,hour:+,c_dur:+]  = num[card:+],  noun[lemme:hour], num[card:+], noun[lemme:minute],  conj[coord], num[card], noun[lemme:second].
+//15> noun[temp_level:t,tempexpr:+,hour:+,c_dur:+]  = dig[year:~],  noun[lemme:hour], dig[year:~], conj[coord], noun[lemme:minute] .
+//15> noun[temp_level:t,tempexpr:+,hour:+,c_dur:+]  = num[card:+], noun[lemme:hour], num[card:+], conj[coord], noun[lemme:minute] .
+
+
+
+
+// year alone (2005 was a hot year)
+//   context : not a noun after (eg. 40 thiefs)
+//   context : not a plural verb before (eg. they were 40) , not a noun (but a period) 
+20> noun[temp_level=y,tempexpr=+,date=+] = 
+	~| prep[form:fat];verb[sg:~];noun[period:~] |
+	dig#1[year];num#1[year]      // XT removed shortyear, too ambiguous   ;dig#1[shortyear]   
+	~| noun[maj:~];adj;nadj;?[timezone];?[posthour] |, 
+	where(copy(#1, #0)). 
+
+
+
+
+// year alone 
+//  the 1997 General Election
+20> noun[temp_level=y,tempexpr=+,date=+] = 
+	dig#1[year];num#1[year]      // XT removed shortyear, too ambiguous   ;dig#1[shortyear]   
+	| (adj;nadj;noun)*, noun[time_span_n] |, 
+	where(copy(#1, #0)). 
+
+
+// year or shortyear alone 
+//   only in special contexts, otherwise too ambiguous
+//    with 'in' before and no noun after
+// shortyears removed because ambiguous and rare
+//20> noun[temp_level=y,tempexpr=+,date=+] = 
+//	| prep[form:fin] |
+//	dig#1[shortyear];num#1[shortyear]
+//	~| prep[form:fof];quant;adj;nadj;?[timezone];?[posthour] |, 
+//	where(del_entries(#1, "DATE") & add_date_short_year(#1) & copy(#1, #0, "DATE")). 
+20> noun[temp_level=y,tempexpr=+,date=+] = 
+	| prep[form:fin] |
+	dig#1[year];num#1[year]
+	~| adj;nadj;?[timezone];?[posthour] |, 
+	where(copy(#1, #0, "DATE")). 
+
+
+// shortyear alone 
+//   only in special contexts, otherwise too ambiguous
+//    with a proper name and a quote, like in ACL'92
+20> noun[temp_level=y,tempexpr=+,date=+] = 
+	| noun[proper, !acron:!, !maj:!], punct[quote] |
+	dig#1[shortyear];num#1[year],
+	where(copy(#1, #0)). 
+
+
+// the 12th (day) with on, after, before or a verb and the month is known
+20> NP[temp_level=d,tempexpr=+,date=+] =
+	| prep[form:fon];prep[form:fbefore];prep[form:fafter];verb |
+	det[def], dig#1[ord,day,tempexpr=+,temp_level=d,date=+]
+	~| noun |,
+	where(month_is_known() & copy(#1, #0)).
+
+
+// the 12th (day) with a comma on the beginning of the sentence
+20> NP[temp_level=d,tempexpr=+,date=+] =
+	det[def,start], dig#1[ord,day,tempexpr=+,temp_level=d,date=+]
+	| punct[comma] |,
+	where(copy(#1, #0)). 
+
+
+// 12th (day) alone with temp_rel prep before
+20> noun[temp_level=d,tempexpr=+,date=+] =
+	| prep[temp_rel,form:~fin] |
+	dig#1[ord,day,tempexpr=+,temp_level=d,mwe=+,day=+,date=+,interval=+]
+	~| noun |,
+	where(copy(#1, #0)).
+
+
+
+////////////////////////////
+// a few C_ANCHORs
+////////////////////////////
+
+// this year
+//  is not only a duration (see det_dem~ in duration main rule)
+//  is an c_anchor
+20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!,stand_alone:+] = 
+	det#1[det_dem, form:fthis],
+	(adj[temp_rel:~];nadj[temp_rel:~]), 
+	noun#2[period,spec_period:~,period:~+,date:~],
+	where(add_duration(#1, #2, #2) &
+		add_explicit_temporal_relation(#1, "PRESENT", "s") & 
+		merge_anchor_date_and_duration(#1, #2, #0) & 
+		#0[temp_level]={#2}).
+
+// the year, that year
+// same as "this year" but with temp_ref = "r"
+// right context added to avoid "the week before"
+20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!,stand_alone:+,def=+] = 
+	det#1[def];det#1[det_dem, form:fthat];det#1[det_dem, form:fthese],
+	(noun[tempexpr:~];adj[temp_rel:~];nadj[temp_rel:~]), 
+	noun#2[period,spec_period:~,period:~+,date:~]
+	~| noun;adv[temp_rel] |,
+	where(add_duration(#1, #2, #2) & 
+		add_explicit_temporal_relation(#1, "PRESENT", "r") & 
+		merge_anchor_date_and_duration(#1, #2, #0) & 
+		copy(#2, #0, "DURATION") & 
+		#0[temp_level]={#2}).
+
+
+// the year | before |
+20> NP[tempexpr:+,c_dur:+,mwe:+,t_mod:!,stand_alone:+] = 
+	det#1[def],
+	(adj[temp_rel:~];nadj[temp_rel:~]), 
+	noun#2[period,spec_period:~,period:~+,date:~]
+	| noun;adv[temp_rel] |,
+	where(add_duration(#1, #2, #0) & #0[temp_level] = {#2} & #0[date] = {#2}).
+
+
+
+// this Winter
+//  is not only a duration (see det_dem~ in duration main rule)
+//  is an c_anchor         (related to speech time)
+20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!,stand_alone:+] = 
+	det#1[det_dem, form:fthis],
+	(adj[temp_rel:~];nadj[temp_rel:~]), 
+	#2[spec_period,date:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!],
+	where(add_duration(#1, #2, #0) &
+		add_explicit_temporal_relation(#1, "PRESENT", "s") &
+		merge_anchor_date_and_date(#1, #2, #0) & 
+		#0[temp_level]={#2}).
+
+
+// that Winter, the Winter    (related to a reference time)
+20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!,stand_alone:+] = 
+	det#1[det_dem, form:fthat];det#1[det],
+	(adj[temp_rel:~];nadj[temp_rel:~]), 
+	#2[spec_period,spec_period:~+,date:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!],
+	where(add_duration(#1, #2, #0) & 
+		add_explicit_temporal_relation(#1, "PRESENT", "r") & 
+		merge_anchor_date_and_date(#1, #2, #0) & 
+		#0[temp_level]={#2}).
+
+
+// this year, this Winter
+//  is not only a duration (see det_dem~ in duration main rule)
+//  is an c_anchor
+//20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!,stand_alone:+] = 
+//	det#1[det_dem, form:fthis],
+//	(adj[temp_rel:~];nadj[temp_rel:~]), 
+//	noun#2[period,period:~+,date:~];#2[spec_period,date:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!],
+//	where(printd() & add_duration(#1, #2, #2) &
+//		add_explicit_temporal_relation(#1, "PRESENT", "s") & 
+//		merge_anchor_date_and_date(#1, #2, #0) & printd() & copy(#2, #0, "DATE")). 
+//		#0[temp_level]={#2} & printd()).
+//
+
+
+
+
+
+// that year, that Winter
+// same as "this year" but with temp_ref = "r"
+//20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!] = 
+//	det#1[det_dem, form:fthat],
+//	(adj[temp_rel:~];nadj[temp_rel:~]), 
+//	noun#2[period,period:~+,date:~];#2[spec_period,date:~, !t_mod:!];#2[spec_period,date,pl, !t_mod:!],
+//	where(add_duration(#1, #2, #0) & 
+//		add_explicit_temporal_relation(#1, "PRESENT", "r") & 
+//		merge_anchor_date_and_date(#1, #2, #0) & 
+//		#0[temp_level]={#2}).
+
+
+// the year
+// same as "this year" but with temp_ref = "r"
+//20> NP[tempexpr:+,c_anchor:+,mwe:+,t_mod:!] = 
+//	det#1[def],
+//	(adj[temp_rel:~];nadj[temp_rel:~]), 
+//	noun#2[period,period:~+,date:~,spec_period:~],
+//	where(add_duration(#1, #2, #0) & add_anchor_date_from_node(#2, "r") & copy(#2, #0)).
+
+// "year" in "year-end"
+// same as "this year" but with temp_ref = "r"
+//   see end of treatment in localgram_temp
+20> noun[tempexpr:+,c_anchor:+,mwe:+,t_mod:!] = 
+	noun#2[period,period:~+,date:~,spec_period:~]
+	| punct[form:fhyph];part, noun[t_mod] |,
+	where(add_duration_x(#2, #2) & add_anchor_date_from_node(#2, "r") & copy(#2, #0)).
+
+
+Marker:
+
+// spec_period alone (Winter (nadj))
+21> ?[spec_period,date:~,temp_level,tempexpr=+,date=+].
+
+// month alone (March)
+21> noun[month, month:~+, temp_level:m, tempexpr=+, date=+].
+
+
+// day name alone (Monday) or WE
+21> ?[temp_level,period:d,tempexpr=+,date=+,spec_period].
+
+
+
+// this year, this month
+//   (already durations, now c_anchor)
+22> noun#1[tempexpr,c_dur, c_anchor=+]{det[det_dem, sg], noun#2[period, spec_period:~, sg]},
+	where(str_type=#2[period] & add_anchor_date(#1, str_type, "X", "present", "r")).
+
+
+
+Sequence:
+
+
+// THE LAST..., THE NEXT...
+// next Monday
+// Rule 19
+23> noun[tempexpr:+,c_anchor:+,mwe:+] = ~| det[indef] | (det[def]), #1[preperiod, c_set:~, temp_rel], #2[date];#2[date:~,spec_period],
+	where(SetFeature(#1, "temp_ref", "s") & add_temporal_relation(#1) & 
+		merge_anchor_date_and_date(#1, #2, #0) &
+		#0[temp_level]={#2}).
+
+
+// e.g. the last few weeks (only "last", ref = ST)
+// Rule 20
+23> noun[tempexpr:+,c_anchor:+,mwe:+] = 
+	~| det[indef] | #1[preperiod, lemme:last, c_set:~, temp_rel], #2[c_dur], 
+		where(SetFeature(#1, "temp_ref", "S") & add_temporal_relation(#1) & 
+			merge_anchor_date_and_duration(#1, #2, #0)).
+
+
+// e.g. the next two weeks (al but "last")...
+// Rule 20
+// adj:~ added to avoid "a more current seven-day yield"
+23> noun[tempexpr:+,c_anchor:+,mwe:+] = 
+	~| det[indef] | #1[preperiod, lemme:~last, c_set:~, temp_rel,adj:~], #2[c_dur], 
+		where(SetFeature(#1, "temp_ref", "+") & add_temporal_relation(#1) & 
+			merge_anchor_date_and_duration(#1, #2, #0)).
+
+
+
+// the last month
+23> NP[tempexpr:+,c_anchor:+,mwe:+]  = det[def], adj#1[preperiod, c_set:~, temp_rel];nadj#1[preperiod, c_set:~, temp_rel], 
+	(adj[temp_rel:~]),
+	noun#2[sg, period, spec_period:~, date:~],
+		where(SetFeature(#1, "temp_ref", "+") & add_temporal_relation(#1) & 
+			add_duration_x(#2, #2) & merge_anchor_date_and_duration(#1, #2, #0)).
+
+
+// last month (different from "THE last month")
+// add mod=date because "last month" expresses a date (the month before this one)
+//              while "the last month" expresses a duration (the last 30 days)
+23> noun[tempexpr:+,c_anchor:+,mwe:+]  = 
+	~| det | adj#1[preperiod, c_set:~, temp_rel];nadj#1[preperiod, c_set:~, temp_rel], noun#2[sg, period, spec_period:~, date:~],
+	where(SetFeature(#1, "temp_ref", "s") & 
+		add_temporal_relation(#1) & 
+		add_duration_x(#2, #2) & 
+		merge_anchor_date_and_duration(#1, #2, #0) &
+		add_anchor_type(#0, "date")).
+
+
+// yesterday night
+23> noun[tempexpr:+,c_anchor:+,mwe:+] = noun#1[c_anchor], noun#2[spec_period, period_frequ_unit:d],
+	where(merge_anchor_date_and_date(#1, #2, #0)).
+
+
+
+
+
+// like Rule 107 but with anchor_dates and date corresponding to days
+// December 17 of 2006
+25> noun[temp_level:d,tempexpr=+,mwe=+,date=+] = noun#1[temp_level:d, tempexpr, date], prep[form:fof], noun#2[tempexpr,date,temp_level:y], 
+	where(merge_dates(#1, #2, #0, "d", "y")).
+
+// December of this year 
+// Tuesday of last week
+25> noun[tempexpr=+,mwe=+,c_anchor=+] = 
+	noun#1[temp_level:d, tempexpr, date];noun#1[temp_level:m, tempexpr, date], 
+	prep#3[form:fof], #2[noun,tempexpr,c_anchor],
+//		where(merge_anchor_date_and_date(#2, #1, #0)).
+		where(branch_two_nodes(#2, #1, #0)).
+// 			merge_anchor_date_and_date(#3, #1, #0)).
+//		where(add_explicit_temporal_relation(#3, "present", "r") &
+//			merge_anchor_date_and_date(#3, #1, #3) & 
+//			merge_anchor_dates(#2, #3, #0)).
+
+
+// Date + Time
+// Friday at 8:00 PM
+// 2006, October 10th, 10 o'clock
+// October 27th at 20:50
+// Rule 200
+// Commented because does not comply with the rule of "truth value"
+//  "~(#2[terminal] & #2[dig])" in the where is here to avoid just a dig to be considered as a time
+//         this is possible only with "at" before (second rule)
+//25> noun[tempexpr:+, temp_level:+, date:+] = 
+//	#1[date], (punct[comma]), #2[hour] 
+//		~| ?*[noun:~, verb:~, tempexpr:~], noun[tempexpr:~, period:~] |,
+//	where(~(#2[terminal] & (#2[dig,money:~] | #2[num])) & merge_dates(#1, #2, #0, "", "t")).
+//25> noun[tempexpr:+, temp_level:+, date:+] = 
+//	#1[date], (punct[comma]), prep[form:fat], #2[hour] 
+//		~| ?*[noun:~, verb:~, tempexpr:~], noun[tempexpr:~, period:~] |,
+//	where(~(#1[terminal]) & merge_dates(#1, #2, #0, "", "t")).
+
+
+// Time + date
+// three o'clock January 5, 1993
+// Commented because does not comply with the rule of "truth value"
+//25> noun[tempexpr:+, temp_level:+, date:+, hour:+] = 
+//	//~| noun[tempexpr:~, period:~] | 
+//	#1[hour], (punct[comma]), (prep[form:fon]), #2[date],
+//	where(~(#1[terminal] & (#1[dig,money:~] | #1[num])) & merge_dates(#1, #2, #0, "t", "")).
+
+
+
+//Sequence:
+
+// treated above
+//8> pp[temp_level=y,time=+,tempexpr=+,interval=+,date=+] = prep[lemme:from], dig[year],punct[form:fhyph,left,right], dig[year];dig[shortyear].
+
+
+// in + date
+//25> pp[tempexpr=+] = prep#1[form:fin], (det[def]), noun#2[date:+], where(merge_anchor_date_and_date(#1, #2, #0)).
+
+// at + hour
+//25> pp[tempexpr=+] = prep#1[form:fat], (det[def]), noun#2[hour:+], where(merge_anchor_date_and_date(#1, #2, #0)).
+
+// other temporal prep + date/hour 
+//25> pp[tempexpr=+] = prep[form:fsince], dig[year].
+
+//25> pp[time=+,tempexpr=+,interval=+] = prep[form:ffrom], dig[year];dig[shortyear], prep[form:finfto], dig[year];dig[shortyear].
+
+
+// from time to time
+// now treated with others in localgram_temp
+//25> pp[time=+,tempexpr=+,c_set=+] = prep[form:ffrom], ?[lemme:time], prep[form:finfto], ?[lemme:time] .
+
+// From year until year
+//25> pp[time=+,tempexpr=+,interval=+] = prep[form:ffrom], dig[year];dig[shortyear], prep[lemme:until], dig[year];dig[shortyear].
+
+// Between year and year
+//25> pp[time=+,tempexpr=+,interval=+] = ?[lemme:between], dig[year];dig[shortyear], ?[lemme:and], dig[year];dig[shortyear].
+
+// Through year and year
+//25> pp[time=+,tempexpr=+,interval=+] = ?[lemme:through], dig[year];dig[shortyear], ?[lemme:and], dig[year];dig[shortyear].
+
+// From year-year
+//25> PP[time=+,tempexpr:+] = ?[lemme:from], dig[year],  
+
+
+// From date1 to date2 
+//12>  pp[time=+,tempexpr=+] = prep[form:ffrom], noun[date:+], prep[form:finfto], noun[date:+] .
+
+
+
+
+
+
+DependencyRules:
+
+// a week, a year is a duration but can be used in a set (twice a week, two days a week)
+//  feature "indef" is propagated for this reason
+//   treated in localgram_temp
+// Rule D1
+| ?[noun,tempexpr:+,c_dur:+,indef=+]{det[sg,indef], noun[period];noun[spec_period]} | 
+	~
+
+
+// Rule D2
+// c_dur with a set (in the temporal dictionary) gets also c_set
+| #1[noun, c_set=+,c_dur] {?*} |
+	if ( is_set(#1) )
+	    ~
+
+// Rule D3
+// c_dur with a date (in the temporal dictionary) gets also date
+| #1[noun, date=+,hour:~,c_dur] {?*} |
+	if ( is_date(#1) )
+	    ~
+
+
+// Rule D4
+// date without a date (in the temporal dictionary) => date removed
+| noun#1[date=~] {?*} |
+	if ( ~is_date(#1))
+	    ~.
+
+
+
+Marker:
+
+
+// t_mod feature must be propagated
+25> noun#1[c_dur]{det, noun#2[t_mod]}, 
+	where(#1[t_mod] = {#2}).
+
+
+// any date or duration starting with a demonstrative 
+//   is a coref
+25> #1[tempexpr,date]{det[det_dem], ?*}, 
+	where(add_coref(#1, "DATE")).
+25> #1[tempexpr,c_dur]{det[det_dem], ?*},
+	where(add_coref(#1, "DURATION")).
+
+
+// an temporal adverb must get the features tempexpr and c_anchor
+//   (because it can be alone => I will come soon, later, ...)
+// preperiod:~ to avoid "last", "next", ...
+25> adv[temp_rel, preperiod:~, tempexpr=+, c_anchor=+].
+
+// same thing as before for an adj (the future war) if the noun is time_span_n
+25> adj[temp_rel, tempexpr=+, c_anchor=+], ?*[verb:~], ?[noun, time_span_n].
+25> nadj[temp_rel, tempexpr=+, c_anchor=+], ?*[verb:~], ?[noun, time_span_n].
+
+
+
+
+
+IDRules:
+
+// should be processed after dates ...
+
+30> dig[mwe=+,card:+] -> dig+[last:~,rom:~],
+                   punct+[form:fslash],  
+                  dig[last,first:~,rom:~,card:+].
+
+
+
+
+Sequence:
+
+
+// COORD for full dates
+// July 15th and August 10th.
+// Winter and Summer
+8> NP[tempexpr:+,mwe=+,date=+,coord=+] = 
+	#1[noun,tempexpr,date],
+	conj#3[coord], (det[def]), #2[tempexpr,date]
+	, where(str_type=#1[temp_level] & SetFeature(#0, "temp_level", str_type) & 
+		concat_dates(#1, #2, #3, #0, "", "")).
+8> NP[tempexpr:+,mwe=+,date=+,coord=+] = 
+	#1[noun,tempexpr,date],
+	punct[comma], (det[def]), #2[tempexpr,date],
+	conj#4[coord], (det[def]), #3[tempexpr,date]
+	, where(str_type=#1[temp_level] & SetFeature(#0, "temp_level", str_type) & 
+		concat_3_dates(#1, #2, #3, #4, #0, "", "", "")).
+8> NP[tempexpr:+,mwe=+,date=+,coord=+] = 
+	#1[noun,tempexpr,date],
+	punct[comma], (det[def]), #2[tempexpr,date],
+	punct[comma], (det[def]), #3[tempexpr,date],
+	conj#5[coord], (det[def]), #4[tempexpr,date]
+	, where(str_type=#1[temp_level] & SetFeature(#0, "temp_level", str_type) & 
+		concat_4_dates(#1, #2, #3, #4, #5, #0, "", "", "", "")).
+
+
+
+// COORD for hours (time)
+// July 15th and August 10th.
+// 10 or 11
+8> noun[tempexpr:+,mwe=+,hour=+,coord=+,temp_level=t] = 
+	#1[noun,tempexpr,hour,temp_level:t],
+	conj#3[coord], #2[tempexpr,hour,temp_level:t]
+	, where(concat_dates(#1, #2, #3, #0, "", "")).
+8> noun[tempexpr:+,mwe=+,hour=+,coord=+,temp_level=t] = 
+	#1[noun,tempexpr,hour,temp_level:t],
+	punct[comma], #2[tempexpr,hour,temp_level:t],
+	conj#4[coord], #3[tempexpr,hour,temp_level:t]
+	, where(concat_3_dates(#1, #2, #3, #4, #0, "", "", "")).
+8> noun[tempexpr:+,mwe=+,hour=+,coord=+,temp_level=t] = 
+	#1[noun,tempexpr,hour,temp_level:t],
+	punct[comma], #2[tempexpr,hour,temp_level:t],
+	punct[comma], #3[tempexpr,hour,temp_level:t],
+	conj#5[coord], #4[tempexpr,hour,temp_level:t]
+	, where(concat_4_dates(#1, #2, #3, #4, #5, #0, "", "", "", "")).
+
+
+
+// SPECIALS
+/////////////
+// ACL'92
+// See also dependency rules
+35> noun[proper=+,mwe=+,acron:!,maj:!] = 
+	noun[proper, !acron:!, !maj:!], punct[quote], noun#2[date, temp_level:y],
+	where(keep_temp_level_date(#2)).
+
+
+
+
+
+// multiword temporal preps/adverbs
+//////////////////////////////
+// later than
+35> prep[temp_rel:after, temp_ref:r,mwe:+] = ?[lemme:late,compar:+], conj[form:fthan], 
+	where(add_temporal_relation(#0)).
+// no later than
+35> prep[temp_rel:before, temp_ref:r,mwe:+] = quant[form:fno], ?[lemme:late,compar:+], conj[form:fthan], 
+	where(add_temporal_relation(#0)).
+// sooner than
+35> prep[temp_rel:before, temp_ref:r,mwe:+] = ?[lemme:soon,compar:+], conj[form:fthan], 
+	where(add_temporal_relation(#0)).
+// no sooner than
+35> prep[temp_rel:after, temp_ref:r,mwe:+] = quant[form:fno], ?[lemme:soon,compar:+], conj[form:fthan], 
+	where(add_temporal_relation(#0)).
+// as early as
+35> prep[temp_rel:during, temp_ref:r,mwe:+] = prep[lemme:as], adv[lemme:early], prep[lemme:as], 
+	where(add_temporal_relation(#0)).
+// in no case + prep
+36> prep[temp_ref:r,mwe:+] = prep[form:fin], quant[form:fno], noun[lemme:case], prep#1[temp_rel], 
+	where(add_inverse_temporal_relation(#1, #0, _str_var) & SetFeature(#0, "temp_rel", _str_var)).
+// shortly/soon after
+35> prep[temp_rel:!,temp_ref:!,mwe:+] = adv[lemme:shortly], prep[temp_rel, !temp_rel:!, !temp_ref:!],
+	where(add_temporal_relation(#0)).
+
+
+// mid-
+20> noun[mwe:+,tempexpr:+,date:+]      = 
+	adj#1[t_mod:mid], (punct[form:fhyph]), (det), #2[tempexpr, date],
+		where(add_mod(#2, #1, #0, "DATE")).
+
+// at this time
+35> adv[mwe:+,tempexpr:+,c_anchor=+] = prep[form:fat], det[det_dem], noun[lemme:time], where(add_anchor_date(#0, "", "", "present", "r")).
+
+// in the wake of = after
+35> prep[mwe:+,tempexpr:+,c_anchor=+, temp_rel=after, temp_ref=r] = prep[form:fin], det[det], noun[lemme:wake], prep[form:fof],
+	where(add_temporal_relation(#0)).
+
+// early after = just after
+35> prep[mwe:+,tempexpr:+,c_anchor=+,temp_rel=just_after,temp_ref=r] = adv[lemme:early, compar:~], prep[form:fafter],
+	where(add_temporal_relation(#0)).
+
+
+// in the meanwhile
+35> adv[mwe:+,tempexpr:+,c_anchor=+,temp_rel=present,temp_ref=r] = prep[form:fin], det[def], adv[lemme:meanwhile],
+	where(add_temporal_relation(#0)).
+
+
+// to be put in localgram2 when merging with regular grammar
+40> nadj[quant:+,t_age:+] = ?[c_dur,tempexpr, tempexpr=~], (punct[form:fhyph]), ?[lemme:old].
+
+
+
+
+Marker:
+
+
+// age
+// 5 years of age
+50> #1[c_dur, t_age=+], prep[form:fof], noun[lemme:age].
+
+
+/////////////////
+// END
+// digs alone that have not be recognized as tempexpr at this point
+//  lose date or hour features if they had one
+50> ?[tempexpr:~]{dig[tempexpr:~,date=~,hour=~]}.
+
+50> dig[tempexpr:~,date=~,hour=~].
+
+// times that stays after localdates but that are durations
+//   remove the time
+50> ?[noun, hour, c_dur, hour=~].
+
+
+
+
+

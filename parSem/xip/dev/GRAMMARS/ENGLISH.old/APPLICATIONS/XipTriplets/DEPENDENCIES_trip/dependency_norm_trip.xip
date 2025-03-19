@@ -1,0 +1,223 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//! --- CONTENTS ---
+//!   Project    : "Triplets" output from the English XIP grammar
+//!   filename   : dependency_norm_trip.xip
+//!   Date       : 2005
+//!   Author     : Maud
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+
+
+//************
+// Modifiers: 
+
+// Transformation des dependances MOD en MOD-T.
+// Ne sont gardees que certaines dependances mettant en relation 
+// certaines categories syntaxiques.
+
+
+/// N de N :
+if(MOD[!pre:+!,!post:+!,proper:~](#1[noun:+, nadj:~],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+
+/// N de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[noun:+, nadj:~],#2[noun:+, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[noun:~, nadj:+],#2[noun:~, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de N :
+if(MOD[!pre:+!,!post:+!](#1[noun:~, nadj:+],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// V de N :
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[noun:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// N de V :
+if(MOD[!pre:+!,!post:+!](#1[noun:+,nadj:~],#2[verb:+]))
+	MOD-T(#1,#2).
+
+/// V de Nadj :
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[noun:~, nadj:+]))
+	MOD-T(#1,#2).
+
+/// Nadj de V :
+if(MOD[!pre:+!,!post:+!](#1[noun:~,nadj:+],#2[verb:+]))
+	MOD-T(#1,#2).
+
+/// N de ADJ:
+if(MOD[!pre:+!,!post:+!](#1[noun:+,nadj:~],#2[adj:+, nadj:~]))
+	MOD-T(#1,#2).
+
+/// ADJ de N  
+if(MOD[!pre:+!,!post:+!](#1[adj:+],#2[noun:+,nadj:~]))
+	MOD-T(#1,#2).
+
+
+/// V de V
+if(MOD[!pre:+!,!post:+!](#1[verb:+],#2[verb:+]))
+	MOD-T(#1,#2).
+
+
+//************** 
+//Prepositions: 
+
+// Objectif : faire apparaitre la preposition
+// dans la dependance.On ne peut pas faire remonter
+// la chaine de caracteres donc on passe par
+// un trait.
+
+
+// Exemple : "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// MOD-T(NOUN:organisation,NOUN:seminar)
+// PREPD(NOUN:seminar,PREP:of)
+// On construit:
+// PREP_OF(NOUN:organisation,NOUN:seminar)
+
+
+if((MOD(#1,#2)| LOC (#1,#2)) & PREPD(#2,#3[!form_prep:!]))
+	PREP(#1,#2).
+
+
+//****************
+// Verb Particle (idem):
+
+
+// Exemple : "The committee has taken over the organisation of the XRCE seminars."
+// On a :
+// NUCL(VERB:take,ADV:over)
+// OBJ-N(VERB:take,NOUN:organisation)
+// On construit :
+// PREP_P_OVER(VERB:take,NOUN:organisation)
+
+
+
+if ( (NUCL(#1[verb:+],#2[adv:+,!partic:!]) | NUCL(#1[verb:+],#2[prep:+,!partic:!]))  & (OBJ-N(#1,#3)) )
+		PREP(#1,#3).
+
+
+//************************************
+// Effacement doublons - Preferences :
+
+if (^MOD-T(#1,#2) & RCP(#1,#2))
+	~     
+
+if (^IOBJ(#1,#2) & IOBJ_RCP(#1,#2))
+	~      
+
+if (^MOD-T(#1,#2) & MOD[temp:+](#1,#2))
+	~     
+
+if (^MOD-T(#1,#2) & PREP(#1,#2))
+	~   
+
+if (^OBJ-N(#1,#2) & PREP(#1,#2))
+	~   
+
+
+
+//************************** 
+// Effacements pronoms + aux + conj :
+
+
+//if (^$1(#1,#2[pron:+]) )
+//	~
+
+//if (^$2(#1[pron:+],#2) )
+//	~
+
+if (^$3(#1[aux:+],#2) )
+	~
+
+if (^$4(#1,#2[aux:+]) )
+	~
+
+if (^$5(#1[conj:+],#2) )
+	~
+
+if (^$6(#1,#2[conj:+]) )
+	~
+
+if (^$7(#1[dig:+],#2) )
+	~
+
+if (^$8(#1,#2[dig:+]) )
+	~
+
+
+
+//************************** 
+// Effacements dependances particulieres:
+
+
+if (^$9[sentence:+](#1,#2))
+	~
+
+
+//if ($10(#1,#2[pronpers:+])) 
+//	$10(#1,##Pron[lemme=SOMEONE])
+
+//CB
+
+if (^$10(#1,#2[pronpers:+]))
+	$10(#1,##Pron[lemme=PERSON])
+ 
+
+//*****************************************************************
+// Pour transformer une dependance NE en trait et affecter ce trait 
+// au noeud concerne. Cela permet ensuite d'afficher cette information
+// au niveau du noeud (Node Display)
+
+
+// Pour faire affecter le trait de la dep au noeud concerne
+Script: 
+
+1> if (PERSON(#1)){
+
+  #1[person=+];
+}
+
+1> if (ORGANISATION(#1)){
+
+   #1[orga=+];
+}
+
+1> if (EVENT(#1)){
+
+   #1[evt=+];
+}
+
+1> if (LOCORG(#1[!country:+!, !city:+!, !contin:+!])){
+
+   #1[locorg=+];
+}
+
+
+
+// Pour faire "descendre" le trait a ts les noeuds fils
+
+1> |Noun[person:+]{?*,Noun#1}| {
+     #1[person=+];
+	}
+
+1> |Noun[evt]{?*,Noun#1}| {
+    #1[evt=+];
+	}
+
+1> |Noun[orga]{?*,Noun#1}| {
+    #1[orga=+];
+	}
+
+1> |Noun[locorg]{?*,Noun#1}| {
+    #1[locorg=+];
+	}
+
+

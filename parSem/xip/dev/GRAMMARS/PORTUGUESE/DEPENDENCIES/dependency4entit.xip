@@ -1,0 +1,394 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP grammar
+//!   filename   : dependency4entit.xip
+//!   Description: exploiting dependencies for NER
+//!		Dealing with ambiguities and metonimy
+//!   Author	 : C. Hagege
+//!   Date       : 21/11/2007
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+DependencyRules:
+
+
+
+
+
+// >>>>>>>>>>>>> PESSOA
+
+
+// nouns have  been considered as proper but are not typed or badly typed (metonimic uses)
+// using dependency relations to type them better
+
+// if untyped mwe proper noun is subject of morrer, then we consider that it is a person.
+| noun#1[proper,mwe,untyped] |
+if ( ~NE(#1) & SUBJ(?[lemma:morrer,sg:+,3p:+],#1) )
+	NE[people=+,individual=+](#1)
+
+
+
+// METONUMY ORG->PESSOA
+// subject of a dicendi verb or human_activity verb is of type PESSOA
+// if this subject is also typed as ORG, then the entity is of subtype indgroup
+//          e.g. O Governo Clinton disse. O Governo Clinton votou
+// or of subtype membro
+//          e.g. O GNR disse.
+| NP#3{?*, noun#2[last,proper:+,people=+]} |
+if ( ( SUBJ(#1[dicendi],#2) | SUBJ(#1[human_activity],#2) ) & ~NE[people](#2) & ^NE[org,jornal:~](#2) & ~NE[local](#2) )
+NE[features=~,people=+,indgroup=+](#2)
+
+
+// If a NE is subject of verb "deliberar" then it is a people:+, membergroup:+
+// e.g.O Conselho de guerra deliberou
+if ( ^NE[membergroup:~](#1) & SUBJ(?[lemma:deliberar],#1) )
+	NE[features=~,people=+,membergroup=+](#1)
+
+// If we have at the same time NE[org] and NE|people,individual], and if the NE has feature acron or org
+// we mark it as a people, indgroup
+if ( ^NE[org](#1[acron]) & NE[people,individual](#1) )
+	NE[features:~,people=+,indgroup=+](#1) 
+
+// Corpo dos Bombeiros
+| #1[noun,proper,mwe,untyped,surface:"Corpo d%+"] |
+if ( ^NE[individual](#1)  | ~NE(#1) )
+	NE[features=~,people=+,indgroup=+](#1)
+
+
+// Correcting some bad annotation in cases like "Santo Isidro", "Santa Maria" which are highly ambiguous between people and place
+// if an NE like this is modifying a noun having feature general:+, admin_area:+, then it is a place and not a person
+// e.g. "O bairro de Santo Isidro"
+| #1[lemma:"santo %+"];#1[lemma:"são %+"] |
+if ( ^NE[individual](#1) & MOD[post](?[general,common,admin_area],#1) )
+	NE[features=~,location=+,admin_area=+](#1)
+
+
+///////////////////////////////////////////////////// ORG
+// if Untyped proper noun is modifier of lider then this is an org, institution
+// o lider do Sinn Fein
+// 
+| #1[proper:+,mwe:+,untyped:+] |
+if ( ~NE(#1) & MOD[post](?[lemma:"líder"],#1) & PREPD(#1,?[lemma:de]) )
+NE[org=+,institution=+,untyped=~](#1)
+
+
+//////////////////////////////////
+// METONIMY LOCAL->ORG
+/////////////////////////////////
+// if LOCAL entity is subject of human_activity verb, then it is
+// <ORG ADMINSTRATIVO>Portugal</ORG> votou a lei.
+// EN COURS
+
+// If a country name is a dependent of some specific words like "trono", "governo" etc.
+// then it is not "country" (i.e local) but it has to be considered as org:+, administration:+
+if ( ^NE[country:+](#1) & PREPD(#1,?[lemma:de]) & ( MOD[post](?[lemma:trono],#1) | MOD[post](?[lemma:governo],#1) ) )
+	NE[features=~,org=+,administration=+](#1)
+
+
+
+
+// DICENDI or HUMAN_ACTIVITY subject
+// if a subject of dicendi which has feature proper is not considered as NE[people],
+// then this subject is a NE[people]
+| NP#3{?*, noun#2[last,proper:+,people=+]} |
+if ( ( SUBJ(#1[dicendi],#2) | SUBJ(#1[human_activity],#2)) & ~NE[people](#2) & ~NE[local](#2) & ~NE[org](#2)     )
+NE[people=+,individual=+](#2)
+
+
+// if a local is subject of "promulgar" or "votar" then it is of type organization, administration
+// o Brasil ja havia promulgado a Lei 5
+if ( ^NE[local:+,admin_area:+](#1) & ( SUBJ(?[lemma:promulgar],#1) | SUBJ(?[lemma:votar],#1) ) )
+   NE[features=~,org=+,administration=+](#1)	
+
+
+
+// local -> org
+// as relacoes entre Israel e Siria
+if ( ^NE[local,admin_area](#1) & MOD[post](?[lemma:"relação"],#1) & PREPD(#1,?[lemma:entre]) )
+   NE[features=~,org=+,administration=+](#1)
+
+// local -> indgroup
+// subject of "ir" which is complemented by a LOC complement ORG -> PEOPLE -INDGROUP
+// O Governo Clinton foi ao Porto
+| NP#3{?*, noun#2[last,proper:+,people=+]} |
+if ( SUBJ(#1[lemma:ir],#2) & MOD[post](#1,#4[location]) & ~NE[people](#2) & ^NE[org](#2)  )
+NE[features=~,people=+,indgroup=+](#2)
+
+// MEMBER
+// if a quantifier quantifies a NE of type ORG, then the NE is of type MEMBER
+// um GNR
+// Careful and restriction for stuff like "O numero dois das Farc" restriction added in dependency1.xip
+if ( ^NE[org,partido:~](#1) & (QUANTD(#1,?) | DETD(#1,?[lemma:um]) ) )
+	NE[features=~,people=+,member=+](#1)
+
+
+// HAREM SPECIFIC
+// ABSTRACCAO - NOME
+// e.g deu-lhe o nome de Joao Sem Medo.
+if ( ^NE[people,individual](#1) & MOD[post](#2[lemma:nome],#1) & CDIR(?[lemma:dar],#2) )
+	NE[features=~,abstraccao=+,nome=+](#1)
+
+// nomeou-o Joao Sem Medo
+| #1[verb];sc{?*,#1[verb]}, NP#5, NP#3 |
+if ( HEAD(#4,#3) & ^NE[people,individual](#4) & HEAD(#2[lemma:nomear],#1) & VDOMAIN(?,#2) & HEAD(#6,#5) & CDIR(#2,#6) )
+	NE[features=~,abstraccao=+,nome=+](#4)
+
+// denominado Joao Sem Medo
+| ?{#1[pastpart,lemma:denominar]}, NP#2 |
+if ( HEAD(#3,#2) & ^NE[people,individual](#3) )
+	NE[features=~,abstraccao=+,nome=+](#3)
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// COISA, ABSTRACCAO, ...
+// (Other kinds of NE (HAREM specific))
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// very, very, schematic
+// Planet name preceeded by "em" is LOCAL, GEOGRAFICO, PLANETA
+| ?[pp]{prep[lemma:em], ?*, noun#1[last,planeta,maj:+]} |
+	if ( ~NE[planeta](#1) )
+	NE[local=+,geographic=+,planeta=+](#1)
+
+// Planets which are MOD[post] introduced by "para" of a verb marked as change_place are local
+| ?[pp]{prep[lemma:para], ?*, noun#1[last,planeta,maj:+]} |
+	if ( ~NE[planeta](#1) & MOD(?[change_place],#1)  )
+	NE[local=+,geographic=+,planeta=+](#1)
+
+
+// planet name not preceeded by "em" is COISA OBJECTO
+| #1[planeta,maj:+] |
+	if ( ~NE(#1) )
+	NE[coisa=+,objecto=+](#1)
+
+// PLANO (ABSTRACCAO)
+| ?[pp]{prep, ?*, noun#1[plano,last]}; ?[np]{?*,noun#1[plano,last]}; noun[mwe,proper,untyped]{?*,noun#1[plano,last]} |
+	if ( ~NE(#1) )
+	NE[abstraccao=+,plano=+](#1)
+
+
+// CULTURAL PLACES
+// if a NE bears feature culture and if it is a monument,
+// then if it is in a PP[em], we consider it as a location
+if ( NE[culture,monument](#1) & PREPD(#1,?[lemma:em]) )
+	NE[features=~,local=+,admin_area=+,building=+](#1)
+
+
+// >>>>>>>>>>>>> ORG - INSTITUTION
+
+// post-modifier PP[de] de campus is an institution
+// eg O campus da UnB
+if ( MOD[post](?[lemma:campus],#1[proper]) & ~NE(#1) & PREPD(#1,?[lemma:de]) )
+	NE[org=+,institution=+,university=+](#1)
+
+// >>>>>>>>>>>>> MOUNTAIN - REGION
+
+// If a mountain name is modifier of some noun like "regiao", "zona", "area" etc. it is no more
+// to be tagged as mountain, but as region
+if ( NE(#1[mountain]) & ( MOD[post](?[lemma:região],#1) | MOD[post](?[lemma:zona],#1) ) & PREPD(#2,?[lemma:de]) )
+	NE[features=~,location=+,geographic=+,region=+](#1)
+
+// >>>>>>>>>>>>> UNTYPED - REGION
+
+// if an unknown mwe named entity is the head of a NP which follows a NP/PP which head contains zona, regiao, area etc. then the unknown NE is typed as 
+// location=+, admin_area=+, region=+
+// eg. A regiao romana Hispanica Betica
+| NP{?*,noun#3[last]};PP{?*,noun#3[last]}, NP{?*,#2[last,proper,noun,maj,untyped]} |
+if ( ~NE(#2) & #3[lemma:zona] | #3[lemma:província] | #3[lemma:região] )
+	NE[location=+,admin_area=+,region=+](#2)
+
+// unknown mwe or people NE is direct object of "denominar" when subject of this verb
+// is zona, provincia, regiao etc.
+// eg. A região ocidental da península era nomeada Gharb Al-Andalus.
+| noun#1[mwe:+,noun:+,maj:+,proper:+] |
+if ( (~NE(#1) | NE[people](#1) ) & 
+	         ( 
+		  CDIR(#2[lemma:denominar],#1) | CDIR(#2[lemma:chamar],#1) | CDIR(#2[lemma:nomear],#1)
+		)  
+	     & 
+	       ( 
+		SUBJ(#2,?[lemma:zona]) | SUBJ(#2,?[lemma:região]) | SUBJ(#2,?[lemma:província]) 
+	       ) 
+   )
+	NE[features=~,location=+,admin_area=+,region=+](#1)
+
+// >>>>>>>>>>>>> TAKING advantage of ATTRIB and MOD relations and PREPD relations
+
+// HAREMERUN
+// if underspecified NE is in modif relation with the word baia. It is local, water-mass
+| #1[noun,proper,mwe:+,untyped:+] |
+  if ( ~NE(#1) & MOD[post](?[lemma:"baía",maj:~], #1) & PREPD(#1,?[lemma:de]) )
+//& PREPD(#1,prep[lemma:de]) )
+	NE[local=+,geographic=+,water-mass=+](#1)
+
+// If underspecified NE in attributive relation with specific words, we can further specify
+// e.g. o estado de Wwerwre
+| ?{?*,#1[last,lemma:estado,maj:~]}, PP{prep[lemma:de], ?*, #2[last]} |
+if ( ^NE[state:~](#2) &  ~NE[state](#2) )
+	NE[features=~,location=+,admin_area=+,state=+](#2)
+
+// universidade de Columbia
+| ?{?*,#1[last,lemma:universidade,maj:~]}, PP{prep[lemma:de], ?*, #2[last]} |
+if ( ^NE[university:~](#2) | ~NE[university](#2) )
+	NE[features=~,org=+,institution=+,university=+](#2)
+
+
+// if underspecified NE modifies the word "tribo", then it is a NE of type person membergroup
+// Eg. O tribo dos Yamabushis
+| PP{prep[lemma:de], ?*, noun#1[proper:+,maj:+,pl:+]} |
+if ( ~NE[people](#1) &  MOD[post](?[lemma:tribo],#1) )
+	NE[people=+,membergroup=+](#1)
+
+
+// if underspecified NE is in apposition with word bearing relative feature, then it is a person individual
+// e.g. A sua mulher, Yapuwer, chegou
+| NP{#1[noun,first,last,proper]} |
+if ( APPOSIT(?[relative],#1) & ~NE(#1) )
+   NE[people=+,individual=+](#1)
+
+
+// ATTRIB relations with a trigger word
+// e.g. A cidade sempre se chamou Itaporanga - Itaporanga is considered as person but has ATTRIB with cidade
+
+if ( ATTRIB(#1[location,maj:~],#2) & ^NE[location:~](#2) )
+	NE[features=~,location=+](#2)
+
+
+// MOD of vir/ir and preceeded by another LOCATION
+// e.g veio do Porto para Zzerzrz
+if ( MOD[post](#1[lemma:vir],#2) & NE[local,admin_area](#2) & PREPD(#2,?[lemma:de]) & MOD[post](#1,#3) & #2 < #3  & ~NE[local](#3) & PREPD(#3,?[lemma:para]) )
+	NE[local=+,admin_area=+](#3)
+
+
+// IF a NE is people
+// if this NE is in a PREPD relation with prep EM without determiner
+// Then destroy NE people relation
+// e.g em Nogueira
+if ( ^NE[individual,people](#1) & PREPD(#1,?[lemma:em]) & ~DETD(#1,?) )
+~
+
+// HAREM SPECIFIC
+// MOD[post]em "de"
+// a prep[de] mod of the word "site" is a LOCAL, VIRTUAL SITIO
+// e.g. o site da FCCN
+| ?{?*,#1[lemma:site]}, PP{?[lemma:de], ?*, #2[last,proper]} |
+if ( ^NE[site:~](#2) | ~NE(#2) )
+	NE[features=~,location=+,virtual=+,site=+](#2)	
+
+
+// HAREM SPECIFIC
+// MOD em "em"
+// if NE is org, jornal and introduced by EM
+// then consider as LOCAL VIRTUAL, OBRA
+// Leu no Expresso. Leu no Jornal Xsefsfswer.
+| PP{?[lemma:em], ?*, #2[last]} |
+if ( ^NE[org,jornal](#2) )
+	NE[features=~,location=+,virtual=+,comsocial=+](#2)	
+
+
+// Leu no jornal Xwerwer (jornal does not start by an uppercase in this case
+// thus does not belong to the NE
+| PP{?[lemma:em], ?*, ?[last,lemma:jornal]}, NP{#2[first,last]} |
+if ( ^NE[org,jornal](#2) )
+	NE[features=~,location=+,virtual=+,comsocial=+](#2)	
+
+
+// Very general rule. Check if OK maybe too general ...
+// If untyped complex proper noun  with mwe:+, if this complex proper noun is between " or '' or '
+// If there is an direct or indirect dependency link between this complex proper noun and the noun
+// album, livro, obra
+// Then consider it as a NE culture:+ inquote:+
+//álbum
+| punct[quote], NP{noun#1[proper:+,untyped:+,mwe:+,first,last]}, punct[quote] |
+	NE[culture=+,inquote=+](#1)
+
+
+// >>>>>>>>>>>>> COORDINATION - COMPLEX CASES
+
+
+// Complex coordination cases
+// Camaras de Alijo e Vila Nova de Pouca
+// Camara de Alijo is marked as INSTITUITO + Vila Nova de Pouca is marked as city
+// We want Vila Nova de Pouca marked as organization too...
+
+// other COORD if the second is a local which is coordinated on its left with a NE which is not local, then the second has
+// the same features than the first
+if ( NE[local:~,!features:!](#2) & ^NE[local](#3) & COORD(#4,#2) & COORD(#4,#3) & #2 < #3  )
+NE[features=~](#3)
+
+
+// Coord
+// Os rios Barangi e Turag
+// COORD relation exists
+if ( NE[local,geographic,!features:!](#1) & COORD(#3,#1) & COORD(#3,#2[proper,misc,src:guess]) & ~NE(#2) )
+	NE(#2)
+
+
+
+// Metonimy....end
+
+
+// According to HAREM...
+// local NE which can be subject of human_activity is ORG, type ADMIN_AREA
+// e.g Portugal votou a lei.
+if ( ^NE[people](#1) & ^NE[local, admin_area](#1[location]) )
+	NE[features=~,org=+,administration=+](#1)
+
+
+
+// Ambiguity in NE
+// intrinsic ambiguity betwen ORG INSTITUITION and LOCAL ADMINISTRATIVO
+// e.g. A Escola Padre Antonio Vieira can be both an organization and a local
+// by default it is coded as a organization
+
+// if a ORG INSTITUTION is ambiguous with LOCAL
+// e.g. fica perto|a 100 metros da Escola Padre Antonio Vieira
+if ( MOD[post](?[lemma:ficar],#1) & ^NE[org,institution](#1) )
+	NE[org=~,institution=~,location=+,admin_area=+](#1)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// cleaning rules...
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// if a NE within a NE take the most embedded out
+| #1{?*,#2} |
+if ( $1(#1) & ^$1(#2) )
+ ~
+// if a NE within a NE take the most embedded out
+| #1{?*,?{#2}} |
+if ( $1(#1) & ^$1(#2) )
+ ~
+
+// If a simple noun in lower case is marked as NE (trigger words), then delete the NE dep.
+| noun#1[mwe:~,surface:"%c%+",site:~,time:~] |
+if ( ^NE(#1) )
+ ~
+
+// if a complex number in lower case is taken as NE[quantity], then destroy it
+// HAREM only considered digits and upper-cases
+| num#1[surface:"%c%+"] |
+if ( ^NE[quant](#1) )
+ ~
+
+
+
+// Cleaning HAREM competition only
+// Xerox only
+// avoiding to take ID values as NE[quant]
+| ?[lemma:"%*(ID)="], punct, np{num#1[first,last]} |
+if ( ^NE[quant](#1) )
+ ~
+
+
+ 

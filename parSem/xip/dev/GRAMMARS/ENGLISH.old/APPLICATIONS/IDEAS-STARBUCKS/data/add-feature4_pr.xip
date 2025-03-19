@@ -1,0 +1,106 @@
+
+
+/////////////////
+// mark entities
+////////////////
+
+
+Script:
+
+iftest ( LOCORG(#1) ) { #1[!Nentity=+, human=+] ; }
+
+iftest ( ORGANISATION(#1) ) { #1[!Nentity=+, human=+] ; }
+
+iftest ( PERSON(#1) ) { #1[!Nentity=+, human=+] ; }
+
+iftest ( LOCATION(#1) ) { #1[!Nentity=+] ; }
+
+
+Marker:
+1> #1[location,adj, human=+,Nentity=+].
+1> #1[commonorg, human=+].
+1> #1[personal,gen,pron, human=+].
+1> #1[pronpers,form:~fit, human=+].
+1> #2[adj:~]{?*,#1[c_person, human=+],?*}.
+
+
+
+DependencyRules:
+|#1[noun]{#2[noun, first,last]}|
+	if (HEAD(#3,#1))
+	HEAD(#3,#2)
+
+
+|#1[Nentity=+]|
+if (HEAD(#1,#2[Nentity]))
+	~
+
+| noun[Nentity]{ ?*, ?[last,!Nentity=+] } |
+	~.
+
+|#1[human=+]|
+if (HEAD(#1,#2[human]))
+	~
+
+
+
+Script:
+
+///////////////////
+
+/
+// I think that a noun that is the object of "have" is not an event. So if this is the case, the feature, event is deleted
+
+iftest ( OBJ-N(#1[form:fhave],#2[evnt]) ) { #2[evnt=~] ; }
+
+// the first generation[evnt=~] Pakistan-1 centrifuge.
+
+iftest ( MOD(#1[lemme:generation],#2) & PREPD(#2,#3[form:fof]) ) { #1[evnt=+]; }
+\
+
+//////////////////////
+// phrasal verbs
+/////////////////////
+
+// phrasal verbs getting features
+
+iftest ( NUCL[particle](#1[lemme:carry],#2) ) { #1[sv=+,subjt=+] ; }
+
+iftest ( NUCL[particle](#1[lemme:get],#2) ) { #1[sv=+] ; }
+
+iftest ( NUCL[particle](#1[lemme:give],#2) ) { #1[sv=~,subjt=~] ; }
+
+// add features to nouns
+
+// decide -> decision
+
+
+iftest ( SREL(#1,#2[sc_toinf]) ) { #1[sc_toinf=+] ; }
+
+// I am to go -> be[sc_toinf=+]
+
+//iftest ( ~NUCL[vlink](#1[form:fbe],#2) & SUBJ(#1[form:fbe],#2) ) { #1[sc_toinf=+] ; }
+
+
+//We have no wish to do anything illegal. -> SUBJ(do,We)
+iftest ( OBJ(#1[form:fhave],#2[noun]) ) { #1[subj_cont=+] ; }
+
+// a verb whose OBJ and SUBJ has pr_feat get pr_feat without any particular feature
+
+iftest ( OBJ(#1[verb],#2[noun,pr_feat]) & SUBJ(#1[verb],#3[noun,pr_feat,nentity:~]) ) { #1[neut=+]; }
+
+/////////////////////////////
+// words that have pr_feat when in OBJ dependency with another word with pr_feat
+
+iftest ( OBJ(#1[lemme:have],#2[noun,pr_feat]) ) { #1[neut=+]; }
+
+// has no military dimension[mil=+] 
+//MOD_PRE(dimension,military)
+
+iftest ( MOD[pre](#1,#2[mil])) { #1[mil=+] ; }
+iftest ( MOD[pre](#1,#2[nuc])) { #1[nuc=+] ; }
+	
+
+
+
+

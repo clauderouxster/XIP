@@ -1,0 +1,387 @@
+
+<project default="all" basedir=".">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="/opt/ParSem/tools/ant-contrib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <target name="all" depends="clean, compile, makalu-war, makUp" />
+
+    <target name="compile" depends="init">
+        <mkdir dir="${classDir}"/>
+        <javac srcdir="${srcDir}" destdir="${classDir}" failonerror="true" >
+            <include name="**/*.java"/>
+            <!-- <compilerarg value="-Xlint"/> -->
+            <classpath refid="comp.class.path" />
+        </javac>
+    </target>
+    
+    <target name="doc" depends="init" description="generate java doc">
+        <delete dir="${javaDocDir}"/>
+        <mkdir dir="${javaDocDir}"/>
+        <javadoc
+            sourcepath="${srcDir}"
+            destdir="${javaDocDir}"
+            author="false"
+            version="0.1"
+            use="false"
+            windowtitle="Cacao advanced UI"
+            Public="true"
+        >
+            <classpath refid="comp.class.path"/>
+            <doctitle><![CDATA[<h1>Cacao advanced UI</h1>]]>
+            </doctitle>
+            <bottom><![CDATA[<i>Copyright &#169; 2009 Xerox All Rights Reserved.</i>]]>
+            </bottom>
+        </javadoc>
+    </target>
+	
+	<taskdef name="celi-deploy" classname="org.apache.catalina.ant.DeployTask">
+        <classpath>
+            <pathelement location="/opt/ParSem/tools/tomcat/6.0.20/lib/catalina-ant.jar"/>
+        </classpath>
+	</taskdef>
+	
+    <target name="demo-celi-deploy" depends="demo-celi-war" description="Deploys the war file on demo.celi.it" >
+		<celi-deploy url="http://demo.celi.it:8095/manager/html"
+			username="admin"
+			password="celiroot"
+			path="/advancedUI"
+			war="file:${warFile}" />		
+	</target>
+	
+    <target name="build-war" depends="clean, init, compile, javascript" description="builds the war file" >
+        <delete file="${warFile}" />
+        <war destfile="${warFile}" webxml="${web.xml}" >
+            <lib dir="${wicket.path}"/>
+            <lib dir="${slf4j.path}" />
+            <lib dir="${jpa.path}" />
+            <lib dir="${cacao.path}" />
+            <lib dir="${wickettree.path}" />
+            <lib file="${h2.jar}" />
+            <lib file="${log4j.jar}" />
+            <classes dir="${classDir}"  />
+            <webinf dir="${srcDir}" prefix="WEB-INF/classes">
+                <include name="**/*.html" />
+                <include name="**/*.jpg" />
+                <include name="**/*.png" />
+                <include name="**/*.gif" />
+                <include name="**/*.css" />
+                <include name="**/*.xml" />
+            </webinf>
+            <webinf dir="${basedir}/web/WEB-INF/classes" includes="log4j.properties" prefix="WEB-INF/classes" />
+            <webinf dir="${propertiesBasedir}" includes="cacao.properties" prefix="WEB-INF/classes" />
+            <webinf dir="${basedir}/src/extui/UI_html" includes="*.properties" prefix="WEB-INF/classes/extui/UI_html" />
+            <webinf dir="${basedir}/web/WEB-INF" includes="sun-web.xml" />
+            <metainf dir="${basedir}/web/META-INF" includes="context.xml" />
+            <metainf dir="${basedir}/src/META-INF" includes="persistence.xml" />
+            <zipfileset dir="${basedir}/web/images" includes="*.png *.jpg *.gif" prefix="images" />
+            <zipfileset dir="${basedir}/web" includes="*.js"  />
+            <zipfileset dir="${basedir}/web/javascript" includes="**/*" prefix="javascript" />
+            <zipfileset dir="${basedir}/web/css" includes="*.css" prefix="css" />
+            <zipfileset dir="${basedir}/web/css/images" includes="*.png" prefix="css/images" />
+        </war>
+    </target>
+	
+    <target name="demo-celi-war" description="builds war file for demo.celi.it" >
+		<antcall target="build-war">
+			<param name="web.xml" value="${basedir}/web/conf/demo-celi/demo-celi-web.xml"/>
+			<param name="propertiesBasedir" value="${basedir}/web/conf/demo-celi"/>
+		</antcall>
+	</target>
+
+    <target name="makalu-war" description="builds makalu war file" >
+		<antcall target="build-war">
+			<param name="web.xml" value="${basedir}/web/conf/makalu/makalu-web.xml"/>
+			<param name="propertiesBasedir" value="${basedir}/web/conf/makalu"/>
+		</antcall>
+	</target>
+
+    <target name="dev-war" description="builds dev war file" >
+		<antcall target="build-war">
+			<param name="web.xml" value="${basedir}/web/WEB-INF/web.xml"/>
+			<param name="propertiesBasedir" value="${basedir}/web/WEB-INF/classes"/>
+		</antcall>
+	</target>
+
+    <target name="javascript" depends="removejs, virtualKeybord, jquery" description="install *.js files" />
+    
+    <target name="removejs" depends="init" description="remove *.js files" >
+        <delete>
+            <fileset dir="${js.dir}" includes="*.js" excludes="accordion.js ui.multiselect.js jquery.blockUI.js" />
+        </delete>
+    </target>
+
+    <target name="virtualKeybord" depends="init" description="install virtualKeyboard files" >
+        <!-- http://www.codeproject.com/KB/scripting/jvk.aspx -->
+        <property name="vkeyboard" location="/opt/ParSem/tools/virtualKeyboard/26mars2008"/>
+        <copy file="${vkeyboard}/1-vkboard/compressed/vkboardc.js" todir="${js.dir}" />
+        <copy todir="${js.dir}">
+            <fileset dir="${vkeyboard}/5-layout_pack" excludes="readme.txt" />
+        </copy>
+    </target>
+
+    <target name="jquery" depends="init" description="install jquery and jqueryUI files" >
+        <property name="jqueryUI" location="/opt/ParSem/tools/jqueryUI/1.7.2"/>
+        <copy file="${jqueryUI}/jquery-1.3.2.js" todir="${js.dir}" />
+        <copy file="${jqueryUI}/ui/ui.core.js" todir="${js.dir}" />
+        <copy file="${jqueryUI}/ui/jquery-ui.js" todir="${js.dir}" />
+        <copy file="${jqueryUI}/ui/ui.accordion.js" todir="${js.dir}" />
+        <!-- no more used
+        http://bassistance.de/jquery-plugins/jquery-plugin-tooltip/
+        <property name="jqueryToolTip" location="/opt/ParSem/tools/jquery/plugin/tooltip/1.3"/>
+        <copy file="${jqueryToolTip}/jquery.tooltip.js" todir="${js.dir}" />
+        <copy file="${jqueryToolTip}/jquery.tooltip.min.js" todir="${js.dir}" />
+        <copy file="${jqueryToolTip}/jquery.tooltip.css" todir="${js.dir}" />
+       -->
+    </target>
+
+    <target name="makUp" depends="init, makStopClean, makInst, makStart, makInfo" description="update makalu" />
+
+    <target name="toMak" depends="init" description="copy all the advUI files on makalu">
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="mkdir /cacao/advUI" failonerror="false"  verbose="true" />
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:/cacao/advUI"
+                verbose="true"  failonerror="true" >
+            <fileset dir="${basedir}/../advUI" excludes="build" />
+        </scp>
+    </target>
+
+    <target name="makInst" depends="init" description="copy all the files on makalu">
+        <!-- copy advUI.war in the tomcat dir-->
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:${makalu.tomcat.dir}/webapps"
+                verbose="true"  failonerror="true" >
+            <fileset file="${warFile}" />
+        </scp>
+    </target>
+
+    <target name="makStopClean" depends="init" description="clean + sleep 5 + stop tomcat on makalu">
+        <antcall target="makStop" />
+        <echo message="start sleep" />
+        <sleep seconds="10" />
+        <echo message="end sleep" />
+        <antcall target="makClean" />
+    </target>
+
+    <target name="makClean" depends="init" description="clean tomcat on makalu">
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="cleant" failonerror="true" outputproperty="out" verbose="true" />
+        <echo message="${out}" />
+    </target>
+
+    <target name="makStart" depends="init" description="start tomcat on makalu">
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="startt" failonerror="true" outputproperty="out" verbose="true" />
+        <echo message="${out}" />
+    </target>
+
+    <target name="makStop" depends="init" description="stop tomcat on makalu">
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="stopt" failonerror="false" outputproperty="out" verbose="true" />
+        <echo message="${out}" />
+    </target>
+
+    <target name="makInfo" >
+        <echo message="http://makalu.xrce.xerox.com:8080/manager/html" />
+        <echo message="http://makalu.xrce.xerox.com:8080/advancedUI" />
+        <echo message="http://makalu.xrce.xerox.com:8082/" />
+    </target>
+
+    <target name="makh2" depends="init" description="start h2 on makalu">
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="h2" failonerror="true" outputproperty="out" verbose="true" />
+        <echo message="${out}" />
+    </target>
+
+    <target name="makGetConf" depends="init"
+        description="copy the configuration files from makalu, and save them in the makaluConf dir">
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/cleant"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/h2"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/info"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/logs"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/netbeans"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/startt"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/cacao/scripts/stopt"
+                todir="${mak.conf.scripts}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/home/cacao/.bash_profile"
+                todir="${mak.conf.bash}" verbose="true"  failonerror="true" >
+        </scp>
+        <scp keyfile="${keyfile}" passphrase=""
+                remotefile="${rhost.login}@${rhost.name}:/home/cacao/.bashrc"
+                todir="${mak.conf.bash}" verbose="true"  failonerror="true" >
+        </scp>
+    </target>
+
+    <target name="makSetConf" depends="init"
+        description="copy the configuration files to makalu, from the makaluConf dir">
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:/cacao/scripts"
+                verbose="true"  failonerror="true" >
+            <fileset dir="${mak.conf.scripts}" includes="cleant h2 info startt stopt"/>
+        </scp>
+        <sshexec host="${rhost.name}" username="${rhost.login}" keyfile="${keyfile}"
+            command="chmod a+x /cacao/scripts/*" failonerror="false"  verbose="true" />
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:/home/cacao"
+                verbose="true"  failonerror="true" >
+            <fileset dir="${mak.conf.bash}" includes=".bash_profile .bashrc"/>
+        </scp>
+    </target>
+
+    <target name="clean" depends="propertiesSetting">
+        <delete dir="${buildDir}"/>
+    </target>
+
+    <target name="init" depends="propertiesSetting">
+        <mkdir dir="${buildDir}"/>
+        <mkdir dir="${classDir}"/>
+    </target>
+
+    <target name="h2" depends="init" description="launch h2 server">
+        <property name="dbFile" location="${basedir}/db" />
+        <mkdir dir="${dbFile}"/>
+        <java  classname="org.h2.tools.Server" fork="true" failonerror="true" maxmemory="512m">
+            <arg line="-baseDir ${dbFile}" />
+            <arg value="-webAllowOthers" />
+            <classpath>
+                <pathelement path="${libExt}/h2/h2.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="h2Inst" depends="init" description="install h2 on makalu ">
+        <scp keyfile="${keyfile}" passphrase=""
+                todir="${rhost.login}@${rhost.name}:${makalu.h2.dir}"
+                verbose="true"  failonerror="true" >
+            <fileset file="${h2.jar}" />
+        </scp>
+    </target>
+
+    <target name="ftp" depends="ftpInit, ftpDel, ftpPut, ftpInfo" />
+
+    <target name="ftpDel" depends="ftpInit" description="delete the delivery on the FTP server">
+        <ftp server="${ftp.server}"
+                action="del"
+                userid="${ftp.login}"
+                password="${ftp.password}"
+                verbose="yes"
+                remotedir="${ftp.remote.dir}"
+                skipFailedTransfers="true"
+        >
+            <fileset >
+                <include name="**/*.war"/>
+            </fileset>
+        </ftp>
+    </target>
+
+    <target name="ftpPut" depends="ftpInit, del" description="put the delivery on the FTP server">
+        <ftp server="${ftp.server}"
+                action="put"
+                userid="${ftp.login}"
+                password="${ftp.password}"
+                binary="yes"
+                verbose="yes"
+                remotedir="${ftp.remote.dir}"
+                chmod="666"
+        >
+            <fileset dir="${delivery.root}">
+                <include name="${delivery.name}"/>
+            </fileset>
+        </ftp>
+    </target>
+    
+    <target name="del" depends="ftpInit" description="create a dated war in the delivery dir">
+        <copy file="${basedir}/build/advancedUI.war" tofile="${delivery.root}/${delivery.name}" />
+        <echo message="file = ${delivery.name}" />
+    </target>
+
+    
+    <target name="ftpInit" >
+        <tstamp prefix="curDate">
+            <format property="nowFull" pattern="d-MMMM-yyyy-hh-mm" locale="en"/>
+        </tstamp>
+        <property name="ftp.server" value="ftp.xrce.xerox.com" />
+        <property name="ftp.login" value="ftp-lg" />
+        <property name="ftp.password" value="lg2k6mc." />
+        <property name="ftp.remote.dir" value="/" />
+        <property name="delivery.name" value="advancedUI-${curDate.nowFull}.war" />
+        <property name="delivery.root" location="${basedir}/delivery" />
+        
+    </target>
+
+    <target name="ftpInfo" depends="ftpInit" >
+        <echo message="server = ${ftp.server}" />
+        <echo message="login = ${ftp.login}" />
+        <echo message="password = ${ftp.password}   (the point is included in the password)" />
+    </target>
+
+    <target name="celiInfo" depends="ftpInit" >
+        <echo message="il faut supprimer les log:" />
+        <echo message="#log4j.logger.extui=ALL, LOGFILE    a mettre en commentaire dans web/WEB_INF/classes/log4j.properties" />
+        <echo message="server = http://demo.celi.it:8095/manager/html" />
+        <echo message="login = admin" />
+        <echo message="password = celiroot" />
+        <echo message="server = http://demo.celi.it:8095/advancedUI" />
+    </target>
+
+    <target name="propertiesSetting">
+        <property name="srcDir" location="${basedir}/src" />
+        <property name="buildDir" location="${basedir}/build" />
+        <property name="classDir" location="${buildDir}/classes" />
+        <property name="javaDocDir" location="${buildDir}/doc" />
+        <property name="libExt" location="${basedir}/libExt" />
+        <property name="js.dir" location="${basedir}/web"/>
+        <property name="js.alt.dir" location="${basedir}/web/javascript"/>
+        <property name="warFileName" value="advancedUI.war" />
+        <property name="warFile" location="${buildDir}/${warFileName}" />
+        <property name="log4j.jar" location="${libExt}/log4j/1.2.15/log4j-1.2.15.jar" />
+        <property name="h2.jar" location="${libExt}/h2/1.1.118/h2.jar" />
+        <property name="cacao.path" location="${libExt}/ws/0.3" />
+        <property name="wickettree.path" location="${libExt}/wickettree/0.4.1" />
+        <property name="jpa.path" location="${libExt}/toplink/2-b41" />
+        <property name="wicket.path" location="${libExt}/wicket/1.4.3" />
+        <property name="slf4j.path" location="${libExt}/slf4j/1.5.6" />
+        <property name="makalu.h2.dir" location="/cacao/h2" />
+        <property name="makalu.tomcat.dir" location="/cacao/tools/tomcat/6.0.18" />
+        <property name="mak.conf.scripts" location="${basedir}/makaluConf/scripts" />
+        <property name="mak.conf.bash" location="${basedir}/makaluConf/bash" />
+        <property name="keyfile" location="${user.home}/.ssh/id_rsa" />
+        <path id="comp.class.path">
+            <pathelement path="${classDir}"/>
+            <pathelement location="${h2.jar}"/>
+            <pathelement location="${log4j.jar}" />
+            <fileset dir="${wicket.path}" />
+            <fileset dir="${slf4j.path}" />
+            <fileset dir="${jpa.path}"/>
+            <fileset dir="${cacao.path}"/>
+            <fileset dir="${wickettree.path}"/>
+        </path>
+        <property name="rhost.name" value="makalu.xrce.xerox.com" />
+        <property name="rhost.login" value="cacao" />
+    </target>
+
+</project>

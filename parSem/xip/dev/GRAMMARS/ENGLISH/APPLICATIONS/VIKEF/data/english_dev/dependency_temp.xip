@@ -1,0 +1,444 @@
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2004 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English Normalization XIP grammar
+//!   filename   : dependency_temp.xip
+//!   Date       : December 2004
+//!   Author     : Caroline Hagege
+//!   Description : Temporal expressions treatment
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+
+
+// WHEN a TEMPORAL complement is attached to a named entity 
+
+/////////////////////////////////////////////////////////////////////////////
+// TEMPORAL EXPRESSIONS
+/////////////////////////////////////////////////////////////////////////////
+
+// When a modifier is temporal within a NP, then the NP is not necessarily temporal if the head is not
+// The April 4 ballot
+| NP[tempexpr=~]{?*,?[tempexpr],?[last,tempexpr:~]} |
+  ~
+
+
+| NP#3{?*,noun#2[last:~]} |
+  if ( HEAD(#1,#3) &  ^NMOD(#1,#2[hour:+]) )
+  ~
+
+// Correcting HEAD relations from temporal expressions (2 rules below)
+| PP#2[tempexpr]{prep,NP#1} |
+  if ( ~HEAD(#1,#2) & HEAD(#10[tempexpr],#1) )
+   HEAD(#1,#2)
+
+
+| PP#2[tempexpr] |
+  if ( HEAD(#4,#2) & ^VMOD[temp](#1,#3) & HEAD(#3,#4) )
+  VMOD[temp=+](#1,#4)
+
+| NP#3[tempexpr,interval]{NP, punct[form:fhyph], NP#2} |
+  if ( HEAD(#20,#2) & ^VMOD[temp](#1,#20) )
+  VMOD[temp=+](#1,#3)
+
+
+
+// Adding feature tempexpr:+ to PP that result from a reshuffling when they are made by a preposition followed by NP[tempexpr]
+| PP[tempexpr=+]{prep, NP[tempexpr,last]} |
+~
+
+
+// Adding features temp:+ or dur:+ to XMOD dependencies
+
+// Rule 195
+// Specializing the NMOD[post] dependency with features temp
+| PP#5[date];PP#5[tempexpr] |
+	if ( HEAD(#2,#5) & ^NMOD[temp:~,fmt:~](#1,#2) )
+	NMOD[temp=+](#1,#2)
+
+
+| PP#5[date];PP#5[tempexpr] |
+ 	if ( HEAD(#2,#5) & ^VMOD[temp:~,fmt:~](#1,#2) )
+	VMOD[temp=+](#1,#2)
+
+
+
+// Rule XXXXX
+// weekly reports
+| AP{nadj#1[period:+]} |
+	if ( ^NMOD[temp:~,pre](#2,#1) )
+//	NMOD[temp=+](#2,#1),
+	TEMP[temp=~](#2,#1)
+
+// Rule XXXXX
+// nearly 11-month conflict
+| AP{?*,adj#1[mwe,tempexpr]} |
+	if ( ^NMOD[temp:~,pre](#2,#1) )
+	TEMP[temp=~](#2,#1)
+
+
+
+
+
+// Rule XXXX
+// March shipments
+| NP{noun#1[period:+],?*,#2[last]} |
+	if ( ^NMOD[temp:~,pre](#2,#1) )
+	TEMP[temp=~](#2,#1)
+
+
+
+| NP#1[tempexpr], FV{?*,#2} |
+  if ( HEAD(#1,#1) & ~VMOD(?,#1) & ~NMOD(?,#1) & VDOMAIN(#4,#2) )
+     VMOD[pre=+,temp=+](#4,#1)  
+
+
+
+// Rule 416
+// Adding feature time to adverbs bearing a tempexpr:+ feature
+if ( ^?[temp:~](#2,#1[adv,tempexpr]) )
+	?[temp=+](#2,#1)
+
+// earlier, later
+if ( ^?[temp:~](#2,#1[adv,time,compar]) )
+	?[temp=+,t_relat=+](#2,#1)
+
+// Rule 417
+// Adding feature time to VMOD and NMOD relations
+// e.g. on Aug. 24, 2001, on Friday etc.
+| PP#3{prep[p_on], NP[tempexpr]} |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+// Rule XXXX
+// Adding feature time to VMOD and NMOD
+// e.g. by night
+| PP#3{prep[lemme:by], NP[tempexpr]} |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 418
+// Adding feature time to VMOD and NMOD dep.
+// e.g. in, before, after followed by a NP which head has feature posttime or hour
+| PP#3{prep[form:fbefore];prep[form:fafter];prep[p_in] } |
+	if ( HEAD(#1,#3) & (#1[posttime] | #1[hour]) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 419
+// Adding feature time to VMOD and NMOD dep.
+// e.g. before, after followed by a NP which has feature hour
+| PP#3{prep[form:fbefore];prep[form:fafter], NP[hour];NP{?[first,last,num]} } |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 420
+// Adding feature time to VMOD and NMOD dep.
+// preposition is "at" and the NP head has the feature hour
+| PP#3{prep[form:fat],NP[hour];NP{?*,?[last,hour]};NP{?[first,last,num]}}|
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 423
+// Adding the feature temp:+ to VMOD and NMOD relations 
+// Note that a feature temp:+ will be also added on the PREPD dependency.
+// e.g. in 1994, in August, in August 1994, etc.
+| PP#3{prep[form:fin], NP{?*,noun[period,last];noun[posttime,last]}} |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 432
+// Temporal NP that has been left alone
+// e.g. Yesterday they said there was a party
+| NP#1[tempexpr], ?*, FV{?*,#2[last]} |
+	if ( HEAD(#3,#1) & ~?(?,#3) & VDOMAIN(#4,#2) )
+	VMOD[pre=+,temp=+](#4,#3)
+
+
+// Rule XXXXX
+// Special treatment for temporal PP introduced by preposition BY
+// They have not been previously calculated because of the passive problem
+| ?[verb]{?*,#1[last,verb]}, ?*[verb:~], PP#20{?[lemme:by], NP[tempexpr]} |
+	if ( HEAD(#2,#20) & ~VMOD(#1,#20) )
+	VMOD[post=+,temp=+](#1,#2)
+
+
+
+// Rule 424
+// Adding the feature temp:+ to VMOD that links a verb and a temporal adverb
+// e.g. He ran two days ago
+| ?{?*,#1[last,verb,hmmselection:+]};SC{?*,FV{?*,#1[last]}}, adv#2[tempadv];adv#2[tempexpr] | 
+	if ( ^VMOD[!features:!](#1,#2) )
+	VMOD[temp=+,post=+](#1,#2)
+
+
+// Rule XXXX
+// Creating VMOD[temp] between a verb and a temporal ADVP (complex temp expression)
+| ?{?*,#1[last,verb,hmmselection:+]};SC{?*,FV{?*,#1[last]}}, ADVP#2[tempexpr] |
+	if ( ~VMOD(#1,#2) )
+	VMOD[temp=+,post=+](#1,#2)
+
+
+
+// Rule XXXX
+// Same as above for pre
+// Rule 618-modifier (under and not under an SC
+| ?*[verb:~], ADVP#2[tempexpr], ?*[verb:~], SC{?*,FV{?*,#1[last]}} |
+	if ( VDOMAIN(#3,#1) & ~VMOD(#3,#2) )
+	VMOD[temp=+,pre=+](#3,#2)
+
+// Rule 1457
+| ?*[verb:~], ADVP#2[tempexpr], ?*[verb:~], FV{?*,#1[last]}} |
+	if ( VDOMAIN(#3,#1) & ~VMOD(#3,#2) )
+	VMOD[temp=+,pre=+](#3,#2)
+
+
+
+
+
+// Rule 1458
+// temporal adverbs, default when not marked with temp feature
+| adv#1[tempadv];adv#1[tempexpr] |
+	if ( VMOD[post:+,temp:~](#4,#1)   )
+	VMOD[temp=+](#4,#1)
+
+
+// Rule 611
+// For complex temporal NPs{NP, PP} that have been created by reshuffling.
+// No temporal links are available at this stage
+| ?[verb:+]{?*,verb#10[last]};SC{?*,?[verb:+]{?*,verb#10[last]}}, ?*[verb:~], NP#1{NP,PP} |
+	if ( HEAD(#1,#1) & ~VMOD(#10,#1) )
+	VMOD[temp=+,post=+](#10,#1)
+
+
+
+// Rule 1460
+// Temporal modifier of a COPULA
+// 1 - If the temporal modifier is associated to a be-form and there is no SUBJCOMPL then the temporal complement is linked to the subject. 
+if (  ( SUBJ(#1[cop:+],#2) | ( VDOMAIN(#1[cop],#10) & SUBJ(#10,#2) ) ) & ~SUBJATTR(#2,#4) & ^VMOD[temp:+](#1,#3) )
+	VMOD(#2,#3)
+
+
+
+// Rule XXXXX
+// TEMPORAL modifier of a copula
+// 2 - If the temporal modifier is associated to a copula and there is a SUBJCOMPL then the temporal complement is linked to the SUBJCOMPL
+if ( ( SUBJ(#1[cop],#2) | ( VDOMAIN(#1[cop],#10) & SUBJ(#10,#2) ) ) & SUBJATTR(#2,#4) & ^VMOD[temp:+](#1,#3) )
+   VMOD(#4,#3)
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// TMF (initial time) and TMT (final time)
+/////////////////////////////////////////////////////////////////////////////
+// Time an event starts or a state becomes true
+
+// Rule XXXX
+// If we have a FMT relation between temporal elements then the first complement is a TMF (initial time)  and the last is a TMT (final time)
+// e.g. He works from morning till night
+| noun#1[period];noun#1[posttime];noun#1[tempexpr];noun#1[time] |
+	if ( NMOD[post,fmt:+](#1,#2) & ^VMOD[post,tmf:~](#3,#1) & VMOD[post,tmt:~](#3,#2) )
+	VMOD[tmf=+](#3,#1)
+
+
+| noun#2[period];noun#2[posttime];noun#2[tempexpr];noun#2[time] |
+	if ( NMOD[post,fmt](#1,#2) & VMOD[post,tmf](#3,#1) & ^VMOD[post,tmt:~](#3,#2) )
+	VMOD[tmt=+](#3,#2)
+
+
+
+// Rule 421
+// Adding a feature dur+ to PP modifiers starting with since and followed by a date
+// e.g. Since 1993
+| PP#3{prep[form:fsince], dig[last,period]} |
+	if ( HEAD(#2,#3) & ^?[tmf:~](#1,#2) )
+	?[tmf=+](#1,#2)
+
+| PP#3{prep[lemme:since], NP[tempexpr]} |
+	if ( HEAD(#2,#3) & ^?[tmf:~](#1,#2) )
+	?[tmf=+](#1,#2)
+
+
+// Rule XXXXX
+// TMT alone (without range with a TMF
+// e.g. It will be full till tomorrow
+
+
+
+// Rule XXXXX
+// Initial Time TMF with embedded clauses introduced by "since"
+// e.g. It has changed since I have lived here
+if ( ^VMOD[post,sentence,tmf:~](#1,#2) & CONNECTOR[subord](?[lemme:since],#2) )
+	VMOD[tmf=+](#1,#2)
+
+
+/////////////////////////////////////////////////////////////////////////////
+// DURATION
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Rule 614
+// With preposition during and temporal complement
+// He worked during the night
+//| PP#3{prep[form:fduring], NP{?*,noun[period];noun[posttime]}} |
+| PP#3{prep[form:fduring], NP} |
+	if ( HEAD(#1,#3) & ^?[dur:~](#2[verb],#1) )
+	?[dur=+](#2,#1)
+
+
+// Rule XXXX
+// With preposition "during" and stand-alone ing-form
+// e.g. He talked with him during meeting
+| prep[form:fduring], GV{#1[first,last,prog:+]} |
+	if (  ^VMOD[post,dur:~](#2,#1)  )
+	VMOD[dur=+](#2,#1)
+
+
+// Rule 616
+// Adding feature duration:+ to PP modifiers for + duration
+// e.g. for more than three years
+| PP#3{prep[lemme:for], NP{(adv[quantadv]), ?*, noun#2[period,last]} } |
+	if ( ^?[dur:~](#1,#2) )
+	?[dur=+](#1,#2)
+
+
+// Rule XXXXX
+// Changing a temp relation to a duration relation. 
+// e.g. She worked nine hours
+| NP[tempexpr]{dig;num;det[indef:+],?*,noun#1[lemme:day];noun#1[lemme:hour];noun#1[lemme:minute];noun#1[lemme:second]} |
+	if ( ^VMOD[temp,post](#2,#1) )
+		VMOD[temp=~,dur=+](#2,#1)
+		
+
+
+// Rule 1466
+// Durations. Ceci est relatif. Une expression comme "last Friday" peut-etre une duree ou un point dans le temps en fonction de ce qu'elle modifie.
+// Ex. She arrived last Friday vs He was waiting last Friday.
+//| NP#30[tempexpr] |
+//if ( HEAD(#3,#30) & ^VMOD[temp,post](#1,#3) & MAIN[progress:+](#1) )
+//	 VMOD[temp=~,dur=+](#1,#3)
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////
+// Preferences for PP attachment when PP are typed.
+
+
+// Rule 620
+// Same as above with temporal complements
+if ( VMOD[post:+,temp:+](#1,#2) & ^NMOD[post](?,#2) )
+	~
+
+
+// Rule 619
+// Preferring to attach duration complements to verbs than to nouns
+// He talked with Peter for a few minutes -> *MOD(Peter,minutes) but MOD(talk,minutes)
+if ( VMOD[post:+,dur:+](#1,#2) & ^NMOD[post](?,#2) )
+	~
+
+
+
+
+// Rule XXXX
+// Deleting inside temporal elements that have been calculated within a bigger temporal expression
+// e.g. Two weeks from next Friday
+|#10, NP#1, #20 |
+	if ( HEAD(#1,#1) & ^NMOD[temp](#2,#3) & #10 < #2 & #2 < #20 ) 
+	~
+
+|#10,PP[tempexpr,interval],#20 |
+	if ( ^NMOD[temp](#4,#5) & #10 < #4 & #4 < #20 )
+	~
+
+
+// Friday evening
+| NP{#1,#2} |
+	if ( VMOD[temp](?,#1) & ^NMOD[temp](#1,#2) )
+	~
+
+// TEMP[np]+hour
+| NP[tempexpr]{NP#1[tempexpr], PP#2[tempexpr] } |
+	if ( HEAD(#10,#1) & HEAD(#20,#2) & ^NMOD[temp,post](#10,#20) )
+	~
+
+
+// Deleting rests of temporal relations that links part of the complex temporal expression
+// e.g. He works between Monday and Friday *VMOD(work,Friday)
+// the only pb with this rule is that it only works when there is something before and something after the NP (i.e. neither in first position, nor in last)
+| #6, PP#1[tempexpr], #5 |
+	if ( HEAD(#10,#1) & VMOD[temp,post](#2,#10) & ^VMOD[temp,post](#2,#20) & #20 < #5 & #6 < #20 )
+	~
+
+
+| NP#1{?*,NP#2} |
+	if ( VMOD[temp](#3,#1) & ^VMOD[temp](#3,#2) )
+	~
+| NP#1{?*,NP{?*,noun#2}} |
+	if ( VMOD[temp](#3,#1) & ^VMOD[temp](#3,#2) )
+	~
+
+
+
+// When a nominal/adjectival non headed temporal expression modifies a non-temporal noun, then the resulting NP is not temporal and deletion of bad temporal features on MOD dependencies
+| PP#5[tempexpr=~]{?*,NP#1[tempexpr=~]{?*, AP[tempexpr], noun[tempexpr:~,time:~,date:~]}} |
+	if ( HEAD(#10,#5) & ^VMOD[temp:+](#2,#10) )
+	VMOD[temp=~](#2,#10)
+
+
+// Unattached temporal adverbials at the beginning of a sentence followed by a comma are attached to the first verb that follows
+| ADV#2[tempexpr:+, startbis:+], punct[comma], SC{?*[verb:~,comma:~,coord:~], FV{?*,#1[last]}} |
+  if ( ~VMOD(?,#2) & VDOMAIN(#1,#10) )
+  VMOD[temp=+,pre=+](#10,#2)
+
+
+// Unattached temporal expressions that are not attached to anything but preceeded by NP, PP, AP 
+// e.g. he began {his carrer}NP {as a sales}PP {representative}AP in 1997.
+| SC{?*,FV{?*,#1[verb]}};?[verb]{?*,#1[verb,last]}, NP, PP, AP, PP#2[tempexpr] |
+  if ( HEAD(#20,#2) & ~VMOD[temp](?,#20) )
+  VMOD[temp=+,post=+](#1,#20)
+
+
+//// NOT USEFUL IT WAS A PB WITH COORD
+// Unattached temporal expressions: NP or PPs that are unattached when there is only a main clause in the sentence are attached to the main verb and when those expressions are coordinated
+// e.g. We would propose the following date Wednesday 24th or Thursday 25th.
+
+// first coordination - 3 and 2 elements
+//| NP#1[tempexpr], punct[comma], NP#2[tempexpr], conj#4[coord], NP#3[tempexpr] |
+//  if ( HEAD(#10,#1) & HEAD(#20,#2) & HEAD(#30,#3) & ~COORD(#4,?) )
+//  COORD(#4,#10),
+//  COORD(#4,#20),
+//  COORD(#4,#30),
+//  NCOORD(#10,#30).
+
+//| NP#2[tempexpr], conj#4[coord], NP#3[tempexpr] |
+//  if ( HEAD(#20,#2) & HEAD(#30,#3) & ~COORD(#4,?) )
+//  COORD(#4,#20),
+//  COORD(#4,#30),
+//  NCOORD(#20,#30).
+
+// second unattached temporal modifiers that are coordinated
+//| NP#1[tempexpr] |
+//if ( HEAD(#10,#1) & COORD(?,#10) & ~VMOD[temp](?,#10) & ~NMOD[temp](?,#10) & ~EMBED(?,?) & MAIN(#3) )
+//   VMOD[temp=+](#3,#10)
+
+
+////
+
+////////////

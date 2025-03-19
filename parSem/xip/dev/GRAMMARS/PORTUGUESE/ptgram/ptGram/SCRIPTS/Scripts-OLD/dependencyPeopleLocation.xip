@@ -1,0 +1,494 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyPeopleLocation.xip                                !
+//!   Date       : 2010/June                                                   !
+//!   Author     : Daniel Santos                                               !
+//!   Revised by : Vera Cabarrão (2011/January)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Dependency file treating the extraction of people location relations     !
+//!                                                                            !
+//!   Dependencies handled in this file:  PEOPLE-LOCATION                      !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////
+// viver / morar / residir / habitar                                          //
+////////////////////////////////////////////////////////////////////////////////
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João vive/mora/reside/habita em Lisboa.
+// Example: Vive/Mora/Reside/Habita em Lisboa
+if( (SUBJ[ELIPS](#2[to-live],#1) ||SUBJ(#2[to-live],#1[human])) &
+    (MOD(#2,#3[location]) || MOD(#2,#3[admin_area])) &
+    ~PEOPLE-LOCATION[residence](#1,?) & ~MOD[NEG](#2,?)
+  )
+   PEOPLE-LOCATION[residence=+](#1,#3)
+
+//VERA, 2011/03/28
+// Example: O João que vive/mora/reside/habita em Lisboa.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[to-live],#1) &
+      (MOD[POST](#3,#4[location]) || MOD[POST](#3,#4[admin_area]) ) &
+      ~MOD[NEG](#3,#4)
+    )
+   PEOPLE-LOCATION[residence=+](#2,#4)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// casa/moradia/vivenda/apartamento/residência/habitação                      //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: A casa/moradia/vivenda/apartamento/residência/habitação do Pedro é em Lisboa
+  if( SUBJ(#2[lemma:ser],#1[live-in]) &
+      PREPD(#3[human],?[lemma:de]) & MOD(#1,#3) &
+      (MOD(#2,#4[location]) || MOD(#2,#4[admin_area])) &
+      ~PEOPLE-LOCATION[residence](#1,?) & ~MOD[NEG](#2,?)
+    )
+     PEOPLE-LOCATION[residence=+](#3,#4)
+
+// Example: A morada do João é Rua do Natal.
+// Example: O endereço do João é Rua do Natal.
+| NP{?*,noun#1[lemma:morada];noun#1[lemma:endereço]},PP#2{?*,noun#3[human]},VF{verb#4[lemma:ser]},NP{noun#5[location]} |
+  if(HEAD(#3,#2) & MOD[POST](#1,#3))
+   PEOPLE-LOCATION[residence=+](#3,#5)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// nasceu / é_natural LOCALIDADE                                              //
+////////////////////////////////////////////////////////////////////////////////
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João nasceu em Lisboa.
+// Example: Nasceu em Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:nascer],#1) || SUBJ(#2[lemma:nascer],#1[human])) &
+      (MOD(#2,#3[location,country:~]) || MOD(#2,#3[admin_area,country:~])) &
+      ~ANTECEDENT(?,#3) &
+      ~PEOPLE-LOCATION[place-of-birth](#1,?) & ~MOD[NEG](#2,#3)
+    )
+      PEOPLE-LOCATION[place-of-birth=+](#1,#3)
+
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João é natural de Lisboa
+// Example: É natural de Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:ser],#1) ||SUBJ(#2[lemma:ser],#1[human])) &
+      PREDSUBJ(#2,#3[lemma:natural]) &
+      (MOD(#3,#4[location]) || MOD(#3,#4[admin_area])) &
+      ~MOD[NEG](#2,?)
+    )
+   PEOPLE-LOCATION[place-of-birth=+](#1,#4)
+
+//VERA, 2011/03/28
+// Example: O João que nasceu em Lisboa.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:nascer],#1) &
+      (MOD[POST](#3,#4[location,country:~]) || MOD[POST](#3,#4[admin_area,country:~]) ) &
+      ~PEOPLE-LOCATION[place-of-birth](#2,?) & ~MOD[NEG](#3,#4)
+    )
+   PEOPLE-LOCATION[place-of-birth=+](#2,#4)
+
+//VERA, 2011/03/28
+// Example: O João que é natural de Lisboa.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      PREDSUBJ(#3,#5[lemma:natural]) &
+      (MOD[POST](#3,#4[location]) || MOD[POST](#3,#4[admin_area]) ) &
+      ~MOD[NEG](#2,#4)
+    )
+   PEOPLE-LOCATION[place-of-birth=+](#2,#4)
+
+
+// Example: A aldeia minhota em que o João nasceu desapareceu.
+// Example: A aldeia minhota em que o João tinha nascido tinha desaparecido.
+// Example: A aldeia minhota onde o João nasceu desapareceu.
+// Example: A aldeia minhota onde o João tinha nascido tinha desaparecido.
+if( (ANTECEDENT[RELAT](#2[location,country:~],#1[lemma:que]) || ANTECEDENT[RELAT](#2[admin_area,country:~],#1[lemma:que]) ||
+     ANTECEDENT[RELAT](#2[location,country:~],#1[lemma:onde]) || ANTECEDENT[RELAT](#2[admin_area,country:~],#1[lemma:onde])) &
+      SUBJ[PRE](#3[lemma:nascer],#4[human]) &
+      ~MOD[NEG](#2,#3) &
+      ~PEOPLE-LOCATION[place-of-birth=+](#4,#2)
+    )
+        PEOPLE-LOCATION[place-of-birth=+](#4,#2)
+
+// Example: D. Pedro (Coimbra, 8 de Abril de 1320 - Estremoz, 18 de Janeiro de 1367)
+| NP#1{?*,noun#2[human]}, PUNCT,
+  NP{noun#3[location]};NP{noun#3[admin_area]}, PUNCT,
+  NP{num};NP{noun[t-date]}, PUNCT,
+  NP{noun#4[location]};NP{noun#4[admin_area]}, PUNCT,
+  NP{num};NP{noun[t-date]}
+|
+  if(HEAD(#2,#1) & ~PEOPLE-LOCATION[place-of-birth](#2,?) & ~PEOPLE-LOCATION[place-of-death](#2,?))
+        PEOPLE-LOCATION[place-of-birth=+](#2,#3),
+        PEOPLE-LOCATION[place-of-death=+](#2,#4)
+
+// Example: D. Pedro (Coimbra, 8 de Abril de 1320) [só nascimento]
+| NP#1{?*,noun#2[human]}, PUNCT,
+  NP{noun#3[location]};NP{noun#3[admin_area]}, PUNCT,
+  NP{num};NP[t-date], PUNCT
+|
+  if(HEAD(#2,#1) & ~PEOPLE-LOCATION[place-of-birth](#2,?))
+        PEOPLE-LOCATION[place-of-birth=+](#2,#3)
+
+// Example: O João é minhoto
+  if( SUBJ(#2[lemma:ser],#1[human]) &
+      (PREDSUBJ(#2,#3[gentcity]) || PREDSUBJ(#2,#3[gentregion])) &
+      ~MOD[NEG](#2,?)
+    )
+   PEOPLE-LOCATION[place-of-birth=+](#1,#3)
+
+// Example: O João deixou a aldeia natal do Mogadouro.
+  if( SUBJ(#3,#2[human]) & CDIR(#3,#4[lemma:"?+ natal"]) &
+     (MOD(#4,#5[location]) || MOD(#4,#5[admin_area])) &
+     ~MOD[NEG](#3,?)
+   )
+        PEOPLE-LOCATION[place-of-birth=+](#2,#5)
+
+// Example: Pedro Paixão, escritor português, nascido em Campo de Ourique (Lisboa), no dia 7 de Fevereiro de 1956.
+| NP#1{?*,noun#2[human,SEM-Hprofession:~]},?*,AP{PASTPART#3[lemma:nascer]},PP#5{?*,noun#4[location]};PP#5{?*,noun#4[admin_area]} |
+  if (MOD(#3,#4) & HEAD(#2,#1) & HEAD(#4,#5) )
+   PEOPLE-LOCATION[place-of-birth=+](#2,#4)
+
+//Vera, 2011/01/17 (it seems it is not needed...)
+// Example: Pedro Paixão, escritor português, morreu/faleceu em Campo de Ourique (Lisboa), no dia 7 de Fevereiro de 1956.
+//|NP#1{?*,noun#2[human,SEM-Hprofession:~]},?*,VF{verb#3[lemma:morrer]};VF{verb#3[lemma:falecer]},PP#5{?*,noun#4[location]};PP#5{?*,noun//#4[admin_area]} |
+//  if (HEAD(#2,#1) & HEAD(#4,#5) & MOD(#3,#4))
+// PEOPLE-LOCATION[place-of-death=+](#2,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//  nasceu / é_natural PAÍS                                                   //
+////////////////////////////////////////////////////////////////////////////////
+
+// Example: O João é português
+  if( SUBJ(#3[lemma:ser],#2[human]) &
+      PREDSUBJ(#3,#4[gentcountry]) &
+      ~MOD[NEG](#3,?)
+    )
+   PEOPLE-LOCATION[country-of-birth=+](#2,#4)
+
+//VERA, 2011/03/28
+// Example: O João que é português
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:ser],#1) &
+      PREDSUBJ(#3,#4[gentcountry]) &
+      ~MOD[NEG](#3,?)
+    )
+   PEOPLE-LOCATION[country-of-birth=+](#2,#4)
+
+// Example: O João nasceu em Portugal.
+// Example: Nasceu em Portugal.
+  if( (SUBJ[ELIPS](#2[lemma:nascer],#1) || SUBJ(#2[lemma:nascer],#1[human])) &
+      MOD(#2,#3[country]) &
+      ~PEOPLE-LOCATION[country-of-birth](#1,?) & ~MOD[NEG](#2,#3)
+    )
+   PEOPLE-LOCATION[country-of-birth=+](#1,#3)
+
+//VERA, 2011/03/28
+// Example: O João que nasceu em Portugal
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      SUBJ[PRE](#3[lemma:nascer],#1) &
+      MOD(#3,#4[country]) &
+      ~PEOPLE-LOCATION[country-of-birth](#2,?) & ~MOD[NEG](#3,#4)
+    )
+   PEOPLE-LOCATION[country-of-birth=+](#2,#4)
+
+
+// Example: O João tem a nacionalidade portuguesa - não está a funcionar
+  if( SUBJ(#2[lemma:ter],#1[human]) &
+      CDIR(#2,#3[lemma:nacionalidade]) &
+      MOD(#3,#4[gentcountry]) &
+      ~MOD[NEG](#2,?)
+    )
+   PEOPLE-LOCATION[country-of-birth=+](#1,#4)
+
+// Example: O João que tem a nacionalidade portuguesa - não está a funcionar
+| NP#1{?*,noun#2[human]}, (PUNCT,NP,PUNCT),  SC{?*,VF{verb#3[lemma:ter]}}, (?[verb])*, NP#4{art,noun#5[lemma:nacionalidade]}, AP{adj#6[gentcountry]} |
+  if(CDIR[POST](#3,#5) & HEAD(#2,#1) & HEAD(#5,#4) & MOD[POST](#5,#6))
+   PEOPLE-LOCATION[country-of-birth=+](#2,#6)
+
+////////////////////////////////////////////////////////////////////////////////
+// morreu / faleceu LOCALIDADE                                                //
+////////////////////////////////////////////////////////////////////////////////
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João morreu/faleceu em Lisboa.
+// Example: Morreu/Faleceu em Lisboa.
+  if( (SUBJ[PRE](#3[lemma:morrer],#2[human]) || SUBJ[PRE](#3[lemma:falecer],#2[human]) ||
+       SUBJ[ELIPS](#3[lemma:morrer],#2) || SUBJ[ELIPS](#3[lemma:falecer],#2)) &
+       (MOD(#3,#4[location]) || MOD(#3,#4[admin_area])) &
+       ~MOD[NEG](#3,?) & ~PEOPLE-LOCATION[place-of-death](#2,?)
+    )
+   PEOPLE-LOCATION[place-of-death=+](#2,#4)
+
+//VERA, 2011/03/28
+// Example: O João que morreu/faleceu em Lisboa.
+  if( ANTECEDENT[RELAT](#2[human],#1[lemma:que]) &
+      (SUBJ[PRE](#3[lemma:morrer],#1) || SUBJ[PRE](#3[lemma:falecer],#1) ) &
+      (MOD[POST](#3,#4[location,country:~]) || MOD[POST](#3,#4[admin_area,country:~]) ) &
+      ~PEOPLE-LOCATION[place-of-death](#2,?) & ~MOD[NEG](#3,#4)
+    )
+   PEOPLE-LOCATION[place-of-death=+](#2,#4)
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João foi morto/assassinado em Lisboa.
+// Example: Foi morto/assassinado em Lisboa.
+  if( (VDOMAIN(#2[lemma:ser],#3[lemma:assassinar]) || VDOMAIN(#2[lemma:ser],#3[lemma:matar])) &
+      (SUBJ[ELIPS](#3,#1) || SUBJ[PRE](#3,#1[human])) &
+      (MOD[POST](#3,#4[location]) || MOD[POST](#3,#4[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#3,?)
+   )
+      PEOPLE-LOCATION[place-of-death=+](#1,#4)
+
+//VERA,  2011/04/26
+// Example: O João que foi morto em Lisboa.
+// Example: O João que foi assassinado em Lisboa.
+  if( ANTECEDENT[RELAT](#4[human],#3[lemma:que]) &
+      (SUBJ[PRE](#2[lemma:matar],#3) || SUBJ[PRE](#2[lemma:assassinar],#3) ) &
+      (MOD[POST](#2,#5[location]) || MOD[POST](#2,#5[admin_area]) ) &
+      ~MOD[NEG](#2,?)
+    )
+    PEOPLE-LOCATION[place-of-death=+](#4,#5)
+
+
+// Example: O Pedro matou/assassinou o João em Lisboa.
+// Example: O Pedro foi quem matou/assassinou o João em Lisboa.
+if( (SUBJ[PRE](#2[lemma:matar],#1) || SUBJ[PRE](#2[lemma:assassinar],#1) ) &
+      CDIR[POST](#2,#3[human]) &
+     (MOD[POST](#2,#4[location]) || MOD[POST](#2,#4[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#3,?) & ~MOD[NEG](#2,?)
+   )
+      PEOPLE-LOCATION[place-of-death=+](#3,#4)
+
+//Vera, 2011/01/17
+// Example: O Pedro tirou a vida ao João em Lisboa.
+  if( SUBJ(#3[lemma:tirar],#2) & CDIR(#3,#5[lemma:vida]) & PREPD(#4,?[lemma:a]) & MOD(#3,#4[human]) &
+      (MOD(#3,#1[location]) || MOD(#3,#1[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#4,?) & ~MOD[NEG](#3,?)
+    )
+       PEOPLE-LOCATION[place-of-death=+](#4,#1)
+
+//Vera, 2011/01/17
+// Example: O Pedro pôs fim à vida do João em Lisboa.
+  if( SUBJ(#3[lemma:pôr],#2) & CDIR(#3,#4[lemma:fim]) &
+      PREPD(#5,?[lemma:a]) & MOD(#3,#5[lemma:vida]) &
+      MOD(#5,#6[human]) &
+      (MOD(#3,#1[location]) || MOD(#3,#1[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#6,?) & ~MOD[NEG](#5,?)
+    )
+      PEOPLE-LOCATION[place-of-death=+](#6,#1)
+
+//Vera, 2011/01/17
+// Example: O João foi ferido/baleado/esfaqueado/atropelado mortalmente em Lisboa.
+// Example: Foi ferido/baleado/esfaqueado/atropelado mortalmente em Lisboa.
+  if( VDOMAIN(?,#4) & MOD(#4,?[lemma:mortalmente]) &
+      (SUBJ[ELIPS](#4,#2) || SUBJ[PRE](#4,#2[human])) &
+      (MOD(#4,#5[location]) || MOD(#4,#5[admin_area])) &
+      ~MOD[NEG](#4,?) & ~PEOPLE-LOCATION[place-of-death](#2,?)
+    )
+    PEOPLE-LOCATION[place-of-death=+](#2,#5)
+
+//Vera, 2011/01/17
+// Example: O João sofreu um ferimento/acidente mortal em Lisboa.
+// Example: Sofreu um ferimento/acidente mortal em Lisboa.
+  if( (SUBJ[ELIPS](#3[lemma:sofrer],#2) ||SUBJ(#3[lemma:sofrer],#2[human]) ) &
+       CDIR(#3,?[lemma:"?+ mortal"]) &
+       (MOD(#3,#1[location]) || MOD(#3,#1[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#2,?) & ~MOD[NEG](#3,?)
+    )
+   PEOPLE-LOCATION[place-of-death=+](#2,#1)
+
+//Vera, 2011/01/17
+// Example: O João foi vítima de um ferimento/acidente mortal em Lisboa.
+// Example: O João foi vítima de homicídio em Lisboa.
+// Example: Foi vítima de um ferimento/acidente mortal em Lisboa.
+// Example: Foi vítima de homicídio em Lisboa.
+ if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ(#3[lemma:ser],#2[human]) ) &
+     PREDSUBJ(#3,#4[lemma:vítima]) &
+     (MOD(#4,#5[lemma:"?+ mortal"]) || MOD(#4,#5[lemma:homicídio]) ) &
+     (MOD(#5,#6[location]) || MOD(#5,#6[admin_area]) ) &
+     ~PEOPLE-LOCATION[place-of-death](#2,?) & ~MOD[NEG](#3,?)
+   )
+   PEOPLE-LOCATION[place-of-death=+](#2,#6)
+
+//Vera, 2011/01/17
+// Example: O João foi a única vítima mortal do acidente em Lisboa.
+// Example: O João foi uma das vítimas mortais do acidente em Lisboa.
+// Example: Foi a única vítima mortal do acidente em Lisboa.
+ if( (SUBJ[ELIPS](#3[lemma:ser],#2) || SUBJ(#3[lemma:ser],#2[human]) ) &
+     PREDSUBJ(#3,#4[lemma:"vítima mortal"]) &
+     PREPD(#5,?[lemma:de]) & MOD(#4,#5) &
+     (MOD(#5,#6[location]) || MOD(#5,#6[admin_area])) &
+     ~PEOPLE-LOCATION[place-of-death](#2,?) & ~MOD[NEG](#3,?)
+   )
+   PEOPLE-LOCATION[place-of-death=+](#2,#6)
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João suicidou-se em Lisboa.
+// Example: Suicidou-se em Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:suicidar],#1) || SUBJ(#2[lemma:suicidar],#1[human])) &
+      (MOD[POST](#2,#3[location]) || MOD[POST](#2,#3[location])) &
+      ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    PEOPLE-LOCATION[place-of-death=+](#1,#3)
+
+//Vera, 2011/01/17 (joined 2 rules)
+// Example: O João cometeu suicídio em Lisboa.
+// Example: Cometeu suicídio em Lisboa.
+  if( (SUBJ[ELIPS](#2[lemma:cometer],#1) || SUBJ(#2[lemma:cometer],#1[human]) ) &
+      CDIR(#2,#3[lemma:suicídio]) &
+      (MOD(#2,#4[location]) || MOD(#2,#4[admin_area])) &
+      ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    PEOPLE-LOCATION[place-of-death=+](#1,#4)
+
+//Vera, 2011/01/17 (simplified: few node restrictions)
+// Example: O João terminou/acabou com a própria vida em Lisboa.
+// Example: Terminou/Acabou com a própria vida em Lisboa.
+| PP{?*,noun#6[location]};PP{?*,noun#6[admin_area]} |
+  if( (SUBJ[PRE](#2[lemma:terminar],#1[human]) || SUBJ[PRE](#2[lemma:acabar],#1[human]) ||
+       SUBJ[ELIPS](#2[lemma:terminar],#1)      || SUBJ[ELIPS](#2[lemma:acabar],#1)) &
+       PREPD(#4[lemma:vida],?[lemma:com]) &  MOD[POST](#2,#4) &
+       ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+    )
+    PEOPLE-LOCATION[place-of-death=+](#1,#6)
+
+//Vera, 2011/01/17
+// Example: O João pôs fim à própria vida em Lisboa.
+// Example: Pôs fim à própria vida em Lisboa.
+ if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+     CDIR(#2,#3[lemma:fim]) &
+     DETD(#4[lemma:vida],?[lemma:próprio]) & MOD(#2,#4) &
+     (MOD(#2,#5[location]) || MOD(#2,#5[admin_area])) &
+     ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+   )
+    PEOPLE-LOCATION[place-of-death=+](#1,#5)
+
+//Vera, 2011/01/17
+// Example: O João pôs fim à sua vida em Lisboa.
+// Example: Pôs fim à sua vida em Lisboa.
+ if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+     CDIR(#2,#3[lemma:fim]) &
+     POSS[PRE](#4[lemma:vida],?[lemma:seu]) & MOD(#2,#4) &
+     (MOD(#2,#5[location]) || MOD(#2,#5[admin_area])) &
+     ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+   )
+    PEOPLE-LOCATION[place-of-death=+](#1,#5)
+
+//Vera, 2011/03/09
+// Example: O João pôs fim à vida em Lisboa.
+// Example: Pôs fim à vida em Lisboa.
+ if( (SUBJ[ELIPS](#2[lemma:pôr],#1) || SUBJ(#2[lemma:pôr],#1[human])) &
+     CDIR(#2,#3[lemma:fim]) &
+     MOD(#2,#4[lemma:vida]) &
+     (MOD(#2,#5[location]) || MOD(#2,#5[admin_area])) &
+     ~( PREPD(#6[human],?[lemma:de]) & MOD(#4,#6) ) &
+     ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+   )
+    PEOPLE-LOCATION[place-of-death=+](#1,#5)
+
+//Vera, 2011/01/17
+// Example: O João tirou a própria vida em Lisboa.
+// Example: Tirou a própria vida em Lisboa.
+ if( (SUBJ[ELIPS](#2[lemma:tirar],#1) || SUBJ(#2[lemma:tirar],#1[human])) &
+     DETD(#3[lemma:vida],?[lemma:próprio]) & CDIR(#2,#3) &
+     (MOD(#2,#4[location]) || MOD(#2,#4[admin_area])) &
+     ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+   )
+   PEOPLE-LOCATION[place-of-death=+](#1,#4)
+
+//Vera, 2011/01/17
+// Example: O João tirou a sua vida em Lisboa.
+// Example: Tirou a sua vida em Lisboa.
+if( (SUBJ[ELIPS](#2[lemma:tirar],#1) || SUBJ(#2[lemma:tirar],#1[human])) &
+    POSS[PRE](#3[lemma:vida],?[lemma:eu]) & CDIR(#2,#3) &
+    (MOD(#2,#4[location]) || MOD(#2,#4[admin_area])) &
+    ~PEOPLE-LOCATION[place-of-death](#1,?) & ~MOD[NEG](#2,?)
+  )
+     PEOPLE-LOCATION[place-of-death=+](#1,#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// FIXED(...)                                                                 //
+////////////////////////////////////////////////////////////////////////////////
+
+
+// FIXED(bater,bota)                 //bater a bota
+// FIXED(bater,caçoleta)             //bater a caçoleta
+// FIXED(esticar,pernil)             //esticar o pernil
+// FIXED(ir,outro mundo)             //ir para o outro mundo
+// FIXED(ir,outro mundo)             //partir para o outro mundo
+// FIXED(ir,outro mundo)             //passar para o outro mundo
+// FIXED(ir,anjinhos)                //ir para os anjinhos
+// FIXED(descer,sepultura)           //descer à sepultura
+// FIXED(descer,túmulo)              //descer ao túmulo
+// FIXED(adormecer,Senhor)           //adormecer no Senhor
+// FIXED(ir,céu)                     //ir para o céu
+// FIXED(ir,cucuias)                 //ir para as cucuias
+// FIXED(ir,quinta das tabuletas)    //ir para a quinta das tabuletas
+// FIXED(ir,jardim das tabuletas)    //ir para o jardim das tabuletas
+// FIXED(ir,cidade dos pés juntos)   //ir para a cidade dos pés juntos
+//
+// Example: O João bateu a bota em Lisboa.
+// Example: O João bateu a caçoleta em Lisboa.
+// Example: O João esticou o pernil em Lisboa.
+// Example: O João foi para o outro mundo em Lisboa.
+// Example: O João passou para o outro mundo em Lisboa.
+// Example: O João partiu para o outro mundo em Lisboa.
+// Example: O João foi para os anjinhos em Lisboa.
+// Example: O João desceu à sepultura em Lisboa.
+// Example: O João adormeceu no senhor em Lisboa
+// Example: O João foi para o céu em Lisboa.
+// Example: O João foi para as cucuias em Lisboa.
+// Example: O João foi para a quinta das tabuletas em Lisboa.
+// Example: O João foi para o jardim das tabuletas em Lisboa.
+// Example: O João foi para a cidade dos pés juntos em Lisboa.
+//
+if ( ( SUBJ[ELIPS](#3,#2) || SUBJ(#3,#2[human]) ) &
+     FIXED[normalized](morrer,?,?) &
+     ( MOD[POST](#3,#5[location]) || MOD[POST](#3,#5[admin_area]) ) &
+     ~PEOPLE-LOCATION[place-of-death=+](#2,?) & ~MOD[NEG](#3,?)
+   )
+  PEOPLE-LOCATION[place-of-death=+](#2,#5)
+
+
+// FIXED(ir,desta,melhor)            //ir desta para melhor
+// FIXED(dar,último,suspiro)         //dar o último suspiro
+// FIXED(soltar,último,suspiro)      //soltar o último suspiro
+// FIXED(dizer,adeus,mundo)          //dizer adeus ao mundo
+// FIXED(entregar,alma,criador)      //entregar a alma ao criador
+// FIXED(ir,lado,lá)                 //ir para o lado de lá
+// FIXED(adormecer,paz,Senhor)       //adormecer na paz do Senhor
+// FIXED(descansar,paz,Senhor)       //descansar na paz do Senhor
+// FIXED(dormir,sono,eterno)         //dormir,sono,eterno
+// FIXED(dormir,sono,último)         //dormir,sono,último
+// FIXED(dormir,sono,derradeiro)     //dormir,sono,derradeiro
+// FIXED(estar,fazer,tijolo)         //estar,fazer,tijolo
+// FIXED(estar,palmos,terra)         //estar,palmos,terra
+//
+// Example: O João foi desta para melhor em Lisboa.
+// Example: O João deu o último suspiro em Lisboa.
+// Example: O João deu o seu último suspiro em Lisboa.
+// Example: O João soltou o último suspiro em Lisboa.
+// Example: O João disse adeus ao mundo em Lisboa.
+// Example: O João entregou a alma ao criador em Lisboa.
+// Example: O João adormeceu na paz do senhor em Lisboa.
+// Example: O João descansa na paz do senhor em Lisboa.
+// Example: O João dorme o derradeiro sono em Lisboa.
+// Example: O João dorme o sono eterno em Lisboa.
+// Example: O João dorme o último sono em Lisboa.
+// Example: O João está a fazer tijolo em Lisboa.
+// Example: O João está sob sete palmos de terra em Lisboa.
+if ( ( SUBJ[ELIPS](#2,#1) || SUBJ(#2,#1[human]) ) &
+     FIXED[normalized](morrer,?,?,?) &
+     ( MOD[POST](?,#5[location]) || MOD[POST](?,#5[admin_area]) ) &
+     ~PEOPLE-LOCATION[place-of-death=+](#1,?) & ~MOD[NEG](?,#5)
+   )
+  PEOPLE-LOCATION[place-of-death=+](#1,#5)

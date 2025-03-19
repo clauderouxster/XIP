@@ -1,0 +1,161 @@
+printlnerr("ARGS:",_args);
+parser scoop("/home/brun/parSem/xip/dev/GRAMMARS/FRENCH/APPLICATIONS/SCOOP/gram_sentim/french_generique.grm");
+
+
+svector infolinguistiques;
+
+//nettoyage des infos. Appele depuis le script
+function nettoieinfos() {
+     infolinguistiques.clear();
+}
+
+function sauveinfo(string s) {
+     infolinguistiques.push(s);
+    // println(s);
+}
+
+
+
+string regle=@" 
+Variables:
+
+string _enrichment = "" ;
+
+script:
+
+|#1[hashtag,positive,hollande:~,sarko:~]|{
+        _enrichment = "positive-hash" ;
+        sauveinfo(_enrichment);
+   }
+
+
+|#1[hashtag,negative,sarko]|{
+        _enrichment = "negative-Sarkozy" ;
+        sauveinfo(_enrichment);
+   }
+
+|#1[hashtag,positive,sarko]|{
+        _enrichment = "positive-Sarkozy" ;
+       sauveinfo(_enrichment);
+   }
+
+|#1[hashtag,negative,hollande]|{
+        _enrichment = "negative-Hollande" ;
+        sauveinfo(_enrichment);
+   }
+
+|#1[hashtag,negative,hollande]|{
+        _enrichment = "positive-Hollande" ;
+        sauveinfo(_enrichment);
+   }
+
+|#1[hashtag,negative,hollande:~,sarko:~]|{
+       _enrichment = "negative-hash" ;
+        sauveinfo(_enrichment);
+   }
+
+
+if (NEGAT(#1[det:~,punct:~,prep:~])){
+   _enrichment = "negat_" + #1[lemme] ;
+   sauveinfo(_enrichment);
+   }
+
+
+|#1[punct:~,url:~,terminal,det:~,prep:~]| 
+     if (~NEGAT(#1)) {
+     _enrichment = #1[lemme];
+     sauveinfo(_enrichment);
+}
+|#1[punct,lemme:"%?"]| {
+     _enrichment = #1[lemme];
+     sauveinfo(_enrichment);
+}
+
+|#1[punct,lemme:"%!"]| {
+     _enrichment = #1[lemme];
+     sauveinfo(_enrichment);
+}
+
+|#1[url]| {
+     _enrichment = "has_url" ;
+     sauveinfo(_enrichment);
+}
+
+if (BIGRAM(#1,#2)){
+    _enrichment = "bigram(" + #1[lemme] + "," + #2[lemme] + ")" ;
+    sauveinfo(_enrichment);
+   }
+
+
+if (SENTIMENT[negative](#1,#2)){
+   _enrichment = "opinion_negative" ;
+   sauveinfo(_enrichment);
+}
+
+if (SENTIMENT[negative](#1)){
+   _enrichment = "opinion_negative" ;
+   sauveinfo(_enrichment);
+}
+
+if (SENTIMENT[positive](#1,#2)){
+   _enrichment = "opinion_positive" ;
+   sauveinfo(_enrichment);
+}
+
+if (SENTIMENT[positive](#1)){
+   _enrichment = "opinion_positive" ;
+   sauveinfo(_enrichment);
+}
+
+
+"@;
+
+scoop.addendum(regle,true);
+
+
+vector noeuds;
+
+//tout d'abord on isole tous les noeuds text...
+function lire(xml n,self d) {
+     //on stocke dans un vecteur les balises text
+     if (n.name()=="tweet")
+          noeuds.push(n);
+}
+
+
+//On associe notre variable doc avec la fonction lire qui sera appelee pour chaque nouveau noeud XML ouvrant
+xmldoc doc with lire;
+
+//On charge notre document XML. Pour chaque balise ouvrante 'lire' est appelee
+doc.load(_args[0]);
+
+xml n;
+xml nouveau;
+string s;
+svector tokens;
+
+for (n in noeuds) {
+     s=n.content();
+     //println(s);
+     //On applique aussi XIP, le resultat est dans infolinguistiques
+     nettoieinfos();
+     scoop.parse(s);
+     //on cree un nouveau noeud XML dont le nom est xipfeatures
+     nouveau.new("xipfeatures");
+     //On joint tous les tokens en une liste de mots separes par des \n
+     s=infolinguistiques.join("\n");
+     //println(infolinguistiques);
+     //C'est desormais notre nouveau contenu pour notre noeud XML
+     nouveau.content(s);
+     //println(tokens);
+     //On l'insere dans notre fichier apres les noeuds text
+     n.next(nouveau);
+}
+
+//Sauvegarde sous un nouveau nom...
+doc.save(_args[1],"utf8");
+doc.close();
+
+
+
+

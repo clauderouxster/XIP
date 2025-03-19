@@ -1,0 +1,205 @@
+#Kif Formalism 
+
+*1 = Wrong index format
+*2 = Wrong expression after an operator
+*3 = Wrong list of parameters
+*4 = Wrong expressions in parentheses
+*5 = Wrong FRAME declaration
+*6 = Wrong argument declaration
+*7 = Wrong FUNCTION declaration
+*8 = Wrong BOOLEAN EXPRESSION
+*9 = Wrong BOOLEAN expression
+*10 = Wrong IF declaration
+*11 = Wrong WHILE declaration
+*12 = Wrong FOR declaration
+*13 = Wrong FUNCTION CALL
+*14 = Wrong Expression
+*15 = Wrong Instruction
+*16 = Wrong SWITCH
+*17 = Wrong test in a SWITCH
+*18 = Wrong IN expression
+*19 = Wrong WITH expression
+*20 = Wrong PREDICATE declaration
+*21 = Wrong PATTERN in A RULE
+*22 = Wrong TRY-CATCH expression
+*23 = Wrong INTERVAL
+*24 = Wrong ELSE section
+*25 = Wrong VECTOR definition
+*26 = Wrong MAP definition
+*27 = Wrong Function call in an index reference
+*28 = Wrong comments
+*29 = Wrong dotted expression
+*30 = Missing ';'
+*31 = Missing '}'
+*32 = Wrong declaration
+*33 = Wrong FOR IN declaration
+*34 = Wrong PREDICATE definition
+*35 = Wrong PREDICATE expression
+*36 = Wrong PREDICATE parameter list
++analyse
+
+#we use the following rules for pre-tokenization: <,>,^,= --->  string in double quote, string in simple quote, token, number, comments
+#! is used to not keep tracks of these specific characters in the final output...
+
+
+char := [A-Z|a-z|%é|%à|%è|%ç|%ê|%î|%ô|%â|%û|%ù|%Ç|%À|%É|%È|%Ë|%Ê|%Ï|%Î|%Û|%Ü|%ä|%ë|%ï|%ö|%ü|%_|%#]
+digit := 0-9
+#^ --> we use tokens
+^word := char [char^0-9]*
+
+path := %/ word (path)
+!shell := %# %! [path^word]
+
+label := %# word
+
+private := $private 
+common := $common 
+const := $const
+
+feature := [private (common)]^[common^const]
+
+^typename := char [char^0-9]*
+type := (feature) typename
+
+anydouble := [%\ .]^[~%"]
+anysimple := ~%'
+
+anycolon := [%% .]^[~%;]
+
+operator := %&^%|^[%< %<]^[%> %>]^%+^%-^%*^%/^[%^ %^]^%%^%^
+
+operatoraffectation := %=^[%< %< %=]^[%> %> %=]^[%+ %=]^[%- %=]^[%* %=]^[%/ %=]^[%% %=]^[%& %=]^[%| %=]^[%^ %^ %=]^[%^ %=]
+
+orand := [%| %|]^[%& %&]
+
+
+comparator := [%~ %=]^[%! %=]^[%< %>]^[%= %=]^[%< %=]^[%> %=]^%<^%>
+
+depend := $with ;19 word
+
+%declaration := type word (%( parameters %)) (depend) (%= expressions)
+
+%declarationlist := word (%( parameters %)) (depend) (%= ;32 expressions) (%, ;32 declarationlist)
+
+%multideclaration := type word (%( parameters %)) (depend) (%= ;32 expressions) (%, ;32 declarationlist)
+
+declarationending := %;
+
+%frame := $frame ;5 typename (depend) [declarationending^instruction] 
+
+instruction := %{ ;15 (blocs) %}
+
+nonlimited := %. %. %.
+
+arguments := declaration (%, ;6 [nonlimited^arguments])
+
+strict := $strict 
+join := $join 
+
+protecclusive := [$protected^$exclusive] 
+
+functionsort := $polynomial^$function^$autorun^$thread
+
+typefunction := (join) (protecclusive) (private) (strict) functionsort
+
+indexname := %[ %]
+intervalname := %[ %: %]
+%function := typefunction ;7 [word^plusplus^operator^comparator^indexname^intervalname] %( (arguments) %) [declarationending^instruction] 
+
+
+%sousbloc := [multideclaration^affectation^predicatedefinition^expressions]
+%bloc :=  sousbloc ;30 %;
+%complexbloc := switch^trycatch^loop^doloop^test^forin^for
+%blocs := [label^frame^complexbloc^function^bloc]+
+
+%analyse := (shell) ([$kif^$Kif^$KIf^$KIF^$KiF^$kIf^$kiF^$kIF] %:) blocs
+
+%subfunc := %. ;27 regularcall
+%subfuncbis := %. regularcall
+%subvar := %. ;29 variable
+framesep := %: %:
+frameup := word framesep
+functioncall := (frameup) word
+%regularcall := functioncall %(;13 (parameters) %) (interval^indexes^subfunc)
+%cut := %!
+%predicate := word %(;34 (parameters) %)
+
+
+returncall := [$return^$_return]
+breakpointcall := $breakpoint
+breakcall := $break
+continuecall := $continue
+
+%call := breakpointcall^breakcall^continuecall^regularcall^returncall
+
+
+sep := %: 
+
+indexes := %[;1 expressions %] (interval^indexes^subfunc)
+interval := %[ (expressions) sep;23 (expressions) %] (interval^indexes^subfunc)
+variable := word (interval^indexes^subfuncbis^subvar)
+predicatevariable := [%? word]
+allvariable := predicatevariable^variable
+
+plusplus := [%+ %+]^[%- %-]
+%affectation := allvariable [plusplus^[operatoraffectation;14 expressions]]
+
+%affectationpredicate := allvariable [plusplus^[operatoraffectation;14 expressions]]
+
+%increment := variable plusplus
+
+%notin := $notin^[$not $in]^[$absent $from]
+%in := $in
+operatorin := notin^in
+%operationin := operatorin;18 expression ($with ;19 word) 
+%operation := operator expressions
+%comparison := comparator expressions
+
+
+%alist := expressions (%, alist)
+%valvector := %[;25(alist) %]
+
+%dvalue := expressions
+
+%dico := dvalue %: dvalue (%, dico)
+%valmap := %{ ;26 (dico) %}
+
+negation := %~^[$not]
+
+%parameters := [predicatevariable^expressions] (%, ;3 parameters)
+
+%optional := %( ;4 expressions %)
+expression := (negation) [abool^xnumber^astringdouble^afullstring^astringsimple^anumber^call^optional^increment^allvariable^valvector^valmap] 
+%expressions := expression (operation^comparison^operationin)
+numbers := expression (operation)
+
+#< --> we use the doublestring map
+<astringdouble := %" anydouble* %"
+#> --> we use the simplestring map
+>astringsimple := %' anysimple* %'
+~afullstring := %@ %" .+ %" %@
+
+#= --> we use numbers
+=anumber := (%-) [0-9]+ (%. [0-9]+) 
+xnumber := %0 %x [0-9^A-F^a-f]+
+abool := $true^$false
+
+blocfor := [affectation^expression] (%, blocfor)
+
+%optionalboolean := %( booleanexpression %)
+%booleanexpression := [optionalboolean|expressions] (orand ;8 [optionalboolean|booleanexpression])
+
+%predicateexpression := [cut^[(negation) regularcall]^affectationpredicate^expressions] (%, ;35 predicateexpression)
+
+%test := $if %( ;10 booleanexpression %) [instruction^complexbloc^bloc] (testelif) ($else ;24 [instruction^complexbloc^bloc]) 
+%testelif := $elif %( ;10 booleanexpression %) [instruction^complexbloc^bloc] (testelif) ($else ;24 [instruction^complexbloc^bloc]) 
+%loop := $while %( ;11 booleanexpression %) [instruction^complexbloc^bloc] 
+%doloop := $do [instruction^complexbloc^bloc] $while %( ;11 booleanexpression %) declarationending
+%for := $for %( ;12 blocfor %; booleanexpression %; blocfor %) [instruction^complexbloc^bloc] 
+%forin := $for %( variable $in ;33 expressions %) [instruction^complexbloc^bloc] 
+%switch := $switch %( ;16 expression %) (depend) %{ ;31 testswitch+ %} 
+%trycatch := $try %{ ;22 blocs %} $catch ;22 (%( (word) %)) [%;^[%{ ;22 blocs %}]]
+%testswitch := [default^xnumber^astringdouble^afullstring^astringsimple^anumber^abool] %: ;17 [instruction^complexbloc^bloc] 
+default := $default 
+
+%predicatedefinition := predicate %: %- ;20 [abool^predicateexpression]

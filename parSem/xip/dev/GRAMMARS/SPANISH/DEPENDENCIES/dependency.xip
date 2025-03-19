@@ -1,0 +1,2390 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 - 2008 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : dependency.xip
+//!
+//!   Content:	definition of dependencies
+//!
+//!   Language:	SPANISH
+//! ENCODING:	 ISO-LATIN-1	
+//!
+//!   Date       : 17-Feb-2006
+//! Update:	29-May-2008	:: changed to UTF-8
+//! Update: September 2008   :: changed ISO-LATIN-1 - some changing in rules
+//! 		
+//!   Author     : Elena L�pez Garc�a - modified C. Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+//We mark the apositions with the trait "apos"
+
+|np[start], (ap;pp), np[prop:+, apos=+]|
+	~
+
+|pp[start], (ap;pp), np[prop:+, apos=+]|
+	~
+
+|pp, (ap;pp), np[prop:+, apos=+]|
+	~
+
+|np, punct[comma:+], np[apos=+], ?*[punct:~, verbal:~], punct[comma:+]|
+	~
+
+|np[start], punct[quote:+], np[apos=+], ?*[punct:~, verbal:~], punct[quote:+]|
+	~
+
+|np[start], (ap;pp), punct[comma:+], np[prop:+, apos=+], ?*[punct:~, verbal:~], punct[comma:+]|
+	~
+
+|np[start], (ap;pp), punct[quote:+], np[apos=+], punct[quote:+]|
+	~
+
+|pp, (ap;pp), punct[comma:+], np[prop:+, apos=+], ?*[punct:~, verbal:~], punct[comma:+]|
+	~
+
+|np[start], punct[paren:+], np[prop:+, apos=+], punct[paren:+]|
+	~
+
+|np[start], (pp{prep[lemma:de], np}), np[num:+, apos=+]|      //A vérifier!!
+	~
+
+//el cable del alimentador (DADF)
+|punct[paren:+], np[prop:+, apos=+], punct[paren:+]|
+	~
+
+
+//Dependency rules for HEAD
+//Adjectives
+|ap#1{?*, #2[last, poss:~]}| 
+	HEAD(#2, #1).
+
+//amigo mío
+|ap#1{?*, #2, #3[last, poss]}| 
+	HEAD(#2, #1),
+	MODADJ(#2, #3).
+
+//Nouns
+|np#1[num:~,rel:~]{?*, #2[last, ap:~]}| 
+	HEAD(#2, #1).
+
+//When head is an ap "el más pequeño"
+|np#1[num:~,rel:~]{?*, ap#2[last]}| 
+	if(head(#20, #2)) 
+	HEAD(#20, #1).
+
+//When the head is a relative pronoun "quienes"
+|np#1{pron#2[rel:+, last]}|
+	HEAD(#2, #1).
+
+//When they are relative NP "el que", "lo que"...
+//|np#1[rel:+]{possessif, ?*, #2[last]}| 
+//	HEAD(#2, #1).
+|np#1[rel:+]{#2[art:+], ?*, #3[pron:+, rel:+]}| 
+	HEAD(#2, #1).
+
+//NPs formed by numerals e.g. en 1972 (1972, en 1972)
+|np#1[num:+]{?*, #2[last]}| 
+	HEAD(#2, #1).
+
+//Adverbs
+|avp#1{?*, #2[last]}| head(#2, #1).
+
+//Verbs
+|fv#1{verb#2[first, last]}|
+	head(#2, #1),
+	TETE_MORPH(#2, #1).
+
+|fv#1{#2[first], ?*, #3[last]}|
+	HEAD(#3, #1),
+	TETE_MORPH(#2, #1).
+
+|#1[nonper:+]{?*, #2[last:+]}|
+	HEAD(#2, #1).
+
+//|vinf#1{?*, #2[last:+]}|
+//	HEAD(#2, #1).
+
+//SC and IC
+|sc#1{?*[verbal:~], #2[verbal:+]}|
+	if(head(#20, #2))
+	HEAD(#20, #1).
+
+//|ic#1{?*[verbal:~], #2[verbal:+]}|
+///	if(head(#20, #2))
+//	HEAD(#20, #1).
+
+
+
+//Dependency rules for DOMIN. It shows the morphological and the semantic head of a verbal form. E.g. "acaba de ser nombrado" (acaba, nombrado).
+|fv#1{#2[first], ?*, #3[last]}|
+	if(tete_morph(#2, #1)
+	& head(#3, #1))
+	DOMIN(#3, #2).
+
+//PP
+|pp#1{prep, ?*, #2[last]}| 
+	if(^head(#20, #2)) 
+	HEAD(#20, #1).
+
+// dependency rules for PREPD
+// links a preposition and the head of PP
+| pp#2{prep#1} |
+	if ( head(#3,#2) )
+	PREPD(#3,#1)
+
+
+//Dependency rules for COORD
+|#1, #2[coord:+], #3|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& #1[sc:~,ic:~]
+	& #3[sc:~, ic:~]
+	& #10[categorie]:#30[categorie])
+	COORD(#2, #10),
+	COORD(#2, #30).
+
+|ap{#1, #2[coord:+], #3}|
+	COORD(#2, #1),
+	COORD(#2, #3).
+
+//tanto social como económicamente
+|#1{?[lemma:tanto], ?+}, #2{#3[lemma:como], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	COORD(#3, #10),
+	COORD(#3, #20).
+
+//tanto en Sevilla como en Tenerife
+|avp{adv[lemma:tanto]}, pp#1, avp#2{adv[lemma:como]}, pp#3|
+	if(head(#10, #1)
+	& head(#30, #3))
+	COORD(#2, #10),
+	COORD(#2, #30).
+
+
+
+//Restriction rule for "el resto de las mínimas y el conjunto de las prestaciones
+|np, pp#1{prep[lemma:de], ?+}, conj#2[coord:+], np#3, pp#4{prep[lemma:de], ?+}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& ^coord(#2, #10)
+	& coord(#2, #30))
+	~.
+
+|np, pp#1{prep[lemma:de], ?+}, conj#2[coord:+], np#3, pp#4{prep[lemma:de], ?+}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& ^coord(#2, #30))
+	~.
+
+//Restriction: el alimentador de documentos y el cristal
+|pp#1{prep, np{noun}}, conj#2[coord:+], np#3{art, ?+}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& coord(#2, #10)
+	& ^coord(#2, #30))
+	~.
+
+|pp#1{prep, np{noun}}, conj#2[coord:+], np#3{art, ?+}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& ^coord(#2, #10))
+	~.
+
+|np#1, pp{prep[lemma:de], np{noun}}, conj#2[coord:+], np#3{art, noun}|
+	if(head(#10, #1)
+	& head(#30, #3))
+	COORD(#2, #10),
+	COORD(#2, #30).
+	
+//If there is one pp and one np coordinated, the np must be considered as a pp also
+|pp#1, conj#2[coord:+], np#3[not_np=+]|
+	~.
+//If there is one pp and one np coordinated, the np must be considered as a pp also
+|sc{?*, pp#1, conj#2[coord:+], np#3[not_np=+], ?*}|
+	~.
+
+//DependencyRules:
+//Dependency rules inside the NP
+//Dependency rules for DETD
+|np#1[rel:~]{?*, det#2, ?+};np#1[rel:~]{?*, art#2, ?+}| 
+	if(head(#3,#1)) 
+	DETD(#3, #2).
+
+
+//Dependency rules for NUMD
+//unos mil hombres: numd(hombres, mil)
+|np#1{?*, num#2, ?*, ?[last]}| 
+	if(head(#10, #1)) 
+	NUMD(#10, #2).
+
+|np#1{art;adj,?[num:+,last]}, pp#2{prep[lemma:de],?*}| 
+	if(head(#10, #1) 
+	& head(#20, #2)
+	& #20[num:~]) 
+	NUMD(#20, #10).
+
+|np#1{num[ord:~]}, pp#2{prep[lemma:de],np}| 
+	if(head(#20, #2)
+	& head(#10, #1)
+	& #20[num:~]) 
+	NUMD(#20, #10).
+
+|pp#1{prep, np#2{?*,num[last]}}, pp#3{prep[lemma:de],?*}| 
+	if(head(#10, #1)
+	& head(#30, #3)) 
+	NUMD(#30, #10).
+
+
+//Dependency rules for QUANTD
+|np#1{?*, quant#2, ?+}| 
+	if(head(#10,#1)) 
+	QUANTD(#10, #2).
+
+
+//Dependency rules for COORD between elements that already have a dependency relation
+//We add the feature "pre"
+//entre 15 y 20 personas
+|#1, conj#2[coord:+], np#3{#4[first:+], ?+}|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& $1(#30, #4)
+	& #10[categorie]:#4[categorie])
+	COORD[pre=+](#2, #10),
+	COORD[pre=+](#2, #4).
+	
+//Dependency rules for INTROD "el que", "lo que", etc.
+|np#1[rel:+]{#2[art:+], ?*, #3[pron:+, rel:+]}| 
+	INTROD(#2, #3).
+
+
+//Dependency rules for MOD
+//la tan esperada muestra
+|np#1{?*, ap#2, ?+}| 
+	if(head(#10, #1) 
+	& head(#20, #2)) 
+	MOD[pre=+](#10, #20).
+
+//la esperada muestra
+|np#1{?*, adj#2, ?+}| 
+	if(head(#10, #1)) 
+	MOD[pre=+](#10, #2).
+
+//quiero más vestidos
+|np#1{?*, adv#2, ?+}| 
+	if(head(#10, #1)) 
+	MOD[pre=+](#10, #2).
+
+//General dependency rules for MOD (pre). We do restrictions of gender and number for the adj
+|ap#1, ?*[verbal:~,sc:~, vinf:~, lemma:~\:,conj:~],np#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pre=+](#20, #10).
+
+
+|vpart#1, ?*[verbal:~,sc:~, vinf:~, lemma:~\:,conj:~],np#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pre=+](#20, #10).
+
+
+//"a primeros de diciembre" an AVP modifies an NP
+|avp#1,pp#2{prep[lemma:de],np{?[num:~,first]}}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MOD[pre=+](#20, #10).
+
+|avp#1, pp#2{prep[lemma:de],np{num#3, ?*}}|
+	if(head(#10, #1))
+	MOD[pre=+](#3, #10).	
+
+//"Casi la mitad"
+|?[verbal:~], avp#1, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[pron:~])
+	MOD[pre=+](#20, #10).
+
+|avp#1[start:+], np#2|
+	if(head(#10, #1)
+	& #10[lemma:~no]
+	& head(#20, #2))
+	MOD[pre=+](#10, #20).
+
+
+//General dependency rules for MOD (pos)
+
+//el artículo 8° de la Constitución (artículo, 8°)
+|np#1, np#2{num{?[ord:+]}}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MOD[pos=+](#10, #20).
+
+|pp#1{prep,?[num:~,last]}, ?*[verbal:~,sc:~,vinf:~,vger:~,vpart:~,conj:~,lemma:~\:,  np:~], pp#2|
+	if(head(#20, #2) 
+	& head(#10, #1))
+	MOD[pos=+](#10, #20).
+
+|np#1{?*,?[num:~,enclit:~,last]}, ?*[verbal:~,sc:~,vinf:~,vger:~,vpart:~,conj:~,lemma:~\:,  np:~], pp#2|
+	if(head(#20, #2) 
+	& head(#10, #1))
+	MOD[pos=+](#10, #20).
+
+|pp#1{prep,?[num:~,last]}, ?*[verbal:~,sc:~,np:~,vger:~,vpart:~,conj:~,lemma:~\:,  np:~], ap#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pos=+](#10, #20).
+
+
+|np#1[num:~], ?*[verbal:~,sc:~,np:~,vger:~,vpart:~,conj:~,lemma:~\: ], ap#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pos=+](#10, #20).
+
+
+|np#1[num:~], ?*[verbal:~,sc:~,np:~,vger:~,vpart:~,conj:~,lemma:~\:], ap#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[pl:+]
+	& coord($1, #10)
+	& ~mod(#10, #20))
+	MOD[pos=+](#10, #20).
+
+|np#1[num:~], ?*[verbal:~,sc:~,np:~,vger:~,conj:~,lemma:~\:], vpart#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pos=+](#10, #20).
+
+
+|pp#1{prep,?[num:~,last]}, ?*[verbal:~,sc:~,np:~,vger:~,conj:~,lemma:~\:], vpart#2|
+	if(head(#20, #2) 
+	& head(#10, #1)
+	& #20[gender]:#10[gender]
+	& #20[number]:#10[number])
+	MOD[pos=+](#10, #20).
+
+
+//pensiones del año 2000
+|pp#1, np#2{num}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[lemma:año])
+	MOD[pos=+, temp=+](#10, #20).
+
+
+
+//tengo la intención de venir
+|np#1, (ap), prep[lemma:de], vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[de_inf:+])
+	MOD[pos=+, stc=+](#10, #20).
+
+//sigo con el objetivo de venir
+|pp#1, (ap), prep[lemma:de], vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[de_inf:+])
+	MOD[pos=+, stc=+](#10, #20).
+
+//Restriction to this rule : when the ap already modifies an np before.
+|np#1, ?*[verbal:~,sc:~],ap#2, ?*[verbal:~,sc:~], np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#10, #20)
+	& ^mod(#30, #20))
+	~.
+
+|pp#1, ?*[verbal:~,sc:~],ap#2, ?*[verbal:~,sc:~], np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#10, #20)
+	& ^mod(#30, #20))
+	~.
+
+//Generaly, the ap modifies the first np or pp on its left, it doesn't "go" further.
+if(^mod(#1, #2)
+& mod(#3, #2)
+& #1 < #3
+& #2[adj:+])
+~.
+
+//Restriction: 
+|pp#1, ?*,?[lemma:\(], ?*, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^mod(#10, #20))
+	~.
+
+|pp#1, ?+, pp#2{prep[lemma:por], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^mod(#10, #20))
+	~.
+
+|np#1, ?*,?[lemma:\(], ?*, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^mod(#10, #20))
+	~.
+
+//Restriction: if a vpart can modify two np, we will prefer a "pos" modification
+if(head(#10, #1)
+& head(#20, #2)
+& head(#30, #3)
+& mod(#10, #20)
+& ^mod(#30, #20)
+& #2[vpart:+])
+~.
+
+
+
+//The most general restriction rule: an ap or a pp just modifie the chunk right before them. We can // the whole rule. The ap, in most of the cases modify the closest chunk.
+|#1, #2, ap#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#20, #30)
+	& ^mod(#10, #30))
+	~.
+
+//|#1, #2, pp#3|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& head(#30, #3)
+//	& mod(#20, #30)
+//	& ^mod(#10, #30))
+//	~.
+
+
+
+//dos meses después
+|np#1[start:+], avp#2, punct|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[lemma:~no])
+	MOD[pos=+](#10, #20).
+
+
+//Apositions are modifiers of the NP
+|np#1, (ap;pp), (punct), np#2[apos:+], (punct)|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MOD[pos=+](#10, #20).
+
+|pp#1, (ap;pp), (punct), np#2[apos:+], (punct)|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MOD[pos=+](#10, #20).
+
+//Dependency rules for MODADJ
+//tan esperada
+|ap#1{?#2, ?[last, poss:~]}| 
+	if(head(#3, #1)) 
+	MODADJ(#3, #2).
+
+//dedicado a gastos
+|ap#1[pastpart:+], (avp), pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& mod($1, #10)
+	& ^mod($1, #20))
+	~,
+	MODADJ[pos=+](#10, #20).
+
+
+//empeñado en decidir
+|ap#1[pastpart:+], prep, vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& mod($1, #10))
+	MODADJ[pos=+, stc=+](#10, #20).
+
+//completamente en blanco
+|avp#1{adv[lemma:~no, start:+]}, pp#2{prep, ap}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODADJ[pre=+](#20, #10).
+
+//Dependency rules for AGENT
+|#1[passif:+], ?*, pp#2{prep[lemma:por], np}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	AGENT(#10, #20).
+
+//past participle followed by agent complement
+|vpart#1[pastpart:+], pp#2{prep[lemma:por], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2) & ~agent(#10,#20) )
+	AGENT(#10, #20).
+
+//when the head of a verbal form is a past participle followed by an agent complement
+|#1[verbal:+], pp#2{prep[lemma:por], np}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[pastpart:+]  &  ~agent(#10,#20) )
+	AGENT(#10, #20).
+
+//an adj with the feature pastpart followed by "por ..."
+|ap#1[pastpart:+], (avp), pp#2{prep[lemma:por], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2) & ~agent(#10,#20) )
+	AGENT(#10, #20).
+//exception: la semana pasada
+|#1[temp:+], ?*, ap#2[pastpart:+], ?*, pp#3{prep[lemma:por], ?*} |
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#10, #20)
+	& ^agent(#20, #30)
+	& agent($1, #30))
+	~.
+
+//Dependency rules for MODV
+|#1[verbal:+], ?*[verbal:~, sc:~, conj:~], avp#2|	
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[lemma:~no]
+	& #20[temp])
+	MODV[temp=+](#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, sc:~, conj:~], avp#2|	
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[lemma:~no]
+	& #20[temp:~])
+	MODV(#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, sc:~], prep, vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[stc=+](#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, sc:~], vger#2|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[stc=+](#10, #20).
+
+|#1[verbal:+], (avp), pp#2{prep[lemma:~a], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|#1[verbal:+], ?+[verbal:~, sc:~, pastpart:~], pp#2{prep[prepcour:~], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+
+//a retirar sus soldados del país
+|#1[verbal:+], np, pp#2{prep[lemma:de], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+//fueron al cine
+|#1[verbal:+], ?*[verbal:~, sc:~], pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[mouv:+])
+	MODV(#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, sc:~], pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:~]
+	& #20[anim:~])
+	MODV(#10, #20).
+
+|avp#1{adv[interrog:~]}, (reflex), (np{pron}), #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#20, #10).
+
+//hace dos semanas lleg� Juan
+|sc#1[temp:+], ?*[verbal:~, sc:~], #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[temp=+, stc=+](#20, #10).
+
+
+|#1[verbal:+], ?*[sc:~, verbal:~], sc#2[temp:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[temp=+, stc=+](#10, #20).
+
+//se reunian el viernes
+// restriction in order to avoid "tiene 6 anos" -> *MODV[temp](tiene,anos)
+|#1[verbal:+], ?*[verbal:~, sc:~], np#2[temp:+]|
+	if(head(#10[lemma:~tener], #1)
+	& head(#20, #2))
+	MODV[temp=+](#10, #20).
+
+// complementary rule to deal cases like
+// tener + edad
+|#1[verbal:+], ?*[verbal:~, sc:~], np#2[temp:+]|
+	if(head(#10[lemma:tener], #1)
+	& head(#20, #2))
+	OBJ(#10, #20).
+	   
+
+//como bien dice, esto es asi
+|sc#1[start:+, rel:~, temp:~], ?*[verbal:~], #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[stc=+](#20, #10).
+
+//esto es así como bien dice
+|#1[verbal:+], ?*[verbal:~, sc:~], sc#2[rel:~, temp:~]{?[lemma:~que], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[stc=+](#10, #20).
+
+//Fueron posteriormente eliminados
+|#1[verbal:+]{?*, adv#2, ?*}|
+	if(head(#10, #1))
+	MODV(#10, #2).
+
+//En estos momentos hay mucho ruido
+|pp#1[start:+, rel:~], ?*[sc:~, verbal:~, conj:~], #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#20, #10).
+
+//En estos momentos hay mucho ruido
+|pp[start:+, rel:~], (punct[comma:+]), pp#1, ?*[sc:~, verbal:~, conj:~], #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#20, #10).
+
+
+//Restriction rules between MODV and ATTRIB
+|#1[verbal:+], (avp), pp#2{prep, ap}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+]
+	& ^modv(#10, #20))
+	~,
+	ATTRIB(#10, #20).
+
+
+//Restriction rules between MOD and MODV
+//desde las primeras horas de la mañana en el centro de Beirut
+//|pp#1, ?*, pp#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& ^mod(#10, #20)
+//	& modv($1, #20))
+//	~.
+
+|pp#1, ?*, pp#2, pp#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#20, #30)
+	& ^mod(#10, #30)
+	& modv($1, #20))
+	~.
+
+|#1[verbal:+], ?*, np#2, pp#3{prep[lemma:como], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& ^modv(#10, #30))
+	~,
+	MOD[pos=+](#20, #30).
+	
+//Dependency rules for OBJ
+//when there are enclitic pronouns attached to the verb
+//just one pronoun
+| #1[verbal:+], np#2{pron[enclit:+]}, #3[np:~] |
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[ref:~]
+	& #10[trans:+, double:~])
+	OBJ(#10, #20).
+
+| #1[verbal:+], np#2{pron[enclit:+]}, #3[np:~] |
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:+])
+	IOBJ(#10, #20).
+
+//dame a mí el libro
+|#1[verbal:+], np#2{pron[enclit:+]}, pp#3{prep[lemma:a], np{pron[compl:+]}}, np#4|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& head(#40, #4)
+	& #20[person]:#30[person]
+	& #10[double:+])
+	IOBJ(#10, #20),
+	IOBJ(#10, #30),
+	OBJ(#10, #40).
+
+//quiéreme a mí
+|#1[verbal:+], np#2{pron[enclit:+]}, pp#3{prep[lemma:a], np{pron[compl:+]}}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #20[person]:#30[person]
+	& #10[trans:+, double:~])
+	OBJ(#10, #20),
+	OBJ(#10, #30).
+	
+
+
+| #1[verbal:+], np#2{pron[ enclit:+]}, np#3{pron[enclit:+]} |
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3))
+	IOBJ(#10, #20),
+	OBJ(#10, #30).
+
+//when there is only one clitic pronoun attached : dame el libro
+|#1[verbal:+], np#2{pron[enclit:+]}, np#3{?[pron:~, enclit:~, temp:~]}|
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& head(#30, #3))
+	IOBJ(#10, #20),
+	OBJ(#10, #30).
+//dame al perro
+|#1[verbal:+], np#2{pron[enclit:+]}, pp#3{prep[lemma:a], np}, ?[np:~]|  //*****ANIMATED****
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& head(#30, #3)
+	& #30[anim:+])
+	IOBJ(#10, #20),
+	OBJ(#10, #30).
+
+//díselo a María
+|#1[verbal:+], np#2{pron[enclit:+]}, np#3{pron[enclit:+]}, pp#4{prep[lemma:a], np}|  
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#40, #4))
+	IOBJ(#10, #40).
+
+//dale el libro a Juan
+|#1[verbal:+], np#2{pron[enclit:+]}, np#3, pp#4{prep[lemma:a], np}|  
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#30, #3)
+	& #30[pron:~, enclit:~, temp:~]
+	& head(#40, #4))
+	IOBJ(#10, #40).	
+
+//When a verb has the feature "double" it can occure several things:
+//Both complements appear
+// "cuentas la historia a Pedro" or "cuentas a Pedro la historia" 
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~], np#2, (avp), pp#3{prep[lemma:a], np}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #10[double:+]
+	& #20[pron:~, temp:~])
+	OBJ(#10, #20),
+	IOBJ(#10, #30).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, prep:~], vinf#2, (avp), pp#3{prep[lemma:a], np}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #10[double:+]
+	& #20[pron:~, temp:~])
+	OBJ[stc=+](#10, #20),
+	IOBJ(#10, #30).
+
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~], pp#2{prep[lemma:a], np}, (avp), np#3[temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #10[double:+])  
+	IOBJ(#10, #20),
+	OBJ(#10, #30).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~], pp#2{prep[lemma:a], np}, (avp), vinf#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #10[double:+])  
+	IOBJ(#10, #20),
+	OBJ[stc=+](#10, #30).
+
+//It has only  one complement. In this case, the complement is in most of the cases OBJ
+//cuenta la historia ya
+//|#1[verbal:+], ?*[verbal:~, np:~, sc:~], np#2, ?{?[lemma:~a], ?*}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[pron:~, temp:~]
+//	& #10[double:+])
+//	OBJ(#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, prep:~, punct:~, conj:~], vinf#2, ?{?[lemma:~a], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[pron:~, temp:~]
+	& #10[double:+])
+	OBJ[stc=+](#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~], pp#2{prep[lemma:a], np}, ?[np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+]
+	& #20[anim:+])  //***************THE NP MUST BE ANIMATED***********
+	OBJ(#10, #20).
+
+//para evitar cualquier incidente
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~], np#2[temp:~, not_np:~], punct|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	OBJ(#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, prep:~, punct:~, conj:~], vinf#2, punct|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	OBJ[stc=+](#10, #20).
+
+//para evitar cualquier incidente
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, conj:~], np#2[last:+, temp:~, not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	OBJ(#10, #20).
+
+|#1[verbal:+, vpart:~, passif:~], ?*[verbal:~, np:~, sc:~], np#2[temp:~, not_np:~], ?+[np:~, punct:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	OBJ(#10, #20).
+
+
+//A np that follows a transitive (with just one direct object) verb might be an OBJ
+|#1[verbal:+, vpart:~, passif:~], ?*[verbal:~, np:~, sc:~, conj:~], np#2[enclit:~, temp:~, not_np:~]|
+	if(head(#10, #1)
+	& #10[trans:+, double:~]
+	& head(#20, #2)
+	& ~obj(#10, #20))
+	OBJ(#10, #20).
+
+//A np that follows a transitive (double), if there is no other np before next verb, must be the OBJ
+|#1[verbal:+,passif:~], ?*[verbal:~, np:~, sc:~, conj:~], np#2[enclit:~, temp:~, not_np:~], ?*[verbal:~, np:~], ?[verbal:~, last:+]|
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& ~obj(#10, #20))
+	OBJ(#10, #20).
+
+//Attention!!! vérifier qu'il ne faut pas ajouter un "np:~" dans le ?*[verbal:~]
+|#1[verbal:+, vpart:~, passif:~], ?*[verbal:~, np:~, sc:~, conj:~], np#2[enclit:~, temp:~, not_np:~], ?*[verbal:~], ?[verbal:+]|
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& ~obj(#10, #20))
+	OBJ(#10, #20).
+
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, conj:~], np#2[enclit:~, temp:~, not_np:~], ?*[np:~, verbal:~], sc|
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& ~obj(#10, #20))
+	OBJ(#10, #20).
+
+//Unless the other np is coordinated with the first one. E.g. Retire el papel u otros materiales de la bandeja
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, conj:~], np#2[enclit:~, temp:~, not_np:~], ?*[verbal:~], conj#3, np#4|
+	if(head(#10, #1)
+	& #10[double:+]
+	& head(#20, #2)
+	& head(#40, #4)
+	& coord(#3, #20)
+	& coord(#3, #40))
+	OBJ(#10, #20).
+
+
+//A pp with the proposition "a" that follows a transitive verb might be an OBJ (if the obj is "animated")
+|#1[verbal:+], ?*[verbal:~, np:~, sc:~, conj:~], pp#2{prep[lemma:a], np}|
+	if(head(#10, #1)
+	& #10[trans:+, double:~]
+	& head(#20, #2)
+	& #20[anim:+])
+	OBJ(#10, #20).
+
+//When the pronouns precede the verb
+//e.g. nos abrió las puertas de su casa
+|np#1{pron[dat:+]}, #2[verbal:+], ?*[verbal:~, np:~], np;ic;sc[rel:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[double:+])
+	IOBJ(#20, #10).
+
+//nos las abrió
+|np#1{pron[dat:+]}, np#2{pron[acc:+]}, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #30[double:+])
+	IOBJ(#30, #10),
+	OBJ(#30, #20).
+
+//se la dio
+|np#1{pron[ref:+]}, np#2{pron[acc:+]}, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #30[double])
+	IOBJ(#30, #10),
+	OBJ(#30, #20).
+
+//me llamó
+|np#1{pron[acc:+]}, #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[trans:+, double:~])
+	OBJ(#20, #10).
+
+//lo ha conseguido
+|np#1{pron[acc:+]}, #2[verbal:+], ?[np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[double:+])
+	OBJ(#20, #10).
+
+//lo ha conseguido
+|~np{pron[acc:+]}, np#1{pron[acc:+]}, #2[verbal:+, last:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[double:+])
+	OBJ(#20, #10).
+
+//Dependency rules for verbs with the feature "intrans"
+//Dependency rules for IOBJ
+//me gusta el cine
+|np#1{pron[dat:+]}, #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[intrans:+])
+	IOBJ(#20, #10).
+
+//a mí me encanta el cine
+|pp#1{prep[lemma:a], ?*}, np#2{pron[dat:+]}, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #30[intrans:+])
+	IOBJ(#30, #10).
+
+//el olor de flores agrada a María
+|#1[verbal:+], pp#2{prep[lemma:a], np}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:+, mouv:~])
+	IOBJ(#10, #20).
+
+//Restriction on the object, a noun(od) followed by an aposition.
+if(head(#10, #1)
+& head(#20, #2)
+& #2[apos:+]
+	& obj($1, #10)
+	& ^obj($1, #20))
+	~.
+
+//Dependency rules for OBJ [stc:+] (the OD is a sentence)
+//The sentence can be an infinitive sentence,
+//an interrogative sentence,
+//or other kind of sentences.
+
+//infinitive sentences
+//quiero saber más
+|#1[verbal:+], (avp), vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[od_inf:+])
+	OBJ[stc=+](#10, #20).
+
+
+//interrogative sentences
+//me pregunto qué querrá.
+|#1[verbal:+], (np{pron[enclit:+]}), (avp), ic#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ[stc=+](#10, #20).
+
+|#1[verbal:+], np#2{pron[enclit:+]}, (avp), ic|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	IOBJ(#10, #20).
+
+
+//other sentences
+|#1[verbal:+], (np{pron[enclit:+]}), (avp), sc#2[rel:~, temp:~]{~prep, ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+, subj_inf:~])
+	OBJ[stc=+](#10, #20).
+
+
+
+
+//Dependency rules for ATTRIB
+//verb [cop:+] , adj
+//e.g. el libro es viejo
+|#1[verbal:+], ap#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+//e.g. mi padre es médico
+|#1[verbal:+], np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+
+//Dependency rules for SUBJ
+//when an np preceds a verb and they have the same number and person.
+//The np can be a personal pronoun (we can check the person) or not (it will be always the 3rd person in this case)
+
+
+|np#1{(quant), pron[enclit:~, nom:+]}, ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(head(#10, #1)
+	& tete_morph(#20, #2)
+	& head(#200, #2)
+	& #10[person]:#20[person]
+	& #10[number]:#20[number])
+	SUBJ(#200, #10).
+
+|np#1{(quant), pron[dem:+]}, ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(head(#10, #1)
+	& tete_morph(#20, #2)
+	& head(#200, #2)
+	& #20[3p:+]
+	& #10[number]:#20[number])
+	SUBJ(#200, #10).
+
+|np#1{pron[indef:+]}, ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(head(#10, #1)
+	& tete_morph(#20, #2)
+	& head(#200, #2)
+	& #20[3p:+]
+	& #10[number]:#20[number])
+	SUBJ(#200, #10).
+
+|np#1[not_np:~], ?*[verbal:~, fcpar:~, dots:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #10[pron:~,sg:+, prop:~]
+	& #20[3p:+, sg:+]
+	& #200[lemma:~haber])
+	SUBJ(#200, #10).
+
+//when the np is a proper noun
+|np#1, ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #10[prop:+, acron:~]
+	& #20[3p:+, sg:+])
+	SUBJ(#200, #10).
+
+//when the np is the noun of a country
+|np#1, ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #10[country:+]
+	& #20[3p:+, sg:+])
+	SUBJ(#200, #10).
+
+
+|np#1[not_np:~], ?*[verbal:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #20[3p:+, pl:+]
+	& #10[pron:~,pl:+])
+	SUBJ(#200, #10).
+
+|np#1[not_np:~]{num[pl:+]}, ?*[verbal:~,comma:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #20[3p:+, pl:+]
+	& #10[pron:~])
+	SUBJ(#200, #10).
+
+//Special rule for acronymes : they don't have the features of number
+|np#1, ?*[verbal:~,comma:~], #2[verbal:+,passif:~]|
+	if(tete_morph(#20, #2)
+	& head(#200, #2)
+	& head(#10, #1)
+	& #20[3p:+, sg:+]
+	& #10[acron:+])
+	SUBJ(#200, #10).
+
+//If the verb is copulative and it has an infinitive that follows, this might be the subject
+|np#1, ?*[verbal:~], #2[verbal:+], vinf#3|
+	if(head(#20, #2)
+	& head(#10, #1)
+	& head(#30, #3)
+	& #20[cop:+]
+	& ^subj(#20, #10))
+	ATTRIB(#20, #10).
+
+//es fundamental cumplir con los objetivos
+//es fundamental el cumplimiento pleno de los acuerdos
+|#1[verbal:+], ap, vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	SUBJ[stc=+](#10, #20).
+
+|#1[verbal:+], ap, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	SUBJ(#10, #20).
+
+|np#1, #2[verbal:+], (ap), vinf#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #20[cop:+]
+	& attrib(#20, #10))
+	SUBJ[stc=+](#20, #30).
+
+|np#1, #2[verbal:+], (ap), np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #20[cop:+]
+	& attrib(#20, #10))
+	SUBJ(#20, #30).
+
+
+//Postponed subject
+//when an np follows a verb intrans and they have the same number and person
+//the subject is not a personal pronoun
+|#1[verbal:+], ?*[np:~, verbal:~, sc:~, ic:~, conj:~], np#2[not_np:~]{?[pron:~]}|
+	if(head(#10, #1)
+	& tete_morph(#100, #1)
+	& head(#20, #2)
+	& #10[intrans:+]
+	& #20[number]:#100[number]
+	& #100[3p:+]
+	& ~subj(#10, $1))
+	SUBJ[pos=+](#10, #20).
+
+//the subject is a personal pronoun
+|#1[verbal:+], ?*[np:~], np#2{pron[nom:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:+]
+	& #10[person]:#20[person]
+	& #10[number]:#20[number])
+	SUBJ[pos=+](#10, #20).
+
+//rules with transitive verbs
+|#1[verbal:+], np#2{pron[nom:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:~]
+	& #10[person]:#20[person]
+	& #10[number]:#20[number])
+	SUBJ[pos=+](#10, #20).
+
+//when it is a passive form
+|#1[verbal:+, passif:+], np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+]
+	& #10[person]:#20[person]
+	& #10[number]:#20[number])
+	SUBJ[pos=+](#10, #20).
+
+//según explicó el secretario
+|prep[lemma:según], #2[verbal:+], np#3|
+	if(head(#20, #2)
+	& head(#30, #3)
+	& ^obj(#20, #30))
+	~,
+	SUBJ[pos=+](#20, #30).
+
+//, dijo un representante
+|punct[comma:+], #1[verbal:+], np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[parole:+]
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+](#10, #20).
+
+//when the subject is two or more coordinated items
+|np#1, ?*[verbal:~, sc:~, conj:~], #2[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& tete_morph(#200, #2)
+	& coord(#3, #10)
+	& #200[pl:+])
+	SUBJ(#20, #10).
+
+//the subject is a sentence
+//it can be an infinitive sentence or another kind of sentence
+//cabe destacar el papel de la ONU
+|#1[verbal:+], vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& (#10[intrans:+] | #10[subj_inf:+]))
+	SUBJ[stc=+](#10, #20).
+
+//parece que vienes hoy
+|#1[verbal:+], sc#2[rel:~, temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& (#10[intrans:+] | #10[subj_inf:+]))
+	SUBJ[stc=+](#10, #20).
+
+//Restriction on the subject, a noun(subject) followed by an aposition.
+if(head(#10, #1)
+& head(#20, #2)
+& #2[apos:+]
+& subj($1, #10)
+& ^subj($1, #20))
+~.
+
+//Another restriction, a subject NUM e.g. "miles de personas fueron expulsadas"
+if(numd(#1, #2)
+& ^subj(#3, #2))
+subj(#3, #1),
+~.
+
+//Another restriction
+|#1, ?*[sc:~], #2, ?*, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& ^subj(#30, #10)
+	& subj(#30, #20))
+	~.
+
+//Another restriction: when one np is the attribute of a copulative verb, it won't be the subject of the following verb
+|#1, ?*, np#2, ?*, #3[verbal]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& attrib(#10, #20)
+	& ^subj(#30, #20))
+	~.
+
+
+
+
+//Restriction on the od:
+//if(^obj(#1, #2)
+//& subj(#1, #3))
+//~.
+
+//Dependency rules for PRED
+//la muerte de Hariri continúa muy viva
+|#1, ?*, #2[verbal:+], ap#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& subj(#20, #10)
+	& #20[pred:+]
+	& #10[number]:#30[number]
+	& #10[gender]:#30[gender])
+	PRED(#10, #30).
+
+|#1, ?*, sc{?*, #2[verbal:+]}, ap#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& subj(#20, #10)
+	& #20[pred:+]
+	& #10[number]:#30[number]
+	& #10[gender]:#30[gender])
+	PRED(#10, #30).
+
+//fue nombrado presidente
+|#1, ?*, #2[verbal:+], np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& subj(#20, #10)
+	& #20[pred:+]
+	& #10[number]:#30[number]
+	& #10[gender]:#30[gender])
+	PRED(#10, #30).
+
+|#1, ?*, sc{?*, #2[verbal:+]}, np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& subj(#20, #10)
+	& #20[pred:+]
+	& #10[number]:#30[number]
+	& #10[gender]:#30[gender])
+	PRED(#10, #30).
+
+|#1, ?*, #2[verbal:+], np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& subj(#20, #10)
+	& #20[pred:+]
+	& #10[prop]
+	& #20[gender]:#30[gender]
+	& #20[number]:#30[number])
+	PRED(#10, #30).
+
+|#1, ?*, sc{?*, #2[verbal:+]}, np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #20[pred:+]
+	& #10[prop]
+	& #20[gender]:#30[gender]
+	& #20[number]:#30[number])
+	PRED(#10, #30).
+
+//Restrictions on the subject when the np is also a predicative complement
+|#1, ?*, #2, ?*, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& pred(#10, #20)
+	& ^subj(#30, #20)
+	& subj(#30, #10))
+	~.
+
+//Dependency rules with a SC relative
+//Dependency rules for ANT (antecedent)
+//dependency beetween a relative pronoun and its antecedent
+//la mujer que veo desde mi ventana
+|np#1, ?*[sc:~, np:~, conj:~], sc{np#2[rel:+], ?*}|
+	if(head(#10, #1))
+	ANT(#10, #2).
+
+//pertenece a la mujer que ves
+|pp#1, (ap;punct[comma:+]), sc{np#2[rel:+], ?*}|
+	if(head(#10, #1))
+	ANT(#10, #2).
+
+//la mujer a la que tanto admiras
+|np#1, ?*[sc:~, np:~], sc[rel:+]{pp#2, ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[number]:#20[number])
+	ANT(#10, #20).
+
+|pp#1, ?*[sc:~, np:~], sc[rel:+]{pp#2, ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[number]:#20[number])
+	ANT(#10, #20).
+
+//if we have an np a relative clause with transitive verb and another np, the first np will be the subject of the relative clause end the second the object (if number and person match)
+//e.g. una operación que realce su valor
+|#1{?[pron:~]}, ?+[sc:~], sc{np#2[rel:+], ?*[verbal:~], #3[verbal:+]}, np#4;vinf|
+	if(head(#10, #1)
+	& tete_morph(#30, #3)
+	& head(#300, #3)
+	& head(#40, #4)
+	& #10[number]:#30[number]
+	& #30[3p:+]
+	& #300[trans:+]
+	& ANT(#10, #2))
+	SUBJ(#300, #2),
+	OBJ(#300, #40).
+
+
+
+|#1{?[pron:~]}, sc[rel:+]{np#2, ?*[verbal:~], #3[verbal:+]}, np#4;vinf|
+	if(head(#10, #1)
+	& tete_morph(#30, #3)
+	& head(#300, #3)
+	& head(#40, #4)
+	& #10[number]:#30[number]
+	& #30[3p:+]
+	& #300[trans:+]
+	& ANT(#10, #2))
+	SUBJ(#300, #2),
+	OBJ(#300, #40).
+
+
+
+
+|np#1{?[pron:+]}, ?*[sc:~], sc{np#2[rel:+], ?*[verbal:~], #3[verbal:+]}, np#4|
+	if(head(#10, #1)
+	& tete_morph(#30, #3)
+	& head(#300, #3)
+	& head(#40, #4)
+	& #10[person]:#30[person]
+	& #10[number]:#30[number]
+	& #300[trans:+]
+	& ANT(#10, #2))
+	SUBJ(#300, #2),
+	OBJ(#300, #40).
+
+
+
+|sc[rel:+]{np#1{pron[lemma:quien]}, ?*[verbal:~], #2[verbal:+]}|
+	if(head(#20, #2))
+	SUBJ(#20, #1).
+
+
+//Dependency rules for OBJ in a SC rel
+|sc[rel:+]{np{pron[lemma:quien]}, ?*[verbal:~], #1[verbal:+]}, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ(#10, #20).
+
+|sc[rel:+]{np{pron[lemma:quien]}, ?*[verbal:~], #1[verbal:+]}, sc#2[rel:~, temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ[stc=+](#10, #20).
+
+|sc[rel:+]{np, ?*[verbal:~], #1[verbal:+]}, (avp), vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[od_inf:+])
+	OBJ[stc=+](#10, #20).
+
+
+
+//la mujer que miras
+//la mujer que él mira
+|#1, ?*, sc[rel:+]{np#2{pron[lemma:que]}, ?*[verbal:~], #3[verbal:+]}, ?[np:~]|
+	if(head(#10, #1)
+	& head(#30, #3)
+	& tete_morph(#300, #3)
+	& #30[trans:+]
+	& ANT(#10, #2)
+	& #10[pron:+]
+	& (#10[number] ~: #300[number] | #10[person]~:#300[person]))
+	OBJ(#30, #2).
+
+|#1, ?*, sc[rel:+]{np#2{pron[lemma:que]}, ?*[verbal:~], #3[verbal:+]}, ?[np:~]|
+	if(head(#10, #1)
+	& #10[pron:~]
+	& head(#30, #3)
+	& tete_morph(#300, #3)
+	& #30[trans:+]
+	& ANT(#10, #2)
+	& (#300[3p:~] | #10[number]~:#300[number]))
+	OBJ(#30, #2).
+
+|sc[rel:+]{np#1, np#2, ?*[verbal:~], #3[verbal:+]}|
+	if(head(#30, #3)
+	& tete_morph(#300, #3)
+	& #30[trans:+]
+	& #300[3p:+]
+	& subj(#30, #2))
+	OBJ(#30, #1).
+
+//la mujer a la que doy un caramelo
+|sc[rel:+]{pp#1{prep[lemma:a], ?+}, ?*[verbal:~], #2[verbal:+]}, np#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #20[double:+])
+	OBJ(#20, #30),
+	IOBJ(#20, #10).
+
+//la mujer a la que miro
+|sc[rel:+]{pp#1{prep[lemma:a], ?+}, ?*[verbal:~], #2[verbal:+]}, ?[np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[trans:+])
+	OBJ(#20, #10).
+
+//de los que 1000 tienen pensiones
+|sc[rel:+]{pp, ?*[verbal:~], #1[verbal:+]}, (punct[quote]), np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ(#10, #20).
+
+//los que tienen cargas familiares
+|sc#1[rel:+]{np{art, pron}, ?*}, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ(#10, #20).
+
+
+//que supere el IPC
+//|sc#1[rel:+]{np[lemma:que], ?*}, np#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[trans:+])
+//	OBJ(#10, #20).
+
+
+//When the verb is intrans or copulative, the antecedent "que" is the subject
+|sc{np#1[rel:+], ?*[verbal:~], #2[verbal:+]}|
+	if(head(#20, #2)
+	& #20[intrans:+])
+	SUBJ(#20, #1).
+
+//la mitad de quienes viven
+|sc{pp#1[rel:+]{prep[prepcour], ?*}, ?*[verbal:~], #2[verbal:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[intrans:+])
+	SUBJ(#20, #10).
+
+|sc{np#1[rel:+], ?*[verbal:~], #2[verbal:+]}|
+	if(head(#20, #2)
+	& #20[cop:+])
+	SUBJ(#20, #1).
+
+|sc{pp#1[rel:+]{prep[prepcour], ?*}, ?*[verbal:~], #2[verbal:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[cop:+])
+	SUBJ(#20, #10).
+
+|sc#1{pp, fv#2}, (ap), vinf#3|
+	if(head(#20, #2)
+	& head(#30, #3)
+	& #20[cop:+])
+	SUBJ(#20, #30).
+
+
+
+
+//Restriction rules for SUBJ
+//Los manifestantes, que portan banderas libanesas, se congregan
+|np#1, ?*[sc:~], sc[rel:+], np#2, ?|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& subj($1, #10)
+	& ^subj($1, #20)
+	&  obj($2, #20))
+	~.
+
+
+//ATTRIB
+//que son dos de los estados más ricos
+|sc[rel:+]{?*[verbal:~], #1[verbal:+]}, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+
+//que son famosos
+|sc[rel:+]{?*[verbal:~], #1[verbal:+]}, ?*[ap:~, np:~, verbal:~], ap#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+//para lo que es impostergable...
+|sc#1{pp, fv#2}, ap#3|
+	if(head(#20, #2)
+	& head(#30, #3)
+	& #20[cop:+])
+	ATTRIB(#20, #30).
+
+
+//Dependency rules for IOBJ after a SC rel
+|sc[rel:+]{?*, #1[verbal:+]}, pp#2{prep[lemma:a], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:+])
+	IOBJ(#10, #20).
+
+//Dependency rules for MODV after a SC rel
+|sc[rel:+]{?*, #1[verbal:+]}, pp#2{prep[lemma:~a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:+]{?*, #1[verbal:+]}, ?+[verbal:~, sc:~], pp#2{prep[prepcour:~], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:+]{?*, #1[verbal:+]}, ?+[verbal:~, sc:~], sc#2[temp:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:+]{?*, #1[verbal:+]}, avp#2|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:+]{?*, #1[verbal:+]}, ?*[verbal:~, conj:~, sc:~], pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[anim:~])
+	MODV(#10, #20).
+
+|sc#1[rel:+]{np, pp#2{prep[lemma:~a], ?+}, ?*}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+
+
+//la mujer a la que doy un caramelo es muy guapa. We have to delete the SUBJ dependency between "caramelo" and "es"
+|sc[rel:+]{?*[verbal:~], #1[verbal:+]}, np#2, #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& #10[trans:+]
+	& OBJ(#10, #20)
+	& ^SUBJ(#30, #20))
+	~.
+
+//Restrictions to subj when he have a sc
+|sc{?*, #1[verbal]}, ?*, #2, ?*, #3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& attrib(#10, #20)
+	& ^subj(#30, #20))
+	~.
+
+//another restriction: una tendencia "empobrecedora, que sigue una deriva que ya se acusa en Estados Unidos, la 'tabloidización' de los noticiarios, esto es, la traslación
+|#1, ?*, sc{?*, #4}, ?*, #2, ?*, #3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& head(#40, #4)
+	& ~$1(#40, #20)
+	& ^subj(#30, #10)
+	& subj(#30, #20))
+	~.
+
+//We can verify the ANT of a relative clause
+//la cantidad de personas que vive en condiciones precarias, "personas" is not the ANT of "que"
+|#1, #2, sc[rel:+]{np#3, ?*[verbal:~], #4[verbal:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& tete_morph(#40, #4)
+	& head(#400, #4)	
+	& ^ant(#20, #3)
+	& subj(#400, #3)
+	& #10[noun:+]
+	& #40[pl:+]
+	& #20[pl:~]
+	& #10[pl:+])
+	~,
+	ANT(#10, #3).
+
+|#1, #2, sc[rel:+]{np#3, ?*[verbal:~], #4[verbal:+]}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#40, #4)
+	& tete_morph(#400, #4)
+	& ^ant(#20, #3)
+	& subj(#40, #3)
+	& #10[noun:+]
+	& #400[sg:+]
+	& #20[sg:~]
+	& #10[sg:+])
+	~,
+	ANT(#10, #3).
+
+//proseguirá la reducción progresiva, mediante incentivos que creen empleo estable
+|#1, ?*, #2, ?*, sc#3[rel:+]{np#4, ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& ^ant(#10, #4)
+	& ant(#20, #4)
+	& subj(#30, #4)
+	& #10[number]~:#30[number]
+	& #20[number] : #30[number])
+	~.
+
+//el tipo, tamaño y color que aparecen
+|#1, sc#2[rel:+]{np#3, ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^ant(#10, #3)
+	& subj(#20, #3)
+	& #20[number]~:#10[number])
+	~.
+
+|#1, sc#2[rel:+]{np#3, ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& coord($1, #10)
+	& #10[sg:+]
+	& #20[pl:+])
+	ANT(#10, #3).
+
+//Dependency rules with a SC NON relative
+
+//Dependency rules for OBJ in a SC NON rel
+//para que compres flores
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, ?*[verbal:~, sc:~, np:~, compar:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[anim:~]
+	& #10[trans:+])
+	OBJ(#10, #20).
+
+
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, ?*[verbal:~, np:~, sc:~], pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[anim:+]
+	& #10[trans:+, double:~])
+	OBJ(#10, #20).
+
+//when the OBJ is a sentence
+//interrogative sentences
+//por si no sabes quién es.
+|sc#1[rel:~], ic#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ[stc=+](#10, #20).
+
+//por si quieres ir mañana
+|sc#1[rel:~], vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[od_inf:+])
+	OBJ[stc=+](#10, #20).
+
+//por si quieres que venga contigo
+|sc#1[rel:~],sc#2[rel:~, temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[trans:+])
+	OBJ[stc=+](#10, #20).
+
+
+//Dependency rules for ATTRIB after a SC NON rel
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, ?*[ap:~, np:~, verbal:~], ap#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	ATTRIB(#10, #20).
+
+//Dependency rules for IOBJ after a SC NON rel
+|sc[rel:~]{?*, #1[verbal:+]}, pp#2{prep[lemma:a], ?*}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[intrans:+, mouv:~])
+	IOBJ(#10, #20).
+
+//Dependency rules for MODV after a SC NON rel
+|sc[rel:~]{?*, #1[verbal:+]}, pp#2{prep[lemma:~a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:~]{?*, #1[verbal:+]}, ?+[verbal:~, sc:~], pp#2{prep[prepcour:~], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc[rel:~]{?*, #1[verbal:+]}, ?*[verbal:~, sc:~], avp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[lemma:~no])
+	MODV(#10, #20).
+
+|sc[rel:~]{?*, #1[verbal:+]}, ?*[verbal:~, sc:~], sc#2[temp:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+|sc#1[rel:~], ?*[sc:~], prep, vinf#2; fv#2[inf:+]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV[stc=+](#10, #20).
+
+|sc#1[rel:~], ?*[verbal:~, conj:~, sc:~], pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[anim:~])
+	MODV(#10, #20).
+
+//aseguró que desde 1996 hay...
+|sc#1[rel:~]{conj, pp#2{prep[lemma:~a], ?+}, ?*}|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODV(#10, #20).
+
+
+
+
+//Dependency rules for SUBJ in SC non rel
+//que todavía queda mucho por hacer
+|sc#1[rel:~], np#2|
+	if(head(#20, #2)
+	& head(#10, #1)
+	& #10[intrans:+])
+	SUBJ(#10, #20).
+
+|sc#1[rel:~]{?*[verbal:~], ?[verbal:+]}, ap, np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	SUBJ(#10, #20).
+
+|sc#1[rel:~], ap, vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[cop:+])
+	SUBJ[stc=+](#10, #20).
+
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, ?*[verbal:~, sc:~, np:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[anim:+]
+	& #10[trans:+]
+	& #10[person]:#20[person]
+	& #10[number]:#20[number])
+	SUBJ(#10, #20).
+
+//Particular restriction: a menos que el cliente solicite RDT
+|sc[rel:~]{?*[verbal:~], #1[verbal:+]}, ?*[verbal:~, sc:~, np:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #20[acron:+]
+	& #10[trans:+]
+	& ^subj(#10, #20))
+	~,
+	OBJ(#10, #20).
+
+
+//Restrictions in OBJ (particular case of "afirmar")
+|#1, ?*[sc:~], np#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20)
+	& #10[lemma:afirmar])
+	SUBJ(#10, #20),
+	~.
+
+//Restriction rules in SUBJ
+|np#1, ?*, sc#2[rel:~], ?*, np#3, ?*, #4[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& head(#40, #4)
+	& subj(#40, #10)
+	& ^subj(#40, #30)
+	& $1(#20, #30))
+	~.
+
+
+//If the verb is copulative and it has an infinitive that follows, this might be the subject
+//que su propósito es proteger
+|sc#1[rel:~]{?*[np:~], np#2, ?*[verbal:~], ?[verbal:+]}, vinf#3|
+	if(head(#20, #2)
+	& head(#10, #1)
+	& head(#30, #3)
+	& #10[cop:+]
+	& ^subj(#10, #20))
+	ATTRIB(#10, #20),
+	SUBJ[stc=+](#10, #30).
+	
+
+//Dependency rules for complements with "como" when it is a preposition
+|sc#1{?*[verbal:~], ?[verbal:+]}, ?*, np#2, pp#3{prep[lemma:como], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& ^modv(#10, #30))
+	~,
+	MOD[pos=+](#20, #30).
+
+//adv in "mente" Larègle est commentée parce que normalement la règle 622 recupère aussi cette dependance.
+//|sc#1, ?*[avp:~, sc:~, verbal:~], avp#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[mente:+])
+//	MODV(#10, #20).
+
+
+//Dependency rules with a IC
+
+//Dependency rules for OBJ in IC
+//me pregunto qué quieres
+//|ic{np#1[interrog:+, lemma:qué], ?*[verbal:~, np:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[trans:+])
+//	OBJ(#20, #10).
+
+//me pregunto cuál quieres
+//|ic{np#1[interrog:+, lemma:cuál], ?*[verbal:~, np:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[trans:+])
+//	OBJ(#20, #10).
+
+//me pregunto a quién quiere
+//|ic{pp#1{prep[lemma:a], np[interrog:+]}, ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[trans:+, double:~])
+//	OBJ(#20, #10).
+
+//|ic{np#1{pron[interrog:+, lemma:qué], ?+}, ?*[verbal:~, np:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[trans:+])
+//	OBJ(#20, #10).
+
+//sobre qué pistas sigue
+//|ic{pp#1{prep[lemma:~a], np[interrog:+]}, ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[double:+])
+//	OBJ(#20, #10).
+
+
+//sé cómo encontrar una buena oferta
+//|ic{avp{adv[interrog:+]}, ?*[verbal:~, np:~], #1[verbal:+]}, ?*[np:~, sc:~, verbal:~], np#2[not_np:~]|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	#10[trans:+])
+//	OBJ(#10, #20).
+
+//|ic{avp{adv[interrog:+]}, ?*[verbal:~, np:~], #1[verbal:+]}, ?*[verbal:~, np:~, sc:~], pp#2{prep[lemma:a], ?+}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[trans:+, double:~])
+//	OBJ(#10, #20).
+
+//when the od is a sentence
+//no sé cuánto deseas ir al cine
+//|ic#, vinf#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[od_inf:+])
+//	OBJ[stc=+](#10, #20).
+
+//cuándo quieres que venga
+//|ic#1,sc#2[rel:~]|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[trans:+])
+//	OBJ[stc=+](#10, #20).
+
+//Dependency rules for ATTRIB after an IC
+//me pregunto cuáles son sus intenciones
+//|ic{?*[verbal:~], #1[verbal:+]}, np#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[cop:+])
+//	ATTRIB(#10, #20).
+
+//|ic{?*[verbal:~], #1[verbal:+]}, ?*[ap:~, np:~, verbal:~], ap#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[cop:+])
+//	ATTRIB(#10, #20).
+
+//Dependency rules for IOBJ after an IC
+//|ic{?*, #1[verbal:+]}, pp#2{prep[lemma:a], ?*}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[intrans:+, mouv:~])
+//	IOBJ(#10, #20).
+
+//Dependency rules for MODV after an IC
+//|ic{?*, #1[verbal:+]}, pp#2{prep[lemma:~a], ?+}|
+//	if(head(#10, #1)
+//	& head(#20, #2))
+//	MODV(#10, #20).
+
+//|ic{?*, #1[verbal:+]}, ?+[verbal:~, sc:~], pp#2{prep[prepcour:~], ?+}|
+//	if(head(#10, #1)
+//	& head(#20, #2))
+//	MODV(#10, #20).
+
+//|ic{?*, #1[verbal:+]}, ?*[verbal:~, sc:~], avp#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[lemma:~no])
+//	MODV(#10, #20).
+//
+//|ic{conj#1, ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#20, #2))
+//	MODV(#20, #1).
+
+//|ic{avp#1, ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#20, #2))
+//	MODV(#20, #1).
+
+//|ic{?*[verbal:~], #1[verbal:+]}, ?*[verbal:~, sc:~], sc#2[temp:+]|
+//	if(head(#10, #1)
+//	& head(#20, #2))
+//	MODV(#20, #10).
+
+//|ic{?*, #1[verbal:+]}, ?*[verbal:~, conj:~, sc:~], pp#2{prep[lemma:a], ?+}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[anim:~])
+//	MODV(#10, #20).
+
+
+
+//Dependency rules for SUBJ in an IC with copulative verbs and intransitive verbs
+//|ic{np#1[interrog:+, lemma:~qué], ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[cop:+])
+//	SUBJ(#20, #10).
+
+//|ic{np#1[interrog:+, lemma:~qué], ?*[verbal:~], #2[verbal:+]}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #20[intrans:+])
+//	SUBJ(#20, #10).
+
+//la semana pasada por el ministro Pimentel
+|#1, ?*, pp#2{prep[prepcour:~], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	&modv[temp:+]($1, #10)
+	& ^mod(#10, #20))
+	~.
+
+//hay 7,9 millones de personas
+|#1, np#2[num:+], pp#3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& numd(#30, #20)
+	& ^modv(#10, #30))
+	~.
+	
+//14 pesetas al mes
+|#1, ?*, #2, ?*, #3|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& mod(#20, #30)
+	& ^modv(#10, #30)
+	& #30[temp:+])
+	~.
+
+//tanto en Sevilla como en Tenerife
+|avp{adv[lemma:tanto]}, pp#1, avp{adv[lemma:como]}, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^mod(#10, #20))
+	~.
+//Another restriction for pp modifying an np : if the pp that modifies an np is the IOBJ of a verb, it cannot modify also the np
+//e.g. dale el libro a Juan
+if(^mod(#1, #2)
+& iobj(#3, #2)
+& obj(#3, #1))
+~.
+
+//Another restriction: Por otra parte, en Sevilla
+|pp#1[start:+], punct[comma:+], pp#2, ?*[verbal:~], #3[verbal:+]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& ^mod(#10, #20))
+	~.
+	
+
+//Restriction for OBJ verb + ic(objd) + np The last np is not the objet of the first verb
+if(obj(#1, #2)
+& ^obj(#1, #3)
+& obj(#2, #3)
+& #2<#3)
+~.
+
+
+//When a transitive verb is preceded by a REFLEX chunk, the verb is not transitive any more and what usually is its OBJ become the SUBJ
+|reflex, #1[verbal:+], ?*[punct:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ~subj(#10, $1)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+](#10, #20).
+
+|punct, reflex, #1[verbal:+], ?*[punct:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^subj(#10, $1)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+](#10, #20).
+
+|sc{np{pron[rel]}, reflex, #1[verbal:+]}, np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2))
+	//& ^obj(#10, #20))
+	//~,
+	SUBJ[pos=+](#10, #20).
+
+|reflex, #1[verbal:+], ?*[np:~, verbal:~, sc:~, punct:~], np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[number]:#20[number]
+	& ~OBJ(#10, #20))
+	SUBJ(#10, #20).  //Attention! : this rule won't take count on the situation when the np is singular coordinated with another np singular.
+
+|reflex, #1[verbal:+], ?*, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	IOBJ(#10, #20).
+
+
+|reflex, #1[verbal:+], ?*, sc#2[rel:~, temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+, stc=+](#10, #20).
+
+|reflex, #1[verbal:+], ?*, ic#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+, stc=+](#10, #20).
+
+|sc{?*, reflex, #1[verbal:+]}, ?*, np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+](#10, #20).
+
+|sc{?*, reflex, #1[verbal:+]}, ?*, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	IOBJ(#10, #20).
+
+|sc{?*, reflex, #1[verbal:+]}, ?*, sc#2[rel:~, temp:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+, stc=+](#10, #20).
+
+|sc{?*, reflex, #1[verbal:+]}, ?*, ic#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+, stc=+](#10, #20).
+
+
+|ic{?*, reflex, #1[verbal:+]}, ?*, np#2[not_np:~]|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	SUBJ[pos=+](#10, #20).
+
+|ic{?*, reflex, #1[verbal:+]}, ?*, pp#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^obj(#10, #20))
+	~,
+	IOBJ(#10, #20).
+
+//|ic{?*, reflex, #1[verbal:+]}, ?*, sc#2[rel:~, temp:~]|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& ^obj(#10, #20))
+//	~,
+//	SUBJ[pos=+, stc=+](#10, #20).
+
+//|ic{?*, reflex, #1[verbal:+]}, ?*, ic#2|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& ^obj(#10, #20))
+//	~,
+//	SUBJ[pos=+, stc=+](#10, #20).
+
+//Another restriction for SUBJ
+//|#1[verbal:+], ?*, np#2[not_np:~], ?*, #3[verbal:+]|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& head(#30, #3)
+//	& obj(#10, #20)
+//	& ^subj(#30, #20))
+//	~.
+
+//We delete the first subj if we also have a postponed subj
+if(^subj(#1, #2)
+& subj[pos:+](#1, #3))
+~.
+
+//Dependency rules for IOBJ with verbs precede by REFLEX
+|reflex, #1[verbal:+], ?*, pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	IOBJ(#10, #20).
+
+|sc{?*, reflex, #1[verbal:+]}, ?*, pp#2{prep[lemma:a], ?+}|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& #10[double:+])
+	IOBJ(#10, #20).
+
+//|ic{?*, reflex, #1[verbal:+]}, ?*, pp#2{prep[lemma:a], ?+}|
+//	if(head(#10, #1)
+//	& head(#20, #2)
+//	& #10[double:+])
+//	IOBJ(#10, #20).
+
+//Dependency rules for MODADJ when the adj is a past participle
+//estoy cansada de todo
+|ap#1[participio:+], pp#2|
+	if(head(#10, #1)
+	& head(#20, #2))
+	MODADJ(#10, #20).
+
+//estoy cansada de luchar
+|ap#1[participio:+], prep, vinf#2|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& ^modv($1, #20))
+	~,
+	MODADJ[stc=+](#10, #20).
+
+ 
+
+//Dependency rules for MAIN
+|top{?*, fv#1, ?*}|
+	if(head(#10, #1))
+	MAIN(#10).
+
+//Dependancy rules for enumerations
+|#1, punct[comma:+], #2, conj#3[enum:+], #4|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#40, #4)
+	& #10[categorie]:#20[categorie]
+	& coord(#3, #20)
+	& coord(#3, #40))
+	COORD(#3, #10).
+
+|#1, punct[comma:+], #2, punct[comma:+], #3, conj#4[enum:+], #5|
+	if(head(#10, #1)
+	& head(#20, #2)
+	& head(#30, #3)
+	& head(#50, #5)
+	& #10[categorie]:#20[categorie]
+	& coord(#4, #20)
+	& coord(#4, #30)
+	& coord(#4, 50))
+	COORD(#3, #10).
+		
+
+//Dependency rules when there is a coordination
+
+if($1(#1, #2)
+& coord(#3, #2)
+& coord(#3, #4)
+& #2 > #4
+& ~$1(#1, #4))
+$1(#1, #4).
+
+if($1(#1, #2)
+& coord(#3, #2)
+& coord(#3, #4)
+& #2 < #4
+& ~$1(#1, #4))
+$1(#1, #4).
+
+//Rules for coodinated words with ANT relationship
+if(coord($1, #1)
+& coord($1, #2)
+& ant(#1, #3)
+& ~ant(#2, #3))
+ANT(#2, #3).
+
+//Rules for the OBJ of coordianted verbs
+if(coord($1, #1)
+& coord($1, #2)
+& #1[verb:+]
+& #2[verb:+]
+& obj(#1, #3)
+& ~obj(#2, #3))
+OBJ(#2, #3).
+
+
+//Rules for the MOD of coordinated nouns.
+if(coord($1, #1)
+& coord($1, #2)
+& head(#30, #3)
+& #30[pastpart:+]
+& mod(#1, #30)
+& #2[noun:+]
+& #2[gender]:#30[gender]
+& ~mod(#2, #30))
+MOD(#2, #30).
+
+
+
+
+// Second level of rules for SUBJ and AGENT in passive forms
+
+// NP preceeded by no verbs followed by passive verb is an OBJECT (if the verb has no object and no subject)
+| ?*[verbal:~], np#1, #2[verbal,passif] |
+if ( head(#3,#1) & head(#4,#2)
+	& ~obj(#4) & ~subj(#4)
+)
+OBJ(#4,#3)
+
+
+// deleting MODV when a relation AGENT is present
+// el rato fue comido por el gato
+if ( ^modv(#1,#2) & agent(#1,#2) )
+  ~

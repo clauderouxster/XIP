@@ -1,0 +1,18 @@
+drop table concepts;
+drop table textsourceindexes;
+drop table concepttosentences;
+drop table dependances ;
+drop table sentencetoconcepts;
+drop table offsets;
+drop table sentences;
+drop table wordoffset;
+drop table dependencyoffset;
+create table concepts (idconcept INT not NULL, word CHAR(255) NOT NULL, key(word), occurence INT, POS char(1), INDEX concept (idconcept,word)) ;
+create table textsourceindexes (idsource INT not NULL, pathname CHAR(255) NOT NULL,UNIQUE INDEX filename (idsource)) ;
+create table concepttosentences (idconcept INT not NULL, rank SMALLINT not NULL, value SMALLINT not NULL, INDEX concept (idconcept,rank));
+create table dependances (idsource INT not NULL, idsent INT not NULL, iddep INT not NULL, rank SMALLINT not NULL,value SMALLINT not NULL,type CHAR(1) not NULL, INDEX rangs (rank),INDEX sentences (idsent,iddep,rank), INDEX fichier (idsource,idsent,iddep,rank) );
+create table sentencetoconcepts ( idsent INT not NULL, rank SMALLINT not NULL,value SMALLINT not NULL, INDEX sentences(idsent,rank));
+create table offsets (idsource INT not NULL, idpara INT not NULL, idsent INT not NULL, beginoffset INT not NULL, endoffset INT not NULL, INDEX position (idsource,idsent), INDEX pospara(idsource,idpara) );
+create table sentences (idsent INT not NULL,idsource INT not NULL, idpara INT not NULL,sentencetext TEXT,UNIQUE INDEX sentenceIndex (idsent)) ;
+create table wordoffset (idconcept INT not NULL, idsent INT not NULL, beginoffset INT not NULL, endoffset INT not NULL, INDEX wordoffindex(idconcept,idsent));
+create table dependencyoffset (idsent INT not NULL,iddep INT not NULL, beginoffset INT not NULL, endoffset INT not NULL, INDEX dependencyoffindex(idsent,iddep));

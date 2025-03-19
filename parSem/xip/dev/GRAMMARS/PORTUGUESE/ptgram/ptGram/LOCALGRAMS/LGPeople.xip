@@ -1,0 +1,550 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : LGPeople.xip                                                !
+//!   Date       : 2007/March                                                  !
+//!   Author     : Luís Romão                                                  !
+//!   Revision   : Diogo Oliveira, 2010/May-October                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!  Person Identification Rules (used after geographical names)               !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+
+//##############################################################################
+// Graus académicos
+//##############################################################################
+
+//NJM, 2012/01/02
+//     <grau> de <doutoramento> honoris causa
+//     <grau> de <doutor>
+//     <grau> de <doutor> honoris causa
+//     <grau> de <mestre>
+//     <grau> de <bacharel>
+//     <grau> de <licenciado>
+//     <título> de <doutoramento> honoris causa
+//     <título> de <doutor>
+//     <título> de <doutor> honoris causa
+//     <título> de <mestre>
+//     <título> de <bacharel>
+//     <título> de <licenciado>
+1> NOUN[sem-academic-degree=+] = ?[lemma:grau];?[lemma:título],
+                                 ?[lemma:de],
+                                 ?[lemma:"doutor %+"];?[lemma:"doutoramento %+"];?[lemma:mestre];?[lemma:bacharel];?[lemma:licenciado].
+
+
+//DCO, 2010/10/03
+// Example: Alto Representante da União para os Negócios Estrangeiros e a Política de Segurança
+1> NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?[lemma:alto,maj], ?[lemma:representante,maj], prep, (art), ?+[maj], (prep ; art ; conj ; ?+[maj])*.
+
+
+
+//##############################################################################
+// Identification of tokens that can start a
+//##############################################################################
+
+//DCO, 2011/02/14
+1> ? @= art[def], noun[SEM-Hcargo], punct[comma], noun[maj,SEM-Hindividual=+,start_people=+], ?+[maj,end_people=+].
+
+//DCO, 2010/10/03
+// Este é daqueles nomes que nunca será apanhado... o lema de "Durão" é "duro"
+1> NOUN[SEM-Hpeople=+,SEM-Hindividual=+,maj=+] @= (?[lemma:José,maj], ?[lemma:Manuel,maj]), ?[surface:Durão], ?[surface:Barroso].
+
+//DCO, 2010/10/02
+// Example: Rainha (D.) Isabel (II) (de Inglatera)
+//DCO, 2011/07/01 Lema de "D." corrigido
+1> ? @= noun[lemma:rei,maj,start_people=+] ; noun[lemma:rainha,maj,start_people=+], (?[lemma:"Dom",cont_people=+]), noun[maj,SEM-Hpeople,SEM-Hindividual,end_people=+], (num[rom,end_people=+]), (prep[lemma:de,cont_people=+], (art), noun[maj,location,end_people=+]).
+
+//DCO, 2010/06/16
+// Nomes do tipo Steve d'Averio, John d'Angelo, etc., nao estavam a ser corretamente classificados como PESSOA-INDIVIDUAL
+1> noun[SEM-Hpeople=+,SEM-Hindividual=+,proper=+,maj=+,mwe=+] @= noun[proper,maj], ?[surface:d], ?[lemma:"'"], noun[maj].
+
+//CH addtion: Complex  Foreign names
+// Herbert von Karajan, Ussama ben Laden etc. Pietro di Roma,
+1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= noun[proper,SEM-Hindividual], ?[lemma:von];?[lemma:van]; ?[lemma:ben]; ?[lemma:bin];?[lemma:di], noun[proper] .
+
+// TODO
+// Abdel Salam Hamud al-Ithawi and other arabic names with al-*
+1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= noun[proper,SEM-Hpeople,maj], ?*[maj], ?[lemma="a[lr]-%+"] .
+
+// Arabic names with "ibn" inbeween. Eg. Tariq ibn Ziyad
+1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= noun[proper], ?*[maj], ?[lemma="ibn"], ?[maj] .
+
+//CH - If ?[maj,guessed] followed by a name which has feature fam:+ coming from fst lexicon, then the whole expression is a proper name (person)
+// Example: Aizita Nascimento
+1> noun[proper=+,maj=+,mwe=+,SEM-Hpeople=+,SEM-Hindividual=+] @= | ?[maj:~];?[lemma:"%c"] | noun[proper,maj], noun[proper,fam,maj] .
+
+//CH, Deus et nomes de deuses e deusas devem ser codificados como people, SEM-Hindividual:+
+// Example: O deus <EN>Vulcano</EN>
+1> ? @= ?[lemma:deus,maj:~], ?[maj,proper=+,SEM-Hindividual=+,SEM-Hpeople=+] .
+
+
+// Word "Magno" just before a title or cargo, has to be included in the cargo
+// eg. Magno Chanceler
+1> noun[SEM-Hcargo=+,mwe=+,SEM-Hpeople=+] @= ?[lemma:magno], ?[SEM-Hcargo,maj] .
+
+//DCO, 2010/09/28
+// Lema corrigido
+// Word "Alto" just before a cargo is included in the cargo
+// Example: Alto Comissário
+1> noun[SEM-Hpeople=+,SEM-Hcargo=+,mwe=+] @= ?[lemma:"alto-%+",maj].
+
+//DCO, 2010/09/28
+// Regra corrigida
+// Word "Mor" just after cargo in included in the cargo
+1> noun[SEM-Hpeople=+,SEM-Hcargo=+,mwe=+] @= ?[SEM-Hcargo], adj[lemma:mor].
+
+//DCO, 2010/09/28
+// Example: Presidente Honorário
+1> ? @= ?[lemma:"%+honorário",SEM-Hpeople=+,SEM-Hcargo=+,mwe=+].
+
+//DCO, 2010/10/03
+// Example: Presidente indonésio
+1> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[lemma:presidente], ?[gentcountry].
+
+//DCO, 2010/09/28
+// Lema corrigido
+//CH - adding chefe de Estado as a cargo:+ expression
+1> ? @= ?[lemma:"chefe de estado",SEM-Hpeople=+,SEM-Hcargo=+,mwe=+].
+
+//DCO, 2010/09/28
+// Lema corrigido
+//CH - Governador civil
+1> ? @= ?[lemma:"governador civil",SEM-Hpeople=+,SEM-Hcargo=+,mwe=+].
+
+//DCO, 2010/09/28
+// Lemas corrigidos
+// Professor Auxiliar, Professor Associado, Professor Catedrático
+1> ? @= ?[lemma:"professor%+",SEM-Hpeople=+,SEM-Hcargo=+].
+
+//DCO, 2010/09/28
+// traços corrigidos
+// Presidente da Junta/Conselho
+1> NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?[lemma:presidente];?[lemma:secretário];?[lemma:tesoureiro], prep[lemma:de], (art), ?[lemma:conselho,maj];?[lemma:direção,maj];?[lemma:câmara,maj];?[lemma:junta,maj].
+
+//DCO, 2010/09/28
+// traços corrigidos
+// Example: capitão de terra e mar
+1> NOUN[SEM-Hpeople=+,title=+,mwe=+] @= ?[lemma:capitão,maj:~], prep[lemma:de], ?[lemma:terra], ?[lemma:e], ?[lemma:mar] .
+
+//DCO, 2010/09/28
+// Regra corrigida
+// Example: Alto-Comissário para os refugiados
+//      Alto-Comissário para a imigração e minorias étnicas
+1>  NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?[lemma:"alto-comissário",SEM-Hpeople=+,SEM-Hcargo=+], prep[lemma:para], (art), noun, (?[lemma:e], noun+).
+
+//DCO, 2010/10/03
+// Example: Comissário Europeu para os Assuntos Sociais e Emprego
+1> NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?[lemma:"comissário europeu",SEM-Hpeople=+,SEM-Hcargo=+], ((prep;art;?[lemma:e]), ?+[maj])*.
+
+// EN COURS - A TESTER
+// o executivo/gabinete de...
+// conflict between this rule and rules in LGOrg.xip which are constructing a complex noun of type organization.
+// As LGOrg comes before in the processing chain, this rule will never apply.
+// o gabinete de...
+//DCO, 2011/02/21, /Added SEM-Hcollective:~ restriction
+1> ?  @= ?[introd_people, maj:~], prep[lemma:de], (?[lemma:o]), ?[maj,SEM-Hcollective:~,start_people=+,SEM-Hindividual=+], (prep[lemma:de]; art[def];  ?[maj,end_people=+])*.
+//1> ? @= noun[introd_people], prep[lemma:de], ?[maj,lemma:~câmara,start_people=+,SEM-Hindividual=+], (prep[lemma:de];art;?[maj,end_people=+,SEM-Hindividual=+])* .
+
+// Making a title:+ for a compound using the head "ministro"
+// eg. ministro dos Negocios Estrangeiros
+1> noun[mwe=+,features:!] @= noun[lemma:ministro,!features:!,sg], prep, (art[def]), ?[maj], (?[lemma:externo,maj];?[lemma:interno,maj];?[lemma:exterior,maj];?[lemma:interior,maj];?[lemma:nacional,maj]) .
+
+// title de X -
+// Example: conde de Montecristo
+1> ? @ = ?[title,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], prep[lemma:de], ?[maj,location:~,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+] .
+
+// e.g Rainha da Suécia
+//DCO, 2010/06/25
+// Example: 44.º Presidente dos EUA
+1> noun[SEM-Hpeople=+,SEM-Hcargo=+,title=+,mwe=+] @= (num), ?[title], prep[lemma:de], (art[def]), ?[maj,location].
+
+
+// without upper case in cargo
+//DCO, 2011/02/16
+// Added cargo;profession;title
+// Added conjunction
+//DCO, 2011/02/17
+// Added "Jr." or "Sr."
+//DCO, 2011/02/20
+//Retiradas restrições location:~ e SEM-Hcollective:~ do segundo noun (antes da preposição)
+//Adicionada restrição proper para o primeiro nome
+//DCO, 2011/04/26
+//Retiradas restrições individual e proper do segundo nome (e já não é noun)
+//Um título não precisa de ser noun, pode ser SYMBOL (D.)
+//DCO, 2011/05/03
+//Adicionada restrição sports-discipline:~ (Cristiano Ronaldo Futebol Campus)
+//DCO, 2011/07/01
+// Lema de "Jr." corrigido
+1> ? @= (noun+[SEM-Hcargo,start_people=+] ; noun+[SEM-Hprofession,start_people=+] ; ?+[title,start_people=+]), noun[maj,proper,surface:~BIC,location:~,SEM-Hcollective:~,sports-discipline:~,start_people=+], (?[maj,prep:~,adv:~,sports-discipline:~,end_people=+]; prep[lemma:"de",cont_people=+]; art[def,cont_people=+])*, ((punct[comma,cont_people=+]), num[rom,end_people=+];?[lemma:"júnior",end_people=+];?[surface:"Sr.",end_people=+]).
+
+// X, o primeiro-ministro/presidente, etc.
+1> ? @= ?[maj,location:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*, punct[comma], (art), noun[SEM-Hcargo,maj:~].
+
+// a indigitação de...
+1> ? @= noun[lemma:indigitação], prep[lemma:de], (art), ?[maj,location:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; art[def]; ?[maj, end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])* .
+
+//Diretor, diretor-geral, gerente
+// added in the lexicon features post_people to the trigger words.
+1> ? @= noun[maj,postpeople,people=+,start_people=+], prep[lemma:de], (art),  ?[SEM-Hcollective,end_people=+];?[location,end_people=+] .
+
+//Secretário, Secretário-geral, secretário de estado
+1> ? @= ?[lemma:"secretário%+",start_people=+,postpeople=+,SEM-Hpeople=+], (prep[lemma:de], noun[SEM-Hcollective]), prep[lemma:de], (art), ?[maj,end_people=+,SEM-Hpeople=+], (prep; art[def]; ?[maj,end_people=+,SEM-Hpeople=+])* .
+
+//DCO, 2010/09/29
+// Lema corrigido
+1> ? @= ?[lemma:"secretário de estado",start_people=+,SEM-Hpeople=+], prep[lemma:de], (art), ?[maj,end_people=+,SEM-Hpeople=+] .
+// Same as above but when the following
+
+// complex expressions denoting cargos
+1> ? @= ?[SEM-Hcargo,start_people=+,postpeople=+,SEM-Hpeople=+], prep[lemma:para], (art[def]), ?+[maj,end_people=+].
+
+// entrevista a/com
+1> ? @= ?[lemma:entrevista], prep[lemma:com];?[lemma:a], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// o discurso de...
+1> ? @= ?[lemma:discurso];noun[lemma:"palestra(%c)"], prep[lemma:de], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// segundo X...
+// afirmou/declarou X...already considered with more general rules on dicendi verbs
+//CH - added restriction "segunda metade do sec. XX (where XX has feature maj)
+1> ? @= ?[lemma:segundo], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+,rom:~], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+,rom:~])*.
+//1> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= |?[lemma:segundo];?[lemma:afirmar];?[lemma:declarar], (art)|  ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+
+// presidido por X...
+1> ? @= ?[lemma:presidir], prep[lemma:por], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// X lembrou...aceitou... ADD RESTRICTION CH in order to avoid problems in "Foi destacado para ...."
+// destacar, referir, recordar taken into account as they are dicendi verbs
+1> ? @= ?[maj, art:~, pron:~, conj:~, adv:~, location:~,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], (prep; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])*, (?[lemma:não]), (?[surface:se]), ?[lemma:lembrar,pastpart:~]; ?[lemma:aceitar,pastpart:~].
+1> ? @= ?[lemma:lembrar,pastpart:~];?[lemma:aceitar,pastpart:~], ?[maj, start_people=+,SEM-Hindividual=+,SEM-Hpeople=+,art:~, pron:~, conj:~, adv:~, location:~], (prep; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])*.
+
+// a visita de...
+1> ? @= ?[lemma:visita], prep[lemma:de], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// o sucessor de...
+1> ? @= ?[lemma:sucessor], prep[lemma:de], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// felicitado por...
+1> ? @= ?[lemma:felicitar,pastpart], prep[lemma:por], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// exercido por...
+1> ? @= ?[lemma:exercer,pastpart], prep[lemma:por], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+//////faltam algumas regras recíprocas
+///
+// Chamar-se...
+//CH - problema com esta regra pois apanha "Uma pequena cidade chamada <PEOPLE>Itaporanga</PEOPLE>
+1> ? @= ?[lemma:chamar], (?[tokenend]), (?[lemma:o]), ?[maj,location:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,location:~,end_people=+,SEM-Hindividual=+])*.
+
+// foi batizado...
+1> ? @= ?[lemma:ser], ?[lemma:batizar], ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+//1> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= | ?[lemma:ser], ?[lemma:batizar]|  ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+
+//elogiou...
+1> ? @= ?[lemma:elogiar], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// nomear...
+1> ? @= ?[lemma:nomear], (?[lemma:o]), ?[maj,SEM-Hcargo:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,SEM-Hcargo:~,end_people=+,SEM-Hindividual=+])*.
+
+// foi nomeado...
+1> ? @= ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:ser], ?[lemma:nomear] .
+
+// X liderou... declarou...
+// declarou already taken into account (dicendi)
+1> ? @= ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:liderar] .
+
+// falar com..... generalizei a regra com todos os dicendi...(conversar com, debater com etc.)
+//DCO, 2010/10/03
+// cuidado com: "concordar com o Governo" ...
+1> ? @= ?[dicendi], prep[lemma:com], (?[lemma:o]), ?[maj,SEM-Hcollective:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,SEM-Hcollective:~,end_people=+,SEM-Hindividual=+])*.
+
+// discutir com, debateu com....
+1> ? @= verb[lemma:debater];verb[lemma:discutir], prep[lemma:com], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// telefonar/ligar a...
+1> ? @= verb[lemma:telefonar];verb[lemma:ligar], prep[lemma:a], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// despedir x...
+1> ? @= verb[lemma:despedir], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// contratar x...
+1> ? @= verb[lemma:contratar], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// ...casar-se com...
+1> ? @= ?[maj,art:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*,
+(?[lemma:não]), verb[lemma:casar], (?[tokenend]),
+prep[lemma:com],  (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// ... divorciar-se de...
+1> ? @= ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), verb[lemma:divorciar], (?[tokenend]), prep[lemma:de], (?[lemma:o]), ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// single/música/videoclip/filme/quadro/obra de...
+//DCO, 2011/02/03
+// Adicionada restrição SEM-Hcollective:~, para casos como "mais técnica e poder ofensivo da banda do Benfica"
+1> ? @= noun[human_realized], prep[lemma:de], (?[lemma:o]),  ?[maj,SEM-Hcollective:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// papel representado por...
+1> ? @= noun[lemma:papel], ?[lemma:representar,pastpart], prep[lemma:por], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// X protagoniza, realiza, canta, inventa, escreve etc. human_activity verbs
+//DCO, 2011/02/06
+//Adicionada restrição location:~ para evitar casos como "o Campeonato de Portugal realizou-se no passado Domingo"
+//DCO, 2011/02/16
+//Adicionada restrição SEM-Hcollective:~ para evitar casos como "Francisco Montenegro do S.C. Olhanense ..."
+//DCO, 2011/02/20
+//Adicionada restrição firstname e retirados traços individual
+1> ? @= noun[maj,firstname,start_people=+,pron:~,adv:~,conj:~,location:~,SEM-Hcollective:~], (prep[lemma:de]; ?[lemma:o]; ?[maj,location:~,SEM-Hcollective:~,end_people=+])*, verb[human_activity] .
+
+//protagonizado/realizado/produzido por/cantado/tocado por...
+// use feature human_activity added in the lexicon
+1> ? @= ?[human_activity,pastpart],  prep[lemma:por], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// cíumes/inveja de...
+1> ? @= ?[lemma:ciúme];?[lemma:inveja],  prep[lemma:de], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// o emissário de...
+// a candidatura de...
+1> ? @= ?[lemma:emissário];?[lemma:candidatura], prep[lemma:de], (?[lemma:o]),  ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+//estar/ser preso em...
+2> ? @= ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*,  ?[lemma:estar];?[lemma:ser], ?[lemma:prender,pastpart] .
+
+// X vive... onde vive X...nascer, morrer
+//DCO, 2011/04/26
+//Adicionada restrição art:~
+2> ? @= ?[maj,art:~,pron:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), verb[lemma:viver];verb[lemma:morrer];verb[lemma:nascer], prep[lemma:em] .
+
+//DCO, 2011/04/26
+// Dado um nome seguido de "e" ou "ou", e seguido de um nome em maiúsculas, classifica este como nome de pessoa
+//DCO, 2011/05/11
+//Regra corrigida
+2> ? @= noun[proper,SEM-Hpeople], conj[lemma:e,cont_people=+] ; conj[lemma:ou,cont_people=+], noun[maj,toutmaj:~,SEM-Hpeople:~,SEM-Hcollective:~,SEM-Hpeople=+,SEM-Hindividual=+].
+
+//DCO, 2011/02/03
+// Adicionada restrição colective:~ para evitar casos como "Viva o Benfica !"
+2> ? @= verb[lemma:viver];verb[lemma:morrer];verb[lemma:nascer], (art[def]), ?[maj,SEM-Hcollective:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+//ser morto/assassinado/apunhalado/executado/estrangulado/esfaqueado/evenenado/decapitado/enforcado em...
+//DCO, 2011/02/03
+// Adicionada restrição SEM-Hcollective:~ para evitar casos como "o Benfica ataca ..."
+//DCO, 2011/02/21
+// Adicionada restrição location:~ para evitar casos como "o Porto ataca ..."
+//DCO, 2011/04/28
+// Adicionada restrição art:~ para evitar que o traço start_people seja colocado nos artigos
+//DCO, 2011/05/11
+//Regra corrigida: removido SEM-Hpeople=+,SEM-Hindividual=+
+2> ? @= ?[maj,art:~,SEM-Hcollective:~,location:~,start_people=+,pron:~,conj:~,adv:~], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), (?[refl]), verb[agression:+] .
+2> ? @= ?[lemma:ser], ?[pastpart,agression], prep[lemma:por], ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*.
+
+// X foi/é o autor de... / o autor de X é Y (o autor de X, Y)
+//DCO, 2011/04/28
+// Adicionada restrição art:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?[maj,art:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:ser], (art), noun[lemma:autor] .
+//2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= |?[lemma:autor], prep[lemma:de], (?[lemma:o]), ?+[maj], (prep, ?+[maj])*, (?[lemma:ser]), (punct[comma])|?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+//ON HOLD
+
+//X foi eleito presidente/primeiro-ministro/ generalizado em X foi eleito + cargo
+//DCO, 2011/04/28
+// Adicionada restrição art:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?[maj,art:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:ser], ?[lemma:eleger,pastpart], noun[SEM-Hcargo].
+
+// X foi/é o realizador de... / o realizador de X é Y (o realizador de X, Y)
+// X foi/é o fundador de... / o fundador de X é Y (o fundador de X, Y)
+// X foi/é o descobridor de... / o fundador de X é Y (o descobridor de X, Y)
+// X foi/é o inventor de... / o inventor de X é Y (o inventor de X, Y)
+// X foi/é o criador de... / o criador de X é Y (o criador de X, Y)
+//DCO, 2011/04/28
+// Adicionada restrição art:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?[maj,art:~,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+,art:~,pron:~,conj:~,adv:~], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:ser], (art), ?[lemma:realizador];?[lemma:fundador];?[lemma:descobridor];?[lemma:inventor];?[lemma:criador], prep[lemma:de] .
+
+2> ? @= ?[lemma:realizador];?[lemma:fundador];?[lemma:descubridor];?[lemma:inventor];?[lemma:criador], prep[lemma:de], (?[maj];art;prep)+, ?[lemma:ser], ?[maj,SEM-Hindividual=+,start_people=+,SEM-Hpeople=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hindividual=+])* .
+
+// relações familiares
+2> ? @=  ?[relative], prep[lemma:de], (?[lemma:o]), ?[maj,title:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de,cont_people=+] ; art[def] ; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])* .
+2> ? @=  ?[relative], prep[lemma:de], (?[lemma:o]), ?+[maj, title:~], (prep[lemma:de], (?[lemma:o]), ?+[maj])*, punct[comma], ?[maj, title:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de];art[def];?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])* .
+
+// o padroeiro de...
+2> ? @=  ?[lemma:padroeiro], prep[lemma:de], ( ?[lemma:o]), noun[location], (punct[comma];?[lemma:ser]),
+?[maj, title:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de];art[def];?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])* .
+
+// X ficou conhecido....
+2> ? @= ?[maj,art:~,pron:~,conj:~,adv:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de];art[def];?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*, (?[lemma:não]), ?[lemma:ficar], ?[lemma:conhecer,pastpart] .
+
+// a coroação (oficial) de X / X foi coroado/ X, coroado
+2> ? @=  ?[lemma:coroação], (adj;noun), prep[lemma:de], (?[lemma:o]), (?[lemma:rei];?[lemma:rainha]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//DCO, 2011/04/28
+// Adicionada restrição def:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?[maj,art:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*, ?[lemma:ser];punct[comma], (adj;noun;adv), ?[lemma:coroar,pastpart] .
+
+//O reinado de X (do rei/rainha X)
+2> ? @= ?[lemma:reinado];?[lemma:reinar,pastpart], prep[lemma:de], (?[lemma:o]), (?[lemma:rei];?[lemma:rainha]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+// X suicidou-se/matou-se ... / ... X se suicidou/matou
+// already done agression verbs
+
+//DCO, 2010/10/03
+// Cuidado com "a violência da Nigéria" ... adicionada restrição location:~
+// o suicídio/homicídio/assassinato/regicídio/violação de...
+//DCO, 2011/02/03
+// Adicionada restrição SEM-Hcollective:~ para evitar casos como "Num ataque do Benfica, ..."
+2> ? @= noun[agression:+], prep[lemma:de], (?[lemma:o]), (?[lemma:rei];?[lemma:rainha]), ?[maj,SEM-Hcollective:~,location:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//a carreira (artística, musical, etc.) de
+2> ? @= noun[lemma:carreira], (adj;noun), prep[lemma:de], (?[lemma:o]), (?[lemma:rei];?[lemma:rainha]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//o julgamento (público, etc.) de...
+2> ? @= noun[lemma:julgamento], (adj;noun), prep[lemma:de], (?[lemma:o]), (?[lemma:rei];?[lemma:rainha]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//quantos anos tem X/qual a idade de X?
+2> ? @= ?[lemma:quanto,pl], ?[lemma:ano], ?[lemma:ter], (art[def]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+2> ? @= ?[lemma:qual], ?[lemma:a];?[lemma:o], ?[lemma:idade], prep[lemma:de], (art[def]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//X tem Y anos (numeros -->)
+//DCO, 2011/04/28
+// Adicionada restrição def:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?[maj,art:~,pron:~,conj:~,adv:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*, (?[lemma:não]),?[lemma:ter], num, ?[lemma:ano] .
+
+//X marcou Y golos (um golo, um canto)
+2> ? @= ?[maj,art:~,pron:~,adv:~,conj:~,event:~,lemma:~campeonato, start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*, (?[lemma:não]),?[lemma:marcar], num;art, ?[lemma:golo];?[lemma:canto] .
+
+2> ? @= ?[lemma:marcar, pastpart], prep[lemma:por], ?[maj,pron:~,adv:~,conj:~,event:~,lemma:~campeonato, start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//quantos golos marcou X...
+2> ? @= ?[lemma:quanto,pl], ?[lemma:golo], ?[lemma:marcar], (art[def]), ?[maj,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+//DCO, 2010/09/29
+// Regra corrigida
+//D. João I, Dona Marília, Don Carlos
+//DCO, 2011/05/11
+//Regra corrigida
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= (noun+[SEM-Hcargo] ; noun+[title] ; noun+[SEM-Hprofession]), ?[lemma:"d.", maj];?[lemma:dona, maj];?[lemma:dom, maj];?[surface:"Don"], ?+[maj], (num[rom]), (prep[lemma:de], (?[lemma:o]), ?+[maj])* .
+
+
+//DCO, 2010/10/01
+// TODO: ver se se pode deixar comentada
+//2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+,maj=+,mwe=+] @= | ?[title:~,SEM-Hprofession:~] | noun[SEM-Hpeople,SEM-Hcargo:~,title:~,postpeople:~], (prep[lemma:de]), ?+[maj, toutmaj:~], (prep[lemma:de], (?[lemma:o]), ?+[maj])*, (?[lemma:e], ?+[maj])*.
+
+2> noun[SEM-Hpeople=+,SEM-Hindividual=+,maj=+,mwe=+] @= | ?[title:~] | noun[firstname,maj],noun[fam,maj] | ?[maj:~] | .
+
+//nacionalidade
+//CH - added restriction in order to avoid
+// *provincia romana <PERSON>Hispanica Betica</PERSO>
+2> ? @= art;pron, noun[gentilic], ?[maj,title:~,toutmaj:~,start_people=+,SEM-Hpeople=+,SEM-Hindividual=+], (prep[lemma:de]; ?[lemma:o]; ?[maj,end_people=+,SEM-Hpeople=+,SEM-Hindividual=+])*.
+
+
+//DCO, 2010/09/22
+// Adicionada restrição SEM-Hgroup:~, porque "os Queen" não são PESSOA GRUPOIND, mas sim HUMANO COLETIVO GRUPO (aliás, GRUPOIND já nem existe!)
+//os Mirandas
+2> ? @= art[lemma:o, pl], ?+[SEM-Hpeople,maj,SEM-Hgroup:~,SEM-Hindgroup=+].
+
+
+//DCO, 2010/09/29
+// Traços corrigidos
+//o governo de Cavaco Silva
+2> NOUN[SEM-Hcollective=+,SEM-Hadministration=+] @= ?[lemma:governo], prep[lemma:de], ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+
+
+//DCO, 2010/09/28
+// Lema corrigido
+// Presidente da República (Sr.) (Aníbal Cavaco Silva)
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[lemma:"Presidente da República",SEM-Hpeople=+,SEM-Hcargo=+], (noun[title]), (noun[maj,SEM-Hpeople,proper]), (noun*[maj,proper], (prep[lemma:de], (art)), (conj[lemma:e]))*.
+
+//em casa da Maria, na casa dos Mirandas
+2> ? @= ?[lemma:casa], prep[lemma:de], art[lemma:o, pl], ?+[maj,start_people=+,SEM-Hindgroup=+,SEM-Hpeople=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hindgroup=+,SEM-Hpeople=+])* .
+
+//DCO, 2011/02/04
+// Adicionada restrição SEM-Hcollective:~ para evitar casos como "casa do Benfica da Beira Litoral"
+2> ? @= ?[lemma:casa], prep[lemma:de], art[lemma:o, sg], ?+[maj,SEM-Hcollective:~,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])* .
+
+//foi X quem...
+2> ? @= ?[lemma:ser], (art),  ?+[maj,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])*, ?[surface:quem] .
+
+
+// X deu uma entrevista
+//DCO, 2011/04/28
+// Adicionada restrição def:~ para evitar que o traço start_people seja colocado nos artigos
+2> ? @= ?+[maj,art:~,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])*, ?[lemma:dar], art, ?[lemma:entrevista].
+
+
+//perguntar a
+2> ? @= ?[lemma:perguntar], prep[lemma:a], (art), ?+[maj,start_people=+,SEM-Hindividual=+,SEM-Hpeople=+], (prep[lemma:de]; art[def]; ?[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+])*.
+
+//DCO, 2010/09/29
+// Traços corrigidos e regra corrigida
+// "família Costa" pode perfeitamente pertencer a HUMANO COLETIVO GRUPO : desta forma, este subtipo não trata apenas de nomes de bandas musicais,
+// mas também deste tipo de nomes coletivos
+// Example: família Costa
+2> NOUN[SEM-Hcollective=+,SEM-Hgroup=+] @= ?[lemma:família], ?+[maj], (prep[lemma:de]; art[def]; ?[maj])*.
+
+// Papa, Cardeal, Madre Superiora, Bispo (non compounds are coded in the lexicon lexPeople with feature postpeople)
+2> NOUN[SEM-Hpeople=+,postpeople=+,maj=+] @= ?[lemma:madre, maj], ?[lemma:superior].
+
+
+//Iniciais em texto de entrevista (ver 2ª regra)
+// restriction in order to avoid problems in Tel: 12345
+//DCO, 2010/10/03
+// Cuidado com esta regra!!! e.g. "Golos: 1-0, por Cristiano Ronaldo" -- "Golos" não pode ser HUMANO INDIVIDUAL PESSOA!
+// Adicionada restrição sports_results:~
+//DCO, 2011/01/24
+// "At 1:55 PM" (aparece na Coleção Dourada!) : At 1 não pode ser pessoa... adicionada restrição num:~
+//DCO, 2011/01/27
+// "BIC: BCOMPTPL" : BIC não pode ser pessoa... adiciona restrição SEM-datum-bic:~
+3> ? @= noun[maj,proper,start,location:~,SEM-Hindividual=+,SEM-Hpeople=+,start_people=+], noun*[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+],  punct[lemma:":"], ?[punct:~,location:~,sports_results:~,SEM-Hpeople:~,num:~,SEM-datum-bic:~].
+
+//Monárquico, Republicano (Comunista?)
+// in lexicon
+2> ? @= art[masc,sg] , ?[lemma:monárquico, maj,member=+];?[lemma:republicano, maj,member=+].
+
+//amigo de X
+2> ? @= ?[lemma:amigo], prep[lemma:de], (art), noun[maj, start,SEM-Hindividual=+,SEM-Hpeople=+,start_people=+], noun*[maj,end_people=+,SEM-Hindividual=+,SEM-Hpeople=+].
+
+//Miss Portugal, Miss Sarah,
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[lemma:miss], ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+
+//Madame Brigitte, Monsieur Jean,
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[lemma:madame];?[lemma:monsieur], ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?[lemma:madame], prep[lemma:de], (art), ?+[maj], (prep[lemma:de], (?[lemma:o]), ?+[maj])*.
+
+//os Romanos, os Visigodos, etc.
+2> ? @= |art[pl]| ?[lemma:romano, maj,SEM-Hpeople=+,member=+];?[lemma:visigodo, maj,SEM-Hpeople=+,member=+];?[lemma:celta, maj,SEM-Hpeople=+,member=+];?[lemma:mouro, maj,SEM-Hpeople=+,member=+];?[lemma:vândalo, maj,SEM-Hpeople=+,member=+];?[lemma:suevo,maj,SEM-Hpeople=+,member=+].
+
+//X, mecânico da AutoEuropa
+//DCO, 2011/02/17
+// Changed title to profession or cargo
+2> ? @= ?[maj,art:~,SEM-Hindividual=+,SEM-Hpeople=+,start_people=+], (prep[lemma:de]; art[def];?[maj,SEM-Hpeople=+,end_people=+,SEM-Hindividual=+])*, punct[comma], ?[SEM-Hprofession];?[SEM-Hcargo].
+
+//a modelo X
+//DCO, 2011/04/26
+//Regra corrigida
+2> ? @= ?[lemma:modelo,start_people=+], ?[maj,SEM-Hindividual=+,SEM-Hpeople=+,start_people=+], (prep[lemma:de,cont_people=+] ; art[def,cont_people=+] ; ?[maj,end_people=+])*.
+
+
+
+4> ? @= noun[maj,member,SEM-Hpeople=+] .
+
+// METONYMY CASES - when the context enables to detect a methonimic use of a NE
+
+//a seleção da França, de Portugal
+Tagging:
+6> noun[location,country] %= | ?[lemma:seleção];?[lemma:seleção], prep[lemma:de], (art) | noun[proper=+,SEM-Hpeople=+,member=+].
+
+//jogo entre o Sporting e o Benfica
+6> noun[proper,SEM-Hpeople:~] %= |?[lemma:jogo], prep[lemma:entre], (art)| noun[proper=+,SEM-Hpeople=+,member=+] .
+// EN COURS
+6> noun[proper,SEM-Hpeople:~] %= |?[lemma:jogo], prep[lemma:entre], (art), noun[proper,SEM-Hpeople], conj[coord], (art)| noun[proper=+,SEM-Hpeople=+,member=+] .
+
+
+//O Sporting jogou contra o Benfica
+
+//DCO, 2011/02/05
+//10> noun[proper,SEM-Hpeople:~] %= noun[proper=+,SEM-Hpeople=+,member=+] | (adv), verb[lemma:jogar] | .
+6> noun[proper,SEM-Hpeople:~] %= | noun[proper,SEM-Hpeople,member], (adv), verb[lemma:jogar], (adv), prep[lemma:contra], (art) | noun[proper=+,SEM-Hpeople=+,member=+] .
+

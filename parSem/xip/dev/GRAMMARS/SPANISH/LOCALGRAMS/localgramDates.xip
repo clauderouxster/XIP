@@ -1,0 +1,88 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : localgramDates.xip
+//!
+//!   Content:	definition of local rules of grammar for dates
+//!
+//!   Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//!   Date       : 27-October-2008
+//!
+//!   Author     : C. Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Sequence:
+
+
+
+// DATES AND HOURS
+
+// hours
+10> num[hour=+] @= num[dig:~], ?[lemma:y], ?[lemma:medio] .
+10> num[hour=+] @= num[dig:~], ?[lemma:menos], num[dig:~] .
+10> num[hour=+] @= num[dig:~], ?[lemma:menos], ?[lemma:quarto] .
+
+// 08:20 (CET) 
+15> num[hour=+,date=+] @= num[time,dig], (punct[fopar]), ?[timezone], (punct[fcpar]). 
+
+
+// DATES - Only dates containing at least a digit will be considered for NER
+// *julio alone is not considered
+
+
+// dates interval in the form year-year
+// they are considered as one token by ntm pre-processing
+10> ? = num[dig,lemma:"%d%d%d%d-%d%d%d%d",date=+] .
+
+
+//dates
+10> num[dig=+,year=+] = num[dig:+],punct[dash:+],num[dig:+],punct[dash:+],num[dig:+].
+
+// martes 10/12/2004
+10>  noun[date=+,day=+,month=+,year=+] @= ?[day,temp], num[dig,date]. 
+
+// dates with day num de month de year
+// lunes 03 de septiembre de 2003
+10> noun[date=+,day=+,month=+,year=+] @= ?[day,temp], num[dig], prep[lemma:de], ?[month], prep[lemma:de], num[dig,year] .
+
+// dates with (dig) month de year
+// (26 de) julio de 2003
+10> noun[date=+,month=+,year=+] @= (num[dig], prep[lemma:de]), ?[month], prep[lemma:de], (art[lemma:el]), num[dig,year] .
+
+// dates with dig month
+// 25 de julio
+10> noun[date=+,day=+,month=+] @= num[dig], prep[lemma:de], ?[month] .
+
+
+
+// coordinated dates with ellipsis
+// 24 y 25 de noviembre
+15> ? = num[date=+,day=+] |conj[coord], noun[date,day,month] | . 
+
+
+// mark as year a 4 digit number preceeded by "de" preceeded by Event
+// e.g. Tour de Francia (de) 2008
+15> ? = noun[event:+], (prep[lemma:de]), num[lemma:"%d%d%d%d",year=+,date=+];num[lemma:"0%d",year=+,date=+] .
+
+
+// unimos fecha + huso horario
+// e.g. lunes 01/12/2008 (CET)
+20> noun[date=+,day=+] @= ?[date:+], (punct[fopar]), ?[timezone], (punct[fcpar]) .
+
+// unimos fecha y hora para hacer una fecha
+// eg martes 08/02/2004 08:20 (CET)
+20> noun[date=+,day=+] @= ?[date:+], ?[hour] .
+
+// Correcting errors in cases like "Plaza 14 de Septiembre" where 14 de Septiembre should not be considered as a date by the system. 
+20> noun[mwe=+,street=+,location=+] @= ?[street:+,common:+], noun[date:+] .
+
+

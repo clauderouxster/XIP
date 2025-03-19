@@ -1,0 +1,80 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Caroline Hagege - Janvier 2010 - rajout de dependances facilitant le
+//! calcul pour ALADIN
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+Déduction:
+
+
+// RELATION ATTRIB entre sujet d'une copule et l'attribut du sujet
+if ( SUBJ(#1[copule],#2) & OBJ[spred](#1,#3) )
+	ATTRIB(#2,#3)
+
+
+// Manque lien quand ellipse
+// eg "Sorti le [T+3J], pas de lien entre ppart et date
+| verb#1[start], NP[tempexpr]{?*,noun#2[last]} |
+if ( ~VMOD(#1,#2) )
+   VMOD(#1,#2),
+   TEMPLINK(#1,#2) .
+
+
+// On réalise plusieurs ponctions lombaires avec résultats négatifs pour les bactéries
+// dans ce cas bactéries est rattaché au verbe. On va également rattacher au plus pres
+if ( OBJ(#1,#4[noun]) & VMOD(#1,#2[noun]) & VMOD(#1,#3[noun]) & #4 < #2 & #2 < #3 &
+   ~NMOD(#2,#3) )
+NMOD(#2,#3)
+
+// dans la meme veine
+// retrouver des arguments pour un processus infectieux
+// processus seulement attache a "retrouver" on attache egalement au nom le 
+// plus pres a gauche
+if ( OBJ(#1,#2[noun]) & VMOD(#1,#3[noun]) & #2 < #3 & ~NMOD(#2,#3) )
+ NMOD(#2,#3)
+
+
+// Rectification de l'attachement dans le cas de verbes support
+// Eg. il n'a pas mis en évidence d'infection
+// infection rattaché a "mettre"
+if ( VMOD(#1[support_deb:+],#2[support_fin:+]) & ^NMOD[posit1](#2,#3) & ~VMOD(#1,#3) )
+   VMOD(#1,#3)
+
+// attachment
+//V PP+[malgre:~], PP[malgré], PP+ dans ce cas les derniers PP sont attachés au noyau de PP[malgré]
+if ( VMOD(#1,#2) & PREPOBJ(#2,?[prep,lemme:malgré]) & ^VMOD(#1,#3) 
+     & #1 < #2 & #2 < #3 )
+~
+   
+
+
+
+/// Correction de mauvaises dépendances
+// il ETRE <V_EVIDENCE[avoir]> OBJ. e.g. il est noté une infection pas passive.
+// dans ce cas, le il n'est pas un sujet passif mais un sujet impersonnel.
+| NP#2[passive]{pron#1[surface:il]} |
+if ( ^SUBJ[passive](#3[v_evid],#1) & (OBJ(#3,#4) || (VMOD(#3,#4[noun]) & VMOD(#3,?[lemme:pas]) & PREPOBJ(#4,?[lemme:de])) ) )
+   SUBJ[traits=~,imperso=+](#3,#1)
+
+
+// enlever le deepobj qui traine
+if (^DEEPOBJ(#1[v_evid],?[pron]) & ~SUBJ[passive](#1,?) )
+~
+
+// il n'est pas noté d'infection
+// transformer le VMOD qui traine en OBJ
+if ( SUBJ[imperso](#1[v_evid],?) & ^VMOD(#1,#2[noun]) & VMOD(#1,?[adv,lemme:pas]) )
+   OBJ[traits=~](#1,#2)
+
+
+// COORDINATION
+// si coord ou en fin de phrase et coorditems non calculé alors on rajoute
+// sans mise en evidence de bactéries ou de virus
+| PP{prep[lemme:de],NP{#1[last]}}, coord[lemme:ou], PP{prep[lemme:de],NP{#2[last]}} |
+if ( ~SUBJ(?,#2) & ~COORDITEMS(#1,#2) )
+COORDITEMS(#1,#2)

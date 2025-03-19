@@ -1,0 +1,343 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2004 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : dependency_circ1.xip
+//!   Date       : May 2004
+//!   Author     : Caroline Hagege
+//!   Description : Typing some adjuncts (typically XMOD dependencies) 
+//!			when we can (preposition form, etc.). 
+//!			Does not take advantage of NE and semantic typing
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+
+/////////////////////////////////////////////////////////////////////////////
+// RANGE (FMT:from-to) relation 
+/////////////////////////////////////////////////////////////////////////////
+
+// Rule XXXX
+// When we have a range From XXX to YYY then the MOD relation between XXXX and YYYY is type with FMT feature
+// e.g. The weekdays from Monday to Friday
+| PP{#1}, PP{#3} |
+if ( PREPD(#1[lemme:from],#2) & 
+     ( PREPD(#3[lemme:to],#4) | PREPD(#3[lemme:till],#4) | PREPD(#3[lemme:until],#4) ) & 
+     ^NMOD[post,fmt:~](#2,#4) )
+	NMOD[fmt=+](#2,#4)	
+
+
+/////////////////////////////////////////////////////////////////////////////
+// LOCATION
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+// Rule 569
+// Adding the loc feature for VMOD and NMOD relations when the head of the PP has feature place and the preposition is in
+// Note: The features on the ? dependency in the conditions are passed to the dependency in the conclusion of the rule
+| PP{prep[form:fin], NP{?*,noun#1[last,place];noun#1[last,city]}} |
+	if ( ^?[loc:~](#2,#1) )
+	?[loc=+](#2,#1)
+
+
+// Rule 414
+// Adding the loc:+ feature for VMOD and NMOD dependencies when the PP is introduced by "along"
+| PP#1{prep[p_along]} |
+	if ( HEAD(#2,#1) & ^?[loc:~](#3,#2) )
+	?[loc=+](#3,#2)
+
+
+// Rule 415
+// Adding the loc:+ feature for VMOD dependencies when the PP is introduced by "about" and when the verb that is modified is a vmotion.
+// e.g. I wandered about the flat, they danced about the table....
+| SC{?*, FV{?*, verb#1[vmotion]}};?{?*,verb#1[vmotion]}, ?*, PP#2{prep[p_about]} |
+	if ( HEAD(#3,#2) & ^VMOD[loc:~](#1,#3) )
+	VMOD[loc=+](#1,#3)
+
+
+// Rule 425
+// Adding the feature loc:+ to a VMOD dependency involving "there"
+if ( ^VMOD(#1,#2[adv,form:fthere]) )
+	VMOD[loc=+](#1,#2)
+
+
+// Rule 426
+// Attaching here to a verb (VMOD) while adding a feature local:+ to this link
+// When here is before the verb (under a SC node) or not (in this case there is a NP inbetween)
+// e.g. Here is the train. 
+| SC{?*,adv#3[form:fhere], FV{?*,#1[last]} } |
+	if ( VDOMAIN(#2,#1) )
+	VMOD[pre=+,loc=+](#2,#3)
+
+
+// Rule 480
+// Avoiding to take as VMOD a form of there which is a non referential subject
+// e.g They think there are people to attend
+| SC{?*,?[verb]{?*,#1[last]}};?[verb]{?*,#1[last]}, ?*[verb:~], adv#5[form:fhere];adv#5[form:fthere] |
+	if ( VDOMAIN(#2,#1) & ~SUBJ[pre](?,#5) )
+	VMOD[post=+,loc=+](#1,#5)
+
+// Rule 481
+// When the adverb here/there is between the subject and the verb
+// e.g. People there are not aware
+| SC{?*, adv#5[form:fthere];adv#5[form:fhere], ?[verb]{?*,#1[last]}} |
+	if ( VDOMAIN(#2,#1) & SUBJ[pre](#1,#3) & #3 < #5 )
+	NMOD[post=+,loc=+](#3,#5)
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// TEMPORAL
+/////////////////////////////////////////////////////////////////////////////
+
+// Rule 195
+// Specializing the NMOD[post] dependency with features temp
+| PP#5[date];PP#5[tempexpr] |
+	if ( HEAD(#2,#5) & ^NMOD[temp:~,fmt:~](#1,#2) )
+	NMOD[temp=+](#1,#2) 
+
+// Rule XXXXX
+// Complex adverb denoting temporal expressions
+//| ADV#1[tempexpr], FV{?*, #2[last]} |
+//	if
+
+// Rule 416
+// Adding feature time to adverbs bearing a tempexpr:+ feature
+if ( ^?[temp:~](#2,#1[adv,tempexpr]) )
+	?[temp=+](#2,#1)
+
+
+// Rule 417
+// Adding feature time to VMOD and NMOD relations
+// e.g. on Aug. 24, 2001, on Friday etc.
+| PP#3{prep[p_on], NP[tempexpr]} |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 418
+// Adding feature time to VMOD and NMOD dep.
+// e.g. in, before, after followed by a NP which head has feature posttime or hour
+| PP#3{prep[form:fbefore];prep[form:fafter];prep[p_in] } |
+	if ( HEAD(#1,#3) & (#1[posttime] | #1[hour]) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 419
+// Adding feature time to VMOD and NMOD dep.
+// e.g. before, after followed by a NP which has feature hour
+| PP#3{prep[form:fbefore];prep[form:fafter], NP[hour];NP{?[first,last,num]} } |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 420
+// Adding feature time to VMOD and NMOD dep.
+// preposition is "at" and the NP head has the feature hour
+| PP#3{prep[form:fat],NP[hour];NP{?*,?[last,hour]};NP{?[first,last,num]}}|
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 423
+// Adding the feature temp:+ to VMOD and NMOD relations 
+// Note that a feature temp:+ will be also added on the PREPD dependency.
+// e.g. in 1994, in August, in August 1994, etc.
+| PP#3{prep[form:fin], NP{?*,noun[period];noun[posttime]}} |
+	if ( HEAD(#1,#3) & ^?[temp:~](#2,#1) )
+	?[temp=+](#2,#1)
+
+
+// Rule 432
+// Temporal NP that has been left alone
+// e.g. Yesterday they said there was a party
+| NP#1[tempexpr], ?*, FV{?*,#2[last]} |
+	if ( HEAD(#3,#1) & ~?(?,#3) & VDOMAIN(#4,#2) )
+	VMOD[pre=+,temp=+](#4,#3)
+
+
+
+
+
+// Rule 424
+// Adding the feature temp:+ to VMOD that links a verb and a temporal adverb
+// e.g. He ran two days ago
+| ?{?*,#1[last,verb]};SC{?*,FV{?*,#1[last]}}, adv#2[tempadv];adv#2[tempexpr] | 
+	if ( ^VMOD[!features:!](#1,#2) )
+	VMOD[temp=+](#1,#2)
+
+
+
+
+// Rule 482
+// Adding a feature temp:+ to the link between a verb and adverbs having the feature time:+
+// Deleting wrong PP attachment if the adverb is followed by a PP which head has feature posttime:+
+// e.g. late in the evening (after the verb)
+| adv#2[time:+], PP{ prep[form:fin], NP{?*,#3[last,posttime]}} |
+	if ( ^VMOD(#1,#2) & ^VMOD[temp](#1,#3) )
+	VMOD[temp=+](#1,#2),
+	ADVMOD[temp=+,post=+](#2,#3).
+
+// Rule 483
+// Same as above when the temporal expression is before the verb
+// e.g. Late in the evening they will come.
+// In this case "late" is not linked to "come" at this stage
+| adv#2[time:+], PP{ prep[form:fin], NP{?*,#3[last,posttime]}}, ?*[verb:~], SC{?*, FV{?*,#5[last]}}; FV{?*,#5[last]} |
+	if ( VDOMAIN(#6,#5) & ~VMOD(?,#2) )
+	VMOD[temp=+,pre=+](#6,#2),
+	ADVMOD[temp=+,post=+](#2,#3).
+
+
+// Rule 471
+// temporal adverbs, default when not marked with temp feature
+| adv#1[tempadv];adv#1[tempexpr] |
+	if ( VMOD[post:+,temp:~](#4,#1)   )
+	VMOD[temp=+](#4,#1)
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// TMF (initial time) and FMT (final time)
+/////////////////////////////////////////////////////////////////////////////
+// Time an event starts or a state becomes true
+
+// Rule XXXX
+// If we have a FMT relation between temporal elements then the first complement is a TMF (initial time)  and the last is a TMT (final time)
+// e.g. He works from morning till night
+| noun#1[period];noun#1[posttime];noun#1[tempexpr];noun#1[time] |
+	if ( NMOD[post,fmt:+](#1,#2) & ^VMOD[post,tmf:~](#3,#1) & VMOD[post,tmt:~](#3,#2) )
+	VMOD[tmf=+](#3,#1)
+| noun#2[period];noun#2[posttime];noun#2[tempexpr];noun#2[time] |
+	if ( NMOD[post,fmt](#1,#2) & VMOD[post,tmf](#3,#1) & ^VMOD[post,tmt:~](#3,#2) )
+	VMOD[tmt=+](#3,#2)
+
+
+
+// Rule 421
+// Adding a feature dur:+ to PP modifiers starting with since and followed by a date
+// e.g. Since 1993
+| PP#3{prep[form:fsince], dig[last,period]} |
+	if ( HEAD(#2,#3) & ^?[tmf:~](#1,#2) )
+	?[tmf=+](#1,#2)
+
+| PP#3{prep[lemme:since], NP[tempexpr]} |
+	if ( HEAD(#2,#3) & ^?[tmf:~](#1,#2) )
+	?[tmf=+](#1,#2)
+
+
+// Rule XXXXX
+// TMT alone (without range with a TMF
+// e.g. It will be full till tomorrow
+
+
+
+// Rule XXXXX
+// Initial Time TMF with embedded clauses introduced by "since"
+// e.g. It has changed since I have lived here
+if ( ^VMOD[post,sentence,tmf:~](#1,#2) & CONNECTOR[subord](?[lemme:since],#2) )
+	VMOD[tmf=+](#1,#2)
+
+
+/////////////////////////////////////////////////////////////////////////////
+// DURATION
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Rule XXXX
+// With preposition during and temporal complement
+// He worked during the night
+//| PP#3{prep[form:fduring], NP{?*,noun[period];noun[posttime]}} |
+| PP#3{prep[form:fduring], NP} |
+	if ( HEAD(#1,#3) & ^?[dur:~](#2[verb],#1) )
+	?[dur=+](#2,#1)
+
+
+// Rule XXXX
+// With preposition "during" and stand-alone ing-form
+// e.g. He talked with him during meeting
+| prep[form:fduring], GV{#1[first,last,prog:+]} |
+	if (  ^VMOD[post,dur:~](#2,#1)  )
+	VMOD[dur=+](#2,#1)
+
+
+// Rule 422
+// Adding feature duration:+ to PP modifiers for + duration
+// e.g. for more than three years
+| PP#3{prep[lemme:for], NP{(adv[quantadv]), ?*, noun#2[period]} } |
+	if ( ^?[dur:~](#1,#2) )
+	?[dur=+](#1,#2)
+
+
+// Rule XXXXX
+// Changing a temp relation to a duration relation. 
+// e.g. She worked nine hours
+| NP{?+,noun#1[lemme:hour];noun#1[lemme:minute];noun#1[lemme:second]} |
+	if ( ^VMOD[temp,post](#2,#1) & QUANTD(#1,?) )
+		VMOD[temp=~,dur=+](#2,#1)
+
+
+/////////////////////////////////////////////////////////////////////////////
+// MANNER
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Rule 484
+// Adding a feature manner:+ to adverbials VMOD in which the dependent does not bear the feature notly:+ and that are not temporal expressions
+if ( ^VMOD[temp:~](#1,#2[adv,notly:~,wh:~]) )
+	VMOD[manner=+](#1,#2)
+
+
+
+///////////////////////////////////////////////////////////////////
+// Preferences for PP attachment when PP are typed.
+
+// Rule XXXX
+// Preferring to attach duration complements to noun than to verbs
+// He talked with Peter for a few minutes -> *MOD(Peter,minutes) but MOD(talk,minutes)
+if ( VMOD[post:+,dur:+](#1,#2) & ^NMOD[post](?,#2) )
+	~
+
+// Rule XXXXX
+// Same as above with temporal complements
+if ( VMOD[post:+,temp:+](#1,#2) & ^NMOD[post](?,#2) )
+	~
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+// REASON (RSN feature)
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Defines a reason why an event or a state happens.
+
+// Rule XXXX
+// A PP modifier introduced by "because of" is marked as REASON
+// They left because of the rain
+if ( ^VMOD[post,rsn:~](#1,#2) & PREPD(#3[lemme:because_of],#2) )
+	VMOD[rsn=+](#1,#2)
+
+
+// Rule XXXXX
+// A sentencial modifier introduced by "because" is marked as REASON
+// e.g. They can start because Mary arrived.
+if ( CONNECTOR[subord](?[lemme:because],#2) & ^VMOD[sentence,rsn:~](#3,#2) )
+	VMOD[rsn=+](#3,#2)
+
+
+// Rule XXXX
+// CHECK with corpus if it does not introduce problems...
+// Past Participle or adjectives e.g. a city famous for its beauty.
+if ( (  (^ADJMOD[rsn:~](#1[sc_pfor:+],#2) & NMOD[post](?[noun],#1))
+       | (^VMOD[rsn:~](#1[partpas:+,sc_pfor:+],#2) & NUCL[vlink,passive](?,#1))
+     ) 
+      & PREPD(?[lemme:for],#2) & DETD(#2,?[pron:+,p3,gen:+]) )
+		MOD[rsn=+](#1,#2)
+

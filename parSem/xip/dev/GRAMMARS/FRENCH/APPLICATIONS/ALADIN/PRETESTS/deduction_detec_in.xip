@@ -1,0 +1,1075 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! Caroline Hagege - Aout 2009 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// Dependances particulieres pour l'appli de detection des IN
+
+
+Déduction:
+
+#@rulespace=medecine
+
+// MARQUAGE
+// expression de mesure de temperature superieure ou egale a 38 est temperature
+| noun#1[unit_temper,temperature=+,lemme:"38%*"] |
+  ~
+| noun#1[unit_temper,temperature=+,lemme:"39"] |
+  ~
+| noun#1[unit_temper,temperature=+,lemme:"4%d%*"] |
+  ~
+
+
+| noun[diagnostic=+]{prefix[lemme:"méga"];prefix[lemme:"méga-"], noun[body_part]} |
+~
+
+// Rajouter le trait soins locaux dans les lavages avec désinfectants
+// lavage régulier avec solution bétadinée
+// lavage de l'abcès avec bétadine
+| #1[soins_loc=+] |
+if ( NMOD(#1[lemme:lavage],#2[desinfect]) |
+     (NMOD(#1[lemme:lavage],#3) & NMOD(#3,#2[desinfect]) )
+     )
+   ~
+
+
+// SITE ISO (dans mwe complexes)
+// Faire remonter a un mwe le trait pour_iso 
+// eg ostéite métatarsienne
+// arthrite septique de la hanche gauche (os -> pour_iso:profond)
+| noun[infection,pour_iso=profond]{?*,?[pour_iso:profond]} |
+~
+| noun[infection,pour_iso=superficiel]{?*,?[pour_iso:superficiel]} |
+~
+
+
+// Expressions a mots multiples indiquant concept important pour detection IN
+
+// IDEE D AUGMENTATION DE LA FIEVRE
+// e.g. augmentation de la température
+// e.g. pics a 40o
+if ( NMOD(#1[augment:+],#2[noun,temperature]) ) 
+   TEMPERATURE(#2)   
+
+// augmentation thermique
+if ( NMOD(#1[augment:+],#2[adj,temperature]) ) 
+   TEMPERATURE(#1)   
+
+
+// eg la temperature augmente
+if ( SUBJ(#1[verb,augment:+],#2[temperature]) )
+   TEMPERATURE(#2)
+
+
+
+
+// IDEE de MAINTIEN DE LA FIEVRE
+// hyperthermie persistante
+if ( NMOD(#1[temperature],#2[contin]) )
+   TEMPERATURE(#1)
+
+if ( SUBJ(#1[verb,contin],#2[temperature]) )
+   TEMPERATURE(#2)
+
+// hyperthermie à 40
+if ( NMOD(#1[temperature],#2[num]) )
+   TEMPERATURE(#1)
+
+
+| PP#3{prep,NP{#2}} | 
+if ( NMOD(#1[temperature],#2[noun]) & AMOUNT(#3) )
+   TEMPERATURE(#1)
+
+
+// IDEE APPARITION FIEVRE
+
+if ( NMOD(#1[appar],#2[temperature]) )
+   TEMPERATURE(#2)
+
+if ( SUBJ(?[appar],#2[temperature]) )
+   TEMPERATURE(#2) 
+
+if ( NMOD(#1[temperature],#2[adj,appar]) )
+   TEMPERATURE(#1) 
+
+
+// fievre seule
+// si en relation avec concept de baisse alors WEAK signal
+| noun#1[temperature] |
+if ( ~TEMPERATURE(#1) & SUBJ(?[augment:-],#1) )
+  WEAK(#1)
+
+| noun#1[temperature] |
+if ( ~TEMPERATURE(#1) & NMOD[posit1](?[augment:-],#2) )
+   WEAK(#1)
+
+// sinon 
+| noun#1[temperature] |
+if ( ~TEMPERATURE(#1) & ~WEAK(#1) )
+   TEMPERATURE(#1)
+
+// rectification de tir "temperature se stabilise a 37."
+| #3[lemme:"37%*"] |
+if ( ^TEMPERATURE(#1[temperature])  & SUBJ(#2,#1) & VMOD[posit1](#2,#3) )
+   ~
+
+// une température de 36(,5)
+| #2[lemme:"3[6,7]%*"] |
+if ( NMOD[posit1](#1[lemme:"température"], #2) & ^TEMPERATURE(#1) )
+   ~
+
+
+
+
+// patient est fébrile
+if ( ATTRIB(#1[lemme:patient],#2[adj,temperature]) )
+   TEMPERATURE(#2)
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// INFECTIONS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Indication de Camille
+//Voici quelques valeurs biologiques que tu pourrais utiliser comme marqueurs d'infection :
+//- leucocytes (ou globules blancs) > 10000
+//- CRP >20 mg/L
+//- Fibrinogene >12micromol/L
+
+
+// Si nitrite dans urine alors infection urinaire
+// e.g. apparition de nitrites dans la BU
+if ( NMOD(#1[lemme:nitrite],?[lemme:BU]) | NMOD(#1[lemme:nitrite],?[lemme:"urine"] ) )
+   INFECTION(#1)
+
+
+// A CODER VU AVEC CAMILLE "leucocyte dans BU" -> infection urinaire
+if ( NMOD(#1[lemme:leucocyte],?[lemme:BU]) | NMOD(#1[lemme:leucocyte],?[lemme:"urine"] ) )
+   INFECTION(#1)
+
+// probleme infectieux
+// attention "bilan infectieux négatif"  et "au niveau infectieux:..."
+// attention hépatite aigue non infectieuse ne doit pas etre prise comme infection
+| #1[mot_vide:~] |
+if ( ( NMOD(#1,#2[adj,lemme:infectieux]) | NMOD(#1,#2[adj,modif_infec]) ) &  ~NMOD(#1,?[lemme:négatif]) & ~ATTRIB(#1,?[lemme:négatif]) & ~NON(#2)  )
+   INFECTION(#1)
+
+
+
+// leucocytes >= 10000
+// pas d'unite explicite
+| num#2[card,gdnbre1,lemme:"1%d%d%d%d"]; num#2[card,gdnbre1,lemme:"1%d\.%d%d%d"] |
+if ( NMOD(#1[lemme:leucocyte],#2 ) )
+INFECTION(#1)
+
+| num#2[card,gdnbre1,lemme:"1%d%d%d%d"]; num#2[card,gdnbre1,lemme:"1%d\.%d%d%d"] |
+if ( NMOD(#1[lemme:leucocyte],#3[lemme:"supérieur"]) & ADJMOD(#3,#2) )
+INFECTION(#1)
+
+
+//- CRP >=20 mg/L
+// avec unite explicite
+// CRP de 30 mg/l
+| #1[measure]{#2[num,lemme:"2%d"],noun[measure,abr]} ;
+  #1[measure]{#2[num,lemme:"3%d"],noun[measure,abr]} ; 
+  #1[measure]{#2[num,lemme:"4%d"],noun[measure,abr]} ; 
+  #1[measure]{#2[num,lemme:"5%d"],noun[measure,abr]} ; 
+  #1[measure]{#2[num,lemme:"6%d"],noun[measure,abr]} ; 
+  #1[measure]{#2[num,lemme:"7%d"],noun[measure,abr]} |
+if ( NMOD(#3[lemme:"CRP"],#1) )
+INFECTION(#3)
+
+// sans unite explicite
+// CRP de|a 45
+| num#1[lemme:"2%d"] ; num#1[lemme:"3%d"] ; num#1[lemme:"4%d"] ; num#1[lemme:"5%d"] ; num#1[lemme:"6%d"]; num#1[lemme:"7%d"] |
+if ( NMOD(#3[lemme:"CRP"],#1) )
+INFECTION(#3)
+
+// CRP supérieur à 20 mg/L
+| #1[measure]{#2[num,lemme:"2%d"],noun[measure,abr]}; 
+  #1[measure]{#2[num,lemme:"3%d"],noun[measure,abr]}; 
+  #1[measure]{#2[num,lemme:"4%d"],noun[measure,abr]};
+  #1[measure]{#2[num,lemme:"5%d"],noun[measure,abr]};
+  #1[measure]{#2[num,lemme:"6%d"],noun[measure,abr]}; 
+  #1[measure]{#2[num,lemme:"7%d"],noun[measure,abr]} |
+if ( NMOD(#3[lemme:"CRP"],#4[lemme:"supérieur"]) & ADJMOD(#4,#1) )
+INFECTION(#3)
+
+
+// sans unite explicite
+// CRP supérieur à 20
+| num#1[lemme:"2%d"] ; num#1[lemme:"3%d"] ; num#1[lemme:"4%d"] |
+if ( NMOD(#3[lemme:"CRP"],#2[lemme:"supérieur"]) & ADJMOD(#2,#1) )
+INFECTION(#3)
+
+// Si (muco)purulent est modifieur alors on marque comme infection la tete
+if ( NMOD(#1,?[lemme:"%c+purulent(e)(s)"]) & ~INFECTION(#1) )
+INFECTION(#1)
+
+
+// A partir de mots-cles codés on extrait dépendances unaires importantes
+
+// e.g. un escherichia coli sensible/resistant à l'Amoxicilline -> ne pas annoter Amoxicilline.
+| noun#1[antib, not_admin:~] |
+	ANTIBIOTIQUE(#1)
+
+// Restriction pour "simplification de l'antibiothérapie par Augmentin..." On ne veut pas 2 occurrence d'antibios pour l'expression mais seulement une (Augmentin)
+| #1[lemme:antibiothérapie] |
+if (  ( NMOD[posit1](#3[lemme:simplification],#1) | NMOD[posit1](#3[lemme:remplacement],#1) )
+      & NMOD[posit2](#3,#4) & ANTIBIOTIQUE(#4) & ^ANTIBIOTIQUE(#1) 
+   )
+~
+
+| noun#1[bacterie] |
+	BACTERIE(#1)
+
+
+
+// complexe
+| noun#1[infection,mwe] |
+	INFECTION(#1)
+
+| NP{?*, noun#1[infection,mwe:~]} |
+  	 INFECTION(#1)
+// 2 niveaux
+| noun#1[infection,mwe]{?*,#2[mwe,infection]} |
+  if ( ^INFECTION(#2) & INFECTION(#1) )
+  ~
+
+
+
+
+// DISPOSITIFS
+| noun#1[mwe:+,dispositif] |
+	DISPOSITIF(#1)
+| NP{?*, noun#1[mwe:~,dispositif]} |
+  	DISPOSITIF(#1)
+
+// VIRUS
+//complexe
+| noun#1[virus,mwe:+] |
+  VIRUS(#1)
+
+| NP{?*, noun#1[virus,mwe:~]} |
+       VIRUS(#1)
+
+
+/// LEVURES
+//complexe
+| noun#1[levure,mwe] |
+  LEVURE(#1)
+
+| NP{?*, noun#1[levure,mwe:~]} |
+  LEVURE(#1)
+
+
+
+// escherichia coli sensible a Amoxicilline.
+
+// enlever les dependances incluses dans dep
+// e.g streptococcus béta-hémolytique de groupe B
+// jusqu'a 3 niveaux dans les regles de construction
+| #1{#2{#3}} |
+if ( BACTERIE(#1) & BACTERIE(#2) & ^BACTERIE(#3))
+~
+
+| #1{#2} |
+if ( BACTERIE(#1) & ^BACTERIE(#2) )
+~
+
+
+
+// maladie virale
+| noun#1[maladie_vir:+] |
+  	MALADIE_VIRALE(#1)
+
+
+//// EXAMENS
+// complexe
+// attention parfois le type est sur exam parfois le type est sur type_exam
+// contrainte sur examens per-operatoires (ne sont pas annotés)
+
+| noun#1[exam,mwe,perop:~] | 
+  EXAMEN(#1)
+
+| noun#1[type_exam,mwe,perop:~] |
+  if ( ~EXAMEN(#1) )
+  EXAMEN(#1)
+
+// simples
+| NP{?*,noun#1[mwe:~,exam]} |
+  EXAMEN(#1) 
+
+
+// Spécification des examens en fonction de leur type
+if ( EXAMEN(#1[exam:bacterio]) | EXAMEN(#1[type_exam:bacterio]) )
+     EXAM_BACTER(#1)
+
+
+if ( EXAMEN(#1[exam:bio]) | EXAMEN(#1[type_exam:bio]) )
+     EXAM_BIO(#1)
+
+if ( EXAMEN(#1[exam:image]) | EXAMEN(#1[type_exam:image]) )
+     EXAM_IMAGE(#1)
+
+
+
+/// DIAGNOSTIQUES
+// complexe
+| noun#1[diagnostic,mwe] |
+  DIAGNOSTIQUE(#1)
+//simples
+| NP{?*,noun#1[mwe:~,diagnostic]} |
+  DIAGNOSTIQUE(#1)
+
+| noun#1[diagnostic,mwe]{?*,#2[mwe,diagnostic]} |
+  if ( ^DIAGNOSTIQUE(#2) & DIAGNOSTIQUE(#1) )
+  ~
+| noun#1[infection,mwe]{?*,#2[mwe,diagnostic]} |
+  if ( ^DIAGNOSTIQUE(#2) & INFECTION(#1) )
+  ~
+
+// INTERVENTIONS CHIRURGICALES
+// complexe
+| noun#1[intervchir,mwe] |
+  INTERV_CHIR(#1)
+//simples
+| NP{?*,noun#1[mwe:~,intervchir]} |
+  INTERV_CHIR(#1)
+
+| noun#1[intervchir,mwe]{?*,#2[mwe,intervchir]} |
+  if ( ^INTERV_CHIR(#2) & INTERV_CHIR(#1) )
+  ~
+
+
+// expressions de 2eme niveau plus complexe (demande une relation pour deduire des mots cles)
+
+// La patiente a présenté , une semaine après son arrivée dans le Service , une infection urinaire à Klebsielle , accompagnée d' une pneumopathie nosocomiale ( sans germe retrouvé au combicath )
+// Le 3ème épisode infectieux va être une pneumopathie nosocomiale à Pseudomonas aeruginosa
+// A VERIFIER dans les texte
+if ( NMOD[posit1](#1,#2[lemme:nosocomial]) )
+   INOSO(#1).
+
+// PNAVM (pneumopathie nosocomiale acquise sous ventilation mécanique)
+if ( INFECTION(#1[lemme:"P(N)AVM"]) )
+   INOSO(#1)
+
+// pneumonie à <germe_infec> equivalent a pneumopathie
+if ( NMOD[posit1](#1[lemme:pneumonie],#2) & GERME_INFEC(#2) )
+   INFECTION(#1)
+
+
+// enlever doublons generes par regles ci-dessus
+if ( ( INFECTION(#1) | INOSO(#1) ) & ^DIAGNOSTIQUE(#1) )
+~
+
+if ( ^INFECTION(#1) & INOSO(#1) )
+~
+
+
+
+
+
+////////////////////// LINK - pour test
+
+
+
+
+// Creation d'un lien LINK pour des noeuds relies par des relations syntaxiques
+if ( SUBJ(#1,#2) | OBJ(#1,#2) | NMOD(#1,#2) | ADJMOD(#1,#2) | VMOD(#1,#2) | CONNECT(#1,#2) )
+	LINK(#1,#2)
+
+
+// DEEPSUBJ ET DEEPOBJ
+if ( DEEPSUBJ(#1,#2) & DEEPOBJ(#1,#3) & ~LINK(#2,#3) & ~LINK(#3,#2) )
+   LINK(#2,#3) 
+
+
+// commutativite
+if ( LINK(#1,#2) & ~LINK(#2,#1) )
+	LINK(#2,#1)
+
+
+// transitivite
+if ( LINK(#1,#2) & LINK(#2,#3) & ~LINK(#1,#3) & #1 < #2 & #2 < #3 ) 
+	LINK(#1,#3)
+
+
+
+// R1(Verb,N1) ET R2(Verb,N2) alors LINK(N1,N2)
+if ( LINK(#1[verb],#2[noun]) & LINK(#1,#3[noun]) & ~LINK(#2,#3) )
+   LINK(#2,#3),
+   LINK(#3,#2).
+
+
+
+// Si infection coordonnee a bactérie alors LINK
+if ( INFECTION(#1) & GERME_INFEC(#2) )
+   LINK(#1,#2) 
+
+
+// Pour le temps
+
+// Initialisation selon les dates anonymisées
+// Mise à jour en fonction de certains segments linguistiques
+// "Le lendemain", A l'admission, Dans les dernieres 24h.
+// Voir dans aladin_temp.xip
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////// NEGATION  //////////////////////////////////////////////
+//////////////////////////////////////////////		  //////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// voir deduction_negat.xip
+// ICI seulement petites rectifications dus a problemes de syntaxe
+
+// résultats sont négatifs pour bactéries
+if ( ATTRIB(#2[lemme:"résultat"],?[lemme:"négatif"]) & SUBJ(#1,#2) & VMOD[posit1](#1,#3) )
+   NON(#3)
+
+
+// vaccination contre hemophilus (pas bacterie sur hemophilus)
+if ( LINK(#1[lemme:vaccination],#2) & ^BACTERIE(#2) )
+   NON(#2)
+
+// test ... contre le tétanos
+if ( LINK(#1[lemme:test],#2) & INFECTION(#2) & PREPOBJ(#2,?[lemme:contre]) )
+   NON(#2)
+
+// concomittance entre BACTERIE et lemme "négatif"
+// l'ensemble des prélevements a la recherche de Clostridium s'avérera négatif
+| SC{?*,PP{prep,NP{?*,#1[last]}};NP{?*,#1[last]}, FV{?*,verb[copule]}}, AP{adj[lemme:"négatif"]} |
+   NON(#1).
+
+
+// antécédants de <diagnostique> ne pas prendre <diagnostique>
+if ( NMOD[posit1](?[lemme:"antécédants"],#2) & DIAGNOSTIQUE(#2) )
+   NON(#2)
+
+/// DOMAINE DEPENDANT
+
+// chute de la temperature
+// chute est a priori polar:- mais trop ambigu
+// chute avec traumatisme cranien
+if ( NMOD[posit1](?[lemme:chute],#2) & TEMPERATURE(#2) )
+   NON(#2)
+
+// si attribut negatif de element de type examen, alors ce n'est pas une inversion de polarité mais bien une allusion aux resultas de l'examen
+if ( EXAMEN(#1) & ATTRIB(#1,?[lemme:négatif]) & ^NON(#1) )
+~
+
+// supprimer occurrence de BMR comme baterie dans les cas suivants (fin de doc)
+// nous n'avons pas connaissance du portage d'une BMR par le patient.
+if ( ^BACTERIE(#1[lemme:BMR]) & LINK(#2[lemme:connaissance],#1) & OBJ(#3[lemme:avoir],#2) & NEGAT(#3) )
+~
+
+// supprier occurrence de INFECTION si modif Service
+// e.g. Service des maladies infectieuses
+if ( ^INFECTION(#1) & NMOD[posit1](#2[lemme:service,sg:+], #1) )
+~
+
+
+
+
+// A faire ???
+// Un relais de la GENTAMICINE sera fait par RIFAMPICINE
+// ne pas garder GENTAMICINE comme indice puisque relai. il faut etre sur que gentamicine deja mentionnee
+
+// A faire
+// réalisation d' une ETO le [ T+2J ] éliminant l' endocardite infectieuse . 
+// endocardite infectieuse n'est pas a considerer comme infection
+
+// A faire
+// ce résultat bactériologique n' a pas conduit à la mise en route d' une antibiothérapie devant l' absence de syndrome septique clinique et biologique évolutif . 
+
+// A faire
+// Substitution du Claventin et du Zyvoxid par de la Piperilline selon les données de l' antibiogramme . 
+
+///////////////////////////
+///// CONDITION - EVT NON AVERES
+///////////////////////////
+
+// eg. Perfalgan si douleurs - prescription avec condition. Ne pas prendre pour diagnostique
+| BG{conj[lemme:si]}, NP{#1[first,last]} |
+if ( ^$1(#1)  )
+   ~
+
+
+
+
+
+
+//////////////////////////////////////////////
+// Expressions complexes - divisees en deux
+//////////////////////////////////////////////
+
+
+// pour les diagnostics
+
+
+#@rulespace=medecine
+
+// dégradation (adj) de/sur (det) etat|plan|mode|fonction  <adj>
+// eg. degradation progressive de la fonction rénale/du rein
+// eg dégradation modérée sur/au le plan respiratoire
+| noun#2[lemme:fonction];noun#2[lemme:plan];noun#2[lemme:mode];noun#2[lemme:état] | 
+if ( NMOD[posit1](#1[lemme:dégradation],#2) 
+     & ( NMOD[posit1](#2,#3[adj,noagr:~]) | NMOD[posit1](#2,#3[body_part]) ) 
+     & #1 < #2
+     & #2 < #3 
+    )
+    DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+    DIAG_DEBUT(#1),
+    DIAG_FIN(#3),
+    DIAG_GENERAL[complexe=+,fin_diag=+](#3).
+
+// det état (adj) (du patient) s'aggrave
+// eg l'état neurologique du patient s'est beaucoup aggravé
+if ( SUBJ(#1[lemme:aggraver],#2[lemme:état]) & NMOD[posit1](#2,?[lemme:patient]) 
+   & REFLEX(#1,?) 
+   & #2 < #1 
+   )
+    DIAG_GENERAL[complexe=+,deb_diag=+](#2),
+    DIAG_DEBUT(#2),
+    DIAG_FIN(#1),
+    DIAG_GENERAL[complexe=+,fin_diag=+](#1).
+
+
+// pléthorique attribut de X
+// abdomen est pléthorique, état pléthorique etc.
+if ( ( NMOD[posit1](#1,#2[lemme:pléthorique]) | ATTRIB(#1,#2[lemme:pléthorique]) ) 
+   & #1 < #2 
+   )
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#2),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#2).
+
+// liquide ?* louche|trouble (nmod[pos1])
+if ( ( NMOD[posit1](#1[lemme:liquide],#2[adj,lemme:trouble]) | NMOD[posit1](#1[lemme:liquide],#2[adj,lemme:louche]) )
+   & #1 < #2 
+   )
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#2),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#2).  
+
+// atrophie ?+ noun[body_part]
+// atrophie jaune chronique du foie
+if (  ( NMOD[posit1](#1[lemme:atrophie],#2[noun,body_part]) | NMOD[posit1](#1[lemme:dégénérescence], #2[noun,body_part]) )
+    & #1 < #2 )  
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#2),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#2).
+
+// noun[pre_diag], ?+, noun[body_part]
+if ( NMOD[posit1](#1[noun,pre_diagnost_body],#2[noun,body_part]) & #1 < #2 )
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#2),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#2).
+
+// noun[body_part], ?*, adj[pre_diagnost_body]
+if ( ( NMOD[posit1](#1[noun,body_part],#2[adj, pre_diagnost_body]) | ATTRIB(#1[noun,body_part],#2[adj,pre_diagnost_body]) ) & #1 < #2 )
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#2),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#2) .
+
+// noun1[pre_diagnost_body], NP2, noun3[body_part] et Mod[posit1](1,2) et Mod[posit](2,3)
+// fracture de l'extrémité inférieure de l'humérus
+if ( NMOD[posit1](#1[noun,pre_diagnost_body],#2) & NMOD[posit1](#2,#3[noun,body_part]) & #1 < #2 & #2 < #3 & ~DIAG_GENERAL(#1) )
+   DIAG_GENERAL[complexe=+,deb_diag=+](#1),
+   DIAG_DEBUT(#1),
+   DIAG_FIN(#3),
+   DIAG_GENERAL[complexe=+,fin_diag=+](#3) .
+
+
+// Cleaning
+// eviter de prendre a la fois le tout d'un diagnostic complexe et une sous-chaine diagnostic
+if ( ^DIAGNOSTIQUE(#1) & DIAG_DEBUT(#1) )
+   ~
+
+
+/// Signaux faibles
+
+#@rulespace=medecine.ortho
+
+// désunion de la cicatrice
+if ( ^DIAGNOSTIQUE(#1[lemme:"%+ cicatrice"]) & ~INFECTION(#1) )
+   INFECTION(#1)
+
+// eg. cicatrice (vraiment tres) inflammatoire, cicatrice est legerement/tres inflammatoire etc.
+// restriction pour la negation
+if ( ( ATTRIB(#1[lemme:cicatrice],#2[lemme:inflammatoire]) | NMOD[posit1](#1[lemme:cicatrice],#2[lemme:inflammatoire]) )
+       & ~INFECTION(#2)
+       & ~NON(#2) & #1 < #2 
+   )
+INFECTION(#2)
+
+// chirurgie
+// DIAGNOSTIQUE avec lien sur "infecter"
+// e.g. une ascite qui s'est infectée"
+if ( SUBJ(#1[lemme:infecter],#2) & ^DIAGNOSTIQUE(#2) )
+  INFECTION(#2)
+
+// ortho et chirurgie
+| #1[noun,weak_cure,mwe] |
+   WEAK[weak_cure=+](#1)
+
+| NP{#1[noun,weak_cure,mwe:~]} |
+  WEAK[weak_cure=+](#1)
+
+#@rulespace=medecine
+
+| #1[noun,weak_infection] |
+   WEAK[weak_infection=+](#1)
+
+
+| #1[noun,weak_fever] |
+   WEAK[weak_fever=+](#1)
+
+if ( EXAM_BACTER(#1) )
+   WEAK[weak_bacter=+](#1)
+
+// voie centrale envoyée en bactério
+if ( LINK(#1,#2[lemme:"bactériologie"])  & DISPOSITIF(#1) )
+   WEAK[weak_bacter=+](#1)
+
+
+//////////////////////////
+/// CLEANING
+//////////////////////////
+// si examen et infection sur meme entree, alors infection prime
+// eg. prélèvements infectieux
+if ( INFECTION(#1) & ^EXAMEN(#1) )
+~
+if ( INFECTION(#1) & ^EXAM_BIO(#1) )
+~
+
+
+
+//////////////////////////
+/////////////////////////// SUSPECT TEST
+//////////////////////////
+
+// Pour tester
+
+| GROUPE#3 |
+if ( INFECTION(#1) & ANTIBIOTIQUE(#2) & ( LINK(#1,#2) | LINK(#2,#1) ) )
+	SUSPECT(#3)
+
+| GROUPE#3 |
+if ( ~SUSPECT(#3) & TEMPERATURE(#1) & ANTIBIOTIQUE(#2) & ( LINK(#1,#2) | LINK(#2,#1) ) )
+	SUSPECT(#3)
+
+
+| GROUPE#3 |
+if ( ~SUSPECT(#3) & DISPOSITIF(#1) & ( INFECTION(#2) | GERME_INFEC(#2) ) & ( LINK(#1,#2) | LINK(#2,#1) ) )
+     SUSPECT(#3)
+
+
+// si nosocomial vient qualifier une infection alors on extrait
+| GROUPE#3 |
+if ( ~SUSPECT(#3) & INFECTION(#1) & LINK(#1,?[lemme:nosocomial]) )
+   SUSPECT(#3)
+
+
+// moins evident
+| GROUPE#3 |
+if ( ~SUSPECT(#3) & INFECTION(#1) & GERME_INFEC(#2) & ( LINK(#1,#2) | LINK(#2,#1) ) )
+	SUSPECT(#3)
+
+
+
+
+
+// A verifier
+// Dans la meme phrase on a a la fois temperature, antibiotique, infection
+| GROUPE#3 |
+if ( ~SUSPECT(#3) & INFECTION(#1) & TEMPERATURE(#2) & ANTIBIOTIQUE(#4) )
+   SUSPECT(#3)
+
+
+// NEGATION FIN - nettoyage
+
+// si negation sur DIAG complexe, alors seulement DIAG_DEBUT supprimé et pas DIA_FIN
+// e g pas de dégradation majeure de la fonction rénale
+if ( NON(#1) & DIAG_DEBUT(#1) &  ^DIAG_FIN(#2) )
+LIXO(#2)
+
+if ( NON(#1) & DIAG_DEBUT(#1) & LIXO(#2) & ^DIAG_GENERAL(#2) )
+~
+
+
+
+// COORD de NON
+// sans mise en évidence de bactéries ou de virus
+if ( NON(#1) & COORDITEMS(#1,#2) & #1 < #2 & ~NON(#2) )
+  NON(#2)
+
+
+// voir si regle pas trop drastique
+// essayer de garder quand meme NEGAT
+//if ( ^$1(#1) & NON(#1) )
+//   ~
+
+// negat et non sur le meme
+if ( NEGAT(#1) & NON(#1) & ^$1(#1) )
+   ~
+
+// seul non et pas negat
+if ( NON(#1) & ~NEGAT(#1) & ^$1(#1) )
+~
+
+
+
+/////////////////////////////////////////////////////////////////////////////////
+///////// CONDITIONS D'EXCLUSIONS - lié à l'appli uniquement
+/////////////////////////////////////////////////////////////////////////////////
+
+// Eliminer les ocurrences d'antibio quand ils sont donnes explicitement de maniere preventive ou prophylactique.
+
+// e.g. prophylaxie antibiotique par Zinnat
+if ( ^ANTIBIOTIQUE(#1) & ( LINK(#1,#2[lemme:"?*prophylaxie"]) | LINK(#1,#2[lemme:"prévention"]) )  )
+   ~
+
+// e.g.  A noter que devant l' éventualité d' une hépatite herpétique la patiente avait été mise de façon prophylactique sous ACICLOVIR ,
+| #3[lemme:prophylactique] |
+if ( ^ANTIBIOTIQUE(#1) & LINK(#1,#2) & NMOD[posit1](#2,#3) )
+   ~
+
+// e.g. protocole bétadine
+if ( ^ANTIBIOTIQUE(#1) & ( NMOD(#1,#2[lemme:protocole]) | NMOD(#2[lemme:protocole],#1) ))
+   ~
+
+// infection communautaire a exclure dans cadre infection nosocomiale
+// éliminer toute occurrence de pneumopathie communautaire
+// en chirurgie seulement
+//if ( ^INFECTION(#1) & LINK(#1,#2[lemme:communautaire]) )
+//   ~
+
+// exclure pneumopathie communautaire comme infection nosocomiale
+if ( ^INFECTION(#1[lemme:pneumopathie]) & LINK(#1,#2[lemme:communautaire]) )
+   ~
+
+// elimination de bactéries trouvées par analyses per opératoires
+// par ailleurs des bactéries trouvées en per-opératoire indiquent une infection en entree
+// 2 regles a cause des possibles elements coordonnes.
+if ( ^BACTERIE(#1) & COORDITEMS(#1,#3) & BACTERIE(#3) & LINK(#2[exam,perop],#1) )
+   LINK(#2,#3)
+
+if ( ^BACTERIE(#1) & LINK(#2[exam,perop],#1) )
+~
+
+
+// Elimination infection : si infectieux modifie qq chose de nié alors on ne supprime le INFECTION
+//eg. Pas de signe général infectieux
+if ( ^INFECTION(#1) & NEGAT(#1) & ~NON(?) )
+   ~
+
+// Elimination infection si infection est modifieur nominal de "antécédent".
+// Dans ce cas, ne pas prendre en compte comme NE infection a collecter
+if ( ^INFECTION(#1) & NMOD[posit1](?[lemme:"antécédent"],#1) )
+~
+
+/////////////////////////////////////////////////////////////////////////////
+//  Ambiguité nom de personne / infection
+////////////////////////////////////////////////////////////////////////////
+
+// e.g. Docteur Blanchet
+if ( ^INFECTION(#1) & ( PERS_MED(#1) | PERSONNE(#1)) )
+~
+
+
+
+
+
+
+//////////////////////////////
+///// ELIMINATION DE DOUBLONS
+//////////////////////////////
+
+// virus herpès
+if ( NMOD(#1[lemme:virus],#2) & ^VIRUS(#1) & VIRUS(#2) )
+   ~
+
+
+
+if ( VIRUS(#1) & ^MALADIE_VIRALE(#1) )
+   ~
+
+// if dispo et interv_chir -> interv_chir
+if ( ^DISPOSITIF(#1) & INTERV_CHIR(#1) )
+   ~
+
+
+
+
+/////////////////////////////////
+//////////////// GENERALISATIONS DES DEPENDANCES
+////////////////////////////////
+// infection et temperature maladie virale et diagnostique sont des 
+// sous-classes de DIAG_GENERAL
+
+if ( ( INFECTION(#1) | DIAGNOSTIQUE(#1) | TEMPERATURE(#1) | MALADIE_VIRALE(#1) | ISO(#1) | INOSO(#1) )
+     &
+     ~DIAG_GENERAL(#1) )
+     DIAG_GENERAL[simple=+](#1)
+
+
+
+if ( BACTERIE(#1) | VIRUS(#1) | LEVURE(#1) )
+   GERME_INFEC(#1)
+
+
+
+
+
+
+
+
+// Dependance generale qui permet de simplifier le code pour l'API java
+
+// DIAG_GENERAL -> DIAGNOSTIQUE U TEMPERATURE U INFECTION U MALADIE_VIRALE
+// GERME_INFEC -> BACTERIE U LEVURE U VIRUS
+// ANTIBIOTIQUE 
+// DISPOSITIF
+// EXAMEN -> EXAMEN_BIO, EXAMEN_BACTER, EXAMEN_IMAGE
+
+
+
+
+/////////////////////////////////// IN explicite //////////////////////////////
+
+
+
+//////////////////////////////////// ISO //////////////////////////////////////
+// Pour la chirurgie
+
+
+////////////// 2eme niveau (liens necessaires en utilisant LINK)
+
+// Si collection (employee seule) et lien avec lavage ou drainage, alors INFECTION
+| noun#1[lemme:collection,first,last] |
+  if ( ( LINK(#1,?[lemme:lavage]) | LINK(#1,?[lemme:drainage]) ) & ~INFECTION(#1) )
+INFECTION(#1)
+
+
+// Si collection de liquide trouble ou jaune alors infection
+| noun#1[lemme:collection] |
+if ( NMOD[posit1](#1,#2[lemme:liquide]) & 
+     	( NMOD[posit1](#2,?[lemme:trouble]) | NMOD[posit1](#2,?[lemme:jaune]) )
+)
+INFECTION(#1)
+
+// Si "cellulite" en lien avec cicatrice alors INFECTION
+| noun#1[lemme:cellulite] |
+if ( LINK(#1,?[lemme:cicatrice]) )
+INFECTION(#1)
+
+
+// Si infection + link avec element pour_iso alors rajouter le trait sur l'infection 
+//eg: SEPSIS SUR OSTEOSYNTHESE D' UNE PLAQUE D' EXTREMITE SUPERIEURE DU TIBIA GAUCHE
+| #1[pour_iso=profond] |
+if ( INFECTION(#1) & LINK(#1,#2[body_part,os]) )
+~
+
+
+
+
+// Si explicitement LINK entre infection et expression "suite opératoire" alors ISO
+// eg. "les suites opératoires ont été marquées par l'infection de la cicatrice"
+| #2[lemme:"suite opératoire"];#2[lemme:"suite",pl] | 
+if ( ^INFECTION(#1) & ( LINK(#1,#2) | LINK(#2,#1) )  )
+   ISO(#1)
+
+// lien infection et "incision" alors iso superf
+| #2[pour_iso=superficiel] |
+if ( ^INFECTION(#2) & LINK(#1[lemme:incision],#2) )
+   ISO(#2)
+
+// lien "infection" et "laparotomie" et "suites" alors iso
+| #2 |
+if ( ^INFECTION(#2) & LINK(#1[lemme:laparotomie],#2) & LINK(#3[lemme:suite],#2) )
+   ISO(#2)
+
+
+// si lien direct entre INFECTION et lemme "cicatrice" alors ISO
+if ( ^INFECTION(#2) & LINK(#1[lemme:cicatrice],#2) )
+   ISO(#2)
+
+
+// idem avec adj cicatricel
+if ( ^INFECTION(#2) & LINK(#1[lemme:cicatriciel],#2) )
+   ISO(#2)
+
+// infection sur/de matériel d'ostéosynthèse -> iso profonde
+| #2[pour_iso=profond] |
+if ( ^INFECTION(#2)  & LINK(#2,#1[lemme:"ostéosynthèse?+"]) & NMOD[posit1](#2,#3) 
+     &  ( PREPOBJ(#3,?[lemme:sur]) | PREPOBJ(#3,?[lemme:de]) ) 
+     )
+     ISO(#2)
+
+// les suites opératoires ont été marquées par une hyperthermie
+| #2[lemme:"suite opératoire"] | 
+if ( ^TEMPERATURE(#1) & ( LINK(#1,#2) | LINK(#2,#1) )  )
+   ISO(#1)
+
+// A VERIFIER
+// lavage ou drainage de infection alors ISO
+| #2[weak_cure] |
+if ( ^INFECTION(#1) & ( LINK(#1,#2) | LINK(#2,#1) )  )
+   ISO(#1)
+
+// ecoulement suspect au niveau de la cicatrice
+| #1[iso] | 
+if ( ^INFECTION(#1) )
+ISO(#1)
+
+
+// marquage, les iso n'ayant pas de pour_iso qui sont en lien avec quelque chose pour_iso prennent la valeur de ce pour_iso
+// e.g. drainage sous diaphragmatique qui ramène du pus
+| #1[pour_iso=profond] |
+if ( ISO(#1) & LINK(#1,#2[pour_iso:profond]) )
+LIXO(#1)
+
+| #1[pour_iso=superficiel] |
+if ( ISO(#1) & ~LIXO(#1) & LINK(#1,#2[pour_iso:superficiel]) )
+~
+
+// lavage de l'abcès avec bétadine
+| #1[pour_iso=superficiel] |
+if ( ISO(#1) & WEAK(#2[soins_loc]) )
+~
+
+
+
+//////////////////// REGLES LOCALES POUR LES ISOs
+
+
+// Si LINK entre infection et interv_chir alors on a ISO
+// eg. Syndrome septique dans les suites d' une sigmoïdectomie pour diverticulite 
+//  e.g. Infection de plaque mise en place lors d' une transplantation hépatique en urgence pour hépatite fulminante ( greffon volumineux ) . 
+| GROUPE#3 |
+if ( ^INFECTION(#1) & INTERV_CHIR(#2) & ~NMOD(?[lemme:"matériel"],#2) & ( LINK(#1,#2) | LINK(#2,#1) )   )
+   ISO(#3)
+
+
+// si a la fois examen_bio sur cicatrice et resultat  donne bactérie alors ISO
+// eg. Un prélèvement de la cicatrice a été toutefois été effectué retrouvant un Pseudomonas aeruginosa .
+| GROUPE#3 | 
+if ( ~ISO(#3) & ( EXAM_BIO(#1) | (EXAM_BIO(#4) & COREF[rel](#4,#1)) ) 
+     & LINK(#1,?[lemme:cicatrice]) & BACTERIE(#2) )
+   ISO(#3)
+
+// si weak-infection sur cicatrice reliee a antibiothérapie alors iso
+// A noter également , une nécrose de cicatrice dorsale qui a nécessité une antibiothérapie IV et la reprise chirurgicale.
+| GROUPE#3 |
+if ( ~ISO(#3) 
+     &
+     ( WEAK[weak_infection](#1[lemme:"?*cicatrice?*"]) | (WEAK[weak_infection](#4[lemme:"?*cicatrice?*"]) & COREF[rel](#4,#1)) )
+     & LINK(#1,#2) & ANTIBIOTIQUE(#2) 
+     )
+ISO(#3)
+
+
+// si weak_infection avec cicatrice relié à reprise alors ISO
+//  A noter également , une nécrose de cicatrice dorsale qui a nécessité une reprise chirurgicale.
+| GROUPE#3 |
+if ( ~ISO(#3) 
+     & ( WEAK[weak_infection](#1) 
+       | (WEAK[weak_infection](#4[lemme:"?*cicatrice?*"]) & COREF[rel](#4,#1)) 
+     )
+     & LINK(#1,#2[lemme:"reprise?*"]) 
+    )
+ ISO(#3)
+
+
+// Si reprise relié a infection alors ISO
+| GROUPE#3 |
+if ( ~ISO(#3) 
+     &
+     INFECTION(#1) & LINK(?[lemme:"reprise?*"],#1)
+     )
+ISO(#3)
+
+
+/////////////////////// Localisation de l'iso
+
+
+
+
+
+
+// CLEANING
+// Enlever les dependances outils de marquage
+if ( ^LIXO(#1) )
+~
+
+
+// CLEANING (doublons) 2eme etape
+// if infection et diagnostic -> infection
+if ( ( INFECTION(#1) | ISO(#1) | INOSO(#1) ) & ^DIAGNOSTIQUE(#1) )
+   ~
+
+
+
+Script: 
+
+//////////////////////////
+//// DECES
+//////////////////////////
+/// Pour les deces
+// variable int _deces initialisee a 0.
+// passe a 1 si deces constaté
+| #1[lemme:décès];#1[lemme:décéder] | 
+{
+print("BBBBBBBBBA\n");
+_deces=1;
+}
+
+// comma irréversible
+| NP{?*,#1[last,lemme:comma]}, AP{?*,#2[last,lemme:irréversible]} |
+{
+print("BBBBBBBBBA\n");
+_deces=1;
+}
+
+
+// limitation thérapeutique
+
+  
+///////////////////
+// INFEC en entree
+//////////////////
+
+// variable int _infecEntree
+if ( LINK(#1[temp_anchor:t0],#2) & INFECTION(#2) )
+ {
+ print ("CCCCCCCCCCCCCCCCCCCCCC\n");
+ _infecEntree=1;
+ }
+
+
+
+
+Initial:
+
+CleanAll;
+
+Final:
+
+_deces=0;
+_infecEntree=0;
+CleanAllLemmas;

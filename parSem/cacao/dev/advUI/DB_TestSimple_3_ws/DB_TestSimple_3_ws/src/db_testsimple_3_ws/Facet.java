@@ -1,0 +1,84 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package db_testsimple_3_ws;
+
+import java.io.Serializable;
+import javax.persistence.*;
+
+
+/**
+ *
+ * @author ctrojahn
+ */
+
+
+@Entity
+@Table(name = "Facet")
+@NamedQueries({
+      @NamedQuery(name="getFacet", query = "SELECT f FROM Facet f where f.nameSolr = :v"),
+      @NamedQuery(name="getFacets", query = "SELECT f FROM Facet f")
+})
+public class Facet implements Serializable
+{
+       @Id
+       @GeneratedValue(strategy = GenerationType.AUTO)
+       private long facetID;
+       private String nameUI;
+       private String nameSolr;
+
+       //@OneToMany(cascade={CascadeType.PERSIST},fetch=FetchType.LAZY)
+       //private Set<FacetValue> facetValues = new HashSet<FacetValue>();
+
+       /**
+        *
+        */
+       public Facet() {
+       }
+
+       /**
+        * @param nameSolr
+        */
+       public Facet(String nameSolr) {
+              this.nameSolr = nameSolr;
+       }
+
+
+       /**
+        *
+        * @return
+        */
+       public String getNameUI() {
+              return this.nameUI;
+       }
+
+       /**
+        * @param nameUI
+        */
+       public void setNameUI(String nameUI) {
+              this.nameUI = nameUI;
+       }
+
+        /**
+        * @return
+        */
+       public String getNameSolr() {
+              return this.nameSolr;
+       }
+
+       /**
+        * @param nameSolr
+        */
+       public void setNameSolr(String nameSolr) {
+              this.nameSolr = nameSolr;
+       }
+
+       //public void addFacetValue(FacetValue facetValue) {
+       //       facetValues.add(facetValue);
+       //       facetValue.setFacet(this);
+      // }
+
+}
+

@@ -1,0 +1,163 @@
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for Pubmed abstracts
+//!   filename   : dependency_types_bk.xip
+//!   Date       : 20/03/2006
+//!   Author     : Agnes Sandor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// Features that help extract abstract types
+
+DependencyRules:
+
+| #1[new,future:~] |
+if ( ^LOGIC(#2) )
+	LOGIC[novstat=+](#2).
+
+| #1[new,future:~] |
+if ( ^SUMMARY(#2) )
+	SUMMARY[novstat=+](#2).
+
+| #1[new,future:~] |
+if ( ^IMPSUMMARY(#2) )
+	IMPSUMMARY[novstat=+](#2).
+
+//to give the first/extension type: TEMPSTAT+POSTAT when 1) the timefact word in the EERQIDEP_TEMPSTAT has the feature "old" 2) the verb in the EERQIDEP_TEMPSTAT relationship does not have the feature "postat" to filter out: The findings support previous observations 3) If it does have the feature "postat", there is an "art" word in the sentence that does not filter out "We show here ... that had previously been suggested" 4) if the scope word has a subject other than a postat word to allow "These results demonstrate ... as has been suggested previously" 
+
+if (^EERQIDEP[tempstat,old](#1[verb,postat:~],#2) | ^EERQIDEP[tempstat,old](#1,#2[verb,postat:~]) )
+	EERQIDEP[oldstat=+](#1,#2).
+
+if ( ^IMPSUMMARY[postat,tempstat,old,contrast:~](#1) & EERQIDEP[oldstat](#4,#5) )
+	IMPSUMMARY[oldstat=+](#1).
+
+| #1[publ,postat:~] |
+if ( ^IMPSENT[tempstat,old,oldstat:~](#2) & SUBJ(#4[postat:~],#5[scope]))
+	IMPSENT[oldstat=+](#2).
+
+| #1[publ,postat:~] |
+if ( ^IMPSUMMARY[postat,tempstat,old,contrast:~](#2) & SUBJ(#4[postat:~],#5[scope]))
+	IMPSUMMARY[oldstat=+](#2).
+
+if ( ^IMPSENT[tempstat,old,contrast:~](#1) & SUBJ(#4[postat:~,form:~fhave,aux:~,form:~fbe],#5[scope]))
+	IMPSENT[oldstat=+](#1).
+
+if ( ^IMPSUMMARY[postat,tempstat,old,contrast:~](#1) & SUBJ(#4[postat:~,form:~fhave,aux:~,form:~fbe],#5[scope]))
+	IMPSUMMARY[oldstat=+](#1).
+
+// filter out cases when the old results and the new show the same
+
+if ( ^IMPSENT[oldstat](#1) & $1(#2[scope],#3[nocontrscope]) )
+	IMPSENT[oldstat=~](#1).
+
+if ( ^IMPSENT[oldstat](#1) & $1(#2[nocontrscope],#3[scope]) )
+	IMPSENT[oldstat=~](#1).
+
+if ( ^IMPSENT[oldstat](#1) & $1(#2[mental],#3[nocontrmental]) )
+	IMPSENT[oldstat=~](#1).
+
+if ( ^IMPSENT[oldstat](#1) & $1(#2[nocontrmental],#3[mental]) )
+	IMPSENT[oldstat=~](#1).
+
+if ( ^IMPSUMMARY[oldstat](#1) & $1(#2[scope],#3[nocontrscope]) )
+	IMPSUMMARY[oldstat=~](#1).
+
+if ( ^IMPSUMMARY[oldstat](#1) & $1(#2[nocontrscope],#3[scope]) )
+	IMPSUMMARY[oldstat=~](#1).
+
+if ( ^IMPSUMMARY[oldstat](#1) & $1(#2[mental],#3[nocontrmental]) )
+	IMPSUMMARY[oldstat=~](#1).
+
+if ( ^IMPSUMMARY[oldstat](#1) & $1(#2[nocontrmental],#3[mental]) )
+	IMPSUMMARY[oldstat=~](#1).
+
+
+// The marking of CONTRAST is not systematic. There are some sentences that are already marked as CONTRAST, and some that will get this feature now. Has to be reviewed. As a temporary solution, since CONTRAST+NEGATIVE will lead to a "reconsider" abstract I mark CONTRAST as NEGATIVE in some cases:
+
+//if ( ^IMPSENT[contrast](#1) & EERQIDEP[old](#2,#3) & EERQIDEP[contr](#4,#5) )
+//	IMPSENT[negative=+](#1).
+
+if ( ^IMPSUMMARY[contrast](#1) & EERQIDEP[old](#2,#3) & EERQIDEP[contr](#4,#5) )
+	IMPSUMMARY[negative=+](#1).
+
+if ( ^IMPSUMMARY[contrast](#1) & EERQIDEP(#4[scope],#5[contr,know:~,speccontr:~,wscope:~]) )
+	IMPSUMMARY[negative=+](#1).
+
+if ( ^IMPSUMMARY[contrast](#1) & EERQIDEP(#4[contr],#5[scope,know:~,speccontr:~,wscope:~]) )
+	IMPSUMMARY[negative=+](#1).
+
+if ( ^IMPSUMMARY[question,negative](#1) )
+	IMPSUMMARY[negative=~](#1).
+
+
+
+
+// vis' expressing a contrary to previous beliefs get the feature CONTRAST
+
+//if ( ^IMPSENT[contrast](#1) & EERQIDEP[vis](#2[old],#3) )
+//	IMPSENT[negative=+](#1)
+
+//if ( ^IMPSENT[contrast](#1) & EERQIDEP[vis](#2,#3[old]) )
+//	IMPSENT[negative=+](#1)
+
+if ( ^IMPSUMMARY[contrast](#1) & EERQIDEP[vis](#2[old],#3) )
+	IMPSUMMARY[negative=+](#1)
+
+if ( ^IMPSUMMARY[contrast](#1) & EERQIDEP[vis](#2,#3[old]) )
+	IMPSUMMARY[negative=+](#1)
+
+if ( ^IMPSUMMARY[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4[contr],#5) )
+	IMPSUMMARY[contrast=+,negative=+](#1).
+
+if ( ^IMPSUMMARY[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4,#5[contr]) )
+	IMPSUMMARY[contrast=+,negative=+](#1).
+
+if ( ^IMPSUMMARY[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4[contr]) )
+	IMPSUMMARY[contrast=+,negative=+](#1).
+
+| #6[deict] |
+if ( ^IMPSENT[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4[contr],#5) )
+	IMPSENT[contrast=+](#1).
+
+| #6[deict] |
+if ( ^IMPSENT[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4,#5[contr]) )
+	IMPSENT[contrast=+](#1).
+
+| #6[deict] |
+if ( ^IMPSENT[vis,novstat:~,first:~](#1) & EERQIDEP[old](#2,#3) & EERQIDEP(#4[contr]) )
+	IMPSENT[contrast=+](#1).
+
+// eval
+
+| #1[eval] |
+	LIXO(#1).
+
+| #1[evalfirst] |
+	LIXO(#1).
+
+if ( ^IMPSENT(#1) & LIXO(#2) )
+	EVAL(#1).
+
+| TOP#1{ ?+ } |
+if ( LIXO(#2) )
+	EVAL(#1).
+
+if ( ^LIXO(#1) )
+	~.
+
+if ( ^IMPSENT(#1) & EVAL(#1) )
+	~.
+
+if ( EVAL(#1) & ^EERQIDEP(#2,#3) )
+	~.
+
+if ( EVAL(#1) & ^EERQIDEP(#2) )
+	~.
+
+

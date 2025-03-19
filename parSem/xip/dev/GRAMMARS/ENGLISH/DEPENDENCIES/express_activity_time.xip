@@ -1,0 +1,505 @@
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2004 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English Normalization XIP grammar
+//!   filename   : express_activity_time.xip
+//!   Date       : December 2004
+//!   Author     : Caroline Hagege
+//!   Description : Temporal expressions treatment
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+// Catch the year
+//| #1{?*,?{?*,dig^#2[year:+];dig^#2[shortyear:+]}} |
+//if ( TIMEX3(#1))
+//   LIXO(#2)
+
+
+
+Script:
+
+// VARIABLES : _ppalPerson stores the value of the first person name found in a document
+//	       _lastPersFound stores the value of the last person name found in a document. Can coincide with _ppalPerson
+//	       _lastDateFound stores the value of the last timex expression found in text
+//	       _dateBefore stores the value of the last but one timex expression found in text
+
+// NOTE : It should be useful to store in a variable the anchor date (either document date or current date). Perl script using xip output and processing the chronological ordering consider that anchor date is current date.
+
+// First person name appearing in analysis store in _ppalPerson
+iftest(  PERSON(#1)  & (boule##1:0)  & (_boule2:0) ) {
+	boule##1=1;
+	_boule2=1;
+	_ppalPerson = #1[lemme];
+//	_print("TRACE : " + _ppalPerson);
+}
+
+// Last person name encounterd in the document stored in _lastPersFound
+iftest ( PERSON(#1) & (_boule2:1)  ) {
+       _lastPersFound = #1[lemme];
+//      _print("TOTO" + _lastPersFound);
+}
+
+
+// last timex3 expression encountered in the document stored in _lastDateFound
+iftest ( TIMEX3(#1) & #1[prep:~,adj:~] ) {
+//& LIXO(#10) & #10[dig:+]) {
+       _dateBefore = _lastDateFound;
+       _lastDateFound = #1[lemme];
+//       _yearBefore = _lastYearFound;
+//       _lastYearFound = #10[lemme];
+//       _print("TATA " + _lastDateFound);
+//       _print("TATA2 " + _dateBefore);
+}
+
+
+iftest ( TIMEX3(#10) & #10[prep] & DAUGHTER(#10,#20) & NEXT(#20,#1) ) {
+//& LIXO(#50) & #50[dig:+]) {
+       _dateBefore = _lastDateFound;
+       _lastDateFound = #1[lemme];
+//       _yearBefore = _lastYearFound;
+//       _lastYearFound = #50[lemme];
+//     _print("TATA prep " + _lastDateFound);
+//     _print("TAT2 " + _dateBefore);
+
+}
+
+
+iftest ( LIXO(#10) & #10[dig:+] ) {
+       _yearBefore = _lastYearFound;
+       _lastYearFound = #10[lemme];
+//      _print("TATA3 " + _lastYearFound);
+}
+
+
+
+DependencyRules:
+
+
+// TRANSFORM START_ACTION VERB + TIME -> VERB + SINCE TIME
+// She began singing in 1934 -> She sings since 1934
+if ( SUBJ-N(#1[start_action],#2) & OBJ-N(#1,#3[verb]) & TEMP(#3,#4) & TIMEX3(#4) )
+   SUBJ-N(#3,#2)
+ 
+if ( SUBJ-N(#1[end_action],#2) & OBJ-N(#1,#3[verb]) & TEMP(#3,#4) & TIMEX3(#4) )
+   SUBJ-N(#3,#2)
+
+
+Script: 
+
+// When dates are incomplete e.g. Year number has to be caught from previous temporal expression
+// e.g. They started in October 2001 and they ended in December (i.e 2001)
+//if ( TIMEX3(#1[miss_year]) & _print(_lastYearFound) )
+//   LIXO(#1,#1,#1)   
+
+iftest ( TIMEX3(#1[miss_year]) ) {
+       iftest ( _lastYearFound ~= "") {
+              _newTimex = #1[lemme]+" " +_lastYearFound;
+       }
+// Possibly add in a second step the possibility to take the year of publication (pre-treatement will be necessary)
+// no reference of year previously present in text. Take the current year.
+       else {
+	      _newTimex = #1[lemme]+" " +@year;
+       }
+}
+
+
+DependencyRules:
+
+if ( TIMEX3(#1[miss_year]) & ^TEMP(#2,#1)  )
+   TIMEX3[features=~](##noun[lemme=_newTimex,surface=_newTimex]),
+   TEMP(#2,##noun[lemme=_newTimex,surface=_newTimex]).
+
+if ( TIMEX3(#1[miss_year]) & ^DUR(#2,#1)  )
+   TIMEX3[features=~](##noun[lemme=_newTimex,surface=_newTimex]),
+   DUR(#2,##noun[lemme=_newTimex,surface=_newTimex]).
+
+
+
+
+
+DependencyRules:
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// Birth and Death
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+if ( ( OBJ-N(#1[lemme:bear],#2[pronpers:+]) | SUBJ-N(#1[lemme:bear],#2[pronpers:+]) ) & TEMP(#1,#4) & TIMEX3(#3) & #3[lemme]:#4[lemme]
+     & _print("date_birth(") & _print(_ppalPerson) & _print(",") 
+     & _print(#3[lemme]) & _print(").\n") )
+LIXO(#3)
+
+if ( ( OBJ-N(#1[lemme:bear],#2[pronpers:~]) | SUBJ-N(#1[lemme:bear],#2[pronpers:~]) ) & TEMP(#1,#4) & TIMEX3(#3) & #3[lemme]:#4[lemme]
+     & _print("date_birth(") & _print(#2[lemme]) & _print(",") 
+     & _print(#3[lemme]) & _print(").\n") )
+LIXO(#3)
+
+if ( SUBJ-N(#1[lemme:die],#2[pronpers:+]) & TEMP(#1,#4) & TIMEX3(#3) & #3[lemme]:#4[lemme]
+     & _print("date_death(") & _print(_ppalPerson) & _print(",") 
+     & _print(#3[lemme]) & _print(").\n") )
+LIXO(#3)
+
+if ( SUBJ-N(#1[lemme:die],#2[pronpers:~]) & TEMP(#1,#4) & TIMEX3(#3) & #3[lemme]:#4[lemme]
+     & _print("date_death(") & _print(#2[lemme]) & _print(",") 
+     & _print(#3[lemme]) & _print(").\n") )
+LIXO(#3)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// cop_as verb +complement[as] assimilation to ATTRIB
+// e.g. she served as president
+////////////////////////////////////////////////////////////////////////////////////////////////
+| PP#3{prep[lemme:as]} | 
+if ( HEAD(#30[occup],#3) & SUBJ-N(#1[cop_as],#2) & MOD(#1,#30) & ^TEMP(#1,#4) )
+   ATTRIB[features=~](#2,#30),
+   TEMP(#30,#4).  
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// SUBJCOMPL and OBJCOMPL
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+// For copulas
+// He became CEO in 1994 
+
+
+if ( ATTRIB(#1[pronpers],#2) & TEMP(#2,#3) & TIMEX3(#4) & #3[lemme]:#4[lemme] & HEAD(#2,#20[prep:~]) & 
+     _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print(#3[lemme]) & _print(").\n") )
+~
+
+// Same as above when not pronpers TEST
+if ( ATTRIB(#1[pronpers:~],#2) & TEMP(#2,#3) & TIMEX3(#4) & #3[lemme]:#4[lemme] & HEAD(#2,#20[prep:~])
+     _print("new_situation(") & _print(#1[lemme]) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print(#3[lemme]) & _print(").\n") )
+~
+
+
+
+// For OBJCOMPL
+// He was named CEO in 1994
+if ( ATTRIB(#1[pronpers],#2) & OBJCOMPL(#3,#2) & TEMP(#3,#4) & TIMEX3(#5) & #4[lemme]:#5[lemme] & HEAD(#2,#20) &
+     _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print(#4[lemme]) & _print(").\n") )
+~
+
+// Same as above when pronpers:~
+if ( ATTRIB(#1[pronpers:~],#2) & OBJCOMPL(#3,#2) & TEMP(#3,#4) & TIMEX3(#5) & #4[lemme]:#5[lemme] & HEAD(#2,#20) &
+     _print("new_situation(") & _print(#1[lemme]) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print(#4[lemme]) & _print(").\n") )
+~
+
+// He was named to a position
+| NP#30{?*,#3[position]} |
+if ( OBJ-N(#1[nomin_v:+],#2[pronpers]) & MOD(#1,#3) & TEMP(#1,#4) & TIMEX3(#5) & #4[lemme]:#5[lemme] &
+   _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#30[lemme])
+   & _print(")") & _print(" and time(") & _print("new_situation,")
+   & _print(#4[lemme]) & _print(").\n") )
+~
+
+// Same as above pronpers:~
+| NP#30{?*,#3[position]} |
+if ( OBJ-N(#1[nomin_v:+],#2[pronpers:~]) & MOD(#1,#3) & TEMP(#1,#4) & TIMEX3(#5) & #4[lemme]:#5[lemme] &
+   _print("new_situation(") & _print(#2[lemme]) & _print(",") & _print(#30[lemme])
+   & _print(")") & _print(" and time(") & _print("new_situation,")
+   & _print(#4[lemme]) & _print(").\n") )
+~
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// VERBS OF LOCALIZATION
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers]) & LOC(#1,#5)  & TEMP(#1,#5) & TIMEX3(#4) & #4[lemme]:#5[lemme] & ~LIXO(#4) &
+     _print("stay(") & _print(_ppalPerson) & _print(",") & _print(#5[lemme])
+   & _print(")") & _print(" and time(") & _print("stay,")
+   & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers:~]) & LOC(#1,#5) & TEMP(#1,#5) & TIMEX3(#4) & #4[lemme]:#5[lemme] & ~LIXO(#4) &
+     _print("stay(") & _print(#2[lemme]) & _print(",") & _print(#5[lemme])
+   & _print(")") & _print(" and time(") & _print("stay,")
+   & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+
+
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers]) & MOD(#1,#5) & ( ORGANISATION(#5) | LOCORG(#5) ) &
+   TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4)
+   & _print("stay(") & _print(_ppalPerson) & _print(",") & _print(#5[lemme])
+   & _print(")") & _print(" and time(") & _print("stay,")
+   & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers:~]) & MOD(#1,#5) & ( ORGANISATION(#5) | LOCORG(#5) ) &
+   TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4)
+   & _print("stay(") & _print(#2[lemme]) & _print(",") & _print(#5[lemme])
+   & _print(")") & _print(" and time(") & _print("stay,")
+   & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// ACTION AND START ACTION
+////////////////////////////////////////////////////////////////////////////////////////////////
+// He started working in 1994
+| #4{prep,#40} |
+if ( SUBJ-N(#1,#2[pronpers]) & ( OBJ-N(?[start_action],#1[verb]) | EMBED[infinit](#1,?[start_action]) ) & TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+   _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(") and time(") & _print(#1[lemme]) 
+   & _print(",since ") & _print(#40[lemme]) & _print(").\n")  )
+LIXO(#4)
+
+| #4{prep,#40} |
+if ( SUBJ-N(#1,#2[pronpers:~]) & ( OBJ-N(?[start_action],#1[verb]) | EMBED[infinit](#1,?[start_action]) ) & TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+   _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(") and time(") & _print(#1[lemme]) 
+   & _print(",since ") & _print(#40[lemme]) & _print(").\n")  )
+LIXO(#4)
+
+// The work was started by Tim in 1998
+| #4{prep,#40} |
+if ( SUBJ-N(#1,#2[pronpers:~]) & OBJ-N(#1[start_action],#3[noun,occup]) & TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+   _print(#3[lemme]) & _print("(") & _print(#2[lemme]) & _print(") and time(") & _print(#3[lemme]) 
+   & _print(",since ") & _print(#40[lemme]) & _print(").\n")  )
+LIXO(#4)
+ 
+
+// no agent with passive
+| #4{prep,#40} |
+if ( OBJ-N(#1[start_action],#3[noun,occup]) & TEMP(#1,#6) & TIMEX3(#4) & ~SUBJ-N(#1,?) & #4[lemme]:#6[lemme] &
+      _print(#3[lemme]) & _print("(") & _print(_ppalPerson) & _print(") and time(") & _print(#3[lemme]) 
+   & _print(",since ") & _print(#40[lemme]) & _print(").\n")  )
+LIXO(#4)
+ 
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// ACTION AND END ACTION
+////////////////////////////////////////////////////////////////////////////////////////////////
+// He stoped working in 1994
+| #4{prep,#40} |
+if ( SUBJ-N(#1,#2[pronpers]) & ( OBJ-N(?[end_action],#1[verb]) | EMBED[infinit](#1,?[end_action]) ) & TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+   _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(") and time(") & _print(#1[lemme]) 
+   & _print(",until ") & _print(#40[lemme]) & _print(").\n") )
+LIXO(#4)
+
+| #4{prep,#40} |
+if ( SUBJ-N(#1,#2[pronpers:~]) & ( OBJ-N(?[end_action],#1[verb]) | EMBED[infinit](#1,?[end_action]) )& TEMP(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+   _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(") and time(") & _print(#1[lemme]) 
+   & _print(",until ") & _print(#40[lemme]) & _print(").\n") )
+LIXO(#4)
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// ACTION VERBS
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+// With object complement
+if ( SUBJ-N(#1,#2[pronpers]) & OBJ-N(#1,#3) & TEMP(#1,#6) & ~LIXO(#4) & TIMEX3(#4) & HEAD(#3,#30) & #4[lemme]:#6[lemme] & 
+     _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(",") & _print(#30[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+~ 
+
+if ( SUBJ-N(#1,#2[pronpers:~]) & OBJ-N(#1,#3) & TEMP(#1,#6) & ~LIXO(#4) & TIMEX3(#4) & HEAD(#3,#30) 
+     & #4[lemme]:#6[lemme] &
+     _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(",") & _print(#30[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+~ 
+
+// Without object complement when it is an occupation verb and there is some local of occupation - he worked at Plessey Ltd.
+if ( SUBJ-N(#1[occup],#2[pronpers]) & ~OBJ-N(#1,?) & ( LOC(#1,#3) | ( MOD(#1,#3) & ( ORGANISATION(#3) | LOCORG(#3) ) ) )  
+   & TEMP(#1,#6) & TIMEX3(#4) & ~LIXO(#4) & ~ATTRIB(#2,?) & #4[lemme]:#6[lemme]  &
+     _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(",") & _print(#3[lemme])
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[occup],#2[pronpers:~]) & ~OBJ-N(#1,?) & ( LOC(#1,#3) | ( MOD(#1,#3) & ( ORGANISATION(#3) | LOCORG(#3) ) ) )  
+   & TEMP(#1,#6) & TIMEX3(#4) & ~LIXO(#4) & ~ATTRIB(#2,?) & #4[lemme]:#6[lemme] &
+     _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(",") & _print(#3[lemme])
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+LIXO(#4)
+
+
+
+
+// Without object complement
+if ( SUBJ-N(#1,#2[pronpers]) & ~OBJ-N(#1,?) & TEMP(#1,#6) & TIMEX3(#4) &  ~LIXO(#4) & ~ATTRIB(#2,?) & #4[lemme]:#6[lemme] &
+     _print(#1[lemme]) & _print("(") & _print(_ppalPerson) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+~ 
+
+if ( SUBJ-N(#1,#2[pronpers:~]) & ~OBJ-N(#1,?) & TEMP(#1,#6) & TIMEX3(#4) &  ~LIXO(#4) & ~ATTRIB(#2,?) & #4[lemme]:#6[lemme] &
+     _print(#1[lemme]) & _print("(") & _print(#2[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print(#4[lemme]) & _print(").\n") )
+~ 
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// DURATIONS
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+// Same when no LOC complement but when complement is ORGANISATION place
+// e.g. He stayed at Plessey Communications
+
+
+
+// With stay_v
+if ( SUBJ-N(#1[stay_v],#2[pronpers:~]) & LOC(#1,#5) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & 
+     _print("stay(") & _print(#2[lemme]) & _print(",") & _print(#5[lemme])
+     & _print(")") & _print(" and duration(") & _print("stay,")
+     & _print(#4[lemme]) & _print(") and initialDate(") & _print(_dateBefore) 
+     & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers]) & LOC(#1,#5) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+     _print("stay(") & _print(_ppalPerson) & _print(",") & _print(#5[lemme])
+     & _print(")") & _print(" and duration(") & _print("stay,")
+     & _print(#4[lemme]) & _print(") and initialDate(") & _print(_dateBefore) 
+     & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers]) & MOD(#1,#5) & ( ORGANISATION(#5) | LOCORG(#5) ) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+     _print("stay(") & _print(_ppalPerson) & _print(",") & _print(#5[lemme])
+     & _print(")") & _print(" and duration(") & _print("stay,")
+     & _print(#4[lemme]) & _print(") and initialDate(") & _print(_dateBefore) 
+     & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1[stay_v],#2[pronpers:~]) & MOD(#1,#5) & ( ORGANISATION(#5) | LOCORG(#5) ) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] &
+     _print("stay(") & _print(#2[lemme]) & _print(",") & _print(#5[lemme])
+     & _print(")") & _print(" and duration(") & _print("stay,")
+     & _print(#4[lemme]) & _print(") and initialDate(") & _print(_dateBefore) 
+     & _print(").\n") )
+LIXO(#4)
+
+
+// With action verbs
+// with objects
+if ( SUBJ-N(#1,#2[pronpers:~]) & OBJ-N(#1,#3) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4) &
+   _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(",") & _print(#3[lemme]) 
+   & _print(") and duration(") & _print(#1[lemme]) & _print(",") & _print(#4[lemme])
+   & _print(") and initialDate(") & _print(_dateBefore) 
+   & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1,#2[pronpers]) & OBJ-N(#1,#3) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4) &
+   _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(",") & _print(#3[lemme]) 
+   & _print(") and duration(") & _print(#1[lemme]) & _print(",") & _print(#4[lemme])
+   & _print(") and initialDate(") & _print(_dateBefore) 
+   & _print(").\n") )
+LIXO(#4)
+
+// without object
+if ( SUBJ-N(#1,#2[pronpers:~]) & ~OBJ-N(#1,?) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4) &
+   _print(#1[lemme]) & _print("(") & _print(#2[lemme]) 
+   & _print(") and duration(") & _print(#1[lemme]) & _print(",") & _print(#4[lemme])
+   & _print(") and initialDate(") & _print(_dateBefore) 
+   & _print(").\n") )
+LIXO(#4)
+
+if ( SUBJ-N(#1,#2[pronpers]) & ~OBJ-N(#1,?) & DUR(#1,#6) & TIMEX3(#4) & #4[lemme]:#6[lemme] & ~LIXO(#4) &
+   _print(#1[lemme]) & _print("(") & _print(_ppalPerson) 
+   & _print(") and duration(") & _print(#1[lemme]) & _print(",") & _print(#4[lemme])
+   & _print(") and initialDate(") & _print(_dateBefore) 
+   & _print(").\n") )
+LIXO(#4)
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+///////////// REFERENTIAL TEMPORAL EXPRESSIONS
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+// On action verbs and attribute only
+
+// prior to that she was CEO.
+if ( ATTRIB(#1[pronpers],#2) & TEMP(#2,#3) & TIMREF(#3[before]) & HEAD(#2,#20) 
+     _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~
+// Same as above when not pronpers
+if ( ATTRIB(#1[pronpers:~],#2) & TEMP(#2,#3) & TIMREF(#3[before])  & HEAD(#2,#20)
+     _print("new_situation(") & _print(#1[lemme]) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~
+
+if ( ATTRIB(#1[pronpers],#2) & TEMP(#2,#3) & TIMREF(#3[after]) & HEAD(#2,#20) 
+     _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("after ") & _print(_lastDateFound) & _print(").\n") )
+~
+// Same as above when not pronpers
+if ( ATTRIB(#1[pronpers:~],#2) & TEMP(#2,#3) & TIMREF(#3[after])  & HEAD(#2,#20[prep:~]) &
+     _print("new_situation(") & _print(#1[lemme]) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("after ") & _print(_lastDateFound) & _print(").\n") )
+~
+
+if ( ATTRIB(#1[pronpers],#2) & TEMP(#2,#3) & TIMREF(#3[at]) & HEAD(#2,#20[prep:~]) &
+     _print("new_situation(") & _print(_ppalPerson) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("since ") & _print(_lastDateFound) & _print(").\n") )
+~
+// Same as above when not pronpers
+if ( ATTRIB(#1[pronpers:~],#2) & TEMP(#2,#3) & TIMREF(#3[at])  & HEAD(#2,#20[prep:~]) &
+     _print("new_situation(") & _print(#1[lemme]) & _print(",") & _print(#20[lemme]) 
+     & _print(")") & _print(" and time(") & _print("new_situation,") 
+     & _print("since ") & _print(_lastDateFound) & _print(").\n") )
+~
+
+
+// ACTION VERBS
+
+// With object complement
+if ( SUBJ-N(#1,#2[pronpers]) & OBJ-N(#1,#3) & TEMP(#1,#4) & TIMREF(#4[before]) & HEAD(#3,#30[prep:~]) &
+     _print(#1[lemme]) & _print("(") & _print(_ppalPerson) & _print(",") & _print(#30[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~ 
+
+if ( SUBJ-N(#1,#2[pronpers:~]) & OBJ-N(#1,#3) & TEMP(#1,#4) & TIMREF(#4[before]) & HEAD(#3,#30[prep:~]) &
+     _print(#1[lemme]) & _print("(") & _print(#2[lemme]) & _print(",") & _print(#30[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~ 
+
+// Without object complement
+if ( SUBJ-N(#1,#2[pronpers]) & ~OBJ-N(#1,?) & TEMP(#1,#4) & TIMREF(#4[before]) & 
+     _print(#1[lemme]) & _print("(") & _print(_ppalPerson) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~ 
+
+if ( SUBJ-N(#1,#2[pronpers:~]) & ~OBJ-N(#1,?) & TEMP(#1,#4) & TIMREF(#4[before]) &
+     _print(#1[lemme]) & _print("(") & _print(#2[lemme]) 
+     & _print(")") & _print(" and time(") & _print(#1[lemme]) & _print(",") 
+     & _print("before ") & _print(_lastDateFound) & _print(").\n") )
+~ 
+
+
+
+// CLEANING LIXO traces that I've been put in order to avoid duplication of special predicates and normal action verbs
+if (TIMEX3(#1) & ^LIXO(#1) )
+   ~
+

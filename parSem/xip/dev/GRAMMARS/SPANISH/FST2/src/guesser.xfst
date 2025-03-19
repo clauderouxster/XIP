@@ -1,0 +1,228 @@
+# ============================================================================
+# FILE:		/opt/Mltt/lingdata/spa/lex/src/guesser.xfst
+# CONTENT:	(x)fst script for morphological guesser
+# ENCODING:	UTF8 [€àâáäã]
+#
+# LANGUAGE:	SPANISH
+#
+# AUTHOR:	C. Arnaudo, A. Schiller
+#
+# LAST UPDATE:	27-Sep-1999	(by A. Schiller)
+#		- added roman numerals
+#
+# UPDATE:	26-Aug-1999	(by A. Schiller)
+#		- converted fsc to (x)fst format
+#		- reorganised file
+#		- morphological categories instead of POS only
+#
+# CREATED:	30-Oct-1999	(by C. Arnaudo, A. Schiller)
+# UDATED:	20-Apr-2005	 (by A.Schiller)
+#		- modified boundary symbols
+#
+# ============================================================================
+# USAGE: 	xfst -l [ThisFile]
+# ============================================================================
+define DBD	"^|" ;	# derivational boundary
+define CBD	"^=" ;	# clitic boundary
+define SPC	"^_" ;	# white space (multi-words)
+
+! -------------------------------------------------------------------------
+! Character classes
+! -------------------------------------------------------------------------
+echo >>> define characters
+define UPP	[A|B|C|D|E|F|G|H|I|J|K|L|M|N|Ñ|O|P|Q|R|S|T|U|V|W|X|Y|Z
+		|Ä|Á|À|Â|Ã|Å|É|È|Ê|Ë|Í|Ì|Ï|Î|Ó|Ò|Ö|Ô|Õ|Ú|Ù|Ü|Û|Ý|Æ|Ç|Ð];
+define LOW	[a|b|c|d|e|f|g|h|i|j|k|l|m|n|ñ|o|p|q|r|s|t|u|v|w|x|y|z
+		|á|à|ã|ä|â|å|é|è|ê|ë|í|ì|ï|î|ó|ò|ô|ö|õ|ü|ú|ù|û|ÿ|ý|ð|æ|ç|ß]; 
+define LET	[ UPP | LOW ] ;
+
+define DIG	[ %0|1|2|3|4|5|6|7|8|9 ];
+
+define SYM	[ %#|%$|%%|%&|%*|%+|%÷|%=|%@|%~|%£|%§|%µ|%^|%×|%Ø|%Þ|%ø|%þ|%/ ];
+
+define PUNCT	[ %. | %, | %? | %¿ | %! | %¡ | %; | %: | %( | %) | %- | %' | %` ];
+
+define ANY	[ LET | DIG | SYM | PUNCT ];
+
+define PREFIX	ANY* %- ;
+
+# --------------------------------------------------------------------------------
+echo >>> proper names
+define ACRON	[ UPP (%.) ]+ ;
+define PROP	[ UPP [LET|SYM|DIG]+ ] - ACRON ;
+
+regex (PREFIX) [
+	PROP		%+Prop:0
+|	ACRON		%+Prop:0 %+Sigla:0
+];
+
+# --------------------------------------------------------------------------------
+echo >>> adverbs
+define ADV	[ LOW+ {mente} ] ;
+
+regex (PREFIX)	[ ADV	%+Adv:0 ] ;
+
+# --------------------------------------------------------------------------------
+echo >>> adjectives
+define ADJSUP	[ LOW+ [ {o}:{ísim} | {re}:{érrim} ] ];
+define AdjStem	[ LOW+ - [ADJSUP.2] ];
+
+
+regex (PREFIX) [
+	ADJSUP			%+Adj:0 %+Sup:0 
+				[ %+Masc:o | %+Fem:a ] [%+Sg:0 | %+Pl:{es} ]
+
+# agradable, deleznable, salubre
+|	LOW+ b [l|r] e		%+Adj:0 %+MF:0 [ %+Sg:0 | %+Pl:s ]
+
+# almeriense, independiente
+|	LOW+ [LOW - m] e n t e	%+Adj:0 %+MF:0 [ %+Sg:0 | %+Pl:s ]
+|	LOW+  i e n s e		%+Adj:0 %+MF:0 [ %+Sg:0 | %+Pl:s ]
+
+# constante, regordete, grandote
+|	LOW+ [e|o|a n] t e	%+Adj:0 %+MF:0 [ %+Sg:0 | %+Pl:s ]
+
+# montaraz, atroz, feliz
+|	LOW+ [a|o|i] z:0	%+Adj:0 %+MF:0 [ %+Sg:z | %+Pl:{ces} ]
+
+# pueril, elemental
+|	LOW+ [i|a] l		%+Adj:0 %+MF:0 	[ %+Sg:0 | %+Pl:{es} ]
+
+# cordobés, -esa
+|	LOW+ é s		%+Adj:0 %+Masc:0 %+Sg:0
+|	LOW+ é:e s 		%+Adj:0 %+Masc:0 %+Pl:{es}
+|	LOW+ é:e s 0:a		%+Adj:0 %+Fem:0 %+Sg:0
+|	LOW+ é:e s 0:a		%+Adj:0 %+Fem:0 %+Pl:s
+
+# lemosín, -ina
+|	LOW+ í n		%+Adj:0 %+Masc:0 %+Sg:0	
+|	LOW+ í:i n 		%+Adj:0 %+Masc:0 %+Pl:{es}
+|	LOW+ í:i n 0:a		%+Adj:0 %+Fem:0 %+Sg:0
+|	LOW+ í:i n 0:a		%+Adj:0 %+Fem:0 %+Pl:s
+
+# creador, -ora
+|	LOW [d|t|s] o r		%+Adj:0 %+Masc:0 [ %+Sg:0 | %+Pl:{es} ]
+|	LOW [d|t|s] o r	0:a	%+Adj:0 %+Fem:0 [ %+Sg:0 | %+Pl:s ]
+
+#
+|	AdjStem o		%+Adj:0	%+Masc:0 [%+Sg:0 | %+Pl:s ]
+|	AdjStem o:a		%+Adj:0	%+Fem:0 [%+Sg:0 | %+Pl:s ]
+];
+
+# --------------------------------------------------------------------------------
+echo >>> common nouns
+define NounStem	[ LOW+ - [ADJSUP.2] ] ;
+
+regex (PREFIX) [
+
+# costumbre, sevidumbre
+	LOW+ [d|t] u m b r e 	%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:s ]
+
+# verdad, barbaidad, libertad	
+|	LOW+ a d 		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:{es} ]
+
+# latitud
+|	LOW+ t u d		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:{es} ]
+
+# actriz
+|	LOW+ t r i z		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:{es} ]
+
+# serie
+|	LOW+  i e		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:s ]
+
+# ??
+|	LOW+  i c e		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:s ]
+
+# estupidez
+|	LOW+  e z		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:{es} ]
+
+# legión, introversión, dejación, razón
+|	LOW+ ó n		%+Noun:0 %+Fem:0 %+Sg:0
+|	LOW+ ó:o n		%+Noun:0 %+Fem:0 %+Pl:{es}
+
+#  comedor, libertador, asesor
+|	LOW+ [d|s|t] o r	%+Noun:0 %+Masc:0 [ %+Sg:0 | %+Pl:{es} ]
+|	LOW+ [d|s|t] o r a	%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:s ]
+
+#  sorbete
+|	LOW+ e t e		%+Noun:0 %+Masc:0 [ %+Sg:0 | %+Pl:s ]
+
+#  redil
+|	LOW+ i l		%+Noun:0 %+Masc:0 [ %+Sg:0 | %+Pl:{es} ]
+
+# chico, chica
+|	NounStem o		%+Noun:0 %+Masc:0 [ %+Sg:0 | %+Pl:{s} ]
+|	NounStem a		%+Noun:0 %+Fem:0 [ %+Sg:0 | %+Pl:{s} ]
+
+];
+
+
+# --------------------------------------------------------------------------------
+echo >>> verbs
+define VStem 	LOW+ - [ {hab} | {s} | {est} ] ;
+
+define CLIT1	[ {yo}:{me} %+Pron:0 %+1P:0 %+MF:0 %+Sg:0
+		| {tú}:{te} %+Pron:0 %+2P:0 %+MF:0 %+Sg:0
+		| {nosotros}:{nos} %+Pron:0 %+1P:0 %+MF:0 %+Pl:0
+		| {vosotros}:{os} %+Pron:0 %+2P:0 %+MF:0 %+Pl:0
+		| {se} %+Pron:0 %+3P:0 %+MF:0 %+SP:0
+		];
+
+define CLIT2	[ CLIT1
+		| {él}:{la} %+Pron:0 %+Acc:0 %+3P:0 %+Fem:0 %+Sg:0
+		| {él}:{lo} %+Pron:0 %+Acc:0 %+3P:0 %+Masc:0 %+Sg:0
+		| {él}:{le} %+Pron:0 %+Dat:0 %+3P:0 %+MF:0 %+Sg:0
+		| {ellos}:{las} %+Pron:0 %+Acc:0 %+3P:0 %+Fem:0 %+Pl:0
+		| {ellos}:{los} %+Pron:0 %+Acc:0 %+3P:0 %+Masc:0 %+Pl:0
+		| {ellos}:{les} %+Pron:0 %+Dat:0 %+3P:0 %+MF:0 %+Pl:0
+		];
+
+define CLIT	(DBD:0 CLIT1) DBD:0 CLIT2 ;
+
+# 
+regex	(PREFIX) [
+	VStem [ {ar} | {er} | {ir} ]	%+Verb:0 %+Inf:0 (CLIT)
+
+### check inflections (see below) !!!!
+
+];
+
+
+# --------------------------------------------------------------------------------
+echo >>> union
+
+union net
+define GUESSER
+
+read regex GUESSER %+guessed:0 ;
+
+
+
+#! -------------------------------------------------------------------------
+#! ** TO DO ***
+#! -------------------------------------------------------------------------
+#echo >>> define guesser
+#
+#
+## VERBS
+#
+#
+## Ni futuro de Subj. ni segunda persona Pl del Imperativo.
+#Stem  [ ó | é | [a|i] s t e | e s |
+#	[a [b|r] a | á | í (a) | a s e | i e r a | i e s e ] (s) | 
+#	[a|e] m o s |
+#	[á | a b a | a s (t) e | i e r a | é | i s t e | i e s e ] i s | 
+#	[ a | á | e | r o ] n ]			%+VERBFIN:0 |
+#[Stem - [?* [ m e n t | b l ]]] e		%+VERBFIN:0 | 
+#[Stem - [?* [ [a|i] d | [i|í] s i m | é r r i m ]]] o	%+VERBFIN:0 |
+#[Stem - [?* [ i s t | [i|a] d | [i|í] s i m | é r r i m  ]]] a (s)	
+#						%+VERBFIN:0 |
+#[Stem - [?* [ [[i|í] s | é r r]]]] i m o s 	%+VERBFIN:0 |
+#
+#
+#Stem [ a | i ] d [ o | a ]	%+PAPSG:0 |
+#Stem [ a | i ] d [ o | a ] s	%+PAPPL:0 |
+#Stem [ a | i e ] n d o		%+VERBPRP:0  
+#];
+#END;
+#

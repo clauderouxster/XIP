@@ -1,0 +1,436 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : Entity XIP grammar
+//!   filename   : entity_dependencies.xip
+//!   Date       : 04/08/2003
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+Déduction:
+
+
+|NUM#1[zipcode]|
+        ZIPCODE[entite=+](#1)
+
+|NUM#1[nclient]|
+        NCLIENT[entite=+](#1)
+
+|NOUN#1[zipcode]|
+        ZIPCODE[entite=+](#1)
+
+|NOUN#1[domname]|
+        URL[entite=+](#1)
+
+|NOUN#2[address,mwe]|
+        LIEU[address=+,entite=+](#2)
+
+|NOUN#2[direction,mwe]|
+        STREET[entite=+](#2)
+
+|NOUN#2[lieu,pays:~,ville:~,continent:~,address:~,org:~,direction:~]|
+        LIEU[entite=+](#2)
+
+ |NOUN#1{?*,NOUN#2}|
+        if(^LIEU(#2) & LIEU(#1))
+        ~
+if(^DATE(#1))
+        DATE[entite=+](#1)
+
+
+ |NOUN#1[phone,mobile:~,fax:~] |
+        if(~PHONE(#1))
+        PHONE[entite=+](#1)
+
+ |NUM#1[phone,mobile:~,fax:~] |
+        if(~PHONE(#1))
+        PHONE[entite=+](#1)
+
+  |NOUN#1[phone,mobile] |
+        if(~MOBILE(#1))
+        MOBILE[entite=+](#1)
+
+  |NUM#1[phone,mobile] |
+        if(~MOBILE(#1))
+        MOBILE[entite=+](#1)
+
+ |NOUN#1|
+        if(^PERSONNE(#1))
+        PERSONNE[entite=+](#1)
+
+
+ |NOUN#1[fax];NUM#1[fax] |
+        FAX[entite=+](#1)
+
+
+ |NOUN#1[url]|
+        URL[entite=+](#1)
+
+ |NOUN#1[email]|
+        EMAIL[entite=+](#1)
+
+|NOUN#1{NOUN#2,PUNCT[form:fhyph],NOUN#3}|
+        if (LIEU(#2) & LIEU(#3))
+        LIEU[entite=+](#1)
+
+if(^LIEU[pays](#1))
+        COUNTRY[entite=+](#1)
+
+if(^LIEU[ville,!cityaddress:!](#1))
+        CITY[entite=+](#1)
+
+if(^LIEU[continent](#1))
+        CONTIN[entite=+](#1)
+
+if(STREET(#1) & ^LIEU(#1))
+        ~
+
+if(CITY(#1) & ^ORG(#1))
+        ~
+if(^CITY(#1[lemme:Mobile]))
+        ~
+
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// >>>>>>>>>>>>>>>>>>DELETIONS
+// We delete entities included in larger entities
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+|?#1{?*,?#2,?*} |
+        if ($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+|?#1{?*,?{?*,?#2,?*},?*} |
+        if ($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+|NOUN#1[address]{?*,NOUN{NOUN#3}}|
+        if(^PERSONNE(#3))
+        ~
+
+|NOUN#1[address]{?*,NOUN{?*,NOUN#3}}|
+        if(^PERSONNE(#3))
+        ~
+|NOUN#1[address]{NOUN{NOUN#3}}|
+        if(^ORG(#3))
+        ~
+
+|NOUN#1[address]{?*,NOUN{NOUN#2}}|
+                if(^ORG(#2))
+        ~
+
+|NOUN#1{?*,NOUN{?*,NOUN#2}}|
+        if(^ORG(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2{NOUN#3}}|
+        if(ORG(#1) & ^ORG(#3))
+        ~
+
+|NOUN#1{NOUN{?*,NOUN#2}}|
+        if(ORG(#1) & ^ORG(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(LIEU(#1) & ^LIEU(#3))
+        ~
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(PERSONNE(#1) & ^ORG(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(ORG(#1) & ^LIEU(#3))
+        ~
+
+|NOUN#1{?*,NOUN#2}| 
+        if(ORG(#1) & ^ORG(#2))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if(LIEU(#1) & ^PERSONNE(#3))
+        ~
+
+|NOUN#1{NOUN#1{NOUN#3}}| 
+        if (LIEU(#1) & ^PERSONNE(#3))
+        ~
+
+|NOUN#1{NOUN#1{?*,NOUN#3}}|
+         if(ORG(#1) & ^PERSONNE(#3))
+        ~
+
+|NOUN#1{NOUN#2{?*,NOUN#3{?*,NOUN#4}}}|
+        if(ORG(#1) & ^ORG(#4))
+        ~
+
+
+|NOUN#1{NOUN#2}| 
+        if (^ORG(#2) & LIEU(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2{?*,NOUN#3}}|
+        if (PERSONNE(#1) & ^LIEU(#3))
+        ~
+
+|NOUN#1{NOUN#2}| 
+       if (^LIEU(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if (^PERSONNE(#2) & LIEU(#1))
+        ~
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if (ORG(#1) & ^PERSONNE(#3))
+        ~
+
+
+
+|NOUN#1{?+,NOUN#2}|
+        if (^ORG(#2) & LIEU(#1))
+        ~
+
+|NOUN#1{?,NOUN{?,NOUN#2}}|
+        if(ORG(#1) & ^LIEU(#2))
+        ~
+
+|NOUN#1[org]{NOUN#2{NOUN#3,NOUN#4}}|
+       if (ORG(#1) & ^ORG(#4))
+        ~
+
+|NOUN#1{?*,NOUN#2}|
+        if(LIEU(#1) & ^LIEU(#2))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORG(#1) & ^LIEU(#3))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORG(#1) & ^ORG(#3))
+        ~
+
+|NOUN#1{NOUN#2}|
+     if(PERSONNE(#1) & ^PERSONNE(#2))
+        ~
+
+|NOUN#1{NOUN#2{?*,NOUN#3{?*,NOUN#4}}}|
+        if(PERSONNE(#1) & ^PERSONNE(#4))
+        ~
+
+|NOUN#1{NOUN#2{NOUN#3}}|
+        if(ORG(#1) & ^PERSONNE(#3))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^ORG(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1|
+        if(^PERSONNE(#1) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2,?+}|
+        if (^PERSONNE(#2) & LIEU(#1))
+        ~
+
+
+| NOUN#1{NOUN#2,NOUN#3{?*,NOUN#4}} |
+        if(PERSONNE(#1) & ^PERSONNE(#4))
+        ~
+
+| NOUN#1{?*,NOUN#3{?*,NOUN#4}} |
+        if(PERSONNE(#1) & ^PERSONNE(#4))
+        ~
+
+
+|NOUN#1{NOUN#2[prof],NOUN#3{?,NOUN#4}}|
+        if (^LIEU(#4) & PERSONNE(#1))
+        ~
+
+
+|NOUN#1{NOUN#2[prof],NOUN#3{?,NOUN#4}}|
+        if (^PERSONNE(#4) & PERSONNE(#1))
+        ~
+
+|NOUN#1{NOUN#2}|
+        if (^LIEU(#2) & PERSONNE(#1[famille]))
+        ~
+
+
+|NOUN#1{?+,NOUN#2},?*|
+        if (^PERSONNE(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?*,NOUN#2,?+}|
+        if (^PERSONNE(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^ORG(#2) & ORG(#1))
+        ~
+|NOUN#1{NOUN#2,?+}|
+        if (^ORG(#2) & ORG(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LIEU(#2) & ORG(#1))
+        ~
+
+
+|NOUN#1{NOUN#2,?+}|
+        if (^LIEU(#2) & ORG(#1))
+        ~
+
+
+|NOUN#1{NOUN#2,?+}|
+        if (^PERSONNE(#2) & ORG(#1))
+        ~
+
+
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LIEU(#2) & PERSONNE(#1))
+        ~
+ |NOUN#1|
+        if (^LIEU(#1) & LIEU(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^PERSONNE(#2) & PERSONNE(#1))
+        ~
+
+ |NOUN#1{?+,NOUN#2}|
+        if (^LIEU(#2) & PERSONNE(#1))
+        ~
+
+ 
+ |NOUN#1{?+,NOUN#2}|
+        if (^ORG(#2) & PERSONNE(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^LIEU(#2) & ORG(#1))
+        ~
+
+|NOUN#1{?+,NOUN#2}|
+        if (^PERSONNE(#2) & ORG(#1))
+        ~
+
+|NOUN#1{NOUN#2,?+}|
+        if (^PERSONNE(#2) & LIEU(#1))
+         ~
+
+
+|NOUN#1{NOUN{NOUN{NOUN#2,?+}},?+}|
+        if(PERSONNE(#1) & ^ORG(#2))
+        ~
+
+|NOUN#1{NOUN{NOUN#2,?+},?+}|
+        if(PERSONNE(#1) & ^LIEU(#2))
+        ~
+
+
+|NOUN#1{?+,NOUN{NOUN#2,?+}}|
+        if(PERSONNE(#1) & ^PERSONNE(#2))
+        ~
+
+
+
+// ADDRESSES BUSICARDS
+if(PROVINCE(#1) & ^LOCORG(#1))
+        ~
+
+|?#1{?*,?#2,?*} |
+        if($1[entite:+](#1) & ^$2[entite:+](#2))
+        ~
+
+
+|NOUN#1{?*,?#2,?*}|
+        if(PHONE(#1) & ^DATE(#2))
+        ~
+
+|NOUN#1{?*,?#2{?*,?#3}}| 
+        if(PHONE(#1) & ^DATE(#3))
+        ~
+
+
+|NOUN#1{?*,?{?*,#3},?*}|
+        if(STREET(#1) & (^LIEU(#3)|^PERSONNE(#3)|^ORG(#3)))
+        ~
+
+|NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^ZIPCODE(#2))
+        ~
+
+|NOUN#1{?*,?{?*,?#2}}}|
+       if(STREET(#1) & (^LIEU(#2)|^PERSONNE(#2)|^ZIPCODE(#2)))
+        ~
+
+  |NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^CITY(#2))
+        ~
+
+|NOUN#1{?*,?#2,?*}|
+        if(STREET(#1) & ^STREET(#2))
+        ~
+
+|NOUN#1|
+     if(PROVINCE(#1) & ^LIEU(#1))
+        ~
+
+|NOUN#1|
+     if(CITY(#1) & ^PERSONNE(#1))
+        ~
+
+ |NOUN#1{?*,?#2}|
+           if(CITY(#1) & ^PERSONNE(#2))
+           ~
+  
+ |NOUN#1{?*,?#2{?*,?#3}}|
+           if(CITY(#1) & ^TITLE(#3))
+           ~
+
+ |?#1{?*,?#2,?*} |
+        if(ZIPCODE(#1) & (^ORG(#2)|^ZIPCODE(#2)))
+        ~
+
+
+ |NOUN#1{?*,?#2,?*} |
+        if(ORG(#1) & ^CITY(#2))
+        ~
+
+
+  |NOUN#1{?*,?#2,?*}|
+        if(^COUNTRY(#2)  & ORG(#1))
+        ~
+
+ |NOUN#1{?*,?#2,?*}|
+        if(^ZIPCODE(#2)  & ORG(#1))
+        ~
+
+  |NOUN#1{?*,?#2,?*}|
+        if(^TITLE(#2)  & ROLE(#1))
+        ~
+
+  |NOUN#1[adresspart:+]{NOUN#2[ville:+],NUM#3[zipcode:+]}|
+        if(^CITY(#2))
+        ~
+  |NOUN#1[adresspart:+]{NOUN#2[ville],NUM#3[zipcode]}|
+        if(^ZIPCODE(#3))
+        ~
+
+  |NOUN#1{NOUN#2[prof]}|
+        if(^PERSONNE(#1))
+        ~
+
+
+
+Final :
+
+CleanAllLemmas;

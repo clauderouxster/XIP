@@ -1,0 +1,98 @@
+Tagging:
+// check if a word has only one category left
+1> ?[uniquecat:~] = ?[uniquecat=+],where(testuniquecat(#0)).
+
+
+DoubleReduction:
+
+// --------------------------------------------------------------------------------
+// direct adjective - noun agreement
+
+10> | adja#1[invar:~], (adja[invar]), (trunc, ?[coord]), noun#2 | => ( #1[nagr] :: #2[nagr] & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ).
+
+// adjective - adjective agreement
+12> | adja#1[invar:~], (?[comma],adja[invar])*, adja#2 | => ( #1[nagr] :: #2[nagr] & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ).
+
+
+// --------------------------------------------------------------------------------
+// adjective - noun agreement
+
+// more to be added here ???
+
+// --------------------------------------------------------------------------------
+// agreement of cardinals
+// !!! CHECK: die/det[pl] zwei/num[pl] Stück/noun[sg] Kuchen !!!
+
+20>  | num#1[card], ?*[pre_noun], noun#2[unit:~] | => (  #1[number] :: #2[number] ) .
+21>  | num#1[card], ?*[pre_noun], adja#2 | => (  #1[number] :: #2[number] ) .
+
+// --------------------------------------------------------------------------------
+// agreement of determiners
+// :: die drei Wagen
+// :: der kleine, viel zu schnelle Wagen
+
+30>  | det#1, ?*[skip], num#1[card] | => (  #1[number] :: #2[number] ) .
+
+32>  | det#1, ?*[pre_noun], noun#2[unit:~] | => ( #1[nagr] :: #2[nagr] & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl])) .
+
+34>  | det#1, ?*[pre_noun], adja#2 | => (  #1[nagr] :: #2[nagr] & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ) .
+
+
+// re-check adj - noun agreement
+
+40> | adja#1, ?*[pre_noun], noun#2 | => ( (  #1[nagr] :: #2[nagr]) & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ).
+
+
+// :: etliche Mühe (Sg.)
+// :: etliche Abgeordnete (Pl.)
+// prefer plural reading if ambiguous
+45> | det#1[quant:+,neg:~,pl], ?*[pre_noun], noun#2[pl] | =>	(#1[pl,sg=~] & #2[pl,sg=~] ).
+
+
+
+// --------------------------------------------------------------------------------
+// agreement with preposition
+
+DoubleReduction:
+// :: auf/dat Hamburgs Strassen/dat
+50> | prep#1[det:~], (det), ?*[pre_noun], noun#2 | =>  ( (#1[case] :: #2[case]) ).
+50> | prep#1[det], ?*[pre_noun], noun#2 | =>  ( (#1[nagr] :: #2[nagr]) & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ).
+
+51>  | prep#1[det:~], (det), ?*[pre_noun], adja#2 | =>  ( #1[case] :: #2[case] ).
+51> | prep#1[det], ?*[pre_noun], adja#2 | =>  ( #1[nagr] :: #2[nagr] & ( #1[decl:~] | #2[decl:~] | #1[decl] :: #2[decl]) ).
+
+// :: mit sich, ohne sich, *trotz sich
+55> | prep#1[det:~,gen:~,nom:~], ?*[skip], pron#2[refl] | => ( #1[case] :: #2[case] ).
+
+// :: bei uns/dat
+// :: ohne den/acc
+55> | prep#1[det:~], (punct[quote]), pron#2[refl:~,uniquecat] | => 	( #1[case] :: #2[case] ).
+
+
+
+// First and last name
+60> | noun#1[firstname], noun#2[lastname] | =>
+	( #1[firstname] & #2[lastname] & #1[nagr] :: #2[nagr] ).
+
+61> | noun#1[title], (?[firstname])*,noun#2[lastname] | =>
+	( #1[nagr] :: #2[nagr] ).
+
+
+Tagging:
+// ----------------------------------------------------------------------------------
+// eliminate remaining unconnected determiners
+// :: das beste, das/pron mir passiert ist
+70> ?[det] = ?[det:~] | ?*[card:~, adj:~, noun:~], verb |.
+
+// eliminate remaining nominal adjective readings
+71> ?[adja,nadj] = ?[nadj:~] .
+
+
+
+// --------------------------------------------------------------------------------
+// adjective - adjective agreement
+
+72> ?[adja] = ?[adja:~] | ?[coord], (?[skip],?[adv],?[pred],?[comma])*, adja#2[invar:~] | 
+	where ( #0[nagr] ~: #2[nagr] & #0[decl] ~: #2[decl]) .
+
+

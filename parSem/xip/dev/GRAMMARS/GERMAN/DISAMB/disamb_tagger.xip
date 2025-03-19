@@ -1,0 +1,680 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb.xip
+//! Content:	Disambiguation rules for POS and morph. features
+//!
+//! Language:	GERMAN
+//!
+//! Author:	Anne Schiller
+//! Created:	21-Jul-2006
+//! Updated:	
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// POS disambiguation
+
+
+Tagging:
+
+
+// -----------------------------------------------------------------------------------------------------------
+// restrictions on first word
+
+// --------------------------------------------------------------------------------
+// rule out reading which should NOT be at beginning of a sentence
+1> ?<firstword> = ?[notfirst:~ ].
+
+
+
+// -----------------------------------------------------------------------------
+// numbers at beginning of a sentence
+// :: Zwei Personen kamen herein.
+// :: Er setzt auf die Zwei/noun
+4> ?[card,noun,firstword,date:~] = ?[noun:~] .
+
+// -----------------------------------------------------------------------------
+// upper case words (other than at the beginning of a sentence) must be
+// * noun or proper name
+// * other defined upper case words (e.g. polite "Sie"), which are marked [upp:+]
+// * special case: adjectives which are part of proper names ("Vereinigte Staaaten")
+
+// :: Die Technische/adja[proper] Hochschule/noun im Gebäude/noun A/symbol[upp]
+// :: Folgen Sie/pron[polite] den Anweisungen.
+
+//5> ?[cap:+,firstword:~] = adja<proper=+,pronom:~>, noun, ?<polite:+>, ?<upp:+> .
+
+// capitalized adjectives at beginning of sentence 
+// :: Alte/noun[nadj] sind willkommen
+5> noun<cap,firstword>,adja<cap,firstword> =  ?[adja:~] | ?[verb,finite, verbal:+] | .
+
+// :: Alte/noun[nadj] und Junge sind willkommen
+5> noun<cap,firstword>,adja<cap,firstword> =  ?[adja:~] | ?[coord], noun | .
+
+// :: Alte/adj Schuhe
+5> ?[noun, adja, cap,firstword] =  ?[noun:~] | (?[coord]), noun#1 |.
+//	where (#0[invar] | #0[nagr] : #1[nagr] ).
+
+// :: Alte/adj (und) schwarze Schuhe
+5> ?[noun, adja, cap,firstword] =  ?[noun:~] | (?[coord]), adja#1, noun |
+	where (#0[invar] | #1[invar] | #0[nagr] :: #1[nagr] ).
+
+
+// :: Alte/adj, blaue (und) schwarze Schuhe
+5> ?[noun, adja, cap,firstword] =  ?[noun:~] | ?[comma], adja#1, (?[comma];?[coord]), adja#2, noun#3 |
+	where (#0[invar] | (#1[invar] | #0[nagr] :: #1[nagr]) & (#2[invar] | #0[agr] :: #2[agr] )).
+
+
+// capitalized adjectives as part of proper names : only before noun or other capitalized adjective
+5> ?[noun, adja, cap,firstword:~] = ?[adja:~] | ?[cap:~] |.
+
+// guessed adjectives
+5> ?[noun, adja, cap, upp:~, firstword:~,guessed] = ?[adja:~].
+
+// -----------------------------------------------------------------------------------------------------------
+// Ein Berliner/adj Bürger
+// Er gibt einem Berliner/noun das Geld.
+
+6>?[noun,adja,invar] = | ?[det];?[adj] | adja[invar] | noun | .
+
+// -----------------------------------------------------------------------------
+// dates
+// :: am 17.3.99
+7> ?[date,num] = | prep[det] | ?[num:~] .
+7> ?[date,num,firstword] = ?[num:~] | punct |.
+
+
+// ==================================================
+// Test UNIQUE
+ 
+//12> ?= ?[unique=+],where(testunique(#0)).
+//12> ?= ?[uniquecat=+],where(testuniquecat(#0)).
+
+
+// -----------------------------------------------------------------------------
+// subordinating conjunction or something else
+
+// :: Er geht, damit/conj[subord] er seine Ruhe hat.
+// :: Er geht damit/adv nach Hause.
+20> ?<conj,subord>, ?<subord:~> = | ?[coord:~,comma:~,semicolon:~,colon:~] | ?[subord:~] .
+
+// :: Da/adv sind manche Probleme zu lösen.
+// :: Da/conj[subord] viele Probleme zu lösen sind.
+20> ?<conj,subord>, ?<subord:~> = ?[subord:~] | verb[verbal:+] |.
+
+
+// prepositions as quantifing particles
+// :: es sind unter/ptcl[padv] 100 Leute
+21> ?[padv] = ?[padv:~] | ?[card:~] | .
+
+
+// adjective particles
+
+25> ?[ptcl,pos] = ?[pos:~] ~| ?[adj,pos];adv |. 
+25> ?[ptcl,comp] = ?[comp:~] ~| ?[adj,comp];adv[comp] |. 
+
+// :: er spielt am/ptcl[super] besten
+// :: er spielt am/prep besten Platz der Stadt
+// :: Am/ptcl[super] besten gefällt mir das rote Kleid.
+25> ?<ptcl,super,lemma:am> = ?[super:~] ~| adv[super]; adjp[sup_am] |. 
+25> ?[ptcl,super] = ?[super:~] ~| ?[adj,super]; adv[super] |. 
+25> ?[ptcl,super] = ?[super] | ?[super, lastword] |.
+25> ?[ptcl,super] = ?[super] | ?[super], ?[finite] |.
+
+// :: von einem zum nächsten/adja[super]
+26> ?[sup_am] = ~| ptcl[super], ?*[skip] | ?[sup_am:~] .
+// :: weil sie am besten spielen
+26> ?[sup_am] = | ptcl[super], ?*[skip] | ?[sup_am] | ?[verb] |.
+
+
+// Guessed last names
+// Any guessed upper case word that follows a (lexical) first name
+// is very likely to be a last name
+// EXAMPLE:	[Michael] Manninger
+30> ?[guessed,cap:+] =  | noun[proper,firstname,guessed:~] | noun[proper,lastname=+].
+31> ?[guessed,cap:+] =  noun[proper,firstname=+] | noun[proper,lastname] |.
+
+
+// titles
+// :: Oberst/noun Dwight Sullivan
+// :: Frau/noun[title] Dr./noun[title] Maier kommt.
+// :: Die Frau/noun[common] kommt.
+32> noun[title,common] = ?[common:~] | noun[firstname];noun[lastname];noun[title];noun[guessed] |.
+32> noun[title,common] = ?[title:~].
+
+
+// proper names
+// :: Ein Mann/noun[common]
+// :: Herr Mann/noun[lastname]
+// :: Herr Hans/noun[firstname] Mann/noun[lastname]
+34> ?[noun,common,firstname] = | ?[title] | noun[firstname] | ?[lastname] | .
+34> ?[noun,common,proper] = | ?[title] | noun<proper,firstname=+> | ?[lastname] | .
+34> ?[noun,common,lastname] = | ?[title], (?[firstname]) | ?[common:~] .
+34> ?[noun,common,lastname] = | ?[det] | ?[lastname:~].
+
+34> ?[noun,common,proper,guessed] = | ?[title] | noun<proper,lastname=+> | ?[noun:~] | .
+
+
+// ==========================================
+// postposition
+
+40> ?<postp>, ?<postp:~> = | conj;punct[skip:~];verb | ?<postp:~>.
+
+//41> postp[gen] = ~| ?[gen];?[pred];?[invar];?[adv], ?*[skip] | ?<postp,gen:~>,?<postp:~> .
+//41> postp[acc] = ~| ?[acc];?[pred];?[invar];?[adv], ?*[skip] | ?<postp,acc:~>,?<postp:~> .
+//41> postp[dat] = ~| ?[dat];?[pred];?[invar];?[adv], ?*[skip]  | ?<postp,dat:~>,?<postp:~> .
+
+// preposition
+// special case: "voller"
+// :: eine Flasche voller/prep Wein
+// :: er ist voller/prep Widersprüche
+// :: ein voller/adja Bauch, in voller/adja Ausrüstung
+
+// *problem* :: voller Bauch studiert nicht gern.
+44> ?<prep,lemma:voller> = | det;prep |  ?[prep:~] .
+44> ?<prep,lemma:voller> = prep | ?*[pre_noun], noun[gen];noun[acc] | .
+
+
+45> ?[prep,pref] = ?[prep:~] | conj[coord], ?[prep:~] |.
+45> ?[prep,pref] = ?[pref:~] | ?[punct:~,coord:~] |.
+
+46> prep[preprep] = prep[preprep] | prep |.
+46> prep[uniquecat] = prep | ?[coord], prep#1 |
+	where ( #0[case] : #1[case] ).
+
+
+// CHECK :: genitive prepositions not with adverbs or predicative adjectives ???
+// :: wegen gestern ???
+
+46> prep[gen] = ?<prep:~>, ?<prep,gen:~> | ?*[skip],  ?[skip:~,gen:~,invar:~,card:~] |  .
+
+47> prep<lemma:in> = ?[acc:~] | ?*[pre_noun], noun[proper,town];noun[proper,country] |.
+
+// -----------------------------------------------------------------------------
+// verb or adjective
+// :: mit schnellen/adja Autos
+// :: die schnellen/adja Autos
+// :: die Läufer schnellen/verb hervor
+// :: sie kommen schnell/adjp hervor.
+50> ?<verb>, ?<adj> = | det[pron:~]; prep[infzu:~,adv:~] | ?<verb:~> .
+50> ?<verb>, ?<adja> = ?<adja:~> | ptcl[pref]; punct[sent] | .
+
+// leere/verb die Flaschen
+// leere/verb;adja Flaschen
+50> ?[adja, verb, finite] = ?[adja:~] | det | .
+
+// die leere/adj Flasche
+50> ?[adja, verb, finite] = | det[pron:~] | ?[verb:~].
+
+// :: So bekannte/verb Maier
+50> ?[adja, verb, finite] = | ?[det:~] | ?[adja:~] | noun[proper] |.
+
+// :: so äussern andere Leute
+// :: CHECK !!!
+//50> ?[adja, verb] = ?[adja:~] | adja |.
+
+// :: Das funktioniert so
+50> ?[adjp, verb, finite] = | ?[pron,firstword] | verb[finite] | ?[adjp:~] |.
+
+// :: dieser modernisierte/verb sein Haus
+// BUT: dieser modernisierte/adja Bau steht leer.
+
+
+50> ?[adja, verb, finite] = | ?[pron,firstword] | verb[finite] ~| ?*[pre_noun], noun |.
+
+
+// -----------------------------------------------------------------------------
+// predicative or attributive adjective
+// :: Das lila/adja Kleid ist lila/adjp
+52> adjp = | prep;det, (adv;adja;adjp)*| ?[adjp:~] |noun|.
+
+
+// :: All die schönnen Sachen
+55> ?[predet,noun,firstword] = det[predet] | det | .
+
+// -----------------------------------------------------------------------------
+// article or pronoun
+// :: eine/det Angestellte/noun
+// :: eine/pron der/det  wenigen
+
+62> ?[det,pron] = pron | ?*[skip], ?[det, gen, pl ] | .
+62> ?[det,pron] = det | ?*[pre_noun], noun |.
+
+
+// :: der/det Mann/noun ,/punct der/pron[rel]
+// :: der/pron[dem] hat/verb gesagt/verb
+
+// :: er kauft ein/ptcl[pref]
+63> ?[det,pref] = ?[pref:~] | ?*[skip], adv;?[adj];noun |.
+63> ?[det]  = ?[det:~] | ?*[skip], ?[comma];?[dash];?[semicolon];?[colon];conj[subord] |.
+63> ?[det, pron, firstword] =  pron[rel:~] | ?*[skip], verb[finite,verbal:+] | .
+63> ?[det, pron] =  | conj[coord:~], ?*[skip] | ?[rel:~] | ?*[skip], verb[finite,verbal:+] | .
+63> ?[det, pron, inf:~] =  pron | ?*[skip], verb[finite,verbal:+] | .
+
+63> ?[det, pron] = det | (?[adj];adv; conj;?[skip])*, noun |.
+
+// :: er gibt Antworten, aber die falschen.
+63> ?[det,pron] = ?[pron:~] | (?[skip];adv)*, adja[lastword] |.
+63> ?[det,pron] = ?[pron:~] | (?[skip];adv)*, adja, ?*[skip], verb |.
+
+
+// :: diejenigen, die/pron[rel]
+64> ?[det, pron,rel] = | pron, punct[comma], (prep) | ?<pron,rel> .
+
+// CHECK !!
+64> ?[det, pron,rel] = | punct[comma], (prep)  | pron[rel] | det;prep;pron[nom];pron[refl];verb[finite,verbal:+] | .
+
+// das Unglück, das/pron[rel] mir begegnete.
+// das/det mir begegnete Unglück
+64> ?[det, pron,rel] = | punct[comma], (prep)  | pron[rel] | pron[pers], (adv;?[skip])*, ?[adj:~]  |.
+
+// relative or demonstrative pronoun
+// NOTE: assuming that commas are used before a relative pronoun !!!
+//:: Man musste sich das/pron[dem] verdienen.
+//:: Er will ihm das zeigen.
+//65> ?[pron] =  | pron | ?[rel:~] .
+65> ?[pron,dem,rel] =  ~| punct[comma], (prep) | ?[rel:~] .
+
+// other verb prefixes
+66> ?[pref] = ?[pref:~] | ?*[quote], verb;?[adj];adv;noun |.
+
+// ----------------------------------------------------------------------------------------------------------
+// conjunction or preposition "um", "ohne", "anstatt"
+
+// :: er kommt (,) um (an dieser Sache) zu arbeiten
+// :: er geht, ohne sie verlassen zu haben
+70> ?<conj, infzu> = conj[infzu] | ?*[inf:~,punct:~], (?[inf];?[ppast]), ptcl[infzu], verb[inf] |.
+
+// :: er kommt (,) um an dieser Sache mitzuarbeiten
+70> ?<conj, infzu> = conj[infzu] | ?*[inf:~,punct:~], verb[infzu] |.
+
+// 70> ?<conj, infzu> = conj[infzu] | ?*[verb:~], (?[inf];?[ppast]), ?[infzu, conj:~] |.
+// otherwise discard conjunction reading
+//70> ?<conj, infzu> = ?[infzu:~].
+
+// -----------------------------------------------------------------------------
+//  "zu" + infinitive
+// :: er braucht nicht zu/ptcl[infzu] kommen/inf
+// :: die Blumen wachsen, ohne zu/ptcl[infzu] grünen/inf
+// :: die Tomaten, die/pron zu/ptcl[infzu] grünen/inf beginnen
+// BUT :: Er isst die zu/ptcl[padv] grünen/adja Tomaten/noun
+// BUT :: sie passen zu/prep grünen/adja Salaten
+// BUT :: Ich habe zu/prep meinen/det Leuten gesagt
+72> ptcl[infzu] = ptcl[infzu] | ?[verb,inf,adj:~,det:~] |.
+72> ptcl[infzu] = ptcl[infzu] | ?[verb,inf], punct[sent] |.
+// :: um Prozess zu überwachen und zu steuern.
+72> ptcl[infzu] = ptcl[infzu] | ?[verb,inf], ?[coord], ptcl[infzu] |.
+// :: um einen Termin zu bekommen
+72> ptcl[infzu] = | conj[infzu], ?*[inf:~] | ptcl[infzu] | verb[inf], punct[sent,comma] |.
+72> ptcl[infzu] = | conj[infzu], ?*[inf:~] | ptcl[infzu] | verb[inf,lastword] |.
+
+
+// :: er ist zu/ptcl[pos] hoch/adjp .
+// :: die (viel) zu/ptcl[pos] hohen/adja Preise
+// BUT :: zu/prep hoch/adjp angesetzten/adja Preisen
+/
+73> ?<lemma:zu>  = ptcl[pos] | adjp[pos,uniquecat], ?[adj:~] |.
+73> ?<lemma:zu>  = | prep; det | ptcl[pos] | adja[pos] | .
+\
+
+74> ?[inf] = | ptcl[infzu,prep:~,padv:~] | verb[inf]  .
+74> ?[inf,infzu] = | conj[infzu], ?*[infzu:~,punct:~] | verb[infzu] .
+74> ?[inf] = | conj[infzu], ?*[infzu:~,punct:~], ptcl[infzu] | verb[inf] .
+74> ?[inf] = verb[inf] | (ptcl[infzu]), verb[inf,modal] | .
+
+75> ?[ptcl,infzu] = ptcl[infzu] | verb[inf] | .
+
+// no subject (nominative case) in infinitive subclause
+//:: Er kommt, um seine/det[acc] Freunde/noun[acc] zu besuchen.
+//:: Er reist ab, ohne sie/pron[acc] gesehen zu haben.
+
+78> ?[acc,nom] = | conj[infzu] | ?[nom:~] .
+
+
+// -----------------------------------------------------------------------------
+// complex preposition
+// :: bis/preprep auf/prep ihn
+// :: bis/preprep ins/prep kleinste Detail.
+80> ?[preprep,conj] = prep[preprep] | ?[prep] |.
+
+// :: Ein- bis Zwei-Zimmer-Wohnung
+80> ?[preprep,conj] = | ?[trunc] | conj[coord] .
+// :: ein bis zwei Prozent
+80> ?[preprep,conj] = | ?[card];det[indef] | conj[coord] | ?[card];det[indef] |.
+
+80> ?[preprep,conj,firstword] = ?[coord:~] .
+80> ?[preprep,conj] = | ?[comma];?[semicolon] | ?[coord:~] .
+
+80> ?<preprep>, ?<preprep:~> = ?[preprep:~] | ?[prep:~] |.
+
+
+// :: er wartet, bis sie kommen
+// :: er wartet bis Montag
+
+
+81> ?<lemma:bis> = ?[prep:~] | pron[pers] |.
+
+// ----------------------------------------------------------------------------
+// Imperative
+// only at beginning of sentence
+// :: es macht rauh/adja.
+// :: Rauh/verb[imp] den Stoff an.
+// :: Rauh/verb[finite] ich den Stoff an.
+89> ?[imp,firstword:~] = | ?[punct:~,coord:~] | ?[imp:~].
+89> ?[firstword,imp] =  ?[imp:~] | pron[pers:+,nom:+] |.
+89> ?<firstword,imp> = ?[imp:~] ~| ?*, punct[exclam:+] | .
+
+
+// adjective or participle
+
+// :: Die Schritte können vereinfacht/verb[ppast] werden
+// :: weil er es vereinfacht/verb[ppast] hat
+// :: ohne ihn gesehen zu haben
+91> ?[adjp,verb,ppast] = ?[adjp:~]  | (ptcl[infzu]), verb[aux_ppast];verb[modal] |.
+
+// :: da er immer noch leicht verwundert/adjp lächelt
+// :: er hat immer verwundert/adjp gelächelt/verb.
+91>  ?[adjp,verb,ppast] =  adjp  | verb[aux_ppast:~,modal:~] |.
+
+// :: er fährt gewollt/adjp schnell.
+// :: er hat es gewollt/verb[ppast]
+// :: er lächelt immer noch leicht verwundert/adjp
+
+91> ?[adjp,verb,ppast] = | verb[aux_ppast],  ?*[punct:~,subord:~] | ?[adjp:~] .
+91> ?[adjp,verb,ppast] = | verb[aux_ppast:~,modal:~],  ?*[punct:~,conj:~] | ?[verb:~],?[verb,ppast:~] .
+
+91> ?[adjp,verb,ppast] = ~| ?[aux_ppast], ?* | verb[ppast:~], ?[verb:~] ~| ?*, ?[aux_ppast] | .
+
+// finite or infinitive verb
+// :: wir könnne/verb[finite] morgen kommen/verb[inf]
+// :: wir werden/verb[finite] nach Hause kommen/verb[inf] können/verb[inf]
+// :: weil sie morgen kommen/verb[inf] können/verb[finite] 
+// :: um damit anfangen/verb[inf] zu können/verb[inf]. 
+
+92> verb[finite,inf] = ?[finite:~] | ptcl[infzu], ?[modal] |.
+// otherwise infinitive is always at the end of a main clause or
+// before a finite modal/auxiliary in a sub clause
+92> verb[finite, inf] = ?<inf:~> | ?[punct:~, conj:~, aux_inf:~, modal:~, ptcl:~] |.
+92> verb[finite, inf] = | ?[modal];?[aux_inf], ?*[punct:~,conj:~] | ?[finite:~].
+92> verb[finite, inf] = ?[finite:~] | ?*[inf], ?[modal];?[aux_inf] |.
+
+93> verb[finite, inf] = | conj[subord], ?*[finite:~] | ?[verb,inf:~] | punct[sent] | .
+93> verb[finite, inf] = | pron[rel,wh], ?*[finite:~] | ?[verb,inf:~] | punct[sent] | .
+
+// finite verb or participle
+93> ?[finite, ppast] = | verb[finite, aux_ppast], ?*[conj:~,punct:~] | ?[finite:~] .
+93> ?[finite, ppast] = ?[finite:~] | verb[aux_ppast] | .
+
+93> ?[finite, ppast] = | conj[subord], ?*[finite:~] | ?[verb,ppast:~] | punct[sent] | .
+
+// CHECK::
+//93> ?[finite, ppast] = | conj[subord:+], ?*[verb:~] | ?[finite:~] | verb[finite, aux_ppast] | .
+//93> ?[finite, ppast] = | noun[nom:+] | ?[ppast:~] | ?*[verb:~], verb[finite, aux_ppast:~] |.
+//
+
+// adjective or finite verb
+// :: sie studierten/verb[finite] Medizin
+// :: die studierten/adja Mediziner
+// :: er las und studierte mit viel Eifer
+94> ?[adj, finite] = | verb[finite,aux:~,modal:~,noun:~], ?*[noun:~, pron:~, punct:~, coord:~] | ?[verb:~].
+94> ?[adj, finite] = | det | ?[verb:~] | ?[noun] |.
+94> ?[adj, finite] = | pron[nom:+,det:~] | ?[adj:~,ppast:~].
+94> ?[adj, finite] = ?[adj:~] | prep |.
+
+// :: weil sich neue Aufgaben ergeben
+94> ?[adj,finite] = | conj[subord], ?*[finite:~] | ?[adj:~] | punct[sent];punct[comma] |.
+
+// CHECK:
+//94> ?[adj, finite] = | adj#1, conj[coord]; punct[comma] | ?[adj:+], where (#0[nagr]::#1[nagr]).
+//94> ?[adj, finite] = | conj[subord]; adv[wh:+] | ?[adj:~].
+//94> ?[adj, finite] = | noun | ?[adj:~] | (det), (adj), ?[noun] |.
+
+
+// -----------------------------------------------------------------------------
+// finite verb or something else
+// don't allow sequence of 2 finite verbs
+// :: die grünen/adja grünen/verb[fin]
+95> ?<verb,finite>, ?<finite:~>  = ?[finite:~] | ?[finite:+,inf:~,ppast:~,verbal:+ ] |.
+95> ?<verb,finite>, ?<finite:~>  = | ?[finite:+,inf:~,ppast:~,verbal:+] | ?[finite:~] .
+
+// full verb  or auxiliary
+// main clause 
+//:: er ist nach Hause gegangen/verb[ppast]
+//:: er hat ihm das Buch gekauft/verb[ppast]
+//:: er wird morgen nach Berlin fahren/verb[inf]
+96> ?<aux_ppast> = ?[aux_ppast] | ?*[semicolon:~,comma:~, colon:~,subord:~], verb[ppast] |.
+96> ?<aux_inf> = ?[aux_inf] | ?*[semicolon:~,comma:~, colon:~,subord:~], verb[inf] |.
+
+// sub clause
+//:: weil er nach Hause gegangen ist.
+//:: weil er ihm das Buch gekauft hat.
+//:: weil er morgen nach Berlin fahren wird.
+96> ?<aux_ppast> = | verb[ppast] , (ptcl[infzu]) | ?[aux_ppast].
+96> ?<aux_inf> = | verb[inf] , (ptcl[infzu]) | ?[aux_inf].
+// otherwise: full verb
+//:: Er hat ein Buch.
+//:: Er wird rot.
+//:: Er ist Lehrer.
+96> ?<aux>, ?<aux:~> = ?[aux:~].
+
+// -----------------------------------------------------------------------------
+// adjective or adverb
+// :: es ist eine lange/adj Zeit
+// :: er hat lange/adv gewartet
+// :: BUT:  er hat die lange/adj gekauft, nicht die kurze/adj
+// :: CHECK: should also work without article !!!!
+100> ?[adj,adv] = ?[adj:~] | ?[noun:~, adv:~, adj:~] |.
+
+// :: in ganz/adj Deutschland
+// :: es ist noch ganz/adjp
+// :: er kommt ganz/adv ohne/prep seine Freunde
+// :: er ist ganz/adv allein
+100> ?[adj,adv] = ?[adj:~] | prep; adv; adjp |.
+
+
+// :: eine müde/adj Frau
+// :: Das Wetter macht/adjp müde
+// :: weil das Wetter müde/adjp macht
+101> adja, adjp = ?[adja:~] | verb[finite,verbal:+] |.
+101> adja, adjp = ?[adja:~] ~| ?*[pre_noun], noun |.
+// :: mit lila/adja Kleid
+101> adja, adjp = |prep;det| ?[adjp:~] | noun |.
+
+// -----------------------------------------------------------------------------
+// verb or noun (at beginning of sentence)
+// :: Folgen des Unfalls sind noch nicht bekannt.
+// :: Folgen Sie den Anweisungen.
+// :: Folgen die Kinder den Regeln ?
+110> ?[noun,verb] = ?[verb,finite:+] | pron | .
+110> ?[noun,verb] = ?[verb,finite:+] | ?*[sent_sep:~], punct[quest] |.
+110> ?[noun,verb,imp:~] = ?[verb:~].
+
+// :: es muss nicht immer derselbe sein/verb.
+// :: dieses Buch ist sein/poss
+// :: sein deutscher Kollege
+
+120> ?[pron,poss,inf,lastword] = | ?[verb,lemma:sein] | pron[poss].
+120> ?[pron,poss,inf] = ?[pron:~,det:~].
+
+
+// -----------------------------------------------------------------------------
+// prounoun or adjevtive
+
+// :: etwas/pron anderes/adja
+// :: nichts/pron besseres/adja
+130> ?[adja,pron,neut,sg] = | pron[adj:~,neut,sg] | ?[adj,neut,sg].
+130> ?[adv,pron,neut,sg] = pron | ?[adj,neut,sg] |.
+
+// :: einer/pron ist hier
+// :: der/det eine/adj ist hier
+// :: die/det eine/adj oder andere/adj Frage/noun
+// :: er will das/det eine/adj oder/conj andere/adj.
+// :: er kennt jeden/pron
+// :: er kennt jeden/adj[pronom] Platz
+// :: ein oder zwei/num andere/adj
+// CHECK :: er gibt allen/pron[dat] guten/adj Wein/noun[acc]
+// CHECK :: der eine/det Tasche tragende Mann
+131> ?[adj,pron,det] = | det | adja.
+131> ?[adj,pron] = | det;prep[det];?[card], (adja, conj[coord]) |  ?[pron:~] .
+131> ?[adj,pron] = ?[adj:~] ~| (adv;adja;adjp)*, noun |.
+
+
+// -----------------------------------------------------------------------------
+
+
+// adverbial oder quantifier
+// :: ein/det wenig/adv erfreuliches/adja Ergebnis
+// :: es ist ein/det wenig/adv kalt
+// :: er kann wenig/pron
+140> ?[adj,adv,quant] = | ?[det], ?*[skip] | adv | ?*[skip], ?[noun:~] |.
+
+// invariant quantifier
+140> ?[adj,quant] = |det| ?[pred:~].
+
+// :: einer [ist gekommen]
+141> ?[pron,det,adj] = ?<pron> | ?[verb,finite] |.
+
+// :: so schnell wie/conj[coord] der Blitz
+// :: Firmen wie/conj[coord] Xerox
+// :: Wie/adv[wh] ist sein Name?
+// :: Er will wissen, wie/adv[wh] schnell er sei.
+
+142> ?[conj, adv, wh, firstword] = ?[coord:~].
+142> ?[conj, adv, wh] =  | ?[conj:~, punct:~, prep:~] | ?[wh:~] .
+
+// -----------------------------------------------------------------------------
+// verb person
+// 1st or 3rd person, singular or plural
+// NOTE: "wir" and "ich" are unambigously nominative and must be subject.
+ 
+// :: wir/pron[p1] sind/verb[p1] gekommen.
+152> ?<verb,p1>, ?<verb,p3> = | pron[p1,nom] |  verb[p1] .
+
+// :: gestern haben/verb[p1] wir/pron[p1] ihn gesehen
+152> ?<verb,p1>, ?<verb,p3> = verb[p1] | pron[p1,nom] |.
+
+// :: weil wir/pron[p1] ihn sehen wollen/verb[p1] 
+// :: weil wir ihn gesehen haben
+152> ?<verb,p1>, ?<verb,p3> = | conj;pron[rel], pron[p1,nom], ?*[comma:~] |  ?[p3:~] ~|?[verb]| .
+
+//:: wir gehen nach Hamburg und kommen bald wider
+152> ?<verb,p1>, ?<verb,p3> = | verb[p1,p3:~], ?*[finite:~], ?[coord] | ?[p3:~] .
+
+// otherweise: 3rd person
+152> ?<verb,p1>, ?<verb,p3> = ?[p1:~].
+
+// NOTE: 	similar rules should be defined for [p2,pl] vs. [p3,sg],
+// 	but the pronoun "ihr" is ambigous !
+//	:: ihr/pron[p2,pl,nom] kauft/verb[p2,pl] dem Mann ein Auto.
+//	:: ihr/pron[p3,sg,dat] kauft/verb[p3,sg] der Mann ein Auto.
+//	:: er/pron[nom] kauft/verb[p3,sg] ihr ein Auto
+
+153> ?<verb,p2>, ?<verb,p3> =  | ?[pron,p2,nom] | ?[verb,p2] | adv*, ?[nom:~] |.
+
+153> ?<verb,p2>, ?<verb,p3> =  | ?[pron,p3,nom,acc:~] | ?[verb,p3] .
+153> ?<verb,p2>, ?<verb,p3> =  ?[verb,p3]  | ?[pron,p3,nom,acc:~] |.
+153> ?<verb,p2>, ?<verb,p3> =  | ?[noun,nom,acc:~] | ?[verb,p3] .
+153> ?<verb,p2>, ?<verb,p3> =  ?[verb,p3]  | ?[noun,nom,acc:~] | .
+153> ?<verb,p2>, ?<verb,p3> =  ~| pron[p2], ?* | ?[p2:~] ~| ?*, pron[p2] |.
+
+
+154> ?<pron,p2> = ?[pron,p2,nom] | ?[verb,p2,p3:~] |.
+154> ?<pron,p2> = | ?[verb,p2,p3:~] | ?[pron,p2,nom] .
+154> ?<pron,p2> = ?[pron,p2,nom:~] | ?[verb,p3,p2:~] |.
+154> ?<pron,p2> = | ?[verb,p3,p2:~] | ?[pron,p2,nom:~] .
+
+
+// preposition / adverb / verb prefix
+// "an"
+// 	Er kommt morgen an/vpref
+// 	Das Licht ist jetzt an/vpref ?
+//	Es waren an/padv die 100 Leute
+//	Er kommt an/prep Ostern nach Berlin
+//	Von morgen an/crcp arbeite ich
+
+// "um"
+//	Er schaut sich um/vpref.
+//	Er geht nur um/prep die Ecke.
+//	Es sind um/padv 100 verschiedene Dinge.
+
+// "unter"
+//	Das Boot taucht schnell unter/vpref.
+//	Das Buch liegt unter/prep dem Tisch
+//	Es waren unter/padv 100 Teilnehmer.
+
+
+182> ?[ptcl,padv,pref] = ?[padv:~] | punct[quote:~] | .
+182> ?[prep,pref] = ?[prep:~] | punct[quote:~] | .
+
+// ::des Staus wegen/prep[post] fahre ich langsam.
+182> ?[prep,postp] = ?[prep:~] | ?[finite] |.
+
+// prefer pronominal adverb reading if a particle is ambiguous
+// :: Er steht dabei/pronadv
+182> ?[pref,adv,pronom] = ?[pref:~] .
+
+
+
+// ----------------------------------------------------------------------------------------------
+// weak adjective or nouns MUST be preceeded by a determiner
+// REWRITE !!!
+
+194> ?[det:~,weak,firstword] = ?[weak:~].
+194> ?[det:~,weak] = | verb[finite,verbal:+], ?*[skip] | ?[weak:~].
+194> ?[det:~,weak] = | prep[det:~];conj[coord:~], ?*[skip] | ?[weak:~].
+194> ?[det:~,weak] = | ?[adja:~], punct[comma], ?*[skip] | ?[weak:~].
+
+
+
+// ensure that verb readings that require a prefix are indeed followed by a prefix
+// NOTE: prefix could also be tagged adverb or adjective
+// ** TO BE REFINED **
+202> ?<req_pref:+>,?<req_pref:~> = ?[req_pref:~] | ?*[pref:~], ?[sent];punct[comma];conj[coord] | .
+
+202> ?<req_pref:+>,?<req_pref:~> = ?[req_pref:+] | ?[pref, prep:~,det:~] |.
+
+// ----------------------------------------------------------------------------------
+// pronoun "es" before verb 
+// at beginning of sentence is never accusative (CHECK!!!)
+// :: es gibt viele Beispiele
+// :: es ist gestern passiert 
+// cf. wir kaufen das Buch, das Buch kaufen wir
+// BUT: wir kaufen es, *es kaufen wir
+210> ?[pron,pers,neut,firstword] = ?[acc:~].
+210> ?[pron,pers,neut] = ?[acc:~] | verb[finite, p3, sg] | .
+
+
+
+// ----------------------------------------------------------------------------------
+// restrict old dative (with ending -e)
+// - these forms should only appear in clear contexts, i.e. 
+// with article or preposition and thus be unambiguous.
+// Hinweise zu diesem Hinweise auf Hinweise
+220> ?<dat,arch,firstword>, ?<arch:~>  = ?[arch:~].
+220> ?<dat,arch,mdat>, ?<arch:~> = | ?[det, mdat ] | ?[arch].
+220> ?<dat,arch,ndat>, ?<arch:~> = | ?[det, ndat ] | ?[arch].
+220> ?<dat,arch>, ?<arch:~> = | ?[det:~,prep:~] | ?[arch:~].
+220> ?<dat,arch>, ?<arch:~,pl> = ?[arch:~].
+
+
+// ----------------------------------------------------------------------------------
+// adverb or preposition
+// :: ein Stück je/prep Teilnehmer 
+// :: das beste, das er je/adv sah
+240> ?[adv,prep] = ?[prep:~] ~| (det), ?*[pre_noun], noun |.
+
+
+// tentative rules to reduce proper name ambiguities
+// 
+// Mann/noun[proper] sagte
+300> ?[noun,proper,firstword] = noun[proper,nom],?[noun:~] | verb[finite,v_utter] |.
+300> ?[noun,proper,firstword] = noun[proper],?[noun:~] | verb[finite] |.
+// Der Mann/noun[common] sagte ...
+300> ?<noun,proper>,?<noun,proper:~> = |det| ?[noun, proper:~], ?[noun:~].
+// .., sagte Mann
+// so sagte Mann
+300> ?[noun,proper] = | punct[comma];adv[firstword], verb[finite,v_utter] | noun[proper,nom], ?[noun:~].
+
+
+

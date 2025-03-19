@@ -1,0 +1,757 @@
+
+<project basedir=".">
+    <property name="env" environment="env"  value="env"/>
+    <property name="common.dir" location="${basedir}/../../../../../../../common" />
+    <property name="xip.dev.dir" location="${basedir}/../../../../.." />
+    <import file="${common.dir}/xipVersion.xml" />
+    <import file="${common.dir}/properties.xml" />
+    <import file="${common.dir}/taskExt.xml" />
+    
+    <!-- you can create a file named "user.properties" (mv user.properties.unused user.properties) in this 
+    directory which can contains the following line:
+    xip.exe=/home/roux/parseur/current/bases/nhxXipL9.54
+    -->
+    
+    <target name="init" depends="getXipVersionAnBuild, platformSetting, 
+        xipHomeSetting, gramSetting, xipExeSetting, libSetting" />
+    
+    <target name="platformSetting" depends="" >
+        <condition property="solaris" value="true">
+            <os name="SunOS" />
+        </condition>
+        <condition property="windows" value="true">
+            <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows 2003" arch="amd64"/>
+                <os name="Windows Server 2008 R2" arch="amd64"/> 
+                <os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="linux" value="true">
+            <os name="Linux" />
+        </condition>
+        <condition property="mac" value="true">
+            <or>
+                <os name="Mac OS X" />
+                <os name="Darwin" />
+            </or>
+        </condition>
+        <!-- init platform  -->
+        <condition property="platform" value="solaris">
+            <os name="SunOS" />
+        </condition>
+        <condition property="platform" value="windows">
+            <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows 2003" arch="amd64"/>
+                <os name="Windows Server 2008 R2" arch="amd64"/> 
+                <os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="platform" value="linux">
+            <os name="Linux" />
+        </condition>
+        <condition property="platform" value="mac">
+            <or>
+                <os name="Mac OS X" />
+                <os name="Darwin" />
+            </or>
+        </condition>
+        <!-- init platform-arch -->
+        <condition property="platform-arch" value="solaris${os.version}-${os.arch}">
+            <os name="SunOS" />
+        </condition>
+        <condition property="platform-arch" value="windows64">
+            <or>
+                <os name="Windows Server 2008 R2" arch="amd64"/> 
+                <os name="Windows 2003" arch="amd64"/>
+            </or>
+        </condition>
+        <condition property="platform-arch" value="windows">
+            <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="platform-arch" value="mac-i386">
+            <or>
+                <os name="Mac OS X" arch="i386"/>
+                <os name="Darwin" arch="i386"/>
+            </or>
+        </condition>
+        <if>
+            <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
+            <then>
+                <condition property="platform-arch" value="linux64">
+                    <os name="Linux" />
+                </condition>
+            </then>
+            <else>
+                <condition property="platform-arch" value="linux">
+                    <os name="Linux" />
+                </condition>
+            </else>
+        </if>
+        <if>
+            <or>
+                <equals arg1="${platform-arch}" arg2="linux" />
+                <equals arg1="${platform-arch}" arg2="linux64" />
+            </or>
+            <then>
+                <if>
+                    <isset property="env.HOSTNAME"/>
+                    <then>
+                        <property name="hostname" value="${env.HOSTNAME}"/>
+                    </then>
+                    <else>
+                        <property name="hostname" value="${env.HOST}"/>
+                    </else>
+                </if>
+                <if>
+                    <or>
+                        <equals arg1="${hostname}" arg2="choranche.grenoble.xrce.xerox.com" />
+                        <equals arg1="${hostname}" arg2="lautaret.grenoble.xrce.xerox.com" />
+                    </or>
+                    <then>
+                        <!-- hostname == choranche or lautaret -->
+                        <if>
+                            <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
+                            <then>
+                                <property name="platformArch" 	value="linux64" />
+                            </then>
+                            <else>
+                                <property name="platformArch" 	value="linux" />
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <!-- hostname != choranche or lautaret -->
+                        <if>
+                            <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
+                            <then>
+<!--
+                                <property name="platformArch" value="linux64-${hostname}" />
+-->
+                                <property name="platformArch" value="linux64" />
+                            </then>
+                            <else>
+<!--
+                                <property name="platformArch" value="linux-${hostname}" />
+-->
+                                <property name="platformArch" value="linux" />
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <property name="platformArch" 	value="${platform-arch}" />
+            </else>
+        </if>
+<!--
+        <echo message="     os.name = ${os.name}           os.arch =  ${os.arch}          os.version = ${os.version} " />
+        <echo message="     platform=${platform}  platform-arch=${platform-arch} env.MACHTYPE=${env.MACHTYPE}  " />
+-->
+    </target>
+    
+    <target name="xipHomeSetting" depends="" >
+        <echo message="--------------------------------------------" />
+        <if>
+            <isset property="delivery" />
+            <then>
+                <property name="xip.home"	location="${basedir}/../../../../../../delivery/xip-${xip.version}-${xip.build}" />
+            </then>
+            <elseif>
+                <isset property="deliverySrc" />
+                <then>
+                    <property name="xip.home"	location="${basedir}/../../../../../../delivery/xip-${xip.version}-${xip.build}" />
+                </then>
+            </elseif>
+            <else>
+                <property name="xip.home"	location="${basedir}/../../../../.." />
+            </else>
+        </if>
+    </target>
+    
+    <target name="libSetting"  >
+        <property name="lib.xips.path"	location="${xip.home}/lib/${platform-arch}/sharedLibPy" />
+    </target>
+    
+    <target name="setValgrind"  >
+        <property name="valgrind.status" value="true" />
+        <!-- load the valgrind.exe from the file valgrind.properties -->
+        <property name="valgrind.prop" location="${basedir}/../../../../../GRAMMARS/TESTCOMMON/valgrind.properties" />
+        <property  file="${valgrind.prop}" />
+    </target>
+    
+    <target name="setGprof"  >
+        <property name="gprof" value="true" />
+    </target>
+    
+    <target name="xipExeSetting"  >
+        <property name="user.prop" location="${basedir}/../../../../../GRAMMARS/TESTCOMMON/user.properties" />
+        <if>
+            <available file="${user.prop}" />
+            <then>
+                <!-- load the property value of xip.exe from the file: ${user.prop} -->
+                <!-- you can specify the path of xip in a file parSem/xip/dev/GRAMMARS/TESTCOMMON/user.properties  -->
+                <property  file="${user.prop}" />
+                <if>
+                    <istrue value="${valgrind.status}" />
+                    <then>
+                        <property name="xip.exe"		location="${valgrind.exe}" />
+                        <property name="valgrind.param1"	location="${xip.perso}" />
+                    </then>
+                    <else>
+                        <property name="xip.exe"		location="${xip.perso}" />
+                    </else>
+                </if>
+            </then>
+            <else>
+                <if>
+                    <istrue value="${valgrind.status}" />
+                    <then>
+                        <!-- use valgrind -->
+                        <property name="xip.exe"		location="${valgrind.exe}" />
+                        <if>
+                            <istrue value="${python}" />
+                            <then>
+                                <!-- use xip + python -->
+                                <property name="valgrind.param1"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}.debug/xips" />
+                            </then>
+                            <else>
+                                <!-- use xip without python -->
+                                <property name="valgrind.param1"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}.debug/xip" />
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <if>
+                            <istrue value="${python}" />
+                            <then>
+                                <!-- use xip + python -->
+                                <if>
+                                    <istrue value="${gprof}" />
+                                    <then>
+                                        <!-- with gprof -->
+                                        <property name="xip.exe"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}.profile/xips" />
+                                    </then>
+                                    <else>
+                                        <!-- without gprof -->
+                                        <property name="xip.exe"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}/xips" />
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                <!-- use xip without python -->
+                                <if>
+                                    <istrue value="${gprof}" />
+                                    <then>
+                                        <!-- with gprof -->
+                                        <property name="xip.exe"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}.profile/xip" />
+                                    </then>
+                                    <else>
+                                        <!-- without gprof -->
+        				<if>
+            					<isset property="delivery" />
+            					<then>
+                                        		<!-- delivery -->
+                                        		<property name="xip.exe"	location="${xip.home}/bin/${platformArch}/xip" />
+            					</then>
+            					<else>
+                                        		<!-- not delivery -->
+                                        		<property name="xip.exe"	location="${xip.home}/${fstOrTrans.dir}/bin/${platformArch}/xip" />
+            					</else>
+            				</if>
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </else>
+        </if>
+        <echo message="using xip: ${xip.exe}" />
+    </target>
+    
+    
+    <target name="gramSetting" depends="gramIdent" >
+        <if>
+            <isset property="delivery" />
+            <then>
+                <!-- test the grammar in xip/delivery/xip-x.xx/grammar dir -->
+                <!-- english -->
+                <if>
+                    <istrue value="${en.basic}" />
+                    <then>
+                        <property name="root_xip"	location="${xip.home}/grammar/english/gen" />
+                        <property name="grm.file"	location="${root_xip}/gram_gen.grm" />
+                    </then>
+                    <elseif>
+                        <istrue value="${en.entity}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/english/entity" />
+                            <property name="grm.file" 	location="${root_xip}/gram_gen_entit.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.entityOnly}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/english/entityOnly" />
+                            <property name="grm.file" 	location="${root_xip}/entities_only.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.tempExp}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/english/tempExpr" />
+                            <property name="grm.file" 	location="${root_xip}/gram_temp.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.temporalExp}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/english/temporalExp" />
+                            <property name="grm.file" 	location="${root_xip}/gram_temporalExp.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.coref}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/english/coref" />
+                            <property name="grm.file" 	location="${root_xip}/coref.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.norm}" />
+                        <then>
+                            <property name="root_xip"       location="${xip.home}/grammar/english/norm" />
+                            <property name="grm.file"       location="${root_xip}/gram_norm_entit.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${en.polrisk}" />
+                        <then>
+                            <property name="root_xip"       location="${xip.home}/grammar/english/polrisk" />
+                            <property name="grm.file"       location="${root_xip}/english_pr.grm" />
+                        </then>
+                    </elseif>
+                    
+                    <!-- french -->
+                    <elseif>
+                        <istrue value="${fr.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/french/basic" />
+                            <property name="grm.file" 	location="${root_xip}/french.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${fr.entity}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/french/entity" />
+                            <property name="grm.file" 	location="${root_xip}/french_entity.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${fr.entityOnly}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/french/entityOnly" />
+                            <property name="grm.file" 	location="${root_xip}/french_entityOnly.grm" />
+                        </then>
+                    </elseif>
+                    <!-- italian -->
+                    <elseif>
+                        <istrue value="${ita.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/italian/basic" />
+                            <property name="grm.file" 	location="${root_xip}/italian_ntm.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${ita.entity}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/italian/entity" />
+                            <property name="grm.file" 	location="${root_xip}/italian.grm" />
+                        </then>
+                    </elseif>
+                    <!-- portuguese -->
+                    <elseif>
+                        <istrue value="${por.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/portuguese/basic" />
+                            <property name="grm.file" 	location="${root_xip}/portuguese.grm" />
+                        </then>
+                    </elseif>
+                    <!-- spanish -->
+                    <elseif>
+                        <istrue value="${spa.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/spanish/basic" />
+                            <property name="grm.file" 	location="${root_xip}/spanish_ntm.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${spa.entity}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/spanish/entity" />
+                            <property name="grm.file" 	location="${root_xip}/spanish_ntm.grm" />
+                        </then>
+                    </elseif>
+                    <!-- german -->
+                    <elseif>
+                        <istrue value="${ger.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/german/entity" />
+                            <property name="grm.file" 	location="${root_xip}/german.grm" />
+                        </then>
+                    </elseif>
+                    <elseif>
+                        <istrue value="${ger.entity}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/german/entity" />
+                            <property name="grm.file" 	location="${root_xip}/german.grm" />
+                        </then>
+                    </elseif>
+                    <!-- dutch -->
+                    <elseif>
+                        <istrue value="${dutch.basic}" />
+                        <then>
+                            <property name="root_xip"	location="${xip.home}/grammar/dutch/basic" />
+                            <property name="grm.file" 	location="${root_xip}/dutch_hmm.grm" />
+                        </then>
+                    </elseif>
+                    <!-- undefined -->
+                    <else>
+                        <echo message="+++++++++++++++++ No GRM file defined ++++++++++++++++++++" />
+                        <fail/>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <if>
+                    <isset property="deliverySrc" />
+                    <then>
+                        <!-- test the grammar with only grammar rules crypted, not the features, categories,... -->
+                        <!-- test the grammar in xip/delivery/xip-X.XX/grammar dir -->
+                        <!-- english -->
+                        <if>
+                            <istrue value="${en.entity}" />
+                            <then>
+                                <property name="root_xip"	location="${xip.home}/grammar/ENGLISH/" />
+                                <property name="grm.file"	location="${root_xip}/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+                            </then>
+                            <elseif>
+                                <istrue value="${en.norm}" />
+                                <then>
+                                    <property name="root_xip"	location="${xip.home}/grammar/ENGLISH/" />
+                                    <property name="grm.file"	location="${root_xip}/GRMFILES/GRAM_NORM/gram_norm_entit.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${fr.entity}" />
+                                <then>
+                                    <property name="root_xip"	location="${xip.home}/grammar/FRENCH/BASIC" />
+                                    <property name="grm.file" 	location="${root_xip}/french_entity.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${ita.entity}" />
+                                <then>
+                                    <property name="root_xip"	location="${xip.home}/grammar/ITALIAN" />
+                                    <property name="grm.file" 	location="${root_xip}/CELI_090313/italian.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${ger.entity}" />
+                                <then>
+                                    <property name="root_xip"	location="${xip.home}/grammar/GERMAN" />
+                                    <property name="grm.file" 	location="${root_xip}/BASIC/german.grm" />
+                                </then>
+                            </elseif>
+                            <!-- undefined -->
+                            <else>
+                                <echo message="+++++++++++++++++ No GRM file defined ++++++++++++++++++++" />
+                                <fail/>
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <!-- test the grammar in the xip/dev/GRAMMARS dir -->
+                        <!-- english -->
+                        <property name="root_xip"	location="${xip.home}/GRAMMARS" />
+                        <if>
+                            <istrue value="${en.basic}" />
+                            <then>
+                                <property name="grm.file" location="${root_xip}/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm" />
+                            </then>
+                            <elseif>
+                                <istrue value="${en.entity}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.entityOnly}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/GRMFILES/ENTITIES_ONLY/entities_only.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.tempExp}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/GRMFILES/GRAM_TEMP/gram_temp.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.temporalExp}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/APPLICATIONS/SPECTEMP/GRMFILES/gram_temporalExp.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.coref}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/APPLICATIONS/COREF/coref.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.norm}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/GRMFILES/GRAM_NORM/gram_norm_entit.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${en.polrisk}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ENGLISH/APPLICATIONS/POLRISK/data/english_pr.grm" />
+                                </then>
+                            </elseif>
+                            <!-- french -->
+                            <elseif>
+                                <istrue value="${fr.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/FRENCH/BASIC/french.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${fr.entity}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/FRENCH/BASIC/french_entity.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${fr.entityOnly}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/FRENCH/BASIC/french_entityOnly.grm" />
+                                </then>
+                            </elseif>
+                            <!-- german -->
+                            <elseif>
+                                <istrue value="${ger.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/GERMAN/BASIC/german.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${ger.entity}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/GERMAN/BASIC/german.grm" />
+                                </then>
+                            </elseif>
+                            <!-- italian -->
+                            <elseif>
+                                <istrue value="${ita.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ITALIAN/GRMFILES/italian_ntm.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${ita.entity}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/ITALIAN/CELI_090313/italian.grm" />
+                                </then>
+                            </elseif>
+                            <!-- portuguese -->
+                            <elseif>
+                                <istrue value="${por.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/PORTUGUESE/GRMFILES/portuguese.grm" />
+                                </then>
+                            </elseif>
+                            <!-- spanish -->
+                            <elseif>
+                                <istrue value="${spa.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/SPANISH/GRMFILES/spanish_ntm.grm" />
+                                </then>
+                            </elseif>
+                            <elseif>
+                                <istrue value="${spa.entity}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/SPANISH/GRMFILES/spanish_ntm.grm" />
+                                </then>
+                            </elseif>
+                            <!-- dutch -->
+                            <elseif>
+                                <istrue value="${dutch.basic}" />
+                                <then>
+                                    <property name="grm.file" location="${root_xip}/DUTCH/BASIC/dutch_hmm.grm" />
+                                </then>
+                            </elseif>
+                            <!-- undefined -->
+                            <else>
+                                <echo message="+++++++++++++++++ No GRM file defined ++++++++++++++++++++" />
+                                <fail/>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </else>
+        </if>
+        <echo message="using grm: ${grm.file}" />
+    </target>
+    
+    <target name="gramIdent" >
+        <!-- ${fs} must me used, otherwise it does not run on windows -->
+        <property name="fs" value="${file.separator}" />
+        <!-- english -->
+        <if>
+            <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}basic" casesensitive="false" />
+            <then>
+                <property name="en.basic" value="true" />
+            </then>
+            <!-- this test must be done before substring="ENGLISH${fs}TEST${fs}entity" -->
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}entityOnly" casesensitive="false" />
+                <then>
+                    <property name="en.entityOnly" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="en.entity" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}tempExp" casesensitive="false" />
+                <then>
+                    <property name="en.tempExp" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}coref" casesensitive="false" />
+                <then>
+                    <property name="en.coref" value="true" />
+                    <property name="python" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}temporalExp" casesensitive="false" />
+                <then>
+                    <property name="en.temporalExp" value="true" />
+                    <property name="python" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}norm" casesensitive="false" />
+                <then>
+                    <property name="en.norm" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ENGLISH${fs}TEST${fs}polrisk" casesensitive="false" />
+                <then>
+                    <property name="en.polrisk" value="true" />
+                </then>
+            </elseif>
+            <!-- french -->
+            <elseif>
+                <contains string="${basedir}" substring="FRENCH${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="fr.basic" value="true" />
+                </then>
+            </elseif>
+            <!-- this test must be done before substring="FRENCH${fs}TEST${fs}entity" -->
+            <elseif>
+                <contains string="${basedir}" substring="FRENCH${fs}TEST${fs}entityOnly" casesensitive="false" />
+                <then>
+                    <property name="fr.entityOnly" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="FRENCH${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="fr.entity" value="true" />
+                </then>
+            </elseif>
+            <!-- german -->
+            <elseif>
+                <contains string="${basedir}" substring="GERMAN${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="ger.entity" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="GERMAN${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="ger.entity" value="true" />
+                </then>
+            </elseif>
+            <!-- italian -->
+            <elseif>
+                <contains string="${basedir}" substring="ITALIAN${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="ita.basic" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="ITALIAN${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="ita.entity" value="true" />
+                </then>
+            </elseif>
+            <!-- portuguese -->
+            <elseif>
+                <contains string="${basedir}" substring="PORTUGUESE${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="por.basic" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="PORTUGUESE${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="por.basic" value="true" />
+                </then>
+            </elseif>
+            <!-- spanish -->
+            <elseif>
+                <contains string="${basedir}" substring="SPANISH${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="spa.basic" value="true" />
+                </then>
+            </elseif>
+            <elseif>
+                <contains string="${basedir}" substring="SPANISH${fs}TEST${fs}entity" casesensitive="false" />
+                <then>
+                    <property name="spa.entity" value="true" />
+                </then>
+            </elseif>
+            <!-- dutch -->
+            <elseif>
+                <contains string="${basedir}" substring="DUTCH${fs}TEST${fs}basic" casesensitive="false" />
+                <then>
+                    <property name="dutch.basic" value="true" />
+                </then>
+            </elseif>
+            <!-- undefined -->
+            <else>
+                <echo message="+++++++++++++++++ new test directory: => update TESTCOMMON/testDefine.xml ++++++++++++++++++++" />
+                <fail/>
+            </else>
+        </if>
+    </target>
+</project>

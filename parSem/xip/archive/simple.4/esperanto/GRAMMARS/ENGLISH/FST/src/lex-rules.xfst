@@ -1,0 +1,106 @@
+# ============================================================================
+# CONTENT:      rules for plural and genitive
+# 
+# LANGUAGE:     ENGLISH
+#
+# AUTHOR:       A. Schiller
+#
+# CREATED:      30-Mar-2006
+# ============================================================================
+# USAGE:        xfst -utf8 -s LEX.fst -l [ThisFile]
+# ============================================================================
+
+define LEX
+
+
+# identify tags
+read regex LEX;
+single char sigma net
+define SIG
+read regex [ %+ ?+ ] .o. SIG ;
+multi char sigma net
+define TAG
+
+read regex [ %^ ?+ ] .o. SIG ;
+multi char sigma net
+define DIAC
+
+define CHAR	\[TAG|DIAC] ;
+
+# remove tags from surface side and diacritics form lexical side
+read regex [ 
+	0 <- DIAC 
+.o.	%+Gen <- [ %^GenSg | %^GenPl ] 
+.o.	%. <- %^DOT	
+.o.	{ and } <- %^AND 
+.o.	{and } <- %^AND 	|| .#. _
+.o. 	LEX 
+.o. 	TAG -> 0 
+.o.	%^AND	->  [ {and } | {&} | {& } ]  || .#. _
+.o.	%^AND	->  [ { and } | {&} | { & } ] 
+.o.	%^DOT	->  [ %. | 0 ]
+];
+define LEX
+
+# move major tags
+define CAT  	[ %+Noun | %+Adj | %+NAdj | %+Prop ];	
+
+read regex [
+	0 <- CAT || $[CAT] _
+.o.	%+Noun <- [..] || CHAR _ TAG+ %+Noun
+.o.	%+Adj  <- [..] || CHAR _ TAG+ %+Adj
+.o.	%+NAdj <- [..] || CHAR _ TAG+ %+NAdj
+.o.	%+Prop <- [..] || CHAR _ TAG+ %+Prop
+.o. LEX ];
+define LEX
+
+# move abbrviation tags
+define FIN  	[ %+Abbr | %+Acron ];	
+
+read regex [
+	0 <- FIN || _ $[FIN] 
+.o.	%+Abbr  <- [..] || $[%+Abbr] _ .#.
+.o.	%+Acron <- [..] || $[%+Acron] _ .#.
+.o. LEX ];
+define LEX
+
+# -------------------------------------------------------------------
+# apply some rules
+
+define CONS	[b|c|d|f|g|h|j|k|l|m|n|p|q (u)|r|s|t|v|w|x|z];
+define APOS	%';
+define SEP	%- | %  ;
+
+
+read regex	[
+	LEX
+# move plural ending (e.g. attorney^PLX_of_law+s -> attorney+s_of_law)
+.o.	[..] -> {+s}	|| _ %^PLX ${+s}	# move plural ending
+.o.	{+s} ->	0	|| $%^PLX _
+.o.	%^PLX -> 0
+
+# plural forms
+.o.	{man} %^MAN {+s} -> {men} 		# Scotchman+s -> Scotchmen
+.o.	%^PlE -> e	|| _ {+s} 		# archipelago^E+s  -> archipelagoes
+.o.	{y+s} -> {ies}  || CONS _		# territory+s -> territories
+.o.	{+s} -> {es}	|| [ s | x | z ] _	
+.o.	{+s} (->) {es}	|| [ c h ] _
+.o.	[ %^MAN | %^PlE | %+ ] -> 0
+
+# genitive 's 
+.o.	%^GenSg (->) APOS  || [ s | x | z ]	_ 
+.o.	%^GenPl -> APOS  || [ s | x | z ]	_ 
+.o.	[ %^GenSg | %^GenPl ] -> {'s}
+
+
+# some short forms (in proper names):
+.o.	{Fort} 		(->) {Ft} (%.)  || _ SEP
+.o.	{Mountain} 	(->) {Mtn} (%.)	|| _ SEP
+.o.	{Mount} 	(->) {Mt} (%.)	|| _ SEP
+.o.	{Saint} 	(->) {St} (%.)	|| _ SEP 
+.o.	{Sankt} 	(->) {St} (%.)	|| _ SEP 
+
+# clean up any remaining diacritics
+.o.	DIAC -> 0
+
+];

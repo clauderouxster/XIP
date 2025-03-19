@@ -1,0 +1,166 @@
+<<<<<<< correction_semeval.kif
+
+kif:
+
+fst f('W:\users\vassilina\parSem\xip\dev\GRAMMARS\ENGLISH\NTMFILES\SOURCEFST\FORSEM\nvlex-scoop.fst', "", 0, false);
+int MAX_EDIT = 3;
+automaton au;
+
+au.loadlemma('W:\users\vassilina\parSem\xip\dev\GRAMMARS\ENGLISH\APPLICATIONS\SCOOP\LEXICONS'+_sep+'..'+_sep+'LEXICONS'+_sep+'updatedLexicon', "|");
+
+function correct(node Node) {
+     parser Parser;
+     smap vres;
+     string pos;
+     Parser.getgrammar(Node);
+     string s=Node.surface();
+     if (s.size() >3) {
+          //println("INITIAL S ", s, Node.pos());
+          MAX_EDIT = min(MAX_EDIT, s.size()/2-1);
+          map nlems;
+          nlems  = au.editdistance(s, 0, a_nocase)[0];
+          println("edit dist 0:", nlems);
+          string lem;
+          boolean hasNotGuessedVariants = false;
+          for (lem in nlems) {
+               if (not "Guess" in lem) {
+                    hasNotGuessedVariants = true;
+               }
+          }
+          if (nlems.size()==0) {
+               nlems = au.editdistance(s, 1, a_change|a_delete|a_insert|a_switch|a_nocase)[0];
+               println("edit dist 1:", nlems);
+               if (nlems.size()==0 and MAX_EDIT>1){
+                    nlems =  au.editdistance(s, MAX_EDIT, a_change|a_delete|a_insert|a_switch|a_nocase)[0];
+                    println("edit dist 2:", nlems);
+               }
+          }
+          string corr_lemma_withFeats;
+          boolean addNewReading = false;
+
+          for (corr_lemma_withFeats in nlems){
+               string corr_lemma = corr_lemma_withFeats.split("+")[0];
+               string xip_feats = f.up(corr_lemma)["\t":][1:];
+               if (xip_feats=="+?"){
+                    // if current correction wasn't found in fst: keep original node features and PoS tag
+                    vres = Node.features();
+                    vres.pop("lemme");
+                    vres.pop("surface");
+                    pos = Node.pos();
+               }
+               else{
+                    // add new reading with new features
+                    svector vfeats=xip_feats.split("+");
+                    pos=Parser.parsefeatures(vfeats,vres);
+                    if (pos==""){
+                         pos = Node.pos();
+                    }
+               }
+               vres["spellch"]="+";
+               Node.lemma(corr_lemma, pos, vres);
+               addNewReading=true;
+          }
+
+          return(addNewReading);
+     }
+     return(false);
+}
+=======
+kif:
+use('kifregex');
+fst f("/home/brun/parSem/xip/dev/GRAMMARS/ENGLISH/NTMFILES/SOURCEFST/FORSEM/nvlex-scoop.fst", "", 0, false);
+//fst f("/opt/ParSem_fast/users/vassilina/parSem/xip/dev/GRAMMARS/ENGLISH/NTMFILES/SOURCEFST/FORSEM/nvlex-scoop.fst", "", 0, false);
+int MAX_EDIT = 2;
+automaton au;
+au.loadlemma("/opt/ParSem_fast/users/vassilina/parSem/xip/dev/GRAMMARS/ENGLISH/APPLICATIONS/SCOOP/LEXICONS/"+_sep+'..'+_sep+'LEXICONS'+_sep+'updatedLexicon', "|");
+
+
+function correct(node Node) {
+     parser Parser;
+     smap vres;
+     string pos;
+     Parser.getgrammar(Node);
+     string s=Node.surface();  
+     if (s.size() >3){   
+     println("INITIAL S ", s, Node.pos());
+     int MAX_EDIT = min(2, s.size()/2-1);
+     map nlems;
+     if ( not s in au){     	     
+     	nlems = au.editdistance(s, 1, a_change|a_delete|a_insert|a_switch|a_nocase)[0];
+     	println("edit dist 1:", nlems);
+     	if (nlems.size()==0 and MAX_EDIT>1){
+     	   nlems =  au.editdistance(s, MAX_EDIT, a_change|a_delete|a_insert|a_switch|a_nocase)[0];
+	   println("edit dist 2:", nlems);
+     	}
+     }
+     string corr_lemma_withFeats;
+     boolean addNewReading = false;
+     fmap bestReading;
+     for (corr_lemma_withFeats in nlems){
+     	 string corr_lemma = corr_lemma_withFeats.split("+")[0];
+     	 string xip_feats = f.up(corr_lemma)["\t":][1:];
+	    if (xip_feats=="+?"){
+	       // if current correction wasn't found in fst: keep original node features and PoS tag
+	       vres = Node.features();
+	       vres.pop("lemme");
+	       vres.pop("surface");
+	       pos = Node.pos();
+	  }
+	  else{
+		// add new reading with new features
+		svector vfeats=xip_feats.split("+");
+	    	pos=Parser.parsefeatures(vfeats,vres);
+	    	if (pos==""){
+	      	   pos = Node.pos();		   
+	    	}
+	  }
+	  vres["spellch"]="+";
+	  Node.lemma(corr_lemma, pos, vres);
+	  addNewReading=true;
+     }
+    
+    return(addNewReading);
+    }
+    return(false);
+}
+ 
+//we want to correct the surface form of that word
+
+function correct_left(node n1, node n2){
+	 parser Parser;
+     	 Parser.getgrammar(n1);
+	 string concatenation = n1.surface()+n2.surface();
+	 println(concatenation);
+	 smap vres;
+         string xip_feats = f.up(concatenation)["\t":][1:];
+	 if (xip_feats!="+?"){
+	    println("LEFT IN AUTOMATON");	  
+	    svector vfeats=xip_feats.split("+");
+	    string pos=Parser.parsefeatures(vfeats,vres);
+	    vres["spellch"]="+";
+	    n1.lemma(concatenation, pos, vres);
+	    return(true);
+	 }
+	 
+	 return(false);
+}
+
+function correct_right(node n1, node n2){
+	 parser Parser;
+     	 Parser.getgrammar(n1);
+	 string concatenation = n1.surface()+n2.surface();
+	 println(concatenation);
+	 smap vres;
+         string xip_feats = f.up(concatenation)["\t":][1:];
+	  if (xip_feats!="+?"){
+	    println("RIGHT IN AUTOMATON");	  
+	    svector vfeats=xip_feats.split("+");
+	    string pos=Parser.parsefeatures(vfeats,vres);
+	    vres["spellch"]="+";
+	    n2.lemma(concatenation, pos, vres);
+	    return(true);
+	 }
+	 
+	 return(false);
+}
+>>>>>>> 1.4

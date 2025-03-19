@@ -1,0 +1,139 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2008 - Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   
+//!   File   : dependency_NE.xip
+//!
+//!   Content:	definition of dependency NE for Named Entites
+//!
+//!   Language:	SPANISH
+//! ENCODING:	ISO-LATIN-1
+//!
+//!   Date       : May 2008
+//! Update:	29-May-2008	:: changed to UTF-8
+//! Update:	22-Sep-2008	:: changed to ISO-1
+//!
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+// geographical entites
+// restriction to avoid to take as NE lexical netires like "pueblo"
+| noun#1[location,water:+,introd_geo:~] |
+  if ( ~NE[geografico](#1) )
+  NE[geografico=+,agua=+](#1)
+
+| noun#1[location,mountain:+,introd_geo:~] |
+  if ( ~NE[geografico](#1) )
+  NE[geografico=+,relieve=+](#1)
+
+| noun#1[location,common:~,introd_geo:~] |
+  if ( ~NE[geografico](#1) )
+  NE[geografico=+](#1)
+
+// isolated end_loc (because of contextual rules)
+| NP{?*[noun:~], noun#1[last,end_loc]} |
+  if ( ~NE[geografico](#1) )
+  NE[geografico=+](#1)
+
+
+
+// people
+| noun#1[human,mwe] |
+  if ( ~NE[persona](#1) )
+  NE[persona=+](#1)
+
+// McCain
+| noun#1[lastname,src:guess] |
+  if ( ~NE[persona](#1) )
+  NE[persona=+](#1)
+
+// isolated proper noun
+// added restriction in case of ambiguity between common and proper noun
+
+| NP{?*,#1[human,mwe:~]};PP{?*,#1[human,mwe:~]} |
+	if ( ~NE[persona](#1) )
+  NE[persona=+](#1)
+
+
+// organization
+| noun#1[organization,last]; noun{?[quote],noun#1[organization],?[quote]} |
+  if ( ~NE[organizacion](#1) )
+  NE[organizacion=+](#1)
+
+// special case for toutmaj higher level recognized ORG
+// eg Movimiento al Socialismo (MAS)
+| ?{?*,noun#1[mwe]};?{prep,?{?*,noun#1[mwe]}}, punct[fopar], #2[org], punct[fcpar] |
+  if ( NE[organizacion](#1) & ~NE[organizacion](#2) )
+  NE[organizacion=+](#2)
+
+| ?{?*,noun#1[mwe,org]};?{prep,?{?*,noun#1[mwe]}}, punct[fopar], #2[toutmaj], punct[fcpar] |
+  if ( NE[organizacion](#1) & ~NE[organizacion](#2) )
+  NE[organizacion=+](#2)
+
+// When the acronym corresponds to another part-of-speech it is integrated within a NP
+// e.g. Centro de Investigacion Economica Nacional (CIEN)
+| ?{?*,noun#1[mwe,org]};?{prep,?{?*,noun#1[mwe]}}, punct[fopar], NP{#2[org,acron]}, punct[fcpar] |
+  if ( NE[organizacion](#1) & ~NE[organizacion](#2) )
+  NE[organizacion=+](#2)
+
+
+// events
+| noun#1[event,last] |
+  if ( ~NE[event](#1) )
+  NE[evento=+](#1)
+
+
+// monuments
+| noun#1[monument,last] |
+  if ( ~NE[monumento](#1) )
+  NE[monumento=+](#1)
+
+
+// dates
+| PP{prep[lemma:en];prep[lemma:desde];prep[lemma:"a partir de"]; prep[lemma:"a final de"]; prep[lemma:"a principio de"], NP{?*,num#1[year,last]}} |
+  if ( ~NE[fecha](#1) )
+  NE[fecha=+](#1)
+
+// entre 2001 y 2002
+| PP{prep[lemma:entre], NP{?*,num#1[year], conj[lemma:y], num#2}} |
+  if ( ~NE[fecha](#1) & ~NE[fecha](#2) )
+  NE[fecha=+](#1),
+  NE[fecha=+](#2) 
+
+// de 2001 hasta 2002
+| PP{prep[lemma:de], NP{?*,num#1[year]}}, PP{prep[lemma:hasta], NP{num#2}} |
+  if ( ~NE[fecha](#1) & ~NE[fecha](#2) )
+  NE[fecha=+](#1),
+  NE[fecha=+](#2) 
+
+// en 2001 hasta 2002
+| PP{prep[lemma:de], NP{?*,num#1[year]}}, PP{prep[lemma:hasta], NP{num#2}} |
+  if ( NE[fecha](#1) & ~NE[fecha](#2) )
+	NE[fecha=+](#2)
+
+// for a complex date expression
+| NP{(art),(adj), #1[date,hour:~]} |
+  if ( ~NE[fecha](#1) )
+  NE[fecha=+](#1)
+
+| NP{(art),(adj), #1[hour]} |
+  if ( ~NE[fecha](#1) )
+  NE[hora=+](#1)
+
+
+
+/// Documentos
+
+| noun#1[doc,mwe] |
+  if ( ~NE[persona](#1) )
+  NE[documento=+](#1)
+
+

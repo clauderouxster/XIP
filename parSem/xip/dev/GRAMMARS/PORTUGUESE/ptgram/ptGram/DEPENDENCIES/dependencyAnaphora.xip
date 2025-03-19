@@ -1,0 +1,343 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : dependencyAnaphora1.xip                                     !
+//!   Date       : 2010/April                                                  !
+//!   Author     : Nuno Nobre                                                  !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!   Generates Anaphora candidates                                            !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+//Acrescentado a dependency0.xip pelo professor Nuno Mamede (21/06/2010)
+//|NP{art[masc], noun[masc=+]}| ~
+//|NP{art[fem], noun[fem=+]}| ~
+//|NP{art[sg], noun[sg=+]}| ~
+//|NP{art[pl], noun[pl=+]}| ~
+
+//|PP{art[masc], noun[masc=+]}| ~
+//|PP{art[fem], noun[fem=+,masc=~]}| ~
+//|PP{art[sg], noun[sg=+]}| ~
+//|PP{art[pl], noun[pl=+]}| ~
+
+// Multi Word Entries
+// number features from sub-names are passed to top-noun
+// Maria dos Santos -> singular
+|NP{?*, noun[sg=+]{?*,noun[sg]}}| ~
+
+// gender features from sub-names are passed to top-noun
+// Maria dos Santos -> singular
+|NP{?*, noun[masc=+]{noun[masc]}}| ~
+|NP{?*, noun[fem=+]{noun[fem]}}| ~
+
+//1) Pronoun rules
+
+//rule 1.1: Anaphor in PP, antecent in NP
+//example: O João deu ao Pedro um bolo feito por ele.
+//result: ACANDIDATE(ele, João)
+
+|?*, NP#1, ?*, PP{?*, pron#2[poss=~]}|
+ if(HEAD(#3,#1) &
+   ~ACANDIDATE(#2,#3) &
+   #2[number]:#3[number] & #2[gender]:#3[gender]
+ )
+ ACANDIDATE(#2,#3)
+
+//rule 1.1_pronPoss: Anaphor in PP, antecent in NP
+//it differs from the previous rule because possessive pronouns only match in
+//gender and number with the objecto, not the antecedent
+//example: O João vestiu a sua camisa.
+//result: ACANDIDATE(sua, João)
+
+//|?*, NP#1, ?*, PP{?*, pron#2[poss=+]}|
+// if(HEAD(#3,#1) &
+//   ~ACANDIDATE(#2,#3)
+// )
+// ACANDIDATE(#2,#3)
+
+//rule 1.2: Anaphor in PP, antecent in PP
+//example:
+//result:
+
+|?*, PP#1, ?*, PP{?*, pron#2[poss=~]}|
+ if(HEAD(#3,#1) &
+   ~ACANDIDATE(#2,#3) &
+   #2[number]:#3[number] & #2[gender]:#3[gender]
+ )
+ ACANDIDATE(#2,#3)
+
+//rule 1.2_pronPoss: Anaphor in PP, antecent in PP
+//example: A Maria deu ao João a sua camisa
+//result: ACANDIDATE(sua, Maria), ACANDIDATE(sua, João)
+
+//|?*, PP#1, ?*, PP{?*, pron#2[poss=+]}|
+// if(HEAD(#3,#1) &
+//   ~ACANDIDATE(#2,#3)
+// )
+// ACANDIDATE(#2,#3)
+
+//rule 1.3: Anaphor in NP, antecent in NP
+//example: O João deu um bolo à Maria e ela ficou contente.
+//result: ACANDIDATE(ela, Maria)
+|?*, NP#1, ?*, NP{?*, pron#2[poss=~]}|
+ if(HEAD(#3,#1) &
+   ~ACANDIDATE(#2,#3) &
+   #2[number]:#3[number] & #2[gender]:#3[gender]
+ )
+ ACANDIDATE(#2,#3)
+
+//rule 1.3_pronPoss: Anaphor in NP, antecent in NP
+//example: A Maria levou o seu chapéu.
+//result: ACANDIDATE(seu, Maria)
+//|?*, NP#1, ?*, NP{?*, pron#2[poss=+]}|
+// if(HEAD(#3,#1) &
+//   ~ACANDIDATE(#2,#3)
+// )
+// ACANDIDATE(#2,#3)
+
+//rule 1.4: Anaphor in NP, antecent in PP
+//example: A Maria deu um bolo ao João mas ele não gostou.
+//result: ACANDIDATE(ele, João)
+
+|?*, PP#1, ?*, NP{?*, pron#2[poss=~]}|
+ if(HEAD(#3,#1) &
+   ~ACANDIDATE(#2,#3) &
+   #2[number]:#3[number] & #2[gender]:#3[gender]
+ )
+ ACANDIDATE(#2,#3)
+
+//rule 1.4_pronPoss: Anaphor in NP, antecent in PP
+//example: A Maria pediu ao João as suas chaves de casa.
+//result: ACANDIDATE(suas, Maria), ACANDIDATE(suas, João)
+
+//|?*, PP#1, ?*, NP{?*, pron#2[poss=+]}|
+// if(HEAD(#3,#1) &
+//   ~ACANDIDATE(#2,#3)
+// )
+// ACANDIDATE(#2,#3)
+
+
+
+//2) Coordination rules
+
+//rule 2.1: Anaphor in PP, Antecedent in coordinated NPs
+//example: A Joana e a Rita levaram um bolo feito por elas.
+//result: ACANDIDATE(elas, Joana), ACANDIDATE(elas, Rita)
+
+|?*, NP#1,?*, NP#2, ?*, PP{?*, pron#3[poss=~]}|
+ if(#3[pl] &
+   COORD(#4,#5) &
+   COORD(#6,#7) &
+   HEAD(#5,#1) &
+   HEAD(#7,#2) &
+   ~ACANDIDATE(#3,#5) &
+   ~ACANDIDATE(#3,#7) &
+   #3[gender]:#5[gender] &
+   #3[gender]:#7[gender]
+   )
+  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+//rule 2.1_possPron: Anaphor in PP, Antecedent in coordinated NPs
+//example: A Joana e a Rita levaram um bolo feito por elas.
+//result: ACANDIDATE(elas, Joana), ACANDIDATE(elas, Rita)
+
+//|?*, NP#1,?*, NP#2, ?*, PP{?*, pron#3[poss=+]}|
+// if(COORD(#4,#5) &
+//    COORD(#6,#7) &
+//    HEAD(#5,#1) &
+//    HEAD(#7,#2) &
+//    ~ACANDIDATE(#3,#5) &
+//    ~ACANDIDATE(#3,#7)
+//    )
+//  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+//rule 2.2: Anaphor in NP, Antecedent in coordinated NPs
+//example: O João e a Maria foram para casa deles
+//result: ACANDIDATE(ele, João), ACANDIDATE(ele, Maria)
+
+|?*, NP#1,?*, NP#2, ?*, NP{?*, pron#3[poss=~]}|
+ if(#3[pl] &
+   COORD(#4,#5) &
+   COORD(#6,#7) &
+   HEAD(#5,#1) &
+   HEAD(#7,#2) &
+   ~ACANDIDATE(#3,#5) &
+   ~ACANDIDATE(#3,#7) &
+   #3[gender]:#5[gender] &
+   #3[gender]:#7[gender]
+   )
+  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+
+//rule 2.2_pronPoss: Anaphor in NP, Antecedent in coordinated NPs
+//example: O João e a Maria foram para casa deles
+//result: ACANDIDATE(ele, João), ACANDIDATE(ele, Maria)
+
+//|?*, NP#1,?*, NP#2, ?*, NP{?*, pron#3[poss=+]}|
+// if(COORD(#4,#5) &
+//    COORD(#6,#7) &
+//    HEAD(#5,#1) &
+//    HEAD(#7,#2) &
+//    ~ACANDIDATE(#3,#5) &
+//    ~ACANDIDATE(#3,#7))
+//  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+
+//rule 2.3: Anaphor in PP, Antecedent in coordinated PPs
+//example:
+//result:
+
+|?*, PP#1,?*, PP#2, ?*, PP{?*, pron#3[poss=~]}|
+ if(#3[pl] &
+   COORD(#4,#5) &
+   COORD(#6,#7) &
+   HEAD(#5,#1) &
+   HEAD(#7,#2) &
+   ~ACANDIDATE(#3,#5) &
+   ~ACANDIDATE(#3,#7) &
+   #3[gender]:#5[gender] &
+   #3[gender]:#7[gender]
+   )
+  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+//rule 2.3_pronPoss: Anaphor in PP, Antecedent in coordinated PPs
+//example:
+//result:
+
+//|?*, PP#1,?*, PP#2, ?*, PP{?*, pron#3[poss=+]}|
+// if(COORD(#4,#5) &
+//    COORD(#6,#7) &
+//    HEAD(#5,#1) &
+//    HEAD(#7,#2) &
+//    ~ACANDIDATE(#3,#5) &
+//    ~ACANDIDATE(#3,#7)
+//    )
+//  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+//rule 2.4: Anaphor in NP, Antecedent in coordinated PPs
+//example:
+//result:
+
+|?*, PP#1,?*, PP#2, ?*, NP{?*, pron#3[poss=~]}|
+ if(#3[pl] &
+   COORD(#4,#5) &
+   COORD(#6,#7) &
+   HEAD(#5,#1) &
+   HEAD(#7,#2) &
+   ~ACANDIDATE(#3,#5) &
+   ~ACANDIDATE(#3,#7)&
+   #3[gender]:#5[gender] &
+   #3[gender]:#7[gender]
+   )
+  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+//rule 2.4_pronPoss: Anaphor in NP, Antecedent in coordinated PPs
+//example:
+//result:
+
+//|?*, PP#1,?*, PP#2, ?*, NP{?*, pron#3[poss=+]}|
+// if(COORD(#4,#5) &
+//    COORD(#6,#7) &
+//    HEAD(#5,#1) &
+//    HEAD(#7,#2) &
+//    ~ACANDIDATE(#3,#5) &
+//    ~ACANDIDATE(#3,#7)
+//    )
+//  ACANDIDATE(#3,#5),ACANDIDATE(#3,#7)
+
+
+
+
+//
+//3 - Possessive pronouns
+//
+
+//rule 3.1 - F1: Anaphor is possessive pronoun in NP, Antecedent in NP
+//example: O pedro e a sua mulher
+//result: ACANDIDATE_POSS(sua, Pedro)
+|?*, NP#1, CONJ, NP{?*, pron#2[poss=+]}|
+  if(HEAD(#3,#1) &
+   ~ACANDIDATE_POSS(#2,#3)
+ )
+ ACANDIDATE_POSS(#2,#3)
+
+//rule 3.2 - F2: Anaphor is possessive pronoun in PP, Antecedent in PP
+//example: A escolha do Pedro, da sua Mulher...
+//result: ACANDIDATE_POSS(sua, Pedro)
+|?*, PP#1, PP{?*, pron#2[poss=+]}|
+  if(HEAD(#3,#1) &
+   ~ACANDIDATE_POSS(#2,#3)
+ )
+ ACANDIDATE_POSS(#2,#3)
+
+//rule 3.3 - F3: Anaphor is possessive pronoun in PP, Antecedent in NP
+//example: A casa do seu filho.
+//result: INVALID_ACANDIDATE(seu, filho)
+|?*, NP#1, PP{?*, pron#2[poss=+]}|
+  if(HEAD(#3,#1) &
+   ~INVALID_ACANDIDATE(#2,#3)
+ )
+ INVALID_ACANDIDATE(#2,#3)
+
+
+
+//
+//4 - Immediate reference
+//
+//rule 4.1 -
+//example: O Pedro pode esperar pelo Zé ou ligar-lhe.
+//result: IMMEDIATE_REFERENCE(lhe, Zé)
+|?*, VINF*, PP#1{?*,noun#4}, CONJ, VINF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)
+
+//rule 4.2 -
+//example: Eu queria falar com a Maria e liguei-lhe.
+//result: IMMEDIATE_REFERENCE(lhe, Maria)
+|?*, NP*, VF*, VINF*, PP#1{?*,noun#4}, CONJ, VF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)
+
+//rule 4.3 -
+//example: Tira o bolo e embala-o
+//result: IMMEDIATE_REFERENCE(a, televisão)
+|?*, NP*, VF, NP#1{?*,noun#4}, CONJ, NP*, VF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)
+
+//rule 4.4 -
+//example: Tira o bolo, embala-o.
+//result: IMMEDIATE_REFERENCE(o, bolo)
+|?*, NP*, VF, NP#1{?*,noun#4}, PUNCT, NP*, VF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)
+
+//rule 4.5 -
+//example: Tira-o e embala-o.
+//result: IMMEDIATE_REFERENCE(o, o)
+|?*, NP*, VF, NP#1{?*,pron#4}, CONJ, NP*, VF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)
+
+//rule 4.6 -
+//example: Tira o bolo, embala-o.
+//result: IMMEDIATE_REFERENCE(o, o)
+|?*, NP*, VF, NP#1{?*,pron#4}, PUNCT, NP*, VF, NP#2{pron#3[pers]}|
+ if(HEAD(#4,#1) && HEAD(#3,#2) &&
+    ~IMMEDIATE_REFERENCE(#3,#4) &
+   #3[number]:#4[number] & #3[gender]:#4[gender])
+ IMMEDIATE_REFERENCE(#3,#4)

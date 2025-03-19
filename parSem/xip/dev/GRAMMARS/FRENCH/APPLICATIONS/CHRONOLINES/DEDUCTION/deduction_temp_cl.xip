@@ -1,0 +1,2699 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2000 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Déduction:
+
+
+// RAPPEL: une date relative qui a le champs jour et mois = t_absolue et t_incomplete
+
+// suite a la suppression de HEURE/1 (n'a pas lieu d'être)
+// si ET est HEURE et modifie un nom juste a gauche avec prep[de] alors duree
+// eg le trajet de 2 heures n'est pas trop long
+// AB 2012.04.10 MAIS: ils entendent les douze coups de minuit (de minuit n'est PAS durée!!!), ajout contraintes sur lemme
+| NP#2, PP#1{prep[lemme:de]} |
+if ( ^HEURE(#1)  & HEAD(#6,#2) & HEAD(#4,#1) & NMOD[posit1](#6,#4) & #4[lemme:~minuit] & #4[lemme:~midi])
+DUREE(#1)
+
+// elargir lien VMOD a l'integralité du PP si celui-ci est une ET.
+| PP#3{prep,NP#2} |
+if ( ^VMOD(#1,#2) & ( DATE(#3) | HEURE(#3)) )
+   VMOD[temp:+](#1,#3)
+
+// elargir lien VMOD a l'integralité du NP si celui-ci est une ET.
+| NP#3{#2[first,last]} |
+if ( ^VMOD(#1,#2) & ( DATE(#3) | HEURE(#3)) )
+   VMOD[temp:+](#1,#3)
+
+// typer avec temp:+ les relations VMOD entre V et ET
+if ( ^VMOD[temp:~](#1,#2) & DATE(#2) )
+   VMOD[temp=+](#1,#2)
+
+// if a duration is NMOD of a person, it is probably an age
+if ( HEAD(#1,#2) & NMOD(#3[person],#1[duree]) & ^DUREE(#2) )
+AGE(#1)
+
+
+// AB 2011.11.30 TODO stop dependency when NMOD exists already
+// e.g. so we can have "il annonce le référendum de jeudi" with NMOD(référendum,jeudi) and not VMOD(annonce,de jeudi)
+// ET qui n'est reliée à rien.
+// dans ce cas, on va la relier au verbe le plus proche à gauche.
+// 1 - cas des formes accomplies 
+| SC{?*, FV{?*,#2[last]}}, ?*[verb:~], #1 | 
+if ( DATE(#1) & ~VMOD(?,#1) & ~OBJ(?,#1) & ~SUBJ(?,#1) & ( HEAD(#3_jeudi,#1_de_jeudi) & ~NMOD(?,#3) ) )
+  VMOD[temp=+](#2,#1)
+
+| #2[verb], ?*[verb:~], #1 | 
+if ( DATE(#1) & ~VMOD(?,#1) & ~OBJ(?,#1) & ~SUBJ(?,#1) & (HEAD(#3,#1) & ~NMOD(?,#3) ) )
+   VMOD[temp=+](#2,#1)
+
+// Avec pred nominal
+| #2[noun], (punct[form:fcm]), #1 |
+if ( DATE(#1) & ~VMOD(?,#1) & ~OBJ(?,#1) & ~SUBJ(?,#1) & (~NMOD(?,#1) | HEAD(#4,#1) & ~NMOD(?,#4)) & HEAD(#3,#2) )
+   NMOD[temp=+](#3,#1)
+
+// Temporal expressions in argument position are events
+// 1. Remove false object dependencies...(only verb être for now)
+| NP#2[tempexpr] |
+if ( HEAD(#1,#2) & ^OBJ(#3[lemme:être],#1) )
+~
+// 2. Remove false DATE dependencies
+// e.g. Cette soirée sera animée par Jean
+//      La police a été cette année particulièrement vigilante
+| NP#2[tempexpr] |
+if ( HEAD(#1,#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) ) & ^DATE(#2) )
+~
+// same as above, but with coreference
+// e.g. Cette soirée, qui sera animée par Jean
+| NP#4[tempexpr] |
+if ( COREF(#1,#2[pron]) & HEAD(#1,#4) & ( DEEPSUBJ(#3,#2) | DEEPOBJ(#3,#2) ) & ^DATE(#4) )
+~
+
+
+// mauvaises attaches de complements de temps, on modifie
+// NOTE: par défaut l'ET est rattachée au verbe. 
+
+
+// Erreur si rattaché au verbe alors que doit être rattaché au nom
+// conditions: le nom est un time_span et se trouve entre le verbe rattaché et l'ET (et pas de verbe entre)
+
+
+// Dans le cas où attachement à un pred nominal de type PP[de] qui lui meme est rattaché à PP dont prep est une préposition predate:+ alors on rattache l'ET au premier nom
+// Depuis le début de l'Intifada fin novembre 2000.
+| PP#2{prep[predate]}, PP#3{prep[lemme:de]} |
+if ( HEAD(#4,#3) & ^NMOD[temp](#4,#1) & DATE(#1) & HEAD(#5,#2) )
+  NMOD(#5,#1)
+
+
+
+/////////////////// TYPAGE ET MARQUAGE DES ET EN FCT CONTEXTES ET DEP //////////////////
+
+
+// Si jour de la semaine tout seul dans NP, on a date relative et on veut rajouter un trait temp_ref:s
+| #1[temp_ref=s]{?[first,last,jour,fete:~]} |
+if ( DATE[relative](#1) )
+~
+
+///////////
+// DATES //
+///////////
+
+// pour 2012
+| PP#1{prep[lemme:pour],NP{num[absolue,partial_date,datepot,last]}} |
+if ( ^DATEPOT(#1) )
+DATE(#1)
+
+
+///////////////
+// DURATIONS //
+///////////////
+
+// AB 2011.11.14 pourquoi ces 2 règles? Elles servent à rien
+// Si "num + periode" tout seul dans NP et rien de temporel autour alors durée
+// e.g "Il est parti 3 jours." 
+//| NP#1{?[card],?*,noun[last,periode]} |
+//DUREE(#1)
+
+// idem si NP est precede par "pendant" "durant"
+//| PP#1{#3[duree,predate],NP#2} |
+//if ( ^DUREE(#2) )
+//DUREE(#1)
+
+// relier le verbe a l'ET duree
+if ( DUREE(#1) & HEAD(#4,#1) & ^VMOD(#3,#4) )
+   VMOD[traits=~,temp=+](#3,#1)
+
+// relier le nom a l'ET duree
+if ( DUREE(#1) & HEAD(#4,#1) & ^NMOD(#3,#4) )
+   NMOD[traits=~,temp=+](#3,#1)
+
+
+
+////////////////
+// AGGREGATES //
+////////////////
+
+| AP#1[t_freq] |
+if ( ~SET(#1) &  ~DATE(#1) & ~DATE(#2) & ~INTERVAL-TEMP(#1) & ~DUREE(#1) & ~DUREE(#2) & ~HEURE(#1) & ~HEURE(#2) )
+SET(#1)
+
+//////////////////////////////////////////
+// AB 2011.11.07 EXTENDING THE GRAMMAR  //
+// This includes additional rules that  //
+// should perhaps have been dealt with  //
+// earlier.                             //
+//////////////////////////////////////////
+
+// cet après-midi, ce matin etc
+//| NP#1{#2[det,dem],?*,#3[time]} |
+//if ( DETERM(#3,#2) & ~DATE(#1) & ~HEURE(#1) )
+//   DATE[relative,temp_ref=s](#1)
+
+// disambiguate durations without prepositions that were potential times
+// e.g. il part trois heures.
+if ( ^HEUREPOT(#1) )
+   DUREE(#1)
+
+// ages not durations
+// e.g. un homme de 30 ans.
+if ( NMOD(?[has_age],#1) & ^DUREE(#1) )
+     AGE(#1)
+
+// les élections de 2004
+if ( ^DATEPOT(#1) & NMOD(?,#2) & HEAD(#2,#1) )
+DATE(#1)
+
+// in case the NP in a PP has been tagged as TIMEX3 already
+| PP#1[tempexpr]{?*,NP#2[duree:~,heure:~]} |
+if ( ~DATE(#1) & ^DATE(#2) & ~INTERVAL-TEMP(#1) & ~DUREE(#1) & ~DUREE(#2) & ~HEURE(#1) & ~HEURE(#2) )
+DATE(#1)
+
+// à l'automne etc. that were missed before
+| PP#1[tempexpr]{?*,PP#2[duree:~,heure:~]} |
+if ( ~DATE(#1) & ^DATE(#2) & ~INTERVAL-TEMP(#1) & ~DUREE(#1) & ~DUREE(#2) & ~HEURE(#1) & ~HEURE(#2) )
+DATE(#1)
+
+// le PSG a été NP{très faible samedi (dernier)} just tag samedi (dernier)
+| NP[tempexpr:~]{?*[det:~],adj;AP,noun#1[time,tempexpr,relative,date]} |
+DATE(#1)
+
+// chaque année, etc.
+| NP#1[tempexpr]{det[quant,t_mod:~],?*,noun[time]} |
+if ( ~DATE(#1) & ~DUREE(#1) & ~SET(#1) )
+SET(#1)
+
+// delete embedded temporal expressions
+// e.g. la nuit de la Saint-Sylvestre
+| NP#1{?*,#2} |
+if ( DATE(#1) & ( ^DATE(#2) | ^DUREE(#2) | ^SET(#2) | ^HEURE(#2) | INTERVAL-TEMP(#2) ) )
+~
+
+| PP#1{?*,NP#2} |
+if ( DATE(#1) & ( ^DATE(#2) | ^DUREE(#2) | ^SET(#2) | ^HEURE(#2) | INTERVAL-TEMP(#2) ) )
+~
+
+| PP#1{?*,NP{?*,#2}} |
+if ( DATE(#1) & ( ^DATE(#2) | ^DUREE(#2) | ^SET(#2) | ^HEURE(#2) | INTERVAL-TEMP(#2) ) )
+~
+
+////////////////////////////////////////////////
+// convert all temporal expressions to TIMEX3 //
+////////////////////////////////////////////////
+
+// dates
+if ( ^DATE(#1) )
+   TIMEX3[date=+](#1)
+
+if ( ^INTERVAL-TEMP(#1) )
+   TIMEX3[interval=+](#1)
+
+// times
+if ( ^HEURE(#1) )
+   TIMEX3[date=+,relative=+,t_granul=H](#1)
+
+// durations
+if ( ^DUREE(#1) )
+   TIMEX3[t_dur=+,seen=+](#1)
+
+// set expressions
+if ( ^SET(#1) )
+   TIMEX3[set=+,t_freq=+,seen=+](#1)
+
+/////////////////////////////////////////////////
+// create a relation for temporal modification //
+/////////////////////////////////////////////////
+
+// verbs
+if ( VMOD(#1,#2) & TIMEX3(#2) )
+   TEMP(#1,#2)
+
+// verbs, with HEAD
+if ( VMOD(#1,#3) & TIMEX3(#2) & HEAD(#3,#2) )
+   TEMP(#1,#2)
+
+// nouns
+if ( NMOD(#1,#2) & TIMEX3(#2) )
+   TEMP(#1,#2)
+
+// nouns, with head
+if ( VMOD(#1,#3) & TIMEX3(#2) & HEAD(#3,#2) )
+   TEMP(#1,#2)
+
+//////////////////////////////////////
+// PRE-PROCESSING FOR NORMALISATION //
+//////////////////////////////////////
+
+///////////////////
+// ABOLUTE DATES //
+///////////////////
+
+// (le) (jeudi) 22 août 2002
+| NP#1{(det), noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// au (jeudi) 22 août 2002
+| PP#1{prep[lemme:à],NP{noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// du (jeudi) 22 août 2002
+| PP#1{prep[lemme:de],NP{noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// open interval left
+// ex. jusqu'à (jeudi) 22 août 2002
+| PP#1{?[temp_pos:"<"],NP{noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// open interval right
+// ex. depuis (jeudi) 22 août 2002
+| PP#1{?[temp_pos:">"],NP{noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+](#1)
+
+// de ce (jeudi) 22 août 2002
+| PP#1{prep[lemme:de],NP{det[lemme:ce,masc],?*,noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// open interval left
+// ex. jusqu'à ce (jeudi) 22 août 2002
+| PP#1{?[temp_pos:"<"],NP{det[lemme:ce,masc],?*,noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// open interval right
+// ex. depuis ce (jeudi) 22 août 2002
+| PP#1{?[temp_pos:">"],NP{det[lemme:ce,masc],?*,noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+](#1)
+
+// non-temporal prep + (jeudi) 22 août 2002
+// e.g. par rapport au jeudi 22 août 2002
+| PP#1{prep[predate:~],NP{noun{(noun[jour]), num[numjourpot], noun[mois], num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// (le) 02/04/2011
+| NP#1{(det),noun{num[numjourpot], punct, num[mois], punct, num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// du 02/04/2011
+| PP#1{prep[lemme:de],NP{(det),noun{num[numjourpot], punct, num[mois], punct, num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// open interval left
+// ex. jusqu'au 02/04/2011
+| PP#1{?[temp_pos:"<"],NP{(det),noun{num[numjourpot], punct, num[mois], punct, num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// open interval left
+// ex. depuis (le) 02/04/2011
+| PP#1{?[temp_pos:">"],NP{(det),noun{num[numjourpot], punct, num[mois], punct, num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+](#1)
+
+// non-temporal prep + 02/04/2011
+// e.g. par rapport au 02/04/2011
+| PP#1{prep[predate:~],NP{(det),noun{num[numjourpot], punct, num[mois], punct, num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// prep + only month and year
+// e.g. en mars 2002
+| PP#1[tempexpr]{prep[lemme:en], NP{(AP),noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// interval open left, prep + only month and year
+// e.g. jusqu'en mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{(AP),noun{noun[mois],num[annee]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// non-temporal prep + only month and year
+// e.g. par rapport à mars 2002
+| PP#1[tempexpr]{prep[predate:~], NP{noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// à (la) mi-mars 2002
+| PP#1[tempexpr]{prep[lemme:à], NP{(det),noun{prefix[lemme:mi-],noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open left
+// ex. jusqu'à (la) mi-mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{(det),noun{prefix[lemme:mi-],noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open right
+// ex. depuis (la) mi-mars 2002
+| PP#1[tempexpr]{?[temp_pos:">"], NP{(det),noun{prefix[lemme:mi-],noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=mid](#1)
+
+// non-temporal prep
+// e.g. par rapport à la mi-mars 2002
+| PP#1[tempexpr]{prep[predate:~], NP{det,noun{prefix[lemme:mi-],noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// au début mars 2002
+| PP#1[tempexpr]{prep[lemme:à], NP{(det),noun[t_mod=start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// au début de mars 2002
+| PP#1[tempexpr]{prep[t_mod:start], NP{noun[t_mod=start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left
+// ex. jusqu'au début de mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun[t_mod=start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open right
+// ex. depuis le début de mars 2002
+| PP#1[tempexpr]{?[temp_pos:">"], NP{(det),noun[t_mod=start],prep[lemme:de],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left
+// ex. jusqu'à début de mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun[t_mod=start],prep[lemme:de],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left
+// ex. jusqu'au début mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{(det),noun[t_mod=start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open right
+// ex. depuis le début mars 2002
+| PP#1[tempexpr]{?[temp_pos:">"], NP{(det),noun[t_mod=start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=beg](#1)
+
+// à la fin mars 2002
+| PP#1[tempexpr]{prep[lemme:à], NP{(det),noun[t_mod=end],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à (la) fin mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{(det),noun[t_mod=end],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=end](#1)
+
+// interval open left
+// depuis la fin mars 2002
+| PP#1[tempexpr]{?[temp_pos:">"], NP{(det),noun[t_mod=end],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à (la) fin de mars 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{(det),noun[t_mod=end],prep[lemme:de],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=end](#1)
+
+// au début du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{prep[t_mod:start],noun[absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left
+// ex. jusqu'au début du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{?[temp_pos:"<"],NP{?*,noun[t_mod:start],prep[lemme:de],noun[absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open right
+// ex. depuis le début du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{?[temp_pos:">"],NP{?*,noun[t_mod:start],prep[lemme:de],noun[absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=beg](#1)
+
+// au milieu du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{prep[t_mod:mid],noun[absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open left
+// ex. jusqu'au milieu du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{?[temp_pos:"<"],NP{?*,noun[t_mod:mid],prep[lemme:de],noun[absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open right
+// ex. depuis le milieu du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{?[temp_pos:">"],NP{?*,noun[t_mod:mid],prep[lemme:de],noun[absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=mid](#1)
+
+// à la fin du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{prep[t_mod:end],noun[absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// interval open left
+// ex. jusqu'à la fin du mois de mars 2002
+| PP#1[tempexpr,partial_date:~]{?[temp_pos:"<"],NP{?*,noun[t_mod:end],prep[lemme:de],noun[absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=end](#1)
+
+// non-temporal prep
+// e.g. par rapport au début mars 2002
+| PP#1[tempexpr]{prep[predate:~], NP{(det),noun[t_mod:start],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// non-temporal prep
+// e.g. par rapport à la fin mars 2002
+| PP#1[tempexpr]{prep[predate:~], NP{(det),noun[t_mod:end],noun{noun[mois],num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,end](#1)
+
+// only year
+// e.g. en 2002
+| PP#1[tempexpr]{prep[lemme:en];prep[lemme:de],NP{num[annee];num[datepot,absolue,annee=+,year=+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// interval open left, only year
+// e.g. jusqu'en 2002
+| PP#1[tempexpr]{?[temp_pos:"<"],NP{num[annee];num[datepot,absolue,annee=+,year=+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// interval open right, only year
+// e.g. depuis 2002
+| PP#1[tempexpr]{?[temp_pos:">"],NP{num[annee];num[datepot,absolue,annee=+,year=+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+](#1)
+
+// début + only year
+// e.g. début (de) 2002
+| NP#1{noun[t_mod:start],(prep[lemme:de]),num[annee]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// mi- + only year
+// e.g. mi-2002
+| NP#1{noun{prefix[lemme:mi-],num[partial_date,date,annee=+,year=+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// fin + only year
+// e.g. fin (de) 2002
+| NP#1{noun[t_mod:end],(prep[lemme:de]),num[annee]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// au début de + only year
+// e.g. au début de 2002 ("au début de" is a prep)
+| PP#1[tempexpr]{prep[t_mod:start],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// au milieu de + only year
+// e.g. au milieu de 2002 ("au milieu de" is a prep)
+| PP#1[tempexpr]{prep[t_mod:mid],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// à la fin de + only year
+// e.g. à la fin de 2002 ("à la fin de" is a prep)
+| PP#1[tempexpr]{prep[t_mod:end],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// au début + only year
+// e.g. au début 2002
+| PP#1[tempexpr]{?[temp_pos:"="],NP{noun[t_mod:start],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// à la mi- + only year
+// e.g. à la mi-2002
+| PP#1[tempexpr]{?[temp_pos:"="],NP{?*,noun{prefix[lemme:mi-],num[partial_date,date,annee=+,year=+]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// à la fin + only year
+// e.g. à la fin 2002
+| PP#1[tempexpr]{?[temp_pos:"="],NP{?*,noun[t_mod:end],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left, au début + only year
+// e.g. jusqu'au début (de) 2002
+| PP#1[tempexpr]{?[temp_pos:"<"],NP{noun[t_mod:start],(prep[lemme:de]),num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left, jusqu'à la mi- + only year
+// e.g. jusqu'à la mi-2002
+| PP#1[tempexpr]{?[temp_pos:"<"],NP{?*,noun{prefix[lemme:mi-],num[partial_date,date,annee=+,year=+]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open left, au milieu de + only year
+// e.g. jusqu'au milieu (de) 2002
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun[t_mod:mid],(prep[lemme:de]),num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open left, à la fin + only year
+// e.g. jusqu'à la fin (de) 2002
+| PP#1[tempexpr]{?[temp_pos:"<"],NP{?*,noun[t_mod:end],(prep[lemme:de]),num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=end](#1)
+
+// interval open right, depuis (le) début + only year
+// e.g. depuis (le) début (de) 2002
+| PP#1[tempexpr]{?[temp_pos:">"],NP{?*,noun[t_mod:start],(prep[lemme:de]),num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left, depuis la mi- + only year
+// e.g. depuis la mi-2002
+| PP#1[tempexpr]{?[temp_pos:">"],NP{?*,noun{prefix[lemme:mi-],num[partial_date,date,annee=+,year=+]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open right, à la fin + only year
+// e.g. depuis la fin (de) 2002
+| PP#1[tempexpr]{?[temp_pos:">"],NP{?*,noun[t_mod:end],(prep[lemme:de]),num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=end](#1)
+
+// non-temporal prep + only year
+// e.g. par rapport à 2002
+| PP#1[tempexpr]{prep[predate:~];prep[lemme:de],NP{num[annee];num[datepot,absolue,annee=+,year=+]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// e.g. de cette (merveilleuse) année 2004
+// CH ajout d'une contrainte sur le déterminant
+// e.g les augures du nouveau mai 68.
+| PP#1{prep[lemme:de],NP{det[indef:~],?*,noun{?*,num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// le début de cette (merveilleuse) année 2004
+| NP#1{NP{?*,noun[t_mod:start]},PP{prep[lemme:de],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// le milieu de cette (merveilleuse) année 2004
+| NP#1{NP{?*,noun[t_mod:mid]},PP{prep[lemme:de],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// la fin de cette (merveilleuse) année 2004
+| NP#1{NP{?*,noun[t_mod:end]},PP{prep[lemme:de],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// au début de cette (merveilleuse) année 2004
+| PP#1{prep[t_mod:start],NP{?*,noun{?*,num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=beg](#1)
+
+// au milieu de cette (merveilleuse) année 2004
+| PP#1{prep[t_mod:mid],NP{?*,noun{?*,num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=mid](#1)
+
+// à la fin de cette (merveilleuse) année 2004
+| PP#1{prep[t_mod:end],NP{?*,noun{?*,num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+,op=end](#1)
+
+// interval open left
+// e.g. jusqu'au début de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:"<"],?*,NP{?*,noun[t_mod:start]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open left
+// e.g. jusqu'au milieu de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:"<"],?*,NP{?*,noun[t_mod:mid]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open left
+// e.g. jusqu'à la fin de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:"<"],?*,NP{?*,noun[t_mod:end]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+,op=end](#1)
+
+// interval open right
+// e.g. depuis le début de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:">"],?*,NP{?*,noun[t_mod:start]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=beg](#1)
+
+// interval open right
+// e.g. depuis le milieu de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:">"],?*,NP{?*,noun[t_mod:mid]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=mid](#1)
+
+// interval open right
+// e.g. depuis la fin de cette (merveilleuse) année 2004
+| PP#1{PP{?[temp_pos:">"],?*,NP{?*,noun[t_mod:end]}},PP[date,absolue]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+,op=end](#1)
+
+// PP with adjective added by chunker_temp_cl
+// e.g. après une année 2003 tumultueuse
+| PP#1[tempexpr,date,absolue]{PP{?[temp_pos:"="]}, AP} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// non-temporal prep
+// e.g. par rapport au nouveau mai 68.
+| PP#1{prep[predate:~],NP{det[indef:~],?*,noun{?*,num[annee]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// e.g. la/cette (merveilleuse) année 2004
+| NP#1{det,?*,noun{noun[lemme:année],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// e.g. le/ce (merveilleux) an 2000
+| NP#1{det,?*,noun{noun[lemme:an],num[annee]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// le 14 janvier de l'année 2002
+| NP#1{NP{det,noun{num,noun[mois]}},PP{prep[form:fde],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,seen=+](#1)
+
+// interval open left
+// e.g. jusqu'au 14 janvier de l'année 2002
+| PP#1{PP{?[temp_pos:"<"], NP{noun{num,noun[mois]}}},PP{prep[form:fde],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,seen=+](#1)
+
+// interval open right
+// e.g. depuis le 14 janvier de l'année 2002
+| PP#1{PP{?[temp_pos:">"], NP{?*,noun{num,noun[mois]}}},PP{prep[form:fde],NP[date,absolue]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,seen=+](#1)
+
+// TODO les dernières secondes de 2003
+
+// "absolute" but missing year
+
+// le (jeudi) 15 mars
+| NP#1{(det[lemme:le]), noun{(noun[jour]),num[numjourpot],noun[mois,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// au (jeudi) 15 mars
+| PP#1{prep[lemme:à],NP{noun{(noun[jour]), num[numjourpot], noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// interval open left
+// e.g. jusqu'au (jeudi) 15 mars
+| PP#1{?[temp_pos:"<"],NP{noun{(noun[jour]), num[numjourpot], noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// interval open right
+// e.g. depuis le (jeudi) 15 mars
+| PP#1{?[temp_pos:">"],NP{?*,noun{(noun[jour]), num[numjourpot], noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// l'élection du (jeudi) 15 mars
+| PP#1{prep[lemme:de],NP{noun{(noun[jour]),num[numjourpot],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) & NMOD(?,#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// non-temporal prep
+// e.g. par rapport au (jeudi) 15 mars
+| PP#1{prep[predate:~],NP{noun{(noun[jour]), num[numjourpot], noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// l'élection du (jeudi) 15 mars
+| PP#1{prep[lemme:de],NP{noun{(noun[jour]),num[numjourpot],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// le (jeudi) 15 mars
+| NP#1{(det[lemme:le]), noun{(noun[jour]),num[numjourpot],noun[mois,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// interval open left
+// jusqu'au (jeudi) 15 mars
+| PP#1{?[temp_pos:"<"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// interval open right
+// à partir du (jeudi) 15 mars
+| PP#1{?[temp_pos:">"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,t_incomplete=+,seen=+](#1)
+
+// au début mars
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun[t_mod:start],noun{noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,unit_delta=M,temp_ref=S,temp_rel=before,t_relat,seen=+,op=beg](#1)
+
+// à la mi-mars
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=mid](#1)
+
+// à la fin mars
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun[t_mod:end],noun{noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=end](#1)
+
+// open interval left
+// e.g. jusqu'au début mars
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun{?*,noun[t_mod:start],noun{noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=beg](#1)
+
+// AB 2012.04.17 NOT WORKING NEED TO CHECK PREVIOUS PROCESSING (LOCALGRAM, MARKING, etc)
+// open interval left
+// e.g. jusqu'à la mi-mars
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{?*,?[t_mod:mid],noun{noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=mid](#1)
+
+// open interval right
+// e.g. à partir du début mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:start],noun{noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=beg](#1)
+
+// open interval right
+// e.g. à partir de la mi-mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{?*,noun{?[t_mod:mid],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=mid](#1)
+
+// open interval right
+// e.g. à partir de la fin mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:end],noun{noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=end](#1)
+
+// non-temporal prep
+// par rapport à la mi-mars
+| PP#1[tempexpr]{prep[predate:~], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,unit_delta=M,temp_delta=month_name,temp_ref=S,temp_rel=before,t_relat,seen=+,op=mid](#1)
+
+//////////////////////////////////
+// RELATIVE DATES (speech time) //
+//////////////////////////////////
+
+// le (jeudi) 15 mars prochain
+| NP#1{(det[lemme:le]), noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// le (jeudi) 15 mars dernier
+| NP#1{(det[lemme:le]), noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// l'élection du (jeudi) 15 mars prochain
+| PP#1{prep[lemme:de],NP{noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// l'élection du (jeudi) 15 mars dernier
+| PP#1{prep[lemme:de],NP{noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open left
+// jusqu'au (jeudi) 15 mars prochain
+| PP#1{?[temp_pos:"<"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open left
+// jusqu'au (jeudi) 15 mars dernier
+| PP#1{?[temp_pos:"<"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open right
+// à partir du (jeudi) 15 mars prochain
+| PP#1{?[temp_pos:">"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open right
+// à partir du (jeudi) 15 mars dernier
+| PP#1{?[temp_pos:">"],NP{?*,noun{(noun[jour]),num[numjourpot],noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_absolut=+,t_incomplete=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// début mars prochain
+| NP#1{?*,noun{noun[t_mod:start],noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// début mars dernier
+| NP{?*,noun{noun[t_mod:start],noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au début mars prochain
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au début mars dernier
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// mi-mars prochain
+| NP#1[tempexpr]{noun{prefix[lemme:mi-], noun[mois], adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// mi-mars dernier
+| NP#1[tempexpr]{noun{prefix[lemme:mi-], noun[mois], adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la mi-mars prochain
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la mi-mars dernier
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// fin mars prochain
+| NP#1[tempexpr]{noun{?[lemme:fin],noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// fin mars dernier
+| NP#1[tempexpr]{noun{?[lemme:fin],noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// à la fin mars prochain
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun{?*,noun[t_mod:end],noun{noun[mois],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// à la fin mars dernier
+| PP#1[tempexpr]{prep[lemme:à], NP{?*,noun{?*,noun[t_mod:end],noun{noun[mois],adj[lemme:dernier]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// open interval left
+// e.g. jusqu'au début mars prochain
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// open interval left
+// e.g. jusqu'au début mars dernier
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{noun{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:dernier]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// open interval left
+// e.g. jusqu'à la mi-mars prochain
+| PP#1{?[temp_pos:"<"], NP{?*,noun{?[t_mod:mid],noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// open interval left
+// e.g. jusqu'à la fin mars dernier
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{?*,noun{noun[t_mod:end],noun{noun[mois],adj[lemme:dernier]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// open interval right
+// e.g. à partir du début mars prochain
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// open interval right
+// e.g. à partir du début mars dernier
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:start],noun{noun[mois],adj[lemme:dernier]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// open interval right
+// e.g. à partir de la mi-mars prochain
+| PP#1[tempexpr]{?[temp_pos:">"], NP{?*,noun{?[t_mod:mid],noun[mois]},adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// open interval right
+// e.g. à partir de la mi-mars dernier
+| PP#1[tempexpr]{?[temp_pos:">"], NP{?*,noun{?[t_mod:mid],noun[mois]},adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// open interval right
+// e.g. à partir de la fin mars prochain
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:end],noun{noun[mois]},adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// open interval right
+// e.g. à partir de la fin mars dernier
+| PP#1[tempexpr]{?[temp_pos:">"], NP{noun{?*,noun[t_mod:end],noun{noun[mois]},adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// non-temporal prep
+// par rapport à la mi-mars prochain
+| PP#1[tempexpr]{prep[predate:~], NP{det,noun{prefix[lemme:mi-],noun[mois],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// non-temporal prep
+// par rapport à la mi-mars dernier
+| PP#1[tempexpr]{prep[predate:~], NP{det,noun{prefix[lemme:mi-],noun[mois],adj[lemme:dernier]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// cette année-ci
+// AJOUTER: partial=year,
+| NP#1{det[lemme:ce,fem],noun{noun[lemme:année], punct, adv[lemme:ci]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=equals,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// open interval left
+// jusqu'à cette année-ci
+// AJOUTER: partial=year,
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:ce,fem],noun{noun[lemme:année], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=equals,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// open interval right
+// à partir de cette année-ci
+// AJOUTER: partial=year,
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:ce,fem],noun{noun[lemme:année], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=equals,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// cette année (attention cette année est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=year,
+| NP#1{det[lemme:ce,fem,sg],noun[lemme:année,last]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à cette année (attention cette année est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=year,
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:ce,fem,sg],noun[lemme:année,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+,blurr_m=+](#1)
+
+// interval open right
+// à partir de cette année (attention cette année est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=year,
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:ce,fem,sg],noun[lemme:année,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+,blurr_m=+](#1)
+
+// ce mois-ci
+// AJOUTER: partial=month,
+| NP#1{det[lemme:ce,masc],noun{noun[lemme:mois], punct, adv[lemme:ci]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'à ce mois-ci
+// AJOUTER: partial=month,
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:ce,masc],noun{noun[lemme:mois], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// interval open right
+// à partir de ce mois-ci
+// AJOUTER: partial=month,
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:ce,masc],noun{noun[lemme:mois], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// ce mois (attention ce mois est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=month,
+| NP#1{det[lemme:ce,masc,sg],noun[lemme:mois,last]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'à ce mois (attention ce mois est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=month,
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:ce,masc,sg],noun[lemme:mois,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// interval open right
+// à partir de ce mois (attention ce mois est ambigu - anaphorique ou deictique)
+// AJOUTER: partial=month,
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:ce,masc,sg],noun[lemme:mois,last]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+, temp_ref=s, temp_rel=equals, seen=+,blurr_d=+](#1)
+
+// ce jour-ci, ce soir-ci
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| NP#1{det[lemme:ce,sg],noun{noun[val_duree:D];noun[daytime], punct, adv[lemme:ci]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// interval open left
+// jusqu'à ce jour-ci, ce soir-ci
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:ce,sg],noun{noun[val_duree:D];noun[daytime], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// interval open right
+// à partir de ce jour-ci, ce soir-ci
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:ce,sg],noun{noun[val_duree:D];noun[daytime], punct, adv[lemme:ci]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// ce jour, ce soir (attention ambigu - anaphorique ou deictique)
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| NP#1{det[dem],noun[val_duree:D];noun[daytime]} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// jusqu'à ce jour, ce soir (attention ambigu - anaphorique ou deictique)
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| PP#1{?[temp_pos:"<"],?*,NP#1{det[dem],noun[val_duree:D];noun[daytime]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// jusqu'à ce jour, ce soir (attention ambigu - anaphorique ou deictique)
+// AJOUTER: partial=day,
+// pourquoi ça marchait pas avec lemme:jour ???
+| PP#1{?[temp_pos:">"],?*,NP#1{det[dem],noun[val_duree:D];noun[daytime]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+, temp_ref=s, temp_rel=equals, seen=+](#1)
+
+// aujourd'hui, maintenant etc.
+// CH - adding feature noprocess:+ for not performing normalization on these expressions
+| adv#1[delta_t:0] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=equals,temp_delta=0,unit_delta=d,seen=+,noprocess=+](#1)
+
+// interval open left
+// jusqu'aujourd'hui, maintenant etc.
+| PP#1{?[temp_pos:"<"],?*,NP{?*,noun[delta_t:0]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=equals,temp_delta=0,unit_delta=d,seen=+](#1)
+
+// interval open right
+// à partir d'aujourd'hui, maintenant etc.
+| PP#1{?[temp_pos:">"],?*,NP{?*,noun[delta_t:0]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=equals,temp_delta=0,unit_delta=d,seen=+](#1)
+
+// hier
+| adv#1[delta_t:"-1J"] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// interval open left
+// jusqu'à hier etc.
+| PP#1{?[temp_pos:"<"],?*,NP{?*,noun[delta_t:-1J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// interval open right
+// depuis hier etc.
+| PP#1{?[temp_pos:">"],?*,NP{?*,noun[delta_t:-1J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// avant-hier
+| adv#1[delta_t:"-2J"] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// interval open left
+// jusqu'à avant-hier etc.
+| PP#1{?[temp_pos:"<"],?*,NP{?*,noun[delta_t:-2J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// interval open right
+// depuis avant-hier etc.
+| PP#1{?[temp_pos:">"],?*,NP{?*,noun[delta_t:-2J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// demain
+| adv#1[delta_t:"+1J"] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// interval open left
+// jusqu'à demain etc.
+| PP#1{?[temp_pos:"<"],?*,NP{?*,noun[delta_t:+1J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// interval open right
+// à partir de demain etc.
+| PP#1{?[temp_pos:">"],?*,NP{?*,noun[delta_t:+1J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=d,seen=+](#1)
+
+// après-demain
+| adv#1[delta_t:"+2J"] |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// interval open left
+// jusqu'à après-demain etc.
+| PP#1{?[temp_pos:"<"],?*,NP{?*,noun[delta_t:+2J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// interval open right
+// à partir d'après-demain etc.
+| PP#1{?[temp_pos:">"],?*,NP{?*,noun[delta_t:+2J]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=2,unit_delta=d,seen=+](#1)
+
+// dans deux jours
+| PP#1{prep[lemme:dans], NP{noun{num,noun[lemme:jour]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=d,seen=+](#1)
+
+// dans deux semaines
+| PP#1{prep[lemme:dans], NP{noun{num,noun[lemme:semaine]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// dans deux mois
+| PP#1{prep[lemme:dans], NP{noun{num,noun[lemme:mois]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// dans deux ans
+| PP#1{prep[lemme:dans], NP{noun{num,noun[lemme:an]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=find,unit_delta=y,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// la semaine prochaine
+| NP#1{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'à la semaine prochaine
+| PP#1{?[temp_pos:"<"], ?*, NP{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// interval open right
+// à partir de la semaine prochaine
+| PP#1{?[temp_pos:">"], ?*, NP{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// le mois prochain
+| NP#1{det[lemme:le],noun{noun[lemme:mois], adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'au mois prochain
+| PP#1{?[temp_pos:"<"], ?*, NP{det[lemme:le],noun{noun[lemme:mois], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// interval open right
+// à partir du mois prochain
+| PP#1{?[temp_pos:">"], ?*, NP{(det[lemme:le]),noun{noun[lemme:mois], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// l'année prochaine
+| NP#1{det[lemme:le],noun{noun[lemme:année], adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'année prochaine
+| PP#1{?[temp_pos:"<"], ?*, NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// à partir de l'année prochaine
+| PP#1{?[temp_pos:">"], ?*, NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'année prochaine
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// l'an prochain
+| NP#1{det[lemme:le],noun{noun[lemme:an], adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'an prochain
+| PP#1{?[temp_pos:"<"], ?*, NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// à partir de l'an prochain
+| PP#1{?[temp_pos:">"], ?*, NP#1{det[lemme:le],noun{noun[lemme:an], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'an prochain
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// le 14 janvier de l'année prochaine/l'an prochain
+| NP#1{NP{det,noun{num,noun[mois]}},PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y], adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open left
+// jusqu'au 14 janvier de l'année prochaine/l'an prochain
+| PP#1{PP{?[temp_pos:"<"],?*,NP{noun{num,noun[mois]}}}, PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open right
+// à partir du 14 janvier de l'année prochaine/l'an prochain
+| PP#1{PP{?[temp_pos:">"],?*,NP{(det),noun{num,noun[mois]}}}, PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y],adj[lemme:prochain]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// les dernières secondes de l'an/année prochain/e
+| NP#1[tempexpr,date,relative]{NP[tempexpr,heure],PP[form:fde,tempexpr,date,relative]{?*,NP{det[lemme:le],noun{noun[val_duree:y], adj[direc:+]}}}} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// la semaine dernière
+| NP#1{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'à la semaine dernière
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// interval open right
+// depuis la semaine dernière
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// de la semaine dernière
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:semaine], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// le mois dernier
+| NP#1{det[lemme:le],noun{noun[lemme:mois], adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// interval open left
+// jusqu'au mois dernier
+| PP#1{?[temp_pos:"<"],?*,NP{noun{noun[lemme:mois], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// interval open right
+// depuis le mois dernier
+| PP#1{?[temp_pos:">"],?*,NP{det,noun{noun[lemme:mois], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// du mois dernier
+| PP#1{prep[lemme:de],NP{noun{noun[lemme:mois], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// l'année dernière
+| NP#1{det[lemme:le],noun{noun[lemme:année], adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'année dernière
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// depuis l'année dernière
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'année dernière
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// l'an dernier
+| NP#1{det[lemme:le],noun{noun[lemme:an], adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'an dernier
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// depuis l'an dernier
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'an dernier
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// l'année passée
+| NP#1{det[lemme:le],noun{noun[lemme:année], adj[lemme:passé,fem]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'année passée
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:passé,fem]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// depuis l'année passée
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:passé,fem]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'année passée
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:année], adj[lemme:passé,fem]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+//TIMEX3[t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// l'an passé
+| NP#1{det[lemme:le],noun{noun[lemme:an], adj[lemme:passé,masc]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open left
+// jusqu'à l'an passé
+| PP#1{?[temp_pos:"<"],?*,NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:passé,masc]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// interval open right
+// à partir de l'an passé
+| PP#1{?[temp_pos:">"],?*,NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:passé,masc]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// de l'an passé
+| PP#1{prep[lemme:de],NP{det[lemme:le],noun{noun[lemme:an], adj[lemme:passé,masc]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// le 14 janvier de l'année dernière/passée / l'an dernier/passé
+| NP#1{NP{det,noun{num,noun[mois]}},PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y], adj[direc:-]}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open left
+// jusqu'au 14 janvier de l'année dernière/passée / l'an dernier/passé
+| PP#1{?[temp_pos:"<"],?*,NP{NP{(det),noun{num,noun[mois]}},PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y], adj[direc:-]}}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// interval open right
+// depuis le/à partir du 14 janvier de l'année dernière/passée / l'an dernier/passé
+| PP#1{?[temp_pos:"<"],?*,NP{NP{(det),noun{num,noun[mois]}},PP{prep[lemme:de],NP{det[lemme:le],noun{noun[val_duree:Y], adj[direc:-]}}}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+](#1)
+
+// les dernières secondes de l'an/année dernière/passée
+| NP#1[tempexpr,date,relative]{NP[tempexpr,heure],PP[form:fde,tempexpr,date,relative]{?*,NP{det[lemme:le],noun{noun[val_duree:y], adj[direc:-]}}}} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=1,unit_delta=y,seen=+,blurr_m=+](#1)
+
+// il y a deux jours
+| PP#1{prep[ily], noun{num,noun[lemme:jour]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=d,seen=+](#1)
+
+// il y a deux semaines
+| PP#1{prep[ily], noun{num,noun[lemme:semaine]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=w,seen=+,blurr_d=+](#1)
+
+// il y a deux mois
+| PP#1{prep[ily], noun{num,noun[lemme:mois]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// il y a des mois
+| PP#1{prep[ily], noun{det[form:fdes],noun[lemme:mois]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=m,seen=+,blurr_d=+](#1)
+
+// il y a deux ans
+| PP#1{prep[ily], noun{num,noun[lemme:an]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,temp_delta=find,unit_delta=y,seen=+,blurr_d=+,blurr_m=+](#1)
+
+// monthname + prochain
+// e.g. janvier prochain
+| NP#1{noun{noun[mois],adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'en/à monthname + prochain, etc.
+// e.g. jusqu'en janvier prochain
+| PP#1{?[temp_pos:"<"],?*,NP{noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// depuis monthname + prochain, etc.
+// e.g. depuis janvier prochain
+| PP#1{?[temp_pos:">"],?*,NP{noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// monthname + prochain as noun in incorrect NP with AP
+// e.g. Le PSG sera NP{AP{très faible} noun{mars prochain}}
+| noun#1[tempexpr,time,date,relative]{noun[mois],adj[lemme:prochain]} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// en + monthname + prochain
+// e.g. en janvier prochain
+| PP#1{prep[lemme:en], NP{noun{noun[mois],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// monthname + dernier
+// e.g. janvier dernier
+| NP#1{noun{noun[mois],adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'en/à monthname + dernier
+// e.g. jusqu'en janvier dernier
+| PP#1{?[temp_pos:"<"],?*,NP{noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// depuis monthname + dernier
+// e.g. depuis janvier dernier
+| PP#1{?[temp_pos:">"],?*,NP{noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// monthname + dernier as noun in incorrect NP with AP
+// e.g. Le PSG a été NP{AP{très faible} noun{mars dernier}}
+| noun#1[tempexpr,time,date,relative]{noun[mois],adj[lemme:dernier]} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// en + monthname + dernier
+// e.g. en janvier dernier
+| PP#1{prep[lemme:en], NP{noun{noun[mois],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// dayname + prochain
+// e.g. jeudi prochain
+| NP#1{noun{noun[jour],adj[lemme:prochain]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname + prochain
+// e.g. jusqu'à jeudi prochain
+| PP#1{?[temp_pos:"<"],?*,NP{noun{noun[jour],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname + prochain
+// e.g. à partir de jeudi prochain
+| PP#1{?[temp_pos:">"],?*,NP{noun{noun[jour],adj[lemme:prochain]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname + prochain as noun in incorrect NP with AP
+// e.g. Le PSG sera NP{AP{très faible} noun{jeudi prochain}}
+| noun#1[tempexpr,time,date,relative]{noun[jour],adj[lemme:prochain]} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname + dernier
+// e.g. jeudi dernier
+| NP#1{noun{noun[jour],adj[lemme:dernier]}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname + dernier
+// e.g. jusqu'à jeudi dernier
+| PP#1{?[temp_pos:"<"],?*,NP{noun{noun[jour],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// depuis dayname + dernier
+// e.g. depuis jeudi dernier
+| PP#1{?[temp_pos:">"],?*,NP{noun{noun[jour],adj[lemme:dernier]}}} |
+if ( ^TIMEX3[seen:~](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname + dernier as noun in incorrect NP with AP
+// e.g. Le PSG a été NP{AP{très faible} noun{jeudi dernier}}
+| noun#1[tempexpr,time,date,relative]{noun[jour],adj[lemme:dernier]} |
+if ( ^TIMEX3[date](#1) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+
+///////////
+// TIMES //
+///////////
+
+// TODO vers 12h30 (11h30 GMT)
+
+
+//////////////////////////////////
+// RELATIVE DATES (SPEECH TIME) //
+// RESOLVED WITH TENSE.         //
+// OPERATORS (BEG,MID,END)      //
+//////////////////////////////////
+
+// add t_past feature for passé composé as ambiguity is (hopefully) not a (big) problem
+// for interpreting temporal expressions in the AFP corpus
+if ( ^VTENSE[t_past:~,t_pres:~,t_fut:~](#1) & VASPECT(#1) )
+VTENSE[t_past=+](#1)
+
+// "depuis" + NP + dayname = PAST
+// Accept NMOD TIMEX *only* when introduced by the preposition "depuis", whatever the tense of the governing verb
+// e.g. Londres est en état d'alerte depuis les attentats de jeudi.
+| PP#1{prep[lemme:de],NP{?*[t_mod:~],noun[jour,last]};NP{?*,noun{?*[t_mod:~],noun[jour,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & (NMOD(#4,#1) & PREPOBJ(#4,?[lemme:depuis])) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// "depuis" + NP + monthname = PAST
+// Accept NMOD TIMEX *only* when introduced by the preposition "depuis", whatever the tense of the governing verb
+// e.g. Londres est en état d'alerte depuis les attentats en novembre.
+| PP#1{prep[lemme:en],NP{?*[t_mod:~],noun[mois,last]};NP{?*,noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & (NMOD(#4,#1) & PREPOBJ(#4,?[lemme:depuis])) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// depuis + dayname = PAST
+| PP#1{prep[lemme:depuis],NP{?*[t_mod:~],noun[jour,last]};NP{?*,noun{?*[t_mod:~],noun[jour,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// depuis + monthname = PAST
+| PP#1{prep[lemme:depuis],NP{?*[t_mod:~],noun[mois,last]};NP{?*,noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// dayname (+ part of day) + past tense = PAST
+// e.g. Jean vint lundi (matin|midi).
+| NP#1{noun[first,last,jour,fete:~]};NP#1{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname (+ part of day) + past tense = PAST
+// e.g. Jean resta jusqu'à lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname (+ part of day) + past tense = PAST
+// e.g. Jean resta à partir de lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// ce + dayname (+ part of day) + past tense = PAST
+// e.g. Jean vint ce lundi (matin|midi).
+| NP#1{det[dem,lemme:ce],noun[last,jour]};NP#1{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à ce + dayname (+ part of day) + past tense = PAST
+// e.g. Jean resta jusqu'à ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de ce + dayname (+ part of day) + past tense = PAST
+// e.g. Jean est venu à partir de ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû venir lundi (matin|midi).
+| NP#1{noun[first,last,jour,fete:~]};NP#1{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1) | VMOD(#2[inf]_venir,#1_lundi) ) & VLINK(#3[modal,partpas]_dû,#2_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3_dû) )
+   TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû rester jusqu'à lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( VMOD(#2[inf]_venir,#4_lundi) & HEAD(#6_venir,#2_venir) ) & VLINK(#3[modal,partpas]_dû,#6_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3) )
+   TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû venir à partir de lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( VMOD(#2[inf]_venir,#4_lundi) & HEAD(#6_venir,#2_venir) ) & VLINK(#3[modal,partpas]_dû,#6_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3) )
+   TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// ce + dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû venir lundi (matin|midi).
+| NP#1{det[dem,lemme:ce],noun[last,jour]};NP#1{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & VMOD(#2[inf]_venir,#4_lundi) & VLINK(#3[modal,partpas]_dû,#2_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3) & HEAD(#4,#1) )
+   TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à ce + dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû rester jusqu'à ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & VMOD(#2[inf]_venir,#4_lundi) & VLINK(#3[modal,partpas]_dû,#2_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3) & HEAD(#4,#1) )
+   TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de ce + dayname (+ part of day) + past conditional modal verb = PAST
+// ex. Jean aurait dû venir à partir de ce lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & VMOD(#2[inf]_venir,#4_lundi) & VLINK(#3[modal,partpas]_dû,#2_venir) & VLINK(#5[lemme:avoir,cond]_aurait,#3) & HEAD(#4,#1) )
+   TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname (+ part of day) + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient lundi (matin|midi).
+| NP#1{noun[first,last,jour,fete:~]};NP#1{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname (+ part of day) + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient jusqu'à lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_left,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname (+ part of day) + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient à partir de lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_right,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// ce + dayname (+ part of day) + present tense = FUTURE (this is certain)
+// ex. (En général,) Jean vient lundi (matin|midi).
+| NP#1{det[dem,lemme:ce],noun[last,jour]};NP#1{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à ce + dayname (+ part of day) + present tense = FUTURE (this is certain)
+// ex. Jean vient jusqu'à ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de ce + dayname (+ part of day) + present tense = FUTURE (this is certain)
+// ex. Jean vient à partir de ce lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait venir lundi (matin|midi).
+| NP#1{noun[first,last,jour,fete:~]};NP#1{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait venir jusqu'à lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait venir à partir de lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// ce + dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait venir lundi (matin|midi).
+| NP#1{det[dem,lemme:ce],noun[first,last,jour,fete:~]};NP#1{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à ce + dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait rester jusqu'à ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[first,last,jour,fete:~]};NP{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de ce + dayname (+ part of day) + present (incl. conditional) modal verb = FUTURE
+// ex. Jean devrait rester à partir de ce lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{det[dem,lemme:ce],noun[first,last,jour,fete:~]};NP{det[dem,lemme:ce],noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ((VMOD(#2[inf]_venir,#4_lundi) & HEAD(#4,#1)) | VMOD(#2[inf],#1)) & VDOMAIN(#2_venir,#3[modal]_devrait) & VTENSE[t_pres](#3_devrait) )
+   TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra lundi (matin|midi).
+| NP#1{noun[first,last,jour,fete:~]};NP#1{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra jusqu'à lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra à partir de lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{noun[first,last,jour,fete:~]};NP{noun{noun[jour,first],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// ce + dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra lundi (matin|midi).
+| NP#1{det[dem,lemme:ce],noun[first,last,jour,fete:~]};NP#1{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open left
+// jusqu'à ce + dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra jusqu'à ce lundi (matin|midi).
+| PP#1{?[temp_pos:"<"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// interval open right
+// à partir de ce + dayname (+ part of day) + future tense = FUTURE
+// ex. Jean viendra à partir de ce lundi (matin|midi).
+| PP#1{?[temp_pos:">"],?*,NP{det[dem,lemme:ce],noun[last,jour]};NP{det[dem,lemme:ce],noun{noun[jour],noun[daytime,last];noun[heure,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#1)
+
+// en plein + monthname + past = PAST
+// ex. Jean vint en plein mars
+| PP#1{prep[lemme:en],NP{AP{adj[lemme:plein]},?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// en plein + monthname + present = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient en plein mars
+| PP#1{prep[lemme:en],NP{AP{adj[lemme:plein]},?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// en plein + monthname + future = FUTURE
+// ex. Jean viendra en plein mars
+| PP#1{prep[lemme:en],NP{AP{adj[lemme:plein]},?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// monthname + past tense = PAST
+// ex. Jean vint en (plein mois de) mars.
+| PP#1{prep[lemme:en], NP{noun[mois,fete:~,last]};NP{?*,noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'en monthname + past tense = PAST
+// ex. Jean vint jusqu'en mars.
+| PP#1{?[temp_pos:"<"], NP{noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// à partir de monthname + past tense = PAST
+// ex. Jean vint à partir de mars.
+| PP#1{?[temp_pos:">"], NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// Exclude NMOD TIMEX e.g. Jean regrette la réunion en mars.
+// ex. (En général,) Jean vient en (plein mois de) mars.
+| PP#1{prep[lemme:en],NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) & ~NMOD(?,#1) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'en monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// Exclude NMOD TIMEX e.g. Jean regrette la réunion en mars.
+// ex. (En général,) Jean vient jusqu'en mars.
+| PP#1{?[temp_pos:"<"],NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) & ~NMOD(?,#1) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// à partir de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// Exclude NMOD TIMEX e.g. Jean regrette la réunion en mars.
+// ex. (En général,) Jean vient à partir de mars.
+| PP#1{?[temp_pos:">"],NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) & ~NMOD(?,#1) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1) 
+
+// monthname + future = FUTURE
+// ex. Jean viendra en (plein mois de) mars.
+| PP#1{prep[lemme:en], NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'en monthname + future = FUTURE
+// ex. Jean viendra jusqu'en mars.
+| PP#1{?[temp_pos:"<"], NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// à partir de monthname + future = FUTURE
+// ex. Jean viendra à partir de mars.
+| PP#1{?[temp_pos:">"], NP{?*[t_mod:~],noun[mois,fete:~,last]};NP{?*[t_mod:~],noun{?*[t_mod:~],noun[mois,fete:~,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// au mois de + monthname + past tense
+// ex. Jean est venu au mois de mars
+| PP#1{prep[lemme:à],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'au mois de + monthname + past tense
+// ex. Jean est resté jusqu'au mois de mars
+| PP#1{?[temp_pos:"<"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// à partir du mois de + monthname + past tense
+// ex. Jean est venu à partir du mois de mars
+| PP#1{?[temp_pos:"<"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// au mois de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient au mois de mars
+| PP#1{prep[lemme:à],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'au mois de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'au mois de mars
+| PP#1{?[temp_pos:"<"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// jusqu'au mois de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir du mois de mars
+| PP#1{?[temp_pos:">"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// au mois de + monthname + future tense = FUTURE
+// ex. Jean viendra au mois de mars
+| PP#1{prep[lemme:à],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open left
+// jusqu'au mois de + monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au mois de mars
+| PP#1{?[temp_pos:"<"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// interval open right
+// à partir du mois de + monthname + future tense = FUTURE
+// ex. Jean viendra à partir du mois de mars
+| PP#1{?[temp_pos:">"],NP{(det),noun{?*[t_mod:~],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (VMOD(#2,#1) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#1)
+
+// au début + monthname + past tense = PAST
+// ex. Jean est venu au début mars
+| PP#1{prep[lemme:à],NP{noun#3{noun[t_mod:start],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début + monthname + past tense = PAST
+// ex. Jean est venu jusqu'au début mars
+| PP#1{?[temp_pos:"<"],NP{noun#3{noun[t_mod:start],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début + monthname + past tense = PAST
+// ex. Jean est venu à partir du début mars
+| PP#1{?[temp_pos:">"],NP{noun#3{noun[t_mod:start],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// à la fin + monthname + past tense = PAST
+// ex. Jean est venu à la fin mars
+| PP#1{prep[lemme:à],NP{det,noun#3{noun[t_mod:end],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin + monthname + past tense = PAST
+// ex. Jean est venu jusqu'à la fin mars
+| PP#1{?[temp_pos:"<"],NP{det,noun#3{noun[t_mod:end],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin + monthname + past tense = PAST
+// ex. Jean est venu à partir de la fin mars
+| PP#1{?[temp_pos:">"],NP{det,noun#3{noun[t_mod:end],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// au début de + monthname + past tense = PAST
+// ex. Jean est venu au début de mars
+| PP#1{prep[t_mod:start],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + monthname + past tense = PAST
+// ex. Jean est venu jusqu'au début de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début de + monthname + past tense = PAST
+// ex. Jean est venu à partir du début de mars
+| PP#1{?[temp_pos:">"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au début de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient au début de mars
+| PP#1{prep[t_mod:start],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'au début de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir du début de mars
+| PP#1{?[temp_pos:">"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au début de + monthname + future tense = FUTURE
+// ex. Jean viendra au début de mars
+| PP#1{prep[t_mod:start],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au début de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début de + monthname + future tense = FUTURE
+// ex. Jean viendra à partir du début de mars
+| PP#1{?[temp_pos:">"],?*,NP{noun#3{noun[t_mod:start],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au milieu de + monthname + past tense = PAST
+// ex. Jean est venu au milieu de mars
+| PP#1{prep[t_mod:mid],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + monthname + past tense = PAST
+// ex. Jean est venu jusqu'au milieu de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir du milieu de + monthname + past tense = PAST
+// ex. Jean est venu à partir du milieu de mars
+| PP#1{?[temp_pos:">"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// au milieu de + monthname + future tense = FUTURE
+// ex. Jean viendra au milieu de mars
+| PP#1{prep[t_mod:mid],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au milieu de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// jusqu'au milieu de + monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au milieu de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// au milieu de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient au milieu de mars
+| PP#1{prep[t_mod:mid],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'au milieu de mars
+| PP#1{?[temp_pos:"<"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// à partir du milieu de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir du milieu de mars
+| PP#1{?[temp_pos:">"],?*,NP{noun#3{noun[t_mod:mid],?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la fin de + monthname + past tense = PAST
+// ex. Jean est venu à la fin de mars
+| PP#1{prep[t_mod:end],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + monthname + past tense = PAST
+// ex. Jean est venu jusqu'à la fin de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + monthname + past tense = PAST
+// ex. Jean est venu jusqu'à la fin de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// à la fin de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à la fin de mars
+| PP#1{prep[t_mod:end],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'à la fin de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir de la fin de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// à la fin de + monthname + future tense = FUTURE
+// ex. Jean viendra à la fin de mars
+| PP#1{prep[t_mod:end],noun#3[mois,last]} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + monthname + future tense = FUTURE
+// ex. Jean restera jusqu'à la fin de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + monthname + future tense = FUTURE
+// ex. Jean restera à partir de la fin de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// au début de + mois de monthname + past tense = PAST
+// ex. Jean est venu au début du mois de mars
+| PP#1{prep[t_mod:start],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + mois de monthname + past tense = PAST
+// ex. Jean est venu jusqu'au début du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début de + mois de monthname + past tense = PAST
+// ex. Jean est venu à partir du début du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au milieu de + mois de monthname + past tense = PAST
+// ex. Jean est venu au milieu du mois de mars
+| PP#1{prep[t_mod:mid],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + mois de monthname + past tense = PAST
+// ex. Jean est venu jusqu'au milieu du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir du milieu de + mois de monthname + past tense = PAST
+// ex. Jean est venu à partir du milieu du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la fin de + mois de monthname + past tense = PAST
+// ex. Jean est venu à la fin du mois de mars
+| PP#1{prep[t_mod:end],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + mois de monthname + past tense = PAST
+// ex. Jean est venu jusqu'à la fin du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + mois de monthname + past tense = PAST
+// ex. Jean est venu à partir de la fin du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// au début de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient au début du mois de mars
+| PP#1{prep[t_mod:start],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'au début du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open right
+// à partir du début de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir du début du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au milieu de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient au milieu du mois de mars
+| PP#1{prep[t_mod:mid],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'au milieu du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir du milieu de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir du milieu du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la fin de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à la fin du mois de mars
+| PP#1{prep[t_mod:end],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'à la fin du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + mois de monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir de la fin du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// au début de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra au début du mois de mars
+| PP#1{prep[t_mod:start],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// jusqu'au début de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au début du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}} } |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// interval open left
+// à partir du début de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra à partir du début du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:start],?*,noun{?*,noun[mois,last]}}} } |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// au milieu de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra au milieu du mois de mars
+| PP#1{prep[t_mod:mid],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'au milieu de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'au milieu du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}} } |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir du milieu de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra à partir du milieu du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun{noun[t_mod:mid],?*,noun{?*,noun[mois,last]}}} } |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la fin de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra à la fin du mois de mars
+| PP#1{prep[t_mod:end],noun{?*,noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open left
+// jusqu'à la fin de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'à la fin du mois de mars
+| PP#1{?[temp_pos:"<"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// interval open right
+// à partir de la fin de + mois de monthname + future tense = FUTURE
+// ex. Jean viendra à partir de la fin du mois de mars
+| PP#1{?[temp_pos:">"],?*,NP#3{(det),noun[t_mod:end],?*,noun{?*,noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// à la mi- + monthname + past tense = PAST
+// ex. Jean est venu à la mi-mars
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'à la mi- + monthname + past tense = PAST
+// ex. Jean est venu jusqu'à la mi-mars
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir de la mi- + monthname + past tense = PAST
+// ex. Jean est venu à partir de la mi-mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#3) & VTENSE[t_past](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la mi- + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à la mi-mars
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'à la mi- + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient jusqu'à la mi-mars
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir de la mi- + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. Jean vient à partir de la mi-mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#3) & VTENSE[t_pres](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// à la mi- + monthname + future tense = FUTURE
+// ex. Jean viendra à la mi-mars
+| PP#1[tempexpr]{prep[lemme:à], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open left
+// jusqu'à la mi- + monthname + future tense = FUTURE
+// ex. Jean viendra jusqu'à la mi-mars
+| PP#1[tempexpr]{?[temp_pos:"<"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_left, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// interval open right
+// à partir de la mi- + monthname + future tense = FUTURE
+// ex. Jean viendra à partir de la mi-mars
+| PP#1[tempexpr]{?[temp_pos:">"], NP{det,noun{prefix[lemme:mi-],noun[mois,last]}}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#3) & VTENSE[t_fut](#3)) ) )
+TIMEX3[t_interval=o_right, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// début + monthname + past tense = PAST
+// ex. Jean vint début mars.
+| NP#1{noun{noun[t_mod:start],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// FROM HERE ALL LEFT AND RIGHT OPEN INTERVAL EQUIVALENTS ARE ALREADY DEALT WITH BY PREVIOUS RULES
+
+// mi- + monthname + past tense = PAST
+// ex. Jean vint mi-mars.
+| NP#1{noun{prefix[t_mod:mid],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// fin + monthname + past tense = PAST
+// ex. Jean vint fin mars.
+| NP#1{noun{noun[t_mod:end];adv[t_mod:end],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_past](#2)) | (MAIN(#4) & VTENSE[t_past](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// début + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient début mars.
+| NP#1{noun{noun[t_mod:start],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point, t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// mi- + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient mi-mars.
+| NP#1{noun{prefix[t_mod:mid],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=mid](#1)
+
+// fin + monthname + present tense = FUTURE (WARNING: this may also have a generic/habitual reading!)
+// ex. (En général,) Jean vient fin mars.
+| NP#1{noun{noun[t_mod:end];adv[t_mod:end],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_pres](#2)) | (MAIN(#4) & VTENSE[t_pres](#4)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+// début + monthname + future = FUTURE
+// ex. Jean viendra début mars.
+| NP#1{noun{?[t_mod:start],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// mi- + monthname + future = FUTURE
+// ex. Jean viendra mi-mars.
+| NP#1{noun{?[t_mod:mid],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=beg](#1)
+
+// modifier + monthname + future = FUTURE
+// ex. Jean viendra fin mars.
+| NP#1{noun{?[t_mod:end],noun#3[mois,last]}} |
+if ( ^TIMEX3[seen:~,relative](#1) & ( (( VMOD(#2,#1) | VMOD(#2,#3) ) & VTENSE[t_fut](#2)) | (MAIN(#4) & VTENSE[t_fut](#4)) ) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+,op=end](#1)
+
+///////////////
+// DURATIONS //
+///////////////
+
+// TODO
+
+///////////////
+// INTERVALS //
+///////////////
+
+
+/////////////////////////////////////
+// TIMEX3 is modifier of a noun,   //
+// normalise according to tense of //
+// noun's governing verb.          //
+/////////////////////////////////////
+
+// These rules are not absolutely reliable/generalisable, but should
+// be fairly successful on the AFP corpus.
+
+// past
+// e.g. Le référedum de jeudi fut annoncé.
+//      Jean annonçait le référendum de jeudi.
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_past](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// e.g. Le référedum de mars fut annoncé.
+//      Jean annonçait le référendum de mars.
+| noun#4[month] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_past](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#2)
+
+// present perfect (= past)
+// e.g. Le référedum de jeudi a été annoncé.
+//      Jean a annoncé le référendum de jeudi.
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_pres](#3) & VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// e.g. Le référedum de mars a été annoncé.
+//      Jean a annoncé le référendum de mars.
+| noun#4[month] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_pres](#3) & VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=m,temp_delta=month_name,seen=+](#2)
+
+// present
+// these cases are complicated to process as the reading imposed on a TIMEX is very context-dependent in a present tense predication.
+// e.g. La réunion de mardi est intéressante.  SUBJ(est,réunion), ATTRIB(réunion,intéressante) mardi = set expression, agregate
+//      L'attentat de mardi est sans précédent. SUBJ(est,attentat) mardi = past
+//      Jean annonce la réunion de mardi. OBJ(annonce,réunion) mardi = future
+//      Jean aime les réunions de mardi. OBJ(aime,réunions) mardi = set expression, agregate
+
+// e.g. La réunion de mardi est intéressante.  SUBJ(est,réunion), ATTRIB(réunion,intéressante) mardi = set expression, agregate 
+// set, so not for normalization
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3[lemme:être],#1) & ATTRIB(#1,?) ) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+TIMEX3[set=+,relative=~](#2)
+
+// THIS STILL DOES NOT SOLVE ETH PB!!!
+// As above, but without the NMOD and the TIMEX is not in a PP.
+// e.g. La réunion mardi est intéressante.
+//| noun#4[day] |
+//if ( ~NMOD(#1,#2) & ^TIMEX3(#2) & SUBJ(#3,#1) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+//TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// e.g. L'attentat de mardi est sans précédent. SUBJ(est,attentat) mardi = past
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & SUBJ(#3[lemme:être],#1) & VMOD(#3,?[adv]) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=before,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// e.g. La réunion de mardi semble/paraît intéressante.  SUBJ(est,réunion), ATTRIB(réunion,intéressante) mardi = set expression, agregate 
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3[lemme:~être,copule,quep],#1) & ATTRIB(#1,?) ) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// The following rules are too general and are unreliable, perhaps just leave as date:+, relative:+ ?
+//// e.g. Jean annonce le référendum de jeudi.
+//| noun#4[day] |
+//if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+//TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#2)
+//
+//// e.g.  Jean annonce le référendum de mars.
+//| noun#4[month] |
+//if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+//TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#2)
+
+// e.g.  Jean vient en mars
+//| noun#4[month] |
+//if ( ~NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_pres](#3) & ~VASPECT[a_perfect](#3) & HEAD(#4,#2) )
+//TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#2)
+
+// future
+// e.g. Le référendum de jeudi sera annoncé.
+//      Jean annoncera le référendum de jeudi.
+| noun#4[day] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_fut](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=d,temp_delta=day_name,seen=+](#2)
+
+// e.g. Le référendum de mars sera annoncé.
+//      Jean annoncera le référendum de mars.
+| noun#4[month] |
+if ( NMOD(#1,#2) & ^TIMEX3(#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_fut](#3) & HEAD(#4,#2) )
+TIMEX3[t_interval=t_point,t_relat=+,temp_ref=s,temp_rel=after,unit_delta=m,temp_delta=month_name,seen=+](#2)
+
+///////////////////////////////////
+// AB 2011.11.23 convert tense   //
+// dependencies to match English //
+///////////////////////////////////
+
+if ( VTENSE[t_past](#1) )
+PAST(#1)
+
+if ( VTENSE[t_pres](#1) )
+PRESENT(#1)
+
+if ( VTENSE[t_fut](#1) )
+FUTURE(#1)
+
+// TENSE
+
+// ADDING information on TIMEX3 expressions regarding the factuality of the verb which introduce them
+// if future verb - add feature FUTPRED
+if ( TEMP(#1,#2) & ^TIMEX3(#2) & FUTURE(#1) )
+   TIMEX3[futpred=+](#2)
+
+// ADDING information on TIMEX3 expressions regarding the factuality of the verb which introduce them
+// if future verb - add feature FUTPRED
+if ( TEMP(#1,#2) & ^TIMEX3(#2) & NMOD(#1,#2) & ( SUBJ(#3,#1) | OBJ(#3,#1) | DEEPSUBJ(#3,#1) | DEEPOBJ(#3,#1) | VARG(#3,#1) ) & VTENSE[t_fut](#3) )
+   TIMEX3[futpred=+](#2)
+
+// MODALITY
+
+// if modality verb - add feature MODPRED
+// need HEAD dependency to get right node from VLINK
+if ( TEMP(#1_venirIV,#2_lundiNP) & ^TIMEX3(#2_lundiNP) & VLINK[modal](#3_doitVerb,#4_venirVerb) & HEAD(#4_venirVerb,#1_venirIV) )
+   TIMEX3[modpred=+](#2)
+
+// REPORTED SPEECH
+
+// Adding feature indspeech on TIMEX3s that modify a dicendi verb
+// e.g. Il a dit dimanche que Jean vient
+if ( TEMP(#1[vcom],#3) & ^TIMEX3(#3) )
+   TIMEX3[indspeech=+](#3)
+
+// Adding feature reported on TIMEX3s that modify a verb introduced by a dicendi verb
+// e.g. Il a dit que Jean arriverait dimanche
+if ( EMBED(#1,#2[vcom]) & TEMP(#1,#3) & ^TIMEX3(#3) )
+   TIMEX3[reported=+](#3)

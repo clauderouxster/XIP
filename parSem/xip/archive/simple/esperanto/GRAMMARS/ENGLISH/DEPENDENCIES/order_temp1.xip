@@ -1,0 +1,323 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : order_temp1.xip
+//!   description: file handles rules dealing with temporal predicate ordering with a
+//!		   same sentence
+//!   Date       : January 2007
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+// Ordering of predicates within a sentence
+
+
+
+DependencyRules: 
+
+
+
+
+//////////
+// Preliminary marking
+// controls cannot handle transportation of features of non-lexical nodes
+//| NP[period:+, c_dur=+] | 
+//  ~
+////////
+
+/// Preliminary corrections
+// They left ten years after the show - TEMP(left,ten years) and *TEMP(show,ten years)
+| NP#1[tempexpr,period], PP{prep[reftime],NP{?*,#2[last]}} |
+  if ( TEMP(#3[verb],#1) & ^TEMP(#2,#1) )
+  ~
+
+
+
+// SEMANTICS of the dependencies
+// ORDER_TEMPREL:BEFORE(X,Y) means that X happens before Y
+
+
+// AFTER as CONJUNCTION
+
+// He left after having his dinner
+if (  MOD[post:+](#1[verb],#2[c_set:~,c_dur:~]) & CONNECTOR[subord](#2,?[lemme:after]) )
+      ORDER[temp_rel=before](#2,#1)
+
+// After leaving the house, she started to run
+if ( MOD[pre:+](#1[verb],#2[verb]) & CONNECTOR[subord](#2,?[lemme:after]))
+   ORDER[temp_rel=before](#2,#1)
+
+
+
+// AFTER/FOLLOWING as PREPOSITION
+
+// After the invasion, they left
+// SREL expresses the fact that the noun is a deverbal
+// Following her husband's death, she retired
+if ( MOD(#1[verb],#2[noun:+,c_set:~,c_dur:~]) & SREL(#2,?) & ( PREPD(#2,?[lemme:after]) | PREPD(#2,?[lemme:following]) ) )
+   ORDER[temp_rel=before](#2,#1)
+
+// Same as above using feature time_span_n (nouns-events which are not deverbals)
+if ( MOD(#1[verb],#2[noun,c_set:~,c_dur:~]) & ~ORDER[temp_rel](#2,#1) & ( PREPD(#2[time_span_n],?[lemme:after]) | PREPD(#2,?[lemme:following]) ) )
+   ORDER[temp_rel=before](#2,#1)
+
+// Same as above for duration events
+// following several months of therapy.
+if ( MOD(#1[verb],#2[noun,c_dur]) & TEMP[t_dur](#3, #2) & 
+	~ORDER[temp_rel](#3,#1) & ( PREPD(#2,?[lemme:after]) | PREPD(#2,?[lemme:following]) ) )
+   ORDER[temp_rel=before](#3,#1)
+
+
+// After as prep in complex expressions
+// e.g. four days after the show, he was in London
+if (  MOD[post](#1[tempexpr], #2[c_set:~,c_dur:~]) & TEMP(#3,#1)   & PREPD(#2,?[lemme:after]) )
+	ORDER[temp_rel=before](#2,#3),
+	DELTA(#2,#3,#1).
+
+//_______________________
+// After as prep in complex expressions/2
+// e.g After four years of show, she retired. or she retired after the show
+// First rule to link the temporal expression to the verb
+| SC{?*,?[verb]{?*,#3[last]}};?[verb:+]{?*[noun:~],#3[last]}, (adv), PP#1[tempexpr]{prep[lemme:after], NP#5} |
+  LIXO(#3,#1) 
+| PP#1[tempexpr]{prep[lemme:after], NP#5}, PP, (adv), (punct[comma:+]), NP, (adv), FV{?*,#4[last]} |
+  if ( VDOMAIN(#3,#4) )
+  LIXO(#3,#1)
+| PP#1[tempexpr]{prep[lemme:after], NP#5}, PP, (adv), (punct[comma:+]), SC{?*,NP, (adv), FV{?*,#4[last]}} |
+  if ( VDOMAIN(#3,#4) )
+  LIXO(#3,#1)
+
+// second rule 
+| PP#1[tempexpr]{prep[lemme:after],NP#5} |
+if ( TEMP(#2[time_span_n],#1) & LIXO(#3[verb],#1) 
+     & PREPD(#2,?[lemme:of]) & ~ORDER(#2,#3) )
+     ORDER[temp_rel=before](#2,#3)
+
+
+
+// 3rd rule : replacing TEMP(noun,pp[after],np) by TEMP(noun,np)
+| PP#3[tempexpr]{prep[lemme:after], NP#2} |
+if ( ^TEMP(#1[time_span_n],#3) & LIXO(?,#3) )
+   TEMP[t_dur=+](#1,#2)
+
+// 4th rule deleting LIXO
+if ( ^LIXO(?[verb],?[tempexpr]) )
+   ~
+ 
+//_______________________
+
+// BEFORE as CONJUNCTION
+
+// Before he left, he closed the door
+if ( MOD(#1[verb],#2) & EMBED(#2,#1)  & CONNECTOR(#2,?[lemme:before]) )
+   ORDER[temp_rel=before](#1,#2)
+
+// Before leaving the house, he closed the door
+if ( MOD(#1[verb],#2[verb])  & CONNECTOR[subord](#2,?[lemme:before]) & ~ORDER(#1,?) )
+   ORDER[temp_rel=before](#1,#2)
+
+
+// BEFORE as PREP
+
+// Before her departure, they had a nice dinner
+if ( MOD(#1[verb],#2[noun:+]) & SREL(#2,?) & PREPD(#2,?[lemme:before]) )
+   ORDER[temp_rel=before](#1,#2)
+
+if ( MOD(#1[verb],#2[noun:+]) & ~ORDER[temp_rel](#1,#2) & PREPD(#2[time_span_n],?[lemme:before]) )
+   ORDER[temp_rel=before](#1,#2)
+
+
+
+
+// Coordination of two predicates 
+// they ate an apple an then left
+| FV{adv[lemme:then], #3} | 
+if ( COORD(#1,#2) & COORD(#1,#3) )
+   ORDER[temp_rel=before](#2,#3)
+ 
+
+
+
+
+
+
+////////////// T_DURING
+
+
+// DURING as preposition when the noun is a time_span_n with a tempexpr modifier
+// The period between October and November
+// The war  of 2003
+//if ( TEMP[post](#1[time_span_n],#2[form:fof]) | TEMP[post](#1[time_span_n],#2[form:fat])|
+//     TEMP[post](#1[time_span_n],#2[form:fon]) | TEMP[post](#1[time_span_n],#2[form:fin])
+//    )
+//   ORDER[temp_rel=during](#1,#2)
+
+
+// DURING as preposition
+// He left during the war.
+if ( MOD(#1[verb],#2[noun]) & SREL(#2,?) & (PREPD(#2,?[lemme:during]) | PREPD(#2,?[lemme:in]))) 
+   ORDER[temp_rel=during](#1,#2)
+
+
+// during the period +PP, verb
+// During the period of the war, she left
+if ( TEMP(#1,#2[time_span_n]) & PREPD(#2,?[lemme:during]) & ~ORDER(#1,#2) )
+   ORDER[temp_rel=during](#1,#2)
+
+
+// Use of adverb "later" e.g. 4 days of campaign later, the general left
+// could be refined as #2 started before #4 
+// Have to link with the first verb on the right if does start sentence
+| ?*[verb:~], NP#1[period], PP#3{prep[lemme:of]}, adv#4[lemme:late], ?*[verb:~], FV{?*,#5[last]} | 
+
+if ( HEAD(#2,#3) & TEMP(#2[time_span_n],#1) & VDOMAIN(#5,#6) & TEMP(#1,#4) & ~ORDER(#2,?) )
+   ORDER[temp_rel=during](#2,#6)
+
+// Take verb on the left 
+| SC{?*, FV{?*,#5[last]}} ; ?[verb]{?*,#5[last]}, ?*[verb:~,punct:~,conj:~], NP#1[period], PP#3{prep[lemme:of]}, adv#4[lemme:late] | 
+if ( HEAD(#2,#3) & TEMP(#2[time_span_n],#1) & VDOMAIN(#5,#6) & TEMP(#1,#4) & ~ORDER(#2,?) )
+   ORDER[temp_rel=during](#2,#6)
+
+// XT with a main with "v_temp_rel", the relation always overlaps
+// he continued to, he began to, he finished to
+if ( EMBED[infinit](#1[partpas:~],#2[v_temp_rel]) & PREPD(#1,?[lemme:to]) )
+   ORDER[temp_rel=during](#1,#2).
+
+
+// While as subordination conjunction
+// He listened to music while she was talking
+//ORDER_TEMPREL:DURING(listened, was)
+if ( EMBED(#2,#1) & CONNECTOR[subord](#2,?[lemme:while]) )
+   ORDER[temp_rel=during](#1,#2)
+
+
+// and at the same time...
+// He listened to music and at the same time read a book
+
+
+// When we have an embeded VPROG wich is not preceeded neither by after nor by before
+// (alone or with prep  "without"
+// The the action of the main verb is simultaneous with the embeded VPROG
+// He calls him seeking approval
+| ?[prep:~];PP;prep[lemme:by];prep[lemme:as];prep[lemme:without], GV{#1[first,last,vprog]} |
+  if ( EMBED[prog](#1,#2) & ~ORDER(#1,#2) & ~ORDER(#2,#1) )
+  ORDER[temp_rel=concomitant](#2,#1).
+
+
+
+////////////// ORDER[temp_rel=before_or_during]
+
+
+// Using EMBED[temp] when the embedded sentence is introduced by WHEN...
+// He left when she arrived. BEFORE_OR_DURING(arrived,left)
+if ( EMBED[temp](#1,#2)  & TEMP[pre:+](#1,?[lemme:when]) )
+   ORDER[temp_rel=before_or_during](#1,#2).
+
+
+
+
+// Embedded infinitive
+// She did a tour to raise funds -> ORDER_TEMP_REL:BEFORE_OR_DURING(did,raise)
+// restriction in order to avoid ORDER_TEMP_REL:BEFORE_OR_DURING(expect, done) in "He is expected to have done"
+//   but still consider "It is expected to be done"
+// XT added v_temp_rel:~ to avoid "I finished to do" (special relations, see order_temp2)
+// XT added v_expect:~   to avoid "I expect to do" (special relations, see order_temp2)
+| IV{?*[form:~fhave],verb#1[last]} |
+	if (EMBED[infinit](#1,#2[v_temp_rel:~, v_expect:~]) )
+		ORDER[temp_rel=before_or_during](#2,#1)
+
+
+// Same with a time_span_n (or rather use S0 ??)
+// the decision to expel Sinn Fein...
+| IV{?*[form:~fhave],verb#1[last]} |
+	if (MOD[infinit](#2[time_span_n], #1))
+		ORDER[temp_rel=before_or_during](#2,#1)
+
+
+// SINCE as preposition
+// He repeated since the crisis break last November that he was not going to resign.
+// break taken as a noun
+// ORDER_TEMPREL:_BEFORE_OR_DURING(break,repeated)
+if ( MOD(#1[verb],#2) & 
+     ( PREPD(#2[time_span_n:+],?[lemme:since]) | ( PREPD(#2,?[lemme:since]) & SREL(#2,?) ) )
+     )
+   ORDER[temp_rel=before_or_during](#2,#1)
+
+
+
+
+// SINCE as conjunction
+
+
+
+
+
+
+
+
+
+////////////// DELTA when possible
+
+// Adding DELTA between already ordered events when relevant.
+// e.g. 4 days after the general came, he visited us
+// we have already T_BEFORE(came,visited)
+// we have link betwen MOD[sentence](days, came)
+// we have TIMEX3(4 days)
+| #4[c_dur,day:~]{?*,#3} | 
+if ( ORDER[temp_rel:before](#1[verb],#2[verb]) & ( MOD[post,sentence](#3,#1) | MOD[post,sentence](#3,#2) ) )
+	DELTA(#1,#2,#4)
+
+
+// same as above with second argument of ORDER as deverbal noun
+// He was born weeks before the invasion
+// They left four hours after the show
+
+if ( ORDER[temp_rel:before](#1,#2) & ( TEMP(#1,#3[c_dur]) | TEMP(#2,#3[c_dur]) ) & ~DELTA(#1,#2,?) )
+   DELTA(#1,#2,#3)
+
+
+/// Other cases
+// Bush is five months from/behind his electoral test
+// T_BEFORE(is,test) DELTA(is,test,5 months)
+| #2, PP#3{prep[lemme:from]};PP#3{prep[lemme:behind]} |
+if ( 
+      ( HEAD(#4[time_span_n:+],#3) | (HEAD(#4,#3) & SREL(#4,?)) ) 
+      & TEMP(#4,#2[period]) & MOD(#1[verb],#4)
+    )
+    ORDER[temp_rel=before,post=~](#1,#4),
+    DELTA(#1,#4,#2).
+
+// Brahim is a week behind/from his 31 May deadline
+// in this case the TEMP complement is between his and "his 31 May deadline"
+// T_BEFORE(is,deadline) DELTA(is,deadline,one week)
+| #2[period], PP#3{prep[lemme:behind], NP{?*,#4[last,time_span_n]}} |
+if ( ^TEMP[post](#1[verb],#3) )
+     ORDER[temp_rel=before,post=~](#1,#4),
+     DELTA(#1,#4,#2).
+
+
+////// CLEANING RULES
+// Avoiding to calculate a DELTA on they left after four years of show
+| PP{prep[lemme:after], NP#4} | 
+if ( ORDER[temp_rel:before](#2[noun,time_span_n],#1[verb]) & TEMP(#2,#4) & ^DELTA(#2,#1,#4) )
+     ~
+
+// They left after ten yeras of show, *TEMP(left,ten years) and TEMP(show,ten years)
+| PP#1{prep[reftime],NP#2[tempexpr,period]} |
+if ( ^TEMP(#3[verb],#1) & TEMP(#4[noun],#2) )
+   ~
+
+
+
+
+// Cleaning rules
+// if a predicate is involved in a ORDER_TEMP_REL, then we destroyed attached TEMP complements
+//if ( ORDER[temp_rel](#1,?) | ORDER[temp_rel](?,#1) & ^TEMP(#1,?) )
+ //  ~

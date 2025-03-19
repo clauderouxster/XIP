@@ -1,0 +1,856 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//! --- CONTENTS ---                                                           !
+//!   Project    : Portuguese XIP grammar                                      !
+//!   filename   : LGLocation.xip                                              !
+//!   Date       : 2006/October                                                !
+//!   Author     : Luís Romão with some completion of CH                       !
+//!   Revised by : Diogo Oliveira (2010/August-October)                        !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//!                                                                            !
+//!  Location and address rules (before people)                                !
+//!                                                                            !
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+//DCO, 2010/08/18
+// Changed all "org" occurrences to "SEM-Hcollective", in order to comply with the new set of directives.
+
+Sequence:
+
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+// CATEGORY: LOCATION       (LOCAL)
+// TYPE:     PHYSICAL       (FISICO)
+// SUBTYPE:  REGION-NATURAL (REGIAO-NATURAL)
+//
+// main features: location, geographic,
+// region-natural
+/////////////////////////////////////////////
+/////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//DCO, 2011/07/05
+//
+// REGRAS PARA APANHAR NOMES DE PESSOAS (REPLICADO DE LGPEOPLE.XIP e LGLAST.XIP)
+// FUNDAMENTAL PARA LIDAR COM LOCAIS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2011/07/05
+//1> ? @= ?+[maj,firstname,start_people=+], ?+[maj,lastname,end_people=+].
+
+
+// At least a profession or a title and a NAME
+1> ? @= noun+[SEM-Hcargo,start_people=+] ; noun+[SEM-Hprofession,start_people=+] ; ?+[title,start_people=+] ; noun[lemma:santo,start_people=+],
+        noun[maj,proper,surface:~"BIC",location:~,SEM-Hcollective:~,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,introdutor:~,SEM-Hjornal:~,
+                                       SEM-datum-BIC:~,brand:~,t-one-day:~,t-several-days:~,SEM-Hgroup:~,
+                                       start_people:~,end_people:~,start_people=+].
+
+// At least a first name and a NAME
+1> ? @= noun[maj,firstname,start_people:~,end_people:~,start_people=+],
+        noun+[maj,proper,surface:~"BIC",location:~,SEM-Hcollective:~,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,introdutor:~,SEM-Hjornal:~,
+                                       SEM-datum-BIC:~,brand:~,t-one-day:~,t-several-days:~,SEM-Hgroup:~,
+                                       start_people:~,end_people:~,end_people=+].
+
+// At least a NAME and a first name
+1> ? @= noun+[maj,proper,surface:~"BIC",location:~,SEM-Hcollective:~,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,introdutor:~,SEM-Hjornal:~,
+                                       SEM-datum-BIC:~,brand:~,t-one-day:~,t-several-days:~,SEM-Hgroup:~,
+                                       start_people:~,end_people:~,start_people=+],
+        noun+[maj,firstname,start_people:~,end_people:~,end_people=+],
+        noun*[maj,proper,surface:~"BIC",location:~,SEM-Hcollective:~,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,introdutor:~,SEM-Hjornal:~,
+                                       SEM-datum-BIC:~,brand:~,t-one-day:~,t-several-days:~,SEM-Hgroup:~,
+                                       start_people:~,end_people:~,end_people=+].
+
+// At least a NAME and last name
+1> ? @= noun+[maj,proper,surface:~"BIC",location:~,SEM-Hcollective:~,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,introdutor:~,SEM-Hjornal:~,
+                                       SEM-datum-BIC:~,brand:~,t-one-day:~,t-several-days:~,SEM-Hgroup:~,
+                                       start_people:~,end_people:~,start_people=+],
+        noun[maj,lastname,start_people:~,end_people:~,end_people=+].
+
+//adds Names (not known to be person names, but uppercased) to a name if followed by a first or last name
+1> ? @= noun[start_people];noun[end_people],
+        ?+[maj,start_people:~,end_people:~,end_people=+],
+        noun[firstname];noun[lastname].
+
+//adds Names to a name that are not other things (e.g., sports-discipline,SEM-building,SEM-building-deNp)
+1> ? @= noun[start_people];noun[end_people],
+        ?+[maj,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,start_people:~,end_people:~,end_people=+].
+
+//adds de art* Name to a name
+1> ? @= noun[start_people];noun[end_people];noun[firstname,start_people:~,end_people:~,start_people=+];noun[lastname,start_people:~,end_people:~,start_people=+],
+        prep[lemma:"de",cont_people=+],
+        (art[def,cont_people=+]),
+        ?+[maj,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,start_people:~,end_people:~,end_people=+].
+
+//adds "%C." to a name//adds de art* Name to a name
+1> ? @= noun[start_people];noun[end_people];noun[firstname,start_people:~,end_people:~,start_people=+];noun[lastname,start_people:~,end_people:~,start_people=+],
+        ?[surface="%C(\.)",cont_people=+],
+        ?+[maj,sports-discipline:~,SEM-building:~,SEM-building-deNp:~,start_people:~,end_people:~,end_people=+].
+
+//adds de ", Júnior | Sr. | Roman_number" to a name
+1> ? @= noun[start_people];noun[end_people],
+        (punct[comma,cont_people=+]),
+        ?[lemma:"júnior",end_people=+];?[surface:"Sr.",end_people=+];num[rom,end_people=+].
+
+//adds de art* País to a name
+1> ? @= noun[end_people];?[rom],
+        prep[lemma:"de",cont_people=+],
+        (art[def,cont_people=+]),
+        ?+[maj,country,start_people:~,end_people:~,end_people=+].
+
+
+
+//DCO, 2011/02/23
+//um passe de Jordão a Martins
+// Não construímos um nó, e dizemos que Martins é fuzzy (nas regras seguintes, só construímos o nó se NÃO for fuzzy)
+1> ? @= ?[firstname,maj,location:~] ; ?[lastname,maj,location:~] ; noun[SEM-Hpeople,SEM-Hindividual], art[def], noun[proper,maj,toutmaj:~,SEM-fuzzy=+,end_people=+].
+
+//DCO, 2011/04/07
+// Construímos um nó PEOPLE,INDIVIDUAL quando apanhamos algo que esteja entre START_PEOPLE e END_PEOPLE, com a possibilidade
+// de ter um ou mais CONT_PEOPLE pelo meio
+2> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?+[start_people,title:~,SEM-Hprofession:~,SEM-Hcargo:~,SEM-fuzzy:~], ((?+[cont_people]), ?[end_people,SEM-fuzzy:~])+.
+
+2> ? = ?+[start_people,surface:~"T[aça,orneio] %*",title:~,SEM-Hprofession:~,SEM-Hcargo:~,SEM-fuzzy:~,SEM-datum-BIC:~,brand:~,SEM-Hpeople=+,SEM-Hindividual=+].
+
+//DCO, 2011/04/07
+// O cargo de uma pessoa fica num nó à parte do nome da pessoa
+3> NOUN[SEM-Hpeople=+,SEM-Hcargo=+] @= ?+[SEM-Hcargo,start_people,SEM-fuzzy:~], noun[SEM-Hpeople,SEM-Hindividual,SEM-fuzzy:~].
+
+//DCO, 2011/04/07
+// O título ou a profissão de uma pessoa ficam num nó à parte do nome da pessoa
+3> NOUN[SEM-Hpeople=+,SEM-Hindividual=+] @= ?+[title,start_people,SEM-fuzzy:~];?+[SEM-Hprofession,start_people,SEM-fuzzy:~], noun[SEM-Hpeople,SEM-Hindividual,SEM-fuzzy:~].
+
+/////////////////////////////
+/////////////////////////////
+
+//DCO, 2010/10/03
+// Ocidente, Oriente
+1> ? @= ?[lemma:ocidente,maj,location=+,geographic=+,region-natural=+];?[lemma:oriente,maj,location=+,geographic=+,region-natural=+].
+
+//DCO, 2010/09/30
+// Pólo Norte, Pólo Sul (não precisa de ser maj)
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[location=+,geographic=+,region-natural=+,mwe=+] @= ?[lemma:pólo], ?[lemma:norte];?[lemma:sul].
+
+//DCO, 2011/06/20
+// Deserto do Sahara, Pântano da Capivara, ...
+1> NOUN[location=+,geographic=+,region-natural=+,mwe=+] @= noun[SEM-Ltop,SEM-building:~,SEM-building-deNp:~,SEM-watermass:~,SEM-watercourse:~],
+                                                           (prep[lemma:de], (art[def])),
+                                                           ?+[maj,SEM-Hpeople:~,SEM-Hindividual:~,SEM-Hcargo:~,title:~,SEM-Hprofession:~,building:~,SEM-building:~,SEM-building-deNp:~,SEM-watermass:~,SEM-watercourse:~],
+                                                           (prep[lemma:de] ; art ; ?[maj])*.
+
+//DCO, 2010/09/24
+// Os Balcãs
+1> ? @= ?[lemma:Balcãs,maj,location=+,geographic=+,region-natural=+].
+
+//DCO, 2010/09/24
+// A região dos grandes lagos
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[location=+,geographic=+,region-natural=+,mwe=+] @= ?[lemma:região], prep[lemma:de], (art), ?[lemma:grande], ?[lemma:lago].
+
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     CREATED   (CRIADO)
+// SUBTYPES: DIVISION & COUNTRY (DIVISAO & PAIS)
+//
+// main features: location, admin_area, city,
+// division, country
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+
+// Monte + X to avoid to have them as a mountain
+// Example: Monto Gordo
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[proper=+,location=+,admin_area=+,city=+,mwe=+] = ?[lemma:monte,maj], ?[surface:Gordo];?[surface:Choro].
+
+// Monte da Caparica
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[proper=+,location=+,admin_area=+,city=+,mwe=+] = ?[lemma:monte,maj], ?[lemma:de], (art[def]), ?[surface:Caparica].
+
+// Example: Nova Lisboa (Nova Iorque tem lema próprio)
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[proper=+,location=+,admin_area=+,city=+,mwe=+] = ?[lemma:novo];?[lemma:nova], noun[location,city].
+1> NOUN[proper=+,location=+,admin_area=+,city=+,mwe=+] = ?[lemma:new], ?[maj].
+
+// Example: Novo México, Nova Zelândia, Nova Escócia
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[proper=+,location=+,admin_area=+,mwe=+] = ?[lemma:novo];?[lemma:nova], noun[location].
+
+//DCO, 2011/06/08
+// bairro do Cerco, bairro Padre Cruz, cidade de Lisboa, Vila do Porto, aldeia da Cabreira
+1> noun[proper=+,location=+,admin_area=+,division=+,mwe=+] @= noun[SEM-division,SEM-Ltop:~] ; noun[SEM-urb,SEM-building:~,SEM-building-deNp:~], (prep[lemma:de], (art[def])), ?+[maj], (prep ; art[def] ; conj[lemma:"e"], ?+[maj])*.
+
+// Monte Estoril
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[location=+,admin_area=+,city=+,proper=+,mwe=+] = noun[surface:"Monte"], ?[city] .
+
+// Évora Monte
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[location=+,admin_area=+,city=+,proper=+,mwe=+] = ?[city], noun[surface:"Monte"] .
+
+// Location with Area Metropolitana de + city
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[location=+,admin_area=+,city=+,proper=+,mwe=+] @= ?[lemma:"área metropolitana"], prep[lemma:de], ?[city] .
+
+// Example: Grande Lisboa, Grande Paris
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[proper=+,location=+,admin_area=+,division=+,mwe=+] @= ?[lemma:grande,maj], ?[location].
+
+//DCO, 2010/09/24
+// República Popular da China e República Centro-Africana têm os seus próprios lemas
+// Example: República de Cabo Verde
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[location=+,admin_area=+,country=+,mwe=+] @= ?[lemma:República], (?[lemma:popular];?[lemma:democrático];?[lemma:islâmico]), (prep[lemma:de], (art)), ?+[maj], (prep, (art), ?+[maj])*.
+
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     CREATED   (CRIADO)
+// SUBTYPES: REGION    (REGIÃO)
+//
+// main features: location, admin_area, region
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+
+//DCO, 2010/09/24
+// Lema corrigido
+// Terceiro Mundo
+1> ? @= ?[lemma:"Terceiro Mundo",maj,proper=+,location=+,admin_area=+,region=+].
+
+//DCO, 2010/09/24
+// Médio Oriente
+1> ? @= ?[lemma:"Médio Oriente",maj,proper=+,location=+,admin_area=+,region=+].
+
+//DCO, 2010/09/24
+// Example: O nordeste brasileiro
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[proper=+,location=+,admin_area=+,region=+,mwe=+] @= ?[lemma:~este,cardinal_p], ?[gentcountry].
+
+//DCO, 2010/09/24
+// Example: O sul de França
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[proper=+,location=+,admin_area=+,region=+,mwe=+] @= ?[cardinal_p], prep[lemma:de], (art), ?[country].
+
+//DCO, 2010/09/24
+// A Raia (fronteira entre Portugal e Espanha)
+1> ? @= ?[lemma:raia,surface:~"Rainha",maj,proper=+,location=+,admin_area=+,region=+].
+
+//DCO, 2010/09/24
+// Regras corrigidas
+// América Ocidental, China Septentrional (não funciona), América Latina
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[proper=+,location=+,admin_area=+,region=+,mwe=+] = noun[location,region,maj], adj[SEM-cardinal-point,maj].
+1> noun[proper=+,location=+,admin_area=+,region=+,mwe=+] = noun[country], adj[SEM-cardinal-point,maj].
+1> ? @= ?[lemma:"América Latina",maj,proper=+,location=+,admin_area=+,region=+].
+
+//DCO, 2010/09/25
+// Regra corrigida, pois são entidades do tipo LOCAL CRIADO REGIAO
+// Example: Países Asiáticos (não precisa de ser maj)
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[location=+,admin_area=+,region=+,proper=+,mwe=+] @= ?[lemma:país,pl], adj[gentcontinent].
+
+//DCO, 2010/09/25
+// Lema corrigido
+1> ? @= ?[lemma:"país do Leste",pl,location=+,admin_area=+,region=+,proper=+].
+
+//DCO, 2010/09/25
+// Example: Oriente Médio, Oriente Próximo
+1> noun[location=+,admin_area=+,region=+,proper=+] @= ?[lemma:oriente], ?[lemma:médio,maj];?[lemma:próximo,maj].
+
+////////////////////////////////////////
+// CATEGORY: LOCATION       (LOCAL)
+// TYPE:     CREATED        (CRIADO)
+// SUBTYPE:  CONSTRUCTION   (CONSTRUÇÃO)
+//
+// main features: location, admin_area,
+// building
+////////////////////////////////////////
+
+//DCO, 2011/05/02
+//Estádio (adj) 22 de Junho, Estádio Municipal 22 de Junho, Estádio Nacional 22 de Junho
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= ?[lemma:estádio];?[lemma:"estádio municipal"];?[lemma:"estádio nacional"], (adj), num[dig] ; num[card], prep[lemma:de], ?[t-month].
+
+//DCO, 2011/05/03
+//Parque de Jogos 1º de Maio
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:parque], prep[lemma:de], (art[def]), ?[maj], num[ord] ; num[dig], prep[lemma:de], ?[t-month].
+
+//DCO, 2011/04/20
+// Multiusos de Guimarães
+1> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= ?[surface:Multiusos];?[surface:multiusos], prep[lemma:de], (art[def]), ?[location].
+
+//DCO, 2011/05/02
+//Aarhus Stadion, Olympish Stadion Amsterdam, Universiada Hall, Sports Hall Jezero
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= ?+[maj], ?[lemma:Stadion];?[surface:hall];?[surface:Hall];?[lemma:Stadium];noun[lemma:estádio,maj], (?+[maj]).
+
+//DCO, 2011/05/04
+//Sport Palace Unost
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= ?[surface:sport];?[surface:Sport];?[lemma:sports], ?[surface:palace];?[surface:Palace], ?+[maj].
+
+//DCO, 2011/07/04
+// Quando o nome introdutor de edifício tem o traço SEM-building-deNp (ver exemplos abaixo), não construímos um nó LOCATION ADMIN_AREA BUILDING, porque damos prioridade ao nome próprio que vem a seguir
+// Ver ficheiro LEXICONS/lexNounSem.xip para encontrar as entradas lexicais que têm este traço.
+// exemplos: consultório do Dr. Martins dos Santos, casa do Diogo Oliveira, etc.
+4> ? @= noun[SEM-building-deNp], prep[lemma:de], (art[def]), noun[SEM-Hpeople,SEM-Hindividual].
+
+//DCO, 2011/07/19
+// (Pavilhão da) Escola E.B. 2,3 (da Mealhada)
+// (Pavilhão da) Escola E.B. 2, 3 (da Mealhada)
+// (Pavilhão da) Escola E.B. 2+3 (da Mealhada)
+// (Pavilhão da) Escola E.B. 2 + 3 (da Mealhada)
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building], prep[lemma:de], (art[def]), noun[lemma:escola,maj], ?+[maj], num, (punct[comma] ; symbol[surface:"+"], num), (prep[lemma:de], (art[def]), ?+[maj]).
+
+//DCO, 2011/06/06
+// Regra geral para apanhar construções humanas. Ver ficheiro: LEXICONS/lexNounSem.xip e procurar o traço SEM-building.
+// e.g. estádio municipal de Lisboa, igreja de Faro, aeroporto da Portela
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building], prep[lemma:de], (art[def]), ?+[maj], (num ; prep[lemma:de] ; art[def] ; ?+[maj])*.
+
+//Vera, 2012/11/22
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:aeroporto];noun[lemma:"aeroporto internacional"], (prep[lemma:de], (art[def])), ?+[location], ?+[maj].
+
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:aeroporto];noun[lemma:"aeroporto internacional"], (prep[lemma:de], (art[def])), ?+[human];?+[location].
+
+//DCO, 2011/05/03
+// Campo N.º 1
+//1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:campo];noun[lemma:pavilhão], ?[lemma:"n.º"];?[lemma:"nº"];?[lemma:número], num[dig].
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:pavilhão], noun[virtual].
+
+//DCO, 2011/07/07
+// Apanhamos primeiro as entidades que tenham nomes de pessoas
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building-deNp], (adj[maj]), noun[SEM-Hpeople,SEM-Hindividual] ; noun[SEM-Hpeople,SEM-Hcargo] ; noun[location].
+
+//DCO, 2011/07/12
+// LOCAL TEMPORARIO!!!
+// Esta regra deve ir para LGOrg
+// A integrar mais tarde, quando as instituições forem resolvidas
+4> NOUN[SEM-Hcollective=+,SEM-Hinstitution=+] @= noun[SEM-org], (adj[maj]), noun[SEM-Hpeople,SEM-Hindividual] ; noun[SEM-Hpeople,SEM-Hcargo] ; noun[location].
+
+//DCO, 2011/07/04
+// Quando temos uma ou mais palavras em maiúsculas a seguir a um SEM-building-deNp, construímos um nó BUILDING
+// e.g. "Casa Pessoa", "Casa Andresen", etc.
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building-deNp], ?+[maj], (prep[lemma:de] ; art[def] ; conj[lemma:"e"] ; num ; ?+[maj])*.
+
+//DCO, 2011/07/06
+// Campo N.º 1, Campo de futebol n.º 5
+1> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building-deNp], noun[num,virtual].
+
+//DCO, 2011/07/08
+// NOUN{Campo de futebol de NOUN{Praia de Chaves}}
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building-deNp], prep[lemma:de], (art[def]), noun[location].
+
+3> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:"clube desportivo"], prep[lemma:de], (art[def]), ?[maj].
+
+//DCO, 2011/07/05
+// Quando temos um nome a seguir a um SEM-building-deNp, e esse nome não é uma pessoa individual, então construímos um nó BUILDING
+// e.g. "casa do Diogo Oliveira", "consultório do Dr. António Martins", etc.
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building-deNp], prep[lemma:de], (art[def]), ?+[maj,SEM-Hpeople:~,SEM-Hindividual:~,title:~,SEM-Hcargo:~,SEM-Hprofession:~], (prep[lemma:de] ; art[def] ; conj[lemma:"e"] ; num ; ?+[maj])*.
+
+//DCO, 2011/07/07
+// Apanhamos primeiro as entidades que tenham nomes de pessoas
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building,start_people:~,end_people:~], (adj[maj]), (prep[lemma:de], (art[def])), noun[SEM-Hpeople,SEM-Hindividual,start_people:~,end_people:~] ; noun[SEM-Hpeople,SEM-Hcargo,start_people:~,end_people:~] ; noun[location].
+
+//DCO, 2011/07/08
+// Quinta dos Lombos, Quinta do Lago, etc.
+3> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:quinta], prep[lemma:de], (art[def]), ?[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+//NJM, 2012/01/27
+// Sala de Oliveira Ramos, etc.
+3> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:sala], prep[lemma:de],
+                                                              noun[SEM-Hpeople,SEM-Hindividual,start_people:~,end_people:~] ; noun[SEM-Hpeople,SEM-Hcargo,start_people:~,end_people:~] ; noun[location].
+
+//DCO, 2011/06/06
+// Regra geral para apanhar construções humanas. Ver ficheiro: LEXICONS/lexNounSem.xip e procurar o traço SEM-building.
+// e.g. "Aeroporto da Portela", "Aeródromo Bissaya Barreto", "Arena Dolce Vita", "Auditório Nacional Carlos Alberto", etc.
+//DCO, 2011/06/30
+// Regra corrigida: adicionado "num" para apanhar casos como "Escola Básica EB 2,3 da Mealhada"
+4> NOUN[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[SEM-building,start_people:~,end_people:~], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; conj[lemma:"e"] ; num ; ?+[maj])*, (punct[dash], noun[num,virtual]).
+
+//DCO, 2011/05/02
+//Centro de Futebol, Centro de Futebol do Sporting Clube de Portugal
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= noun[lemma:centro], prep[lemma:de], (art[def]), ?[sports-discipline], (prep[lemma:de], (art[def]), ?[SEM-Hcollective]).
+
+//DCO, 2011/05/02
+//Centro de Alto Rendimento de Atletismo
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= noun[lemma:centro], prep[lemma:de], (art[def]), ?+[maj], prep[lemma:de], (art[def]), noun[sports-discipline].
+
+//DCO, 2011/05/02
+//Centro de Desportos e Congressos de Matosinhos, Pavilhão do Centro de Estágio de Rio Maior
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= (noun[lemma:pavilhão], prep[lemma:de], (art[def])), noun[lemma:centro], prep[lemma:de], (art[def]), noun[lemma:desporto];noun[lemma:Treinamento];noun[lemma:treino];noun[lemma:estágio], (conj[lemma:e] ; prep[lemma:de] ; art[def] ; ?+[maj])*.
+
+//DCO, 2011/05/02
+//Centro Desportivo de Colovray, Centro Desportivo Universitário de Lisboa
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= noun[lemma:"centro desportivo"], (adj[lemma:universitário]), prep[lemma:de], (art[def]), ?+[maj].
+
+//DCO, 2011/05/13
+//Teatro Municipal
+1> ? @= ?[lemma:"teatro municipal",location=+,admin_area=+,building=+,proper=+,mwe=+].
+
+//NJM, 2012/03/28
+// topo norte do Estádio da Luz
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= noun[SEM-Ltop,SEM-building:~,SEM-building-deNp:~,SEM-watermass:~,SEM-watercourse:~],
+                                                     (prep[lemma:de], (art[def])),
+                                                     ?+[maj,building,SEM-Hpeople:~,SEM-Hindividual:~,SEM-Hcargo:~,title:~,SEM-Hprofession:~],
+                                                     (prep[lemma:de] ; art ; ?[maj])*.
+
+//DCO, 2010/09/25
+// Example: O Auditório, o Cineteatro
+1> ? @= ?[lemma:auditório,maj,location=+,admin_area=+,building=+,proper=+];?[lemma:cineteatro,maj,location=+,admin_area=+,building=+];?[lemma:cine-teatro,maj,location=+,admin_area=+,building=+].
+
+//DCO, 2011/05/03
+//Stadio Dei Pini, Stade de France, Palacio de los Deportes de la Comunidad de Madrid
+1> noun[location=+,admin_area=+,building=+,proper=+,mwe=+] @= ?[surface:stadio];?[surface:Stadio];?[surface:stade];?[surface:Stade], (prep[lemma:de]), (art), ?+[maj], (prep, (art), ?+[maj])*.
+
+//DCO, 2011/05/03
+// Campo 1.º de Maio, Estádio 1º de Maio
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:campo] ; noun[lemma:estádio], num[ord] ; num[dig], prep[lemma:de], ?[t-month].
+
+//DCO, 2011/07/11
+//Cristiano Ronaldo Futebol Campus, Caixa Futebol Campus
+4> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= ?+[maj] ; noun[SEM-Hpeople,SEM-Hindividual], (?[sports-discipline]), noun[lemma:campus].
+
+//DCO, 2011/05/03
+//Glanford Park, Yoyogi National Gymnasium, Tbilisi Sports Palace, Sports Arena, Serhedchi Olympic Sports Center
+//Tartu University Sports Hall
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= ?+[maj], ?[surface:park] ; ?[surface:Park] ; ?[lemma:Gymnasium] ; ?[lemma:Palace] ; ?[lemma:arena] ; ?[lemma:sports], (?[surface:center];?[surface:Center];?[surface:Hall];?[surface:hall];?[surface:City]).
+
+//DCO, 2011/05/03
+//Pavilhão Desportivo da Horta, Pavilhão Gimnodesportivo da Batalha, Pavilhão Gimnodesportivo Gaeirense, Pavilhão Polidesportivo Vava Duarte
+//1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:"pavilhão %*desportivo"], (prep[lemma:de], (art[def])), ?[maj], (prep[lemma:de] ; art[def] ; conj[lemma:e] ; ?[maj])*.
+
+//DCO, 2011/05/04
+//Campo sintético (de futebol)
+1> noun[proper=+,location=+,admin_area=+,building=+,mwe=+] @= noun[lemma:"campo sintético",proper=+,location=+,admin_area=+,building=+,mwe=+], (prep[lemma:de], (art[def]), ?[sports-discipline]).
+
+//DCO, 2010/09/25
+// "sala" não precisa de ser maj
+// Example: Sala X, Sala do Trono
+1> noun[location=+, admin_area=+, building=+,proper=+,mwe=+] @= ?[lemma:sala], (?[lemma:"n.º"]; ?[lemma:"nº"]; ?[lemma:número]), num;noun.
+
+////////////////////////////////////////
+// CATEGORY: LOCATION (LOCAL)
+// TYPE:     CREATED  (CRIADO)
+// SUBTYPE:  STREET   (RUA)
+//
+// main features: location, admin_area,
+// street
+////////////////////////////////////////
+
+//DCO, 2011/01/25
+//Endereços complexos: "Rua de D. Vasco, 7, 7050 Montemor-o-Novo"
+// "Avenida da Liberdade, 21 - 10º Andar", "Rua Professor Mark Athias, 6, 1.º E", "Rua da Fábrica Carp, 8, 2º B", etc.
+1> NOUN[location=+,admin_area=+,street=+,mwe=+] @= noun[SEM-Lpath,SEM-Ltop:~,SEM-building:~,SEM-building-deNp:~,SEM-division:~,SEM-urb:~], (prep), (art), ?+[maj], (prep, ?[maj])*, ((punct[comma];punct[lemma:"-"]), num[dig,rom:~,time:~,t-meas:~,curr:~];num[ord,rom:~,time:~,t-meas:~,curr:~], (symbol), (noun[maj];?[surface:"%C"]))*.
+
+//Vera, 2012/01/25
+// Example: Avenida 5 de Outubro
+// Example: Avenida 1º de Maio
+1> NOUN[location=+,admin_area=+,street=+] @= ?[SEM-Lpath], num[ord];num[dig], prep[lemma:de], ?[t-month].
+
+//DCO, 2011/06/17
+//Endereços simples: Rua da Prata, Avenida da Liberdade, Praça da Figueira, etc.
+1> noun[location=+,admin_area=+,street=+,mwe=+] @= noun[SEM-Lpath,SEM-Ltop:~,SEM-building:~,SEM-building-deNp:~,SEM-division:~,SEM-urb:~], prep[lemma:de], (art[def]), ?+[maj].
+
+//DCO, 2010/10/03
+// Example: IP4
+1> ? @= ?[lemma:"ip%d+",maj,location=+,admin_area=+,street=+].
+
+//DCO, 2010/09/25
+// Example: Downing Street
+//DCO, 2011/02/24
+// Added mwe feature
+1> NOUN[location=+, admin_area=+,street=+,mwe=+] @= ?+[maj], ?[surface:"Street"];?[surface:"street"].
+
+//DCO, 2011/04/15
+// planeta Terra
+1> NOUN[location=+,geographic=+,celestialbody=+,mwe=+] @= ?[lemma:planeta], ?[maj].
+
+////////////////////////////////////////
+// CATEGORY: LOCATION (LOCAL)
+// TYPE:     CREATED  (CRIADO)
+// SUBTYPE:  ROAD     (ESTRADA)
+////////////////////////////////////////
+
+// Example: Estrada Nacional 125
+1> NOUN[location=+,road=+] @= ?[lemma:"estrada nacional"], ?[num].
+
+// Example: Ponte Salgueiro Maia
+// Example: Túnel da Gardunha
+// Example: ramal de Braga
+1> NOUN[location=+,road=+] @= ?[SEM-Lpath2], (prep, (art)), ?+[noun,proper,start_people:~,title:~,SEM-Hcargo:~,SEM-Hprofession:~];?[location].
+
+
+////////////////////////////////////////
+// CATEGORY: LOCATION    (LOCAL)
+// TYPE:     PHYSICAL    (FISICO)
+// SUBTYPE:  WATERCOURSE (AGUACURSO)
+//
+// main features: location, geographic,
+// watercourse
+////////////////////////////////////////
+
+//NJM. 2012/03/26
+//Removes "SEM-watercourse" feature from Fonte, when followed by an institution name
+// Example: Fonte da Associação...
+1> ? @= noun[lemma:fonte,SEM-watercourse,SEM-watercourse=~], (prep[lemma:de], (art[def])), ?+[maj,SEM-Hinstitution].
+
+//DCO, 2011/06/21
+// Rio Tejo, Rio da Prata, Cataratas do Niagara, Canal da Mancha,
+1> noun[location=+,geographic=+,watercourse=+] @= (adj[maj]), noun[SEM-watercourse,SEM-Ltop:~], (prep[lemma:de], (art[def])), ?+[maj,SEM-Hinstitution:~], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+//DCO, 2010/09/25
+// "estreito" não precisa de ser maj para que tudo seja uma entidade mencionada
+// Example: Estreito de Gibraltar, estreito de Bering
+1> noun[location=+,geographic=+,watercourse=+,mwe=+] @= ?[lemma:estreito];?[lemma:delta];?[lemma:ribeira], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     PHYSICAL  (FISICO)
+// SUBTYPE:  WATERMASS (AGUAMASSA)
+//
+// main features: location, geographic,
+// watermass
+////////////////////////////////////////
+
+//DCO, 2011/06/20
+// Oceano Glaciar Árctico, Mar do Norte, Lago Windermere, Grande Lago do Urso, Lagoa do Lugar de Baixo
+1> noun[location=+,geographic=+,watermass=+] @= (adj[maj]), noun[SEM-watermass,SEM-Ltop:~], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+//DCO, 2010/09/25
+// Regra corrigida para adaptação aos lemas dos oceanos
+// Example: Oceano Atlântico, Pacífico, Índico, Austral, (Glaciar) Árctico, (Glaciar) Antárctico
+1> noun[location=+,geographic=+,watermass=+] @= ?[lemma:"oceano%+",location=+,geographic=+,watermass=+].
+
+// estuario, delta, foz, bacia de XXX
+//DCO, 2010/09/25
+// baía de Hudson, estuário do Tejo, foz do Guadiana, bacia do Douro
+1> noun[location=+,geographic=+,watermass=+] @= ?[lemma:baía];?[lemma:estuário];?[lemma:foz];?[lemma:bacia], prep[lemma:de], (art), ?+[maj], (prep[lemma:de], (art), ?+[maj])*.
+
+////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     PHYSICAL  (FISICO)
+// SUBTYPE:  RELIEF    (RELEVO)
+//
+// main features: location, geographic,
+// relief
+////////////////////////////////////////
+
+//DCO, 2011/06/21
+// Example: montanha do Pico, vulcão da Islândia, cordilheira dos Andes, etc.
+1> noun[location=+,geographic=+,relief=+,proper=+,mwe=+] @= noun[SEM-relief,SEM-Ltop:~], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     PHYSICAL  (FISICO)
+// SUBTYPE:  ISLAND    (ILHA)
+//
+// main features: location, geographic,
+// island
+////////////////////////////////////////
+
+//DCO, 2011/04/20
+//ilha da Boavista, arquipélago dos Açores, ilhéu de Vila Franca, atol Moruroa, etc.
+1> noun[location=+,geographic=+,island=+] @= noun[SEM-island], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+////////////////////////////////////////
+// CATEGORY: LOCATION  (LOCAL)
+// TYPE:     PHYSICAL  (FISICO)
+// SUBTYPE:  PLANET    (PLANETA)
+//
+// main features: location, geographic,
+// celestialbody
+////////////////////////////////////////
+
+//DCO, 2011/06/21
+// estrela Polar, cometa Halley, etc.
+1> noun[location=+,geographic=+,celestialbody=+] @= noun[SEM-Lstar], (prep[lemma:de], (art[def])), ?+[maj], (prep[lemma:de] ; art[def] ; ?[maj])*.
+
+////////////////////////////////////////////////////////////////////////////////
+// Non contextual ADDRESS RULES (ex. Rua Alves Redol, 9, 1000-029 Lisboa)
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2010/09/25
+// Regra corrigida
+// Example: Caixa Postal
+//DCO, 2011/02/24
+// Added mwe feature
+1> noun[location=+,admin_area=+,proper=+,mwe=+] @= ?[lemma:caixa], ?[lemma:postal], (num, punct*[dash])+.
+
+// condado, bairro, estado, regiao, vila etc.
+//CH - add restriction in order to avoid to take "secretario de [Estado da Cultura]"
+// Refine the rules in order to consider different subtypes.
+1> ? @= | ?*[SEM-Hcargo:~] |  noun[maj,admin_area,general,city,start_loc=+,location=+,proper=+], (adj[maj]), (prep[lemma:de]; art; ?[maj,end_loc=+])+.
+1> ? @= | ?*[SEM-Hcargo:~] | noun[maj,admin_area,general,city:~,start_loc=+,location=+,proper=+], (adj[maj]),(prep[lemma:de]; art; ?[maj,end_loc=+])+.
+
+////////////////////////////////////////////////////////////////////////////////
+// CONTEXTUAL LOCATION RULES for admin_area
+////////////////////////////////////////////////////////////////////////////////
+// It would be better to generalize and use grammatical functions and a specialized lexicon(semantic features todo later)
+
+//DCO, 2010/09/21
+// Adicionada restrição SEM-Hinstitution:~ (e.g. "Estive na Google" - é tratado como LOCAL na metonímia)
+// residir/morar/viver/localizar-se/situado em
+//DCO, 2011/06/21
+//Regra revista, OK : "Ele reside no Cabeço de Baixo" - adivinhado como LOCAL
+1>? @= ?[SEM-permanency], (?[ref]),  prep[lemma:em], (art[def]), ?[maj,general:~,island:~,relief:~,celestialbody:~,SEM-Hinstitution:~,location=+,admin_area=+,proper=+,start_loc=+], (prep ; art ; ?[maj,admin_area=+,location=+,proper=+,end_loc=+,time:~])*.
+
+// viajar para / mudar para / ir para /vir para/ deslocar-se para/ exilar-se para
+//DCO, 2010/10/03
+// cuidado com "ir para a TAP"
+//DCO, 2011/06/21
+//Regra revista, OK : "Ele viajou para o Cabeço de Baixo" - adivinhado como LOCAL
+1> ? @= verb[SEM-change-place], (?[ref]), prep[lemma:para], (art), ?[maj,SEM-Hcollective:~,general:~,island:~,relief:~,celestialbody:~,admin_area=+,location=+,start_loc=+,proper=+], (prep ; art; ?[maj,SEM-Hcollective:~,admin_area=+,location=+,proper=+,end_loc=+])*.
+
+// viagem, partida, mudanca, deslocacao (de metro) para...
+//DCO, 2011/06/21
+//Regra revista, OK : "A viagem de autocarro para o Cabeço de Baixo" - adivinhado como LOCAL
+1> ? @= noun[SEM-change-place], (prep, noun[transport_mean]), prep[lemma:para], (art), ?[maj,general:~,island:~,relief:~, celestialbody:~,admin_area=+,location=+,start_loc=+], (prep ; art ; ?[maj,admin_area=+,location=+,end_loc=+])*.
+
+//DCO, 2011/03/18
+// Ir a <LOCAL>
+// Added human:~, SEM-Hindividual:~ restrictions to avoid cases like "O Manuel comprou um carro, IA A MARIA dizer"
+//DCO, 2011/06/21
+//Regra revista, OK : "Ele ia ao Cabeço de Baixo" - adivinhado como LOCAL
+1> ? @= verb[lemma:ir], prep[lemma:a], (art), ?[maj,general:~,island:~,relief:~,SEM-Hcollective:~,human:~,SEM-Hindividual:~,admin_area=+,location=+,start_loc=+,proper=+], (prep ; art ; ?[maj,admin_area=+,location=+,proper=+,end_loc=+])*.
+
+// partir de, deslocar-se de, vir de, regressar de
+//DCO, 2011/06/21
+//Regra revista, OK : "Ele regressou do Cabeço de Baixo" - adivinhado como LOCAL
+1> ? @= verb[SEM-change-place,surface:~parte], prep[lemma:de], (art), ?[maj,general:~,island:~,relief:~, admin_area=+,location=+,start_loc=+,proper=+], (prep ; art ; ?[maj,admin_area=+,location=+,proper=+,end_loc=+])*.
+
+// (a pé, de autocarro, etc.) de/a/para
+//DCO, 2011/06/21
+//Regra revista, OK : "Ele regressou de autocarro ao Cabeço de Baixo" - adivinhado como LOCAL
+1> ? @= verb[SEM-change-place], (?[ref]), (adv), prep[lemma:de], noun[transport_mean], (adv), prep[lemma:de];?[lemma:a];?[lemma:o];prep[lemma:para], (art[def]), ?[maj,general:~,island:~,relief:~, location=+,admin_area=+,proper=+,start_loc=+], (prep ; art ; ?[maj,admin_area=+,location=+,proper=+,end_loc=+])*.
+
+// na região de... na zona de...
+//DCO, 2011/06/21 OK
+1> ? @= art, noun[admin_area,general,maj:~,city:~], prep[lemma:de], (art[def]), ?[maj,location=+,admin_area=+,proper=+,start_loc=+], (prep ; art ; ?[maj,admin_area=+,location=+,proper=+,end_loc=+])*.
+
+// nascer em/morrer em
+//DCO, 2011/06/21 OK
+1> ? @= ?[lemma:nascer];?[lemma:morrer], prep[lemma:em], (art[def]), ?[maj,time:~,location=+,admin_area=+,proper=+,start_loc=+], (prep ; art ; ?[maj,location=+,admin_area=+,proper=+,end_loc=+])*.
+
+// Chegar a/de/em (br)
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:chegar], prep[lemma:em];prep[lemma:a];prep[lemma:de], (art[def]), ?[maj,time:~,celestialbody:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// aterrar em...
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:aterrar], prep[lemma:em], (art[def]), ?[maj,celestialbody:~,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// levantar voo de...
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:levantar], noun[lemma:voo], prep[lemma:de], (art[def]), ?[maj,celestialbody:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ser (originário/oriundo/natural) de...
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:ser], ?[lemma:oriundo];?[lemma:natural];?[lemma:originário], prep[lemma:de], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// o caminho/a estrada para
+//DCO, 2011/06/21 OK
+1> ? @= art[def],?[lemma:caminho];?[lemma:estrada], prep[lemma:para], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// exilar-se em, exilado em
+// Regra corrigida
+//DCO, 2011/06/21 OK
+1> ? @= ?[lemma:exilar], (?[ref]), prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ser destacado para
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:ser];verb[lemma:ir], ?[lemma:destacar], prep[lemma:para], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ter lugar em
+//CH added restriction "Ter lugar em Fevereiro"
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:ter], ?[lemma:lugar], prep[lemma:em], (art[def]), ?[maj,t-month:~,t-period:~,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// passar (as) férias em...
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:passar], (art), ?[lemma:férias], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// fazer a tropa em
+//DCO, 2011/06/21 OK
+1> ? @= verb[lemma:fazer], (art), ?[lemma:tropa], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// cumprir serviço militar em
+//DCO, 2011/06/21 Regra corrigida
+1> ? @= verb[lemma:cumprir], (art), ?[lemma:"serviço militar"], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// fazer (o exame de) X ano em NP
+// fazer (o exame de) X classe em NP
+//DCO, 2011/06/24 Regra corrigida
+1> ? @= ?[lemma:fazer], (art, ?[lemma:exame], prep[lemma:de]), (?[lemma:o]), num[ord], ?[lemma:classe];?[lemma:ano], prep[lemma:em], (?[lemma:o]), ?[maj,time:~, location=+,admin_area=+,start_loc=+,proper=+], (prep ; art ; ?[maj,end_loc=+,admin_area=+,location=+,proper=+])*.
+
+// colocado em...
+//DCO, 2011/06/24 OK
+1> ? @= ?[lemma:colocar], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// aqui em... cá em... ali em... lá em...
+//DCO, 2011/06/27 OK
+1> ? @= adv[proxadv], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// (A)o sul/norte de ....
+//1> ? @= art, noun[cardinal_p], prep[lemma:de], (art), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep; art; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])* .
+
+// sair de...
+//DCO, 2011/02/03
+// Adicionada restrição SEM-Hcollective:~ para evitar casos como "a saída do Benfica originou logo uma ocasião de perigo para os visitantes..."
+//DCO, 2011/06/27 OK
+1> ? @= ?[lemma:sair], prep[lemma:de], (art[def]), ?[maj,SEM-Hcollective:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ficar ao pé de...
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= ?[lemma:ficar], prep[lemma:"ao pé de"], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ficar perto/longe de...
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= ?[lemma:ficar], prep[lemma:"perto de"] ; prep[lemma:"longe de"], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// ficar em...
+// already done with permanency verbs
+
+//DCO, 2010/10/03
+// Cuidado com "Onde é que está o PSD?!" - adicionadas restrições SEM-Hcollective:~ e SEM-Hpeople:~
+// onde (é que) fica/é ...?
+//DCO, 2011/06/27 Regra corrigida
+// Onde fica o Cabeço de Baixo? -- OK, adivinhado como LOCAL
+// Onde É QUE fica o Cabeço de Baixo? -- OK, adivinhado como LOCAL
+1> ? @= ?[lemma:onde], (adv[lemma:"é que"]), ?[verb,SEM-permanency], (art[def]), ?[maj,SEM-Hcollective:~,SEM-Hpeople:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,SEM-Hcollective:~,SEM-Hpeople:~,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// onde se situa...
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= ?[lemma:onde], (adv[lemma:"é que"]), ?[surface:se], ?[lemma:situar], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// Y é em X
+// already done with permanency verbs
+
+// vai dar a...
+//DCO, 2011/06/27 OK
+1> ? @= ?[lemma:ir], ?[lemma:dar], prep[lemma:a], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+//DCO, 2010/10/03
+// Cuidado com "o que ensinam nas escolas em Educação Ambiental"... estas regras são demasiado abrangentes
+// escola/colégio em/de...
+//1> ? @= ?[lemma:escola], (adj), prep[lemma:de];prep[lemma:em], (art[def]), ?[maj,time:~,SEM-Hcollective:~,start_loc=+,location=+,admin_area=+,SEM-school=+], (prep; art; ?[maj,SEM-Hcollective:~,end_loc=+,location=+,admin_area=+])* .
+//1> ? @= ?[lemma:colégio], prep[lemma:de];prep[lemma:em], (art[def]), ?[maj,time:~,SEM-Hcollective:~,start_loc=+,location=+,admin_area=+,SEM-school=+], (prep; art; ?[maj,SEM-Hcollective:~,end_loc=+,location=+,admin_area=+])* .
+
+// estar/ser preso em...
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= ?[lemma:estar];?[lemma:ser], ?[lemma:preso], prep[lemma:em], (art[def]), ?[maj,time:~,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+//Quantos habitantes tem (o) X?
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= ?[lemma:quanto], ?[lemma:habitante], ?[lemma:ter], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+// X tem Y habitantes
+//DCO, 2011/06/27 Regra corrigida
+1> ? @= (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,end_loc=+,location=+,admin_area=+,proper=+])*, ?[lemma:ter], num, ?[lemma:habitante].
+
+// X jantou/almoçou em...
+//DCO, 2011/06/27 OK
+1> ? @= ?[lemma:jantar];?[lemma:almoçar], prep[lemma:em], (art[def]), ?[maj,start_loc=+,location=+,admin_area=+,proper=+], (prep ; art ; ?[maj,time:~,end_loc=+,location=+,admin_area=+,proper=+])*.
+
+////////////////////////////////////////////////////////////////////////////////
+// CONTEXTUAL  Virtual location  RULES (ex. Rua Alves Redol, 9, 1000-029 Lisboa)
+////////////////////////////////////////////////////////////////////////////////
+
+//DCO, 2010/09/25
+// Números de telefone
+// Example: O telemóvel é (:) 915559988
+//DCO, 2011/06/27 Não está a funcionar bem
+//1> ? @= ?[lemma:"tel."];?[lemma:Tel];?[lemma:tel];?[lemma:telemóvel];?[lemma:telefone];?[lemma:extensão], ?*, (?[lemma:":"]), num+[dig,ord:~,time:~,frac:~,location=+,virtual=+].
+
+//DCO, 2010/09/25
+// E-mails
+// Example: O email é (:) john.appleseed@apple.com
+//DCO, 2011/06/27 Não está a funcionar bem
+//1> ? @= ?[lemma:"email"];?[lemma:e-mail], ?*, (?[lemma:":"]), ?[lemma:"%+@%+",location=+,virtual=+,email=+].
+
+// o website X, online em X
+// using regexp on the noun
+//DCO, 2011/06/27 Desnecessária, já existe em LGElectronic.xip e funciona
+//1> noun[location=+, virtual=+] = ?[lemma="(http://)www.?+"] .
+
+//DCO, 2010/09/20
+// Decreto-Lei n.º 35/10
+// Infelizmente, há expressões como "35/10" que têm o seu próprio lema: "35/10". Outras, como "3/2008", é preciso apanhar token a token.
+// Tal como "n.º" tem o lema "n.º", mas "nº" já é preciso apanhar "n" + "º"
+//1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:decreto-lei], ?[lemma:"n.º"];?[lemma:número];(?[lemma:n],?[lemma:º]), ?[lemma:"%d+/%d+",virtual=+];(num+[dig,frac:~,time:~,virtual=+], ?[surface:"/"], num+[dig,frac:~,time:~,virtual=+]).
+
+//DCO, 2010/09/22
+// Plano Diretor, Plano Diretor Municipal, Plano Diretor Municipal de Setúbal ...
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:"plano diretor"];?[lemma:"plano diretor municipal"], (prep[lemma:de], (art), ?[location]).
+
+//DCO, 2010/10/03
+// Plano de Pormenor do Núcleo Histórico de Belas, Plano de Urbanização da Vila (de...)
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:plano,maj], prep[lemma:de], ?[lemma:pormenor,maj];?[lemma:urbanização,maj], prep, (art), ?+[maj], (prep ; art ; conj ; ?+[maj])*.
+
+//DCO, 2010/10/03
+// Example: Protocolo de Quioto
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:protocolo], prep, (art), ?+[maj], (prep ; art ; conj ; ?+[maj])*.
+
+//DCO, 2010/09/22
+// Regulamento (geral) (de (as) ...)
+//DCO, 2011/02/23
+// Regra corrigida
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:"regulamento"];?[lemma:"regulamento geral"];?[lemma:"regulamento interno"], prep[lemma:"de"], (art[def]), noun[maj], (prep ; art[def] ; noun[maj] ; adj[maj])*.
+
+//DCO, 2011/01/25
+// Example: processo n.º 432-DGRF
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:processo], ?[lemma:número];?[lemma:"n.º"];?[lemma:"nº"], num[dig,rom:~,ord:~,time:~,t-meas:~,curr:~], (punct[lemma:-], ?[toutmaj]).
+
+//DCO, 2011/01/27
+// Example: Regulamento (CE) n.º 2216/2004
+//DCO, 2011/06/27 OK
+1> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:regulamento], (punct[paren,left], ?+, punct[paren,right]), ?[lemma:número];?[lemma:"n.º"];?[lemma:"nº"], num[rom:~,ord:~,time:~,t-meas:~,curr:~].
+
+//DCO, 2011/01/27
+// Example: Dire(c)tiva 2004/101/CE
+// Example: Decreto 7/2002
+//DCO, 2011/06/27 OK
+2> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:diretiva];?[lemma:decreto], num[rom:~,ord:~,time:~,t-meas:~,curr:~], (punct[lemma:"/"], ?[toutmaj];num[rom:~,ord:~,time:~,t-meas:~,curr:~]).
+
+//DCO, 2011/01/27
+// Example: IP/04/1250
+//DCO, 2011/06/27 OK
+2> NOUN[location=+,virtual=+,documents=+] @= ?[surface:IP], punct[lemma:"/"], num[rom:~,ord:~,time:~,t-meas:~,curr:~], (punct[lemma:"/"], num[rom:~,ord:~,time:~,t-meas:~,curr:~]).
+
+//DCO, 2011/01/27
+// Example: Decisão da | Comissão n.º | 156/2004 --> não é VALOR QUANTIDADE, portanto metemos virtual
+2> ? @= | noun[lemma:comissão], ?[lemma:número];?[lemma:"n.º"];?[lemma:"nº"] | num[rom:~,ord:~,time:~,t-meas:~,curr:~,virtual=+].
+
+//DCO, 2011/01/27
+// Example: | Decisão n.º | 156/2004 --> não é VALOR QUANTIDADE, portanto metemos virtual
+2> ? @= | noun[lemma:decisão], ?[lemma:número];?[lemma:"n.º"];?[lemma:"nº"] | num[rom:~,ord:~,time:~,t-meas:~,curr:~,virtual=+], (punct[lemma:"/"], ?[toutmaj];num[rom:~,ord:~,time:~,t-meas:~,curr:~,virtual=+]).
+
+//DCO, 2011/02/01
+// Example: Lei 53-B/2006
+//DCO, 2011/06/27 Não está a funcionar bem
+//2> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:lei], num[dig,rom:~,ord:~,frac:~,curr:~,time:~,t-meas:~,sports_results:~], (punct[lemma:"-"], ?[lemma:"%C"]), (punct[lemma:"/"], num[dig,ord:~,rom:~,frac:~,curr:~,time:~,t-meas:~,sports_results:~]).
+
+//DCO, 2011/02/01
+// Example: art. 4, art. 4º
+//DCO, 2011/06/27 OK
+2> NOUN[location=+,virtual=+,documents=+] @= ?[lemma:"art."];?[lemma:artigo], num[rom:~,frac:~,curr:~,time:~,t-meas:~,sports_results:~].
+

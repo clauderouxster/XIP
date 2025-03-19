@@ -1,0 +1,40 @@
+// deduction_tourisme_2.xip
+// dépendances de sentiments pour le tourisme, 2ème partie, coréférence de LIEU
+// créé: 27.6.2007 (Sigrid Maurel)
+// modifié: 27.6.2007 (Sigrid Maurel)
+
+
+Déduction:
+
+// coréférence indirecte, par la relation LIEU
+// PB: il n'y a pas de relation expicite entre "ville, endroit, etc" et le nom de lieu, donc le résultat est à considérer avec précaution!
+// aussi si c'est seulement le pronom "ce"?
+
+// Personne ne parle de Chypre sur ce forum pourtant c'est une île magnifique et à decouvrir vraiment.
+// Petit conseil: garde-toi beaucoup de temps pour Versailles, c'est très beau, très grand, pleins de jardins magnifiques, le palais des glaces splendide.
+// PB: si plusieurs lieux présents dans la phrase, celui le plus près à gauche du sentiment sera choisi, c'est pas forcéement le bon...
+// PB: si les lieux sont regroupés dans un même SC, celui le plus à gauche dans le SC sera choisi; pas de différence si ajout de [lieu-touri:~] dans les conditions emboitées
+// Alors je maintiens Venise, Nuremberg, et je rajoute Lucerne en Suisse (pas donné comme coin mais franchement superbe!)
+// -> SENTIMENT_POSITIF(superbe, Suisse), ici plutôt Lucerne ?
+// Tu pourrais par exemple prendre un ferry pour Helsinki en Finlande (une très belle ville, possède un camping pas trop loin du centre en été).
+//| (SC{?*[lieu-touri:~], NP{?*, #3}}; SC{?*, PP{?*, NP{?*, #3}}}; NP{?*, #3}; PP{?*, NP{?*, #3}}), ?*, (SC{?*, NP{?*, #2}}; SC{?*, PP{?*, NP{?*, #2}}}; NP{?*, #2}; PP{?*, NP{?*, #2}}) |
+//if ( (^SENTIMENT(#1, #2[lieu-touri:+, lemme:ville]) | ^SENTIMENT(#1, #2[pron:+, lemme:ce]) ) & LIEU(#3[ville:+]) )
+//SENTIMENT(#1, #2, #3).
+
+| (SC{?*[lieu-touri:~], NP{?*, #3}}; SC{?*, PP{?*, NP{?*, #3}}}; NP{?*, #3}; PP{?*, NP{?*, #3}}), ?*[lieu-touri:~], (SC{?*, NP{?*, #2}}; SC{?*, PP{?*, NP{?*, #2}}}; NP{?*, #2}; PP{?*, NP{?*, #2}}) |
+if ( (^SENTIMENT(#1, #2[lieu-touri:+]) | ^SENTIMENT(#1, #2[pron:+, lemme:ce]) ) & LIEU(#3) )
+//SENTIMENT(#1, #3).
+SENTIMENT(#1, #2, #3).
+
+// La ville de Caen, à part son château n'est pas extraordinaire.
+// PB: si plusieurs lieux présents dans la phrase, celui le plus près à droite du sentiment sera choisi, c'est pas forcéement le bon...
+// s'il y a deux noms de lieu, un à gauche et un à droite du mot en question, celui à gauche sera chosi
+| (SC{?*, NP{?*, #2}}; SC{?*, PP{?*, NP{?*, #2}}}; NP{?*, #2}; PP{?*, NP{?*, #2}}), ?*[lieu-touri:~], (SC{?*, NP{?*, #3}}; SC{?*, PP{?*, NP{?*, #3}}}; NP{?*, #3}; PP{?*, NP{?*, #3}}) |
+if ( (^SENTIMENT(#1, #2[lieu-touri:+]) | ^SENTIMENT(#1, #2[pron:+, lemme:ce]) ) & LIEU(#3) )
+//SENTIMENT(#1, #3).
+SENTIMENT(#1, #2, #3).
+
+// répéter le 2e argument s'il s'agit d'un nom propre (ville, pays ou région)
+// J'aime Grenoble. -> SENTIMENT_POSITIF(aimer, Grenoble, Grenoble)
+if ( ^SENTIMENT(#1, #2[ville:+]) | ^SENTIMENT(#1, #2[pays:+]) | ^SENTIMENT(#1, #2[region:+]) )
+SENTIMENT(#1, #2, #2).

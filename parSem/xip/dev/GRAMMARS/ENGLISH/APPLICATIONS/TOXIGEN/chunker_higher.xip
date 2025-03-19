@@ -1,0 +1,155 @@
+
+
+Sequence:
+
+
+// We work with paragraphs. Have to consider the SENTENCE LEVEL.
+
+//10> ST = ?[start], ?+, ?[endbis:!] .
+10> ST = ?[startbis:!], ?+, ?[sent,endbis:!] .
+11> ST = ?[startbis], ?+ ||.
+
+
+Marker:
+
+
+// Ajustements necessaires pour rajouter des traits.
+// Marquage par le trait [colour:+] d'expressions complexes de coulour
+// Rule XXXXX
+
+15> NADJ[colour=+]{?[colour],punct,?[colour]} .
+
+15> AP[colour=+]{NADJ[colour]{?[colour],punct,?[colour]}} .
+
+15> AP[colour=+]{?, conj[coord], ?[colour]} .
+
+15> AP[colour=+]{adv*,?[colour,last]} .
+
+
+
+//15> AP[colour=+]{nadj[colour,first,last]} .
+
+// small quantity
+15> NP[quant=+]{?*, AP{?*,?[adj_quantity,last]}, ?[noun_quantity,last,quant=+]} .
+
+
+
+reshuffling:
+
+// Delete the end of paragraph mark
+20> ST+#1, NP#2 = #1 .
+
+
+// Reshuffles string "clear to yellow metal"
+// using features colour:+ that have been added to the lexicon
+20>  NP{det#1, AP#2{?*,?[last,colour]}}, PP{#3[prep,form:finfto], NP{ AP#4{?*,?[last,colour]}, #5[last]}}  = 
+	NP{#1, AP[colour=+]{#2, #3, #4} , #5} .
+
+// cream- to brown-colored
+20>  NP{#1?-, AP#2{?*,?[last,colour]}}, PP{#3[prep,form:finfto], NP{ AP#4{?*,?[last,colour]}}}  = 
+	AP[colour=+]{#1, #2, #3, #4} .
+
+
+// gray-to-purple colored metal
+20> NP{ #1?-, AP#2[colour:+]},verb#3[partpas,colour], NP#4{#5?-,#6[noun,last]} =
+	NP{ #1, #2, #3[adj=+], #5, #6}.
+
+
+// Coordination of adjectives
+// e.g. yellow, white or gray
+20> NP{AP{?*#7,#1[adj,last]}}, punct#2[comma], NP{AP{#3[adj], (punct#8[comma]), conj#4[coord], #5[adj]}} = 
+	 AP{#7, #1, #2, #3, #8, #4, #5} .
+
+20> AP{?*#7,#1[adj,last]}, punct#2[comma], AP{#3[adj], (punct#8[comma]), conj#4[coord], #5[adj]} = 
+	 AP{#7, #1, #2, #3, #8, #4, #5} .
+
+20> AP{?*#7,#1[adj,last]}, punct#2[comma], NP{AP{#3[adj], (punct#8[comma]), conj#4[coord], #5[adj]}} = 
+	AP{#7,#1,#2,#3,#8,#4,#5} .
+
+
+20> NP{AP{?*#7,#1[last,colour]}}, punct#2[comma], NP{AP[colour]{?*#13,#3}}, punct#8[comma], conj#4[coord], NP{AP[colour]{?*#15,#5}} = 
+	AP[colour=+]{ #7, #1, #2, #13, #3, #8, #4, #15, #5 } .
+
+20> NP{AP{?*#10,#1[adj,prop_entite], punct#2[comma], #3[adj,prop_entite], punct#8[comma], conj#4[coord], #5[adj,prop_entite]} } =
+	AP{#10,#1,#2,#3,#8,#4,#5} .
+
+// Coordination with comma only
+// a colorless, flammable metal
+20> NP{det#1, AP{#2[adj,first,last,prop_entite]}}, punct#3[comma], NP{AP{#4[first,last,prop_entite]}, AP{#5[first,last]}} =
+	NP{#1, AP{#2,#3,#4}, #5} .
+
+
+// Same as above when the NP has no article
+20> NP{AP{#2[adj,first,last,prop_entite]}}, punct#3[comma], NP{AP{#4[first,last,prop_entite]}, AP{#5[first,last]}} =
+	NP{ AP{#2,#3,#4}, #5} .
+
+// a colorless flammable car
+20> NP{det#1, AP{#2[adj,first,last,prop_entite]}, punct#3[comma], AP{#4[first,last,prop_entite]}, noun#5[last]} =
+	NP{#1, AP{#2,#3,#4}, #5} .
+
+// Same as above when there is no determiner
+20> NP{AP{#2[adj,first,last,prop_entite]}}, punct#3[comma], NP{ AP{#4[first,last,prop_entite]}, noun#5[last]} =
+	NP{ AP{#2,#3,#4}, #5} .
+
+// Bad chunking 
+// if COLOUR NADJ followed by ELEMENT NADJ, it builds just a NP
+20> NP{AP#1[colour]}, AP{?*#2,#3[element]} =
+	NP{ #1, #2, #3} .
+
+
+// Coordination of entity names taken as NADJ
+// What are sdfsdfform and werwerthane ?
+20> ST{ SC#1{BG{?[form:fwhat,first]}, FV{?[form:fbe,last]}}, NP{AP{#2[nadj,guess], conj#3[coord], #4[nadj,guess]} }, punct#5[endbis]} =
+	ST{ #1, NP{ noun#2[adj=~,last=+]}, #3, NP{ noun#4[first=+,adj=~]}, #5} .
+
+
+// Coordination of entity names at the beginning of a sentence
+20> SC[startbis]{ NP#1, conj#2[coord], NP{AP{nadj#3[first,last]}}, FV#4 } =
+	SC[startbis=+] {#1, #2, NP{noun#3[adj=~]}, #4} .
+
+
+// Bad chunking
+// if we have an NP starting with a determiner that contains just an NP in which there are only adjectives and an NADJ at the end
+// Then we tag the last NADJ as a noun
+//20> NP{det#1, AP{?*#2,nadj#3[last]} } =
+//	NP{#1, AP{#2}, noun#3[adj=~]} .
+
+
+
+// Special treatment of unknown word (guessed) that are probably some chemical product name and that are alone in an AP (and should be in a NP)
+// e.g. At room temperature acrolein is flammable...
+20> PP#1[startbis], AP{nadj#2[first:+,last:+,guess:+]}, FV#3, ?-#4 =
+	#1, SC{ NP{noun#2}, #3}, #4 .
+
+20> SC{ NP#1[startbis,tempexpr], AP{nadj#2[first:+,last:+,guess:+]}, FV#3}, ?-#4 = 
+	#1, SC{ NP{noun#2}, #3}, #4 .
+
+DependencyRules: 
+
+// For coordination - specific cases in the specialized corpus (toxiques)
+
+// If we have a PP{prep NP[pl]} followed by a sequence a NP[pl], all the NPs being without determiners separated by commas, then they are coordinated
+| PP{prep, NP{?*,#10[last]}}, ( punct[comma];NP{?*,#20[last]} )*, conj#4[coord], NP{?*,#30[last]};PP{prep[lemme:as],NP{?*,#30[last]}} |
+	COORD[adhoc=+](#4,#10),
+	COORD[adhoc=+](#4,#20),
+	COORD[adhoc=+](#4,#30).
+
+// Coordinated adjectives that have a comma before the coordinator
+| AP{?*[adj:~], adj#1;nadj#1, (punct[comma];adj#2)*, conj#4[coord], adj#3[last];nadj#3[last]} |
+	if ( #1[prop_entite]:#2[prop_entite] & #1[prop_entite]:#3[prop_entite] )
+	AJCOORD(#1,#3),
+	COORD[adhoc=+](#4,#1),
+	COORD[adhoc=+](#4,#2),
+	COORD[adhoc=+](#4,#3).
+
+
+| AP{?*[adj:~], adj#1;nadj#1, (punct[comma];nadj#2)*, conj#4[coord], adj#3[last];nadj#3[last]} |
+	if ( #1[prop_entite]:#2[prop_entite] & #1[prop_entite]:#3[prop_entite] )
+	AJCOORD(#1,#3),
+	COORD[adhoc=+](#4,#1),
+	COORD[adhoc=+](#4,#2),
+	COORD[adhoc=+](#4,#3).
+
+
+
+

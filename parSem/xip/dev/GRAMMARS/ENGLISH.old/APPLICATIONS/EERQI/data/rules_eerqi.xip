@@ -1,0 +1,176 @@
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2009 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for Pubmed abstracts
+//!   filename   : rules_eerqi.xip
+//!   Date       : 2009
+//!   Author     : Agnes Sandor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+tagging: 
+
+//!!!!!!! We have to be careful: whenever a feature is eliminated, it will go back in the lexicon_rule. So, the word should be marked and be left out of the lexicon_rule !!!!!!!!!!!!
+
+1> ?[form:fno,toutmaj] = ?[contr=~,bk=~,speccontr=~,func=~,forneg=~].
+1> ?[form:fnot,toutmaj] = ?[contr=~,bk=~,speccontr=~,func=~,forneg=~].
+
+// words getting features depending on their context
+
+// little if not preceded by a determiner
+
+1> ?[form_bk:flittle] = | ?[det:~,timefact:~] | ?[contr=+,bk=+,wmentsco=+].
+1> ?[form_bk:flittle,start:+] = ?[contr=+,bk=+,wmentsco=+].
+
+// "rather" is not a "contr" word when it is in front of adjectives
+
+1> ?[form_bk:frather] = ?[bk=~,contr=~,weak=~,speccontr=~,func=~] | ?[adj:+] | .
+
+
+// Certain abstracts are divided into sections by the author. The section names are in capital letters that are sometimes not seperated from the previous and following sentences by punctuation. If the words in the section titles have features for the change of direction, this can give wrong results. So these words shouldn't have these features - this rule is now implemented in the lexicon
+
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,scope=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,mental=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,timefact=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,attitude=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,contr=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,possibility=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,publ=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,change=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,func=~]. 
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,nonot=~]. 
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,speccontr=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,specweak=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,weak=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,wscope=~].
+1> ?[bk:+,scope:+,toutmaj:+] = ?[bk=~,wtime=~].
+1> ?[bk:+,toutmaj:+,contr:+] = ?[bk=~,contr=~].
+
+// mark words that are either "mental" or "scope"
+
+1> ?[mental:+,contr:~] = ?[mentsco=+].
+
+1> ?[scope:+] = ?[mentsco=+].
+
+// mark words that are "mental", "scope" or "timefact"
+
+1> ?[timefact,nonot:~] = ?[mentscotime=+].
+
+1> ?[mentsco] = ?[mentscotime=+].
+
+// mark words that are "mental", "scope" or "possibility"
+
+1> ?[possibility] = ?[mentscoposs=+].
+
+1> ?[mentsco] = ?[mentscoposs=+].
+
+// mark words that are either "mental" or "cont"
+
+
+1> ?[mental:+,contr:~,scope:~] = ?[mentcont=+].
+
+1> ?[mental:~,contr:+,scope:~] = ?[mentcont=+].
+
+
+// "factor" is not a level word within hyphened words
+
+//1> ?[nohyph:+] = | ?[form:fhyph] | ?[level=~,bk=~,contr=~].
+
+// gain-of-function
+
+1> ?[nohyph:+] = ?[bk=~,change=~] | ?[form:fhyph] |.
+
+// "challenge" is a term when preceded by a guessed word even when this word is not analyzed as its modifier 
+
+1> ?[form_bk:fchallenge] = | ?[guess:+] | ?[contr=~,bk=~,nohyph=~,nounary=~] .
+
+// "elucidate" has the feature "new" only if it is an infinitive
+
+//1> verb[new:+] = | ?[form_bk:~finfto] | verb[new=~].
+
+//1> verb[new:+,start:+] = verb[new=~].
+
+//contexte dependent "negative":
+
+//but .... not
+
+1> ?[forneg:+,toutmaj:~] = | ?[form:fbut] , ?*[punct:~] | ?[forneg=~,negative=~] .
+
+1> ?[forneg:+,toutmaj:~] = | ?[however] , ?*[punct:~] | ?[forneg=~,negative=~] .
+
+1> ?[negative:+] = | ?[form:fbut] , ?*[punct:~] | ?[forneg=~,negative=~] .
+
+1> ?[negative:+] = | ?[however] , ?*[punct:~] | ?[forneg=~,negative=~] .
+
+// or not
+
+1> ?[forneg:+,toutmaj:~] = | ?[form:for] | ?[forneg=~,negative=~] .
+
+// "may not" "probably not" -> "not gets the feature negative so that it can make a negative relsent
+
+1> ?[forneg,toutmaj:~] = | ?[possibility], (adv[form:~fbut]) | ?[negative=+] | ?[noneg:+] | .
+
+1> ?[forneg,toutmaj:~] = | ?[form:fand], (adv[form:~fbut]) | ?[negative=+] | ?[noneg:+] |.
+
+1> ?[forneg,toutmaj:~] = | ?[comma], (adv[form:~fbut]) | ?[negative=+] | ?[noneg:+] |.
+
+1> ?[forneg,toutmaj:~,last:+] = | ?[possibility], (adv[form:~fbut]) | ?[negative=+]  .
+
+1> ?[forneg,toutmaj:~,last:+] = | ?[form:fand], (adv[form:~fbut]) | ?[negative=+] .
+
+1> ?[forneg,toutmaj:~,last:+] = | ?[comma], (adv[form:~fbut]) | ?[negative=+] .
+
+// not only is not negative
+
+1> ?[forneg:+,toutmaj:~] = ?[forneg=~,negative=~,contr=~,bk=~,func=~] | ?[noneg:+] |.
+
+//contrary to
+
+1> ?[contr,noun] = | ?[start], ?*[form:~fbut] | ?[negative=+] | ?[form:finfto] |.
+
+1> ?[contr,noun] = | ?[start], ?*[however:~] | ?[negative=+] | ?[form:finfto] |.
+
+1> ?[contr,noun,start] =  ?[negative=+] | ?[form:finfto] |.
+
+// than is contr only before mental and timefact_old
+
+1> ?[form:fthan] = ?[bk=+,contr=+,weak=+] | ?[mental] | .
+
+1> ?[form:fthan] = ?[bk=+,contr=+,weak=+] | ?[timefact] | .
+
+// Here (,) we MENTAL[PUBL=+] ->CONTRIBUTION
+
+1> ?[mental] = | ?[form:fhere], (punct), ?[pron,deict] | ?[mental,publ=+] .
+
+1> noun,verb<lemme:key> = noun.
+
+1> ?<lemme:not> = ?[forargumentation=+] .
+
+1> ?<lemme:only> =  ?[forargumentation=+]  .
+
+1> ?[forargumentation] = ?[argumentation=+,contrast=+] | ?[forargumentation] | .
+
+1> ?[forargumentation] = | ?[forargumentation] | ?[argumentation=+,contrast=+] .
+
+1> ?[ord] = ?[argumentation=+,enumeration=+].
+
+//1> ?<lemme:firstly> = ?[argumentation=+,enumeration=+].
+
+
+// words in the NP that should not be part of keywords
+
+
+1> ?[dig] = ?[!nokeyword=+].
+1> ?[quant] = ?[!nokeyword=+].
+1> ?[pron] = ?[!nokeyword=+].
+1> ?[num] = ?[!nokeyword=+].
+1> ?[det] = ?[!nokeyword=+].
+1> ?[adv] = ?[!nokeyword=+].
+1> ?[importance] = ?[!nokeyword=+].
+1> ?[attitude] = ?[!nokeyword=+].
+

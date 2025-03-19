@@ -1,0 +1,272 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : localgram2.xip
+//!   Date       : 10/02/2003
+//!   Author     : Caroline Hagege
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// This file contains both sequence and tagging rules.
+// They are some adjustments (groupings and disambiguation that can be done)
+
+Sequence:
+
+// A TEST IN CASE TWO GUESS NOUNS
+
+
+
+// Same as below but the digit may be a fractional e.g. 2,3-benzofuran
+
+// CH 27th September
+// Grouping together a digit followed by an hyphen followed by an adjective
+10> nadj = dig[dig], punct[form:fhyph], nadj.
+
+
+
+// AFFIXES (regles sur les prefixes) mises dans localgram1
+
+
+// CH 18th October
+// words with feature cardpoint separated by hyfen are grouped together
+// South East -- South and East
+10> nadj[features:!,mwe=+] = nadj[cardpoint],
+                             (punct[form:fhyph,left,right]),
+                             (conj[coord]),
+                             nadj[!features:!,cardpoint].
+
+// South East -- South and East
+10> adv[features:!,mwe=+] = adv[cardpoint],
+                             (punct[form:fhyph,left,right]),
+                             (conj[coord]),
+                             adv[!features:!,cardpoint].
+
+
+
+
+// CH
+// Having together a word followed by an hyphen[left:+, right:~] and the hyphen when followed by comma or coordinator
+// e.g. onion- or garlic-like
+10> nadj = ?[noun:+], punct[form:fhyph, left:+, right:~] | punct[comma];?[coord] | .
+
+
+// CH 11 Oct.
+// Grouping a noun followd by an hyphen followed by a ing form when they are followed by an adjective or noun
+10> nadj = ?[noun:+], punct[form:fhyph,left:+,right:+], ?[vprog] | ?[noun:+] | .
+
+// CH 31 july
+// Grouping of adjectival forms separated by hyphen eg. fast-growing
+10> nadj = ?[adj:+], punct[form:fhyph,left:+,right:+], ?[adj:+].
+
+
+10> nadj[mwe=+] = ?[noun:+], punct[form:fhyph,left:+,right:+], ?[noun:+] | ?[noun:+] | .
+
+// CH 31 July
+// Grouping nouns and past participle separated by hypen eg. object-oriented
+10> nadj = noun, punct[form:fhyph,left:+,right:+], verb[partpas:+].
+
+// CH 21th September
+// Grouping adjectives and past participle separated by hyphen e.g. Soviet-blessed
+// We give the nadj category to the result
+10> adj = adj, punct[form:fhyph,left:+,right:+], verb[partpas:+].
+
+// CH 12th September
+// Grouping noun-adjectives and past participle separated by hypeh e.g. ill-prepared
+10> nadj = nadj, punct[form:fhyph,left:+,right:+], verb[partpas:+].
+
+// CH 24th August
+// Grouping two proper nouns separated by hyphen e.g. The annual meeting of INDONESIA-MALAYSIA forest experts
+//10> noun[proper:+] = noun[proper:+], punct[form:fhyph,left:+,right:+], noun[proper:+].
+
+
+// CH 3rd September 
+// Grouping two nouns separated by hyphen e.g. health-care
+// I'm not sure . Check
+10> noun = noun[tempexpr:~,maj:~,!features:!], punct[form:fhyph,left:+,right:+], noun[maj:~,date:~,tempexpr:~,!features:!].
+
+// CH 12th September
+// Grouping together an nadj followed by hyphen followed by noun before another noun
+// e.g. A West Berliner counter-culture group
+10> noun = nadj, punct[form:fhyph,left:+,right:+], noun[date:~] | noun | .
+
+
+// CH 28th September
+// Grouping together an adj followed by hyphen followed by noun before another noun
+10> noun = adj, punct[form:fhyph,left:+,right:+], noun[date:~,!features:!] | noun | .
+
+
+// CH 28th September
+// Grouping together a noun followed by an hyphen followed by like
+// eg. alpha-like virus 
+10> nadj = noun, punct[form:fhyph,left:+,right:+], ?[form:flike] .
+
+// CH 1st October
+// Grouping together an abbreviation followed by an hyphen followed by a noun or adjective
+10> nadj = noun[abr], punct[form:fhyph,left:+,right:+], ?[adj] .
+
+10> noun = noun[abr], punct[form:fhyph,left:+,right:+], noun[noun] .
+
+
+//CB
+
+10> adv = conj[lemme:"as_soon_as"], adj[lemme:"possible"] |?[noun:~]|.
+
+
+
+// CH 7th August
+// Grouping together a form of have followed by TO in order to construct a modal
+// CHECK IF NO BAD SIDE EFFECT !!!!
+10> aux[pres=+] = verb[form:fhave,pres:+], prep[form:finfto].
+10> aux[past=+] = verb[form:fhave,past:+], prep[form:finfto].
+
+// CH 8th August
+// Grouping the words EACH and OTHER together
+// In a later stage correct in the lexicon
+// In the file lexicon.xip (and feautures.xip) 2 new values of form are added especially for this rule
+10> pron = quant[form:feach], adj[form:fother].
+
+
+
+// ADJ{15 - year} old -> ADJ{ADJ{15 - year} old}
+10> adj[quant:+] = adj[quant], (punct[form:fhyph]), ?[adj,guess:~] .
+// same as above without an hyphen
+// to be removed when merging with XT temporal grammar.
+10> adj[quant:+,tempexpr=~] = dig;num, noun[lemme:year], ?[lemme:old] .
+
+
+// SEE OTHER ADVP in chunker.xip
+
+// CH 22th Aug.
+// Grouping together HOW + MUCH
+// The result is given either the det[wh:+] or adv[wh:+]
+10> ADVP[wh:+,form:fmuch] = ?[form:fhow], ?[form:fmuch] | ?[noun:~, adj:~] |.
+
+10> det[wh:+,form:fmuch] = ?[form:fhow], ?[form:fmuch] | ?[prep:~, verb:~, coord:~, adv:~, punct:~] |.
+
+
+// CH 22th Aug.
+// Grouping together HOW + MANY
+// The result gives either a det or an adv
+10> ADVP[wh:+,form:fmany] = adv[form:fhow], ?[form:fmany] | ?[noun:~, adj:~] |.
+
+10> det[wh:+,form:fmany] = ?[form:fhow], ?[form:fmany] | ?[prep:~, verb:~, coord:~, adv:~, punct:~] |.
+
+
+
+// CH 
+// Grouping together "later" and "on" if this expression is followed by a punctuation mark, a conjunction, a verb 
+10> adv[notly:+] = ?[form:flater], prep[p_on:+] | conj;verb;punct |.
+
+
+
+// CH 23th Nov.
+// Treating complex expressions involving AS
+// If we have a sequence AS + adv;adj + AS followed by an adjective or a noun that has not the features pron and nom
+// OR if this sequence is followed by anything with no verbs until the end of the sentence
+// Then we grouped it and give it a tag prep with feature form:fas
+// If the sequence AS+ adj;adv + AS is followed by a determiner, or a nominative pronoun,
+// Then we give it the tag conj with feature fas
+10> prep[lemme:as] = prep[lemme:as], ?[adj], prep[lemme:as] | (?[adj]), ?+[noun,nom:~,pron:~], ?[verb:~,aux:~] | .
+
+10> prep[lemme:as] = prep[lemme:as], ?[adv], prep[lemme:as] | (?[adj]), ?+[noun,nom:~,pron:~], ?[verb:~,aux:~] | .
+
+
+10> conj[lemme:as] = prep[lemme:as], ?[adj], prep[lemme:as] | pron[nom,personal] | .
+
+10> conj[lemme:as] = prep[lemme:as], ?[adv], prep[lemme:as] | pron[nom,personal] | .
+
+10> prep[lemme:as] = prep[lemme:as], ?[adj], prep[lemme:as] | (?[adj]), ?+[noun,nom:~,pron:~], aux;verb | .
+
+10> prep[lemme:as] = prep[lemme:as], ?[adv], prep[lemme:as] | (?[adj]), ?+[noun,nom:~,pron:~], aux; verb | .
+
+
+
+// CH - In order to
+10> prep[form:finfto] = | | ?[lemme:in], ?[lemme:order], ?[lemme:to] | (adv), verb;aux | .
+
+
+
+
+
+
+//"at least 2 people were injured". At most ....
+//15> ADV -> prep[form:fat], quant[sup:+,last:+].
+// changed by XT
+14> ADV[quantadv:+,mwe:+,t_mod:equal_or_more] = prep[form:fat], quant[sup:+,lemme:least].
+14> ADV[quantadv:+,mwe:+,t_mod:equal_or_less] = prep[form:fat], quant[sup:+,lemme:most].
+14> ADV[quantadv:+,mwe:+] = prep[lemme:as], quant[form:fmuch] ~| (?*), prep[lemme:as] |.
+
+// CH more/less than...
+// changed by XT
+14> ADV[quantadv:+,mwe:+,t_mod:more_than] = quant[lemme:more,compar:+], conj[form:fthan] .
+14> ADV[quantadv:+,mwe:+,t_mod:less_than] = quant[lemme:less,compar:+], conj[form:fthan] .
+14> ADV[quantadv:+,mwe:+,t_mod:equal_or_less] = quant[form:fno], quant[lemme:more,compar:+], conj[form:fthan] .
+14> ADV[quantadv:+,mwe:+,t_mod:equal_or_more] = quant[form:fno], quant[lemme:less,compar:+], conj[form:fthan] .
+14> ADV[quantadv:+,mwe:+,t_mod:equal_or_less] = | prep[form:ffor] | ?[p_up], ?[p_to] | ?[c_dur] |.
+
+IDrules:
+
+
+
+// CH Grouping "so far away" and "so far as"
+15> ADV[mwe:+] -> adv[form:fso], adv[form:ffar], adv[p_away] .
+
+15> CONJ[conj:+, sub:+,mwe:+] -> adv[form:fso], adv[form:ffar], conj[lemme:as] .
+
+
+// CH Grouping "so far" when followed by anything that is not a preposition
+
+20> ADV[mwe:+] -> adv[form:fso], adv[form:ffar] | ?[prep:~,form:~fthan] | .
+
+
+
+//====================== Numeral Grouping ========================================
+
+15> num[card:+] -> dig, num[ord:~].
+
+
+
+// dig to dig is considered as dig e.g. 65 to 69 CH 3rd Sept.
+15> dig[card:+] -> dig[card:+,percent:~], prep[form:finfto], dig[card:+,percent:~] .
+
+//added CB : distinction for percentages
+
+15> dig[card:+,percent] -> dig[card:+,percent], prep[form:finfto], dig[card:+,percent] .
+
+
+// CH Grouping of monetary expressions like US $ 
+15> meas[symbol:+] -> noun[abr, country], meas[symbol] .
+
+// CH Grouping together a measure followed by a numeral
+20> num[card:+,symbol:+] -> meas[symbol:+], num[card:+] .
+
+
+// CH Grouping together expressions of measure with "per cent"
+20> num[card:+,symbol:+,num:+] -> num[card:+], noun[percent:+] .
+
+20> num[card:+, symbol:+,num:+] -> dig[card:+], noun[percent:+].
+
+
+Sequence:
+
+// XT num with "about" (about 12 percent)
+22> num[mwe:+,num:+, !card:!, !symbol:!, !percent:!] = 
+	~| verb[sc_pabout] | adv[p_about], num[card:!, symbol:!, percent:!].
+
+
+//CH 6th August
+//====================== Quantification ========================================
+IDrules:
+
+15> quant[quant:+, predet:+] -> det[def:+], nadj[form:fwhole].
+
+
+
+
+
+

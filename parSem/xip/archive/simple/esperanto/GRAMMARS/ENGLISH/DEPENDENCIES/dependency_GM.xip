@@ -1,0 +1,99 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 - 2007 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for Litigation
+//!   filename   : dependency.xip
+//!   Date       : 06/07/2006
+//!   Author     : Elena López García
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+DependencyRules:
+
+//To get the author of a document
+//After "From:"
+|prep[lemme:from], punct[lemme:\:], #1{#2}|
+	if(PERSON(#2))
+	EXP(#2).
+
+
+//after a person who is already an EXP
+//|#1{#2}, punct[comma], #3{#4}|
+//	if(EXP(#1))
+	//& PERSON(#4))
+//	EXP(#4).
+
+//|#1{#2}, #3{#4}|
+//	if(EXP(#2)
+//	& PERSON(#4))
+//	EXP(#4).
+
+//after "Sincerely,..."
+|#1[lemme: sincerely], (punct[comma]), #2{#3}|
+	if(PERSON(#3))
+	EXP(#3).
+
+//after "Yours,..."
+|#1, (ADVP), punct[comma], #2{#3}|
+	if(head(#10, #1)
+	& #10[lemme:you])
+	EXP(#3).
+
+
+//To get the recipients of a document
+//either he is after "To:"
+|prep[lemme:to], punct[lemme:\:], #1{#2}|
+	//if(PERSON(#2))
+	RECIPIENT(#2).
+
+//either he is after someone already recipient
+|#1{#2}, punct[comma], #3{#4}|
+	if(RECIPIENT(#2))
+	//& PERSON(#4))
+	RECIPIENT(#4).
+
+|#1{#2}, #3{#4}|
+	if(RECIPIENT(#2)
+	& PERSON(#4))
+	RECIPIENT(#4).
+
+//After "Attention:"
+|#1, punct[lemme:\:], #2{#3}|
+	if(head(#10, #1)
+	& #10[lemme:attention]
+	& #PERSON(#4))
+	RECIPIENT(#4).
+
+//ATTN:
+
+//After "Dear ..."
+|#1{?[lemme:dear], ?}|
+	RECIPIENT(#1).
+
+
+//To get the date of the document
+|#1, punct[lemme:\:], #2{#3}|
+	if(head(#10, #1)
+	& #10[lemme:"date"]
+	& DATE(#3))
+	DATE_DOC(#3).
+
+//To get other dates in the document
+	if(DATE(#1)
+	& ~DATE_DOC(#1))
+	OTHER_DATE(#1).
+
+//To get the copyees
+|#1[surface:cc], punct[lemme:\:], #2{#3}|
+	if(person(#3))
+	COPYEE(#3).
+
+|#1{#2}, punct[comma], #3{#4}|
+	if(COPYEE(#2)
+	& PERSON(#4))
+	COPYEE(#4).

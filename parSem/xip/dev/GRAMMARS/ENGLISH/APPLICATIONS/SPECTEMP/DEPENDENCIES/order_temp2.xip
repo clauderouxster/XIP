@@ -1,0 +1,963 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2003 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar
+//!   filename   : order_temp2.xip
+//!   description: file handles rules dealing with temporal predicate
+//!                ordering with a same sentence.
+//!                Use lexical info from verbs
+//!   Date       : February 2007
+//!   Author     : Xavier Tannier
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Ordering of predicates within a sentence
+
+
+
+
+
+DependencyRules: 
+
+
+///////////////////////
+// TENSE REFINEMENTS
+///////////////////////
+// XT  "to be written" => FUTURE
+| IV{prep[form:finfto], verb[form:fbe,inf], verb#1[partpas]} | 
+	FUTURE(#1).
+
+
+
+// SUBJ + indspeech
+//  the subject and the verb are concomitant
+// (not a proper noun, not a pronoun)
+| verb#1[indspeech] |
+	if (SUBJ-N(#1, #2[pron:~,proper:~,tempexpr:~]))
+		ORDER[temp_rel:concomitant](#1, #2).
+
+
+///////////////////////
+// CORRECTIONS
+///////////////////////
+// TEMP with t_age are removed
+// the age should be a special DEPENDENCY
+// (later)
+if (^TEMP(?, ?[t_age]))
+	~.
+
+
+// if a TEMP stayed by mistake while a DELTA has been found,
+//   remove the TEMP
+// its comes a month after Qantas suspended
+if (^TEMP(#1, #2[c_dur]) & (DELTA(?, #1, #2) | DELTA(#1, ?, #2)))
+	~.
+
+// TEMP between two tempexpr included into the same tempexpr
+//   is an error
+| ADV[tempexpr]{?*, #1[tempexpr], ?*, #2[tempexpr]} | 
+	if (^TEMP(#1, #2))
+		~.
+
+//////////
+//////////
+// they began gathering ... Tuesday
+// if TEMP(gathering, Tuesday) then TEMP(began, Tuesday)
+| verb#1[v_temp_rel] |
+	if (^TEMP(#2, #3[date]) & OBJ-N(#1, #2))
+		TEMP(#1, #3).
+
+
+
+
+// the attacks of the war
+// two time_span_n linked by of
+| noun#1[time_span_n] |
+	if (MOD[post](#1, #2[time_span_n]) & PREPD(#2, ?[lemme:of]))
+		ORDER[temp_rel:concomitant](#1, #2).
+
+
+
+// The unemployment rate for adult men declined to 3.8 percent last month from 4.1 percent in December.
+// (two rules)
+| PP#5, #2[tempexpr,c_anchor,c_set:~] |
+	if ((^TEMP(#1_V[v_rise], #2_TEMPEXPR) | ^TEMP(#1_V[v_fall], #2_TEMPEXPR))
+		& MOD(#1, #3) & HEAD(#3[tempexpr:~], #5) &
+		(PREPD(#3, #4_PREP[form:funtil]) | PREPD(#3, #4_PREP[form:finfto])))
+	ORDER[temp_rel:ends_with](#1, #2).
+
+| PP#5, #2[tempexpr,c_anchor,c_set:~] |
+	if ((^TEMP(#1_V[v_rise], #2_TEMPEXPR) | ^TEMP(#1_V[v_fall], #2_TEMPEXPR))
+		& MOD(#1, #3) & HEAD(#3[tempexpr:~], #5) &
+		PREPD(#3, #4_PREP[form:ffrom]))
+	ORDER[temp_rel:starts_with](#1, #2).
+
+
+
+//////////////////////////
+// the verb linked to a SET gets a new feature iteration:+
+| #1[tempexpr,c_set] |
+	if (TEMP(#2_MAIN, #1) & SetFeature(#2, "e_iteration", "+"))
+		~.
+
+
+///////////////////////
+// COMPARATIVES
+///////////////////////
+// The gain left wages 3.8 percent higher than a year earlier.
+// left is the reference time for "a year earlier"
+| #1[form:fthan] |
+	if (COMPAR(#1_THAN, #2[tempexpr,c_anchor]) & MOD[comparativ](#3_ADJ, #1_THAN) &
+		ATTRIB(#4_OBJ, #3_ADJ) & OBJ-N(#5_V, #4_OBJ))
+		RT(#5_V, #2_TEMPEXPR).
+
+
+if (RT(?, #1) & ~TEMP(?, #1))
+	TEMP(##VERB, #1).
+
+
+// December of this year
+// Wednesday of last week
+| noun[tempexpr,mwe,c_anchor]{noun#1[temp_level:d,tempexpr,date];noun#1[temp_level:m,tempexpr,date], prep[form:fof], #2[noun,tempexpr,c_anchor]} |
+	RT(#2, #1).
+
+
+///////////////////////
+// TEMP_REL INTRODUCED BY VERBS
+///////////////////////
+
+
+
+// v_temp_rel
+// A precedes B
+| verb#1[v_temp_rel, !v_temp_rel:!] |
+	if (SUBJ-N(#1, #2_SUBJ[time_span_n]) & 
+		OBJ-N(#1, #3_OBJ[time_span_n]))
+		ORDER(#2, #3).
+
+
+
+// v_temp_rel + with
+//   A begins with B
+| verb#1[v_temp_rel, !v_temp_rel:!] |
+	if (SUBJ-N(#1_V, #2_SUBJ[time_span_n]) & 
+		MOD(#1_V, #3_OBJ[time_span_n]) & 
+		PREPD(#3_OBJ, #4_PREP[form:fwith]))
+	ORDER(#3_OBJ, #2_SUBJ).
+
+
+
+// the war has finished
+| verb#1[v_temp_rel:ends] |
+	if ((PRESENT(#1) | PAST(#1) | PRES-OR-PAST(#1)) &
+		SUBJ-N(#1, #2_NOUN[time_span_n]))
+		N-PAST(#2), N-LINK(#2, #1).
+
+
+// the campaign has begun
+| verb#1[v_temp_rel:starts] |
+	if ((PRESENT(#1) | PAST(#1) | PRES-OR-PAST(#1)) &
+		SUBJ-N(#1, #2_NOUN[time_span_n]))
+		N-PRESENT(#2), N-LINK(#2, #1).
+
+// the campaign will begin
+| verb#1[v_temp_rel:starts] |
+	if (FUTURE(#1) &
+		SUBJ-N(#1, #2_NOUN[time_span_n]))
+		N-FUTURE(#2), N-LINK(#2, #1).
+
+// the campaign is going to begin
+| verb#1[v_temp_rel:starts] |
+	if (NEAR-FUTURE(#1) &
+		SUBJ-N(#1, #2_NOUN[time_span_n]))
+		N-NEAR-FUTURE(#2), N-LINK(#2, #1).
+
+
+// the war is finished
+| verb#1[partpas, v_temp_rel:ends] |
+	if (VDOMAIN[passive](#1, #2[auxbh]) & NUCL[passive](#2, #1) & 
+		PRESENT(#2) &
+		SUBJ-N(#2, #3_NOUN[time_span_n]))
+		N-PAST(#3), N-LINK(#3, #1).
+
+
+// the campaign is begun
+| verb#1[partpas, v_temp_rel:starts] |
+	if (VDOMAIN[passive](#1, #2[auxbh]) & NUCL[passive](#2, #1) & 
+		PRESENT(#2) &
+		SUBJ-N(#2, #3_NOUN[time_span_n]))
+		N-PRESENT(#3), N-LINK(#3, #1).
+
+// I started speaking
+| verb#1_MAIN[v_temp_rel, !v_temp_rel:!] |
+	if (OBJ-N(#1_MAIN, #2[vprog]))
+		ORDER(#1, #2).
+
+// I started to speak
+// he continued to, he began to, he finished to
+| verb#1_MAIN[v_temp_rel, !v_temp_rel:!] |
+	if (EMBED[infinit](#2[partpas:~],#1) & PREPD(#2,?[lemme:to]) )
+		ORDER(#1,#2).
+
+
+// copulative verb
+// He appears to be tasting...
+| verb#1[cop];verb#1[cop2] |
+	if (EMBED[infinit](#2, #1))
+		ORDER[temp_rel:concomitant](#2, #1).
+
+///////////////
+// Relations with the veb
+// the war followed the invasion
+//  => invasion is before follow
+//  => war is concomitant with follow
+// the SUBJ relation is valuable for any temp_rel
+| verb#1[v_temp_rel] |
+	if (SUBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:concomitant](#2, #1).
+
+// OBJ relations:
+
+// the war followed the invasion
+| verb#1[v_temp_rel:after] |
+	if (OBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:before_or_during](#2, #1).
+
+// the war began the invasion
+| verb#1[v_temp_rel:starts] |
+	if (OBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:after_or_during](#2, #1).
+
+// the war finished the invasion
+| verb#1[v_temp_rel:ends] |
+	if (OBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:before_or_during](#2, #1).
+
+// the war preceded the invasion
+| verb#1[v_temp_rel:before] |
+	if (OBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:after_or_during](#2, #1).
+
+// the war continued the invasion
+| verb#1[v_temp_rel:before_or_during] |
+	if (OBJ-N(#1, #2[time_span_n]))
+		ORDER[temp_rel:concomitant](#2, #1).
+
+
+
+///////////////
+// cause
+// A causes B
+| verb#1[v_cause] |
+	if (SUBJ-N(#1_V, #2_SUBJ[time_span_n]) & 
+		OBJ-N(#1_MAIN, #3_OBJ[time_span_n]))
+		ORDER[v_temp_rel:before](#2, #3)
+
+
+///////////////
+// expectation
+// I expect this in 2010
+| verb#1[v_expect];verb#1[v_plan] |
+	if (OBJ-N(#1_V, #2_OBJ) & ^TEMP(#1, #3_TEMP[c_set:~,c_dur:~]) &
+		~(#2::#3))
+			TEMP[temp_uncertain:+](#2_OBJ, #3_TEMP),
+			ORDER[temp_rel:before_or_during](#1, #2).
+
+
+// expectation or plan
+// I plan to...
+// I hope to...
+// partpas:~ to avoid   "to have done"
+//  cop:~   to avoid I hope to be... (treated in next rule)
+| verb#1[v_expect,sc_toinf];verb#1[v_plan,sc_toinf] |
+	if (EMBED[infinit](#2[cop:~,partpas:~],#1_EXP) & PREPD(#2,?[form:finfto]) )
+		ORDER[temp_uncertain:+,v_temp_rel=after](#2,#1_EXP).
+
+// expectation
+// I plan to be => future
+// partpas:~ to avoid   "to have been"
+| verb#1[v_plan,sc_toinf] |
+	if (EMBED[infinit](#2,#1_EXP[cop,partpas:~]) & PREPD(#2,?[form:finfto]) )
+		ORDER[temp_uncertain:+,v_temp_rel=after](#2,#1_EXP).
+
+// expectation
+// I hope to be => not sure, future or during (given by v_temp_rel)
+// partpas:~ to avoid   "to have been"
+| verb#1[v_expect,sc_toinf] |
+	if (EMBED[infinit](#2,#1_EXP[cop,partpas:~]) & PREPD(#2,?[form:finfto]) )
+		ORDER[temp_uncertain:+,v_temp_rel=after_or_during](#2,#1_EXP).
+
+
+// expectation with SUBJ[time_span_n]
+// the war is expected 
+
+
+// I expect months of negociations in 2010
+//  TEMP(negociations, months) + ORDER(2010, months)  => ORDER(2010, negociations)
+if (TEMP(#1, #2[c_dur]) & HEAD(#3_H2, #2) & ^ORDER[!temp_rel:!](#4, #3_H2))
+	ORDER[temp_rel:!](#4, #1).
+
+
+///////////////////
+// permission
+
+// I allow this.
+| verb#1[v_permit] |
+	if (OBJ-N(#1_V, #2_OBJ) & S0(#2, ?))
+		ORDER[temp_rel:before_or_during](#1, #2).
+
+// I allow to do...
+| verb#1[v_permit] |
+	if (EMBED[infinit](#2,#1_PERM) & PREPD(#2,?[form:finfto]) )
+		ORDER[temp_uncertain:+,v_temp_rel=after](#2,#1_PERM).
+
+// convicted
+// He is convicted of/for ...
+| ?[verb]{?*, verb#1[lemme:convict, last]}, prep[form:fof], GV[prog]{verb#2} |
+	ORDER[v_temp_rel:after](#1, #2).
+	
+
+
+///////////////////
+// announce
+
+// I announce plans
+| verb#1[v_announce] |
+	if (OBJ-N(#1_V, #2_OBJ) & S0(#2, ?))
+		ORDER[temp_rel:after](#2, #1).
+
+
+///////////////////////
+// COPULA verbs
+///////////////////////
+// there is an increase
+// there has been ... + time_span_n
+// the noun gets the "tense" of the verb and the features of corresponding VDOMAIN
+// if the noun is a duration, do not N-LINK the duration but the corresponding event
+//     (if it exists -- "There have been 40 years of mistrust")
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		PAST(#1_BE))
+	N-PAST(#3), N-LINK(#3, #1).
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		PRES-OR-PAST(#1_BE))
+	N-PAST(#3), N-LINK(#3, #1).
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		FUTURE(#1_BE))
+	N-FUTURE(#3), N-LINK(#3, #1).
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		PRES-OR-FUT(#1_BE))
+	N-PRES-OR-FUT(#3), N-LINK(#3, #1).
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		NEAR-FUTURE(#1_BE))
+	N-NEAR-FUTURE(#3), N-LINK(#3, #1).
+| adv#2[form:fthere] |
+	if (LOC[pre](#1_BE[cop], #2) & 
+		(NUCL[subjcompl](#1_BE, #3[c_dur:~]) | (NUCL[subjcompl](#1_BE, #4[c_dur]) & TEMP(#3, #4))) & 
+		PRESENT(#1_BE))
+	N-PRESENT(#3), N-LINK(#3, #1).
+
+// same thing with "it is..."
+| pron#2[form:fit] |
+	if (SUBJ(#1_BE[cop], #2) & NUCL[subjcompl](#1_BE, #3[time_span_n]) & 
+		VDOMAIN[!perfect:!](#1_BE, ?) & PAST(#1_BE))
+	N-PAST(#3), N-LINK(#3, #1).
+| pron#2[form:fit] |
+	if (SUBJ(#1_BE[cop], #2) & NUCL[subjcompl](#1_BE, #3[time_span_n]) & 
+		VDOMAIN[!perfect:!](#1_BE, ?) & FUTURE(#1_BE))
+	N-FUTURE(#3), N-LINK(#3, #1).
+| pron#2[form:fit] |
+	if (SUBJ(#1_BE[cop], #2) & NUCL[subjcompl](#1_BE, #3[time_span_n]) & 
+		VDOMAIN[!perfect:!](#1_BE, ?) & NEAR-FUTURE(#1_BE))
+	N-NEAR-FUTURE(#3), N-LINK(#3, #1).
+| pron#2[form:fit] |
+	if (SUBJ(#1_BE[cop], #2) & NUCL[subjcompl](#1_BE, #3[time_span_n]) & 
+		VDOMAIN[!perfect:!](#1_BE, ?) & PRESENT(#1_BE))
+	N-PRESENT(#3), N-LINK(#3, #1).
+
+
+
+
+
+// N-EMBEDs, N-PAST, N-FUTURE, N-NEAR-FUTURE, N-PRESENT, and
+//   EMBEDs,   PAST,   FUTURE,   NEAR-FUTURE,   PRESENT, PRES-OR-PAST, PRES-OR-FUT
+//  are transformed into G-EMBED, G-PAST, etc. FOR THE TIME OF THIS FILE ONLY
+//  This is to avoid redundancy in rules
+//  These (G-)EMBEDs are removed AT THE END OF THE FILE
+if (EMBED[!condition:!, !complthat:!, !relativ:!, !infinit:!, !prog:!, !rsn:!](#1, #2))
+	G-EMBED(#1, #2).
+if (N-FUTURE(#1) | FUTURE(#1))
+	G-FUTURE(#1).
+if (N-NEAR-FUTURE(#1) | NEAR-FUTURE(#1))
+	G-NEAR-FUTURE(#1).
+if (N-PRESENT(#1) | PRESENT(#1))
+	G-PRESENT(#1).
+if (N-PAST(#1) | PAST(#1))
+	G-PAST(#1).
+if (PRES-OR-PAST(#1))
+	G-PRES-OR-PAST(#1).
+if (PRES-OR-FUT(#1))
+	G-PRES-OR-FUT(#1).
+if (MAIN(#1))
+	G-MAIN(#1)
+// COORDs
+if (MAIN(#2) & COORD(#2, #1))
+	G-MAIN(#1).
+
+
+///////////////////
+// N-EMBEDs
+///////////////////
+if (N-LINK(#1_NOUN, #2_VERB) & 
+	EMBED[!condition:!, !complthat:!, !relativ:!, !infinit:!, !prog:!, !rsn:!](#2_VERB, #3_MAIN))
+		G-EMBED(#1_NOUN, #3_MAIN).
+
+///////////////////
+// N-MAINs
+// time_span_n linked to MAINs
+///////////////////
+if (G-MAIN(#1) & N-LINK(#2_NOUN, #1))
+	G-MAIN(#2)
+
+
+// two EMBEDs with an infinitive in the middle
+// EMBED between extremes
+if (EMBED[infinit](#2, #1) & EMBED(#3, #2))
+	G-EMBED(#3, #1).
+
+
+
+
+///////////////////////
+// NEITHER MAIN or EMBED (or COORD)
+///////////////////////
+// Treated like MAINs for the moment
+| verb#1 | 
+	if (~G-MAIN(#1) & ~G-EMBED[complthat](#1, ?) & 
+			~G-EMBED[infinit](#1, ?) & 
+			~G-EMBED[condition](#1, ?) & 
+		~COORD(?, #1) & 
+		~NUCL[subjcompl:~,particle:~](#1, ?))
+	G-MAIN(#1).
+
+// not a VTENSE, etc
+// past + part pas => past
+// was said
+| FV{verb[past]}, NFV{?*, verb#1[partpas]} |
+	if (~VTENSE(#1))
+		VTENSE[t_past](#1),
+		VASPECT[a_simple](#1),
+		G-PAST(#1).
+// pres + part pas => present
+// is said
+| FV{verb[pres]}, NFV{?*, verb#1[partpas]} |
+	if (~VTENSE(#1))
+		VTENSE[t_pres](#1),
+		VASPECT[a_simple](#1),
+		G-PRESENT(#1).
+
+
+
+///////////////////////
+// MAINs
+///////////////////////
+if (G-MAIN(#1) & G-PAST(#1))
+	ST-ORDER[temp_rel:before](#1).
+
+// PRES-OR-PAST, distinguish copula from normal verbs
+// he has been, he has become => concomitant
+// he has seen, he has shown => before_or_during
+if (G-MAIN(#1) & G-PRES-OR-PAST(#1[cop:~]))
+	ST-ORDER[temp_rel:before_or_during](#1).
+
+if (G-MAIN(#1) & G-PRES-OR-PAST(#1[cop]))
+	ST-ORDER[temp_rel:concomitant](#1).
+
+if (G-MAIN(#1) & (G-FUTURE(#1) | G-NEAR-FUTURE(#1)) & ~VMODAL(#1))
+	ST-ORDER[temp_rel:after](#1).
+
+if (G-MAIN(#1) & G-PRES-OR-FUT(#1) & ~VMODAL(#1))
+	ST-ORDER[temp_rel:concomitant](#1).     // to be changed if necessary !
+
+if (G-MAIN(#1) & G-PRESENT(#1) & ~VMODAL(#1))
+	ST-ORDER[temp_rel:concomitant](#1).
+
+// modals
+// I must agree, ...
+// I would agree, ...
+// ~SUBJ-N[post]     avoids inversed subject (next rule)
+if (G-MAIN[guille:~](#1) & VMODAL(#1) & ~G-PAST(#1) & ~SUBJ-N[post](#1, ?))
+	ST-ORDER[temp_rel:after_or_during](#1).
+
+
+
+// modals with inversed subjects
+// May I say 
+if (G-MAIN[guille:~](#1) & VMODAL(#1) & ~G-PAST(#1) & SUBJ-N[post](#1, ?))
+	ST-ORDER[temp_rel:concomitant](#1).
+
+
+
+
+
+
+
+
+///////////////////////
+// EMBEDs with sequence of tenses
+///////////////////////
+
+// EMBEDs where main verb is present
+//  -> the PAST/PRESENT/FUTURE tense is related to BOTH the
+//    MAIN verb and the ST
+// He says he was
+if (G-PRESENT(#2_MAIN) & G-EMBED(#1, #2_MAIN) & G-PAST(#1))
+	ORDER[temp_rel:before](#1, #2_MAIN),
+	ST-ORDER[temp_rel:before](#1).
+// He says he has been
+if (G-PRESENT(#2_MAIN) & G-EMBED(#1, #2_MAIN) & G-PRES-OR-PAST(#1))
+	ORDER[temp_rel:before](#1, #2_MAIN),
+	ST-ORDER[temp_rel:before_or_during](#1).
+// He says he will
+if (G-PRESENT(#2_MAIN) & G-EMBED(#1, #2_MAIN) & (G-FUTURE(#1) | G-NEAR-FUTURE(#1)))
+	ORDER[temp_rel:after](#1, #2_MAIN),
+	ST-ORDER[temp_rel:after](#1).
+
+if (G-PRESENT(#2_MAIN) & G-EMBED(#1, #2_MAIN) & G-PRES-OR-FUT(#1) & ~VMODAL(#1))
+	ORDER[temp_rel:concomitant](#1, #2_MAIN),
+	ST-ORDER[temp_rel:concomitant](#1).
+
+// He says he is
+if (G-PRESENT(#2_MAIN) & G-EMBED(#1, #2_MAIN) & G-PRESENT(#1))
+	ORDER[temp_rel:concomitant](#1, #2_MAIN),
+	ST-ORDER[temp_rel:concomitant](#1).
+
+
+// EMBED[complthat] any tense + simple past
+// I saw that I kidnapped
+//   see that ...
+// => EMBED is before the MAIN and before the ST
+// guille:~  	avoids direct speech
+// indspeech:~ avoids indirect speech, where the treatment is slightly different
+if (G-EMBED[complthat](#1_EMB, #2_MAIN[indspeech:~]) & 
+	VTENSE[t_past](#1_EMB[guille:~]) & VASPECT[a_simple](#1_EMB) & ~VMODAL(#1_EMB))
+	ORDER[temp_rel:before](#1, #2_MAIN),
+	ST-ORDER[temp_rel:before](#1).
+
+// EMBED[complthat] any tense + simple future
+//   indirect speech or not
+// I said I will do
+//   see  I will ...
+// => EMBED is after the MAIN and after the ST
+// guille:~  	avoids direct speech
+if (G-EMBED[complthat](#1_EMB, #2_MAIN) & 
+	VTENSE[t_fut](#1_EMB[guille:~]) & VASPECT[a_simple](#1_EMB) & ~VMODAL(#1_EMB))
+	ORDER[temp_rel:after](#1, #2_MAIN),
+	ST-ORDER[temp_rel:after](#1).
+
+// EMBED[complthat] any tense + SIMPLE PRESENT
+// I saw that he goes...
+//   see that ...
+// => EMBED is on the ST
+// guille:~  	avoids direct speech
+//
+// Changed because too much infinitive are taken as present
+//   I saw the birds fly...
+//     we should have ST-ORDER[concomitant]
+//     changed it into ORDER[before_or_during] the main...
+if (G-EMBED[complthat](#1_EMB, #2_MAIN) & 
+	VTENSE[t_pres](#1_EMB[guille:~]) & VASPECT[a_simple](#1_EMB) & ~VMODAL(#1_EMB))
+		ORDER[temp_rel:before_or_during](#2_MAIN, #1).
+
+
+// EMBED[complthat] any tense + PRESENT PROGRESSIVE
+// I saw that he is doing...
+//   see that ...
+// => EMBED is on the ST and on the MAIN
+// guille:~  	avoids direct speech
+if (G-EMBED[complthat](#1_EMB, #2_MAIN) & 
+	VTENSE[t_pres](#1_EMB[guille:~]) & VASPECT[a_progress](#1_EMB) & ~VMODAL(#1_EMB))
+		ST-ORDER[temp_rel:concomitant](#1_EMB),
+		ORDER[temp_rel:concomitant](#1_EMB, #2_MAIN).
+
+
+
+// He said/saw he was investigating   (indspeech or not)
+//   simple past + progressive past
+//    investigate BEFORE OR OVERLAPS said/saw
+if (G-EMBED[complthat](#2, #1_MAIN) & 
+	VTENSE[t_past](#1_MAIN) & VASPECT[a_simple](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_past](#2) & VASPECT[a_progress](#2) & ~VMODAL(#2))
+		ORDER[temp_rel:before_or_during](#2, #1),
+		ST-ORDER[temp_rel:before](#2).
+
+
+// SIMPLE PAST     + SIMPLE MODAL
+// PRESENT PERFECT + SIMPLE MODAL
+// I saw/said he would follow
+// I have said he would follow
+// follow after said
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_past](#1_MAIN) & VASPECT[a_simple](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_pres](#2) & VASPECT[a_simple](#2) & VMODAL(#2))
+		ORDER[temp_rel:after](#2, #1).
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_perfect](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_pres](#2) & VASPECT[a_simple](#2) & VMODAL(#2))
+		ORDER[temp_rel:after](#2, #1_MAIN),
+		ST-ORDER[temp_rel:after](#2).
+
+
+// SIMPLE PAST     + PREFECT MODAL
+// PRESENT PERFECT + PREFECT MODAL
+// I saw/said he would have followed
+// follow before said
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_past](#1_MAIN) & VASPECT[a_simple](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_past](#2) & VASPECT[a_perfect](#2) & VMODAL(#2))
+		ORDER[temp_rel:before](#2, #1),
+		ST-ORDER[temp_rel:before](#2).
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_perfect](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_past](#2) & VASPECT[a_perfect](#2) & VMODAL(#2))
+		ORDER[temp_rel:before](#2, #1),
+		ST-ORDER[temp_rel:before](#2).
+
+
+// SIMPLE PRESENT + SIMPLE MODAL
+// I think he would travel
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_simple](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_pres](#2) & VASPECT[a_simple](#2) & VMODAL(#2))
+		ORDER[temp_rel:after](#2, #1),
+		ST-ORDER[temp_rel:after](#2).
+
+
+// SIMPLE PRESENT + PROGRESSIVE MODAL
+// I think he would be traveling
+if (G-EMBED[complthat](#2_MOD, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_simple](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_pres](#2) & VASPECT[a_progress](#2) & VMODAL(#2))
+		ORDER[temp_rel:after_or_during](#2, #1),
+		ST-ORDER[temp_rel:after_or_during](#2).
+
+
+
+
+// PRESENT PERFECT + PRESENT PERFECT
+// I have said that I have begun
+if (G-EMBED[complthat](#2, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_perfect](#1_MAIN) & ~VMODAL(#1_MAIN) &
+	VTENSE[t_pres](#2) & VASPECT[a_perfect](#2) & ~VMODAL(#2))
+		ORDER[temp_rel:before_or_during](#2, #1),
+		ST-ORDER[temp_rel:before_or_during](#2).
+
+
+// PRESENT PERFECT + INFINIT 
+//    They have agreed to allow
+//   allow is after or during ST
+if (G-EMBED[infinit](#2, #1_MAIN) &
+	VTENSE[t_pres](#1_MAIN) & VASPECT[a_perfect](#1_MAIN) & ~VMODAL(#1_MAIN))
+		ST-ORDER[temp_rel:after_or_during](#2).
+
+
+// NUCL[subjcompl]
+// any tense
+//  Banks remained closed
+// closed is concomitant with remained
+if (NUCL[subjcompl](#1, #2[verb]))
+	ORDER[temp_rel:concomitant](#1, #2).
+
+
+
+
+///////////////////////
+// INDIRECT SPEECH
+///////////////////////
+// EMBED[complthat] any tense + simple past
+// I said that I kidnapped
+// => EMBED is before_or_during the MAIN (different from not indspeech!) and before the ST
+// guille:~  	avoids direct speech
+if (G-EMBED[complthat](#1_EMB, #2_MAIN[indspeech]) & 
+	VTENSE[t_past](#1_EMB[guille:~]) & VASPECT[a_simple](#1_EMB) & ~VMODAL(#1_EMB))
+	ORDER[temp_rel:before_or_during](#1, #2_MAIN),
+	ST-ORDER[temp_rel:before](#1).
+
+
+
+// He said he has been kidnapped
+//    kidnap BEFORE said
+| verb#1_MAIN[indspeech] |
+	if (G-EMBED[complthat](#2, #1_MAIN) & G-PAST(#1) & G-PRES-OR-PAST(#2) & VDOMAIN[progress:~](#2, ?))
+		ORDER[temp_rel:before](#2, #1).
+
+// He said he was investigating
+//    investigate BEFORE OR OVERLAPS said
+//| verb#1_MAIN[indspeech] |
+//	if (G-EMBED[complthat](#2, #1_MAIN) & G-PAST(#1) & G-PAST(#2) & NUCL[vlink,progress](?[form:fbe], #2))
+//		ORDER[temp_rel:before_or_during](#2, #1).
+
+// He said he hopes
+// ORDER also with the ST
+// guille:~  	avoids direct speech
+| verb#1_MAIN[indspeech,v_temp_rel:~] |
+	if (G-EMBED[complthat](#2[guille:~], #1_MAIN) & G-PRESENT(#2))
+		ORDER[temp_rel:concomitant](#2, #1),
+		ST-ORDER[temp_rel:concomitant](#2).
+
+
+
+
+
+
+
+///////////////////////
+// DIRECT SPEECH
+///////////////////////
+
+// EMBED between quotes
+// -> the PAST/PRESENT/FUTURE tense is related to the
+//    main verb
+// He said "I was ..."
+| #1[guille] |
+	if (G-EMBED(#1, #2_MAIN[indspeech]) & G-PAST(#1))
+		ORDER[temp_rel:before](#1, #2).
+| #1[guille] |
+	if (G-EMBED(#1, #2_MAIN[indspeech]) & G-PRES-OR-PAST(#1))
+		ORDER[temp_rel:before_or_during](#1, #2).
+| #1[guille] |
+	if (G-EMBED(#1, #2_MAIN[indspeech]) & (G-FUTURE(#1) | G-NEAR-FUTURE(#1)))
+		ORDER[temp_rel:after](#1, #2),
+		ST-ORDER[temp_rel:after](#1).
+| #1[guille] |
+	if (G-EMBED(#1, #2_MAIN[indspeech]) & G-PRES-OR-FUT(#1))
+		ORDER[temp_rel:concomitant](#1, #2).     // to be changed if necessary !
+| #1[guille] |
+	if (G-EMBED(#1, #2_MAIN[indspeech]) & G-PRESENT(#1))
+		ORDER[temp_rel:concomitant](#1, #2).
+
+
+
+
+
+
+
+// EMBED PAST + PAST => EMBED is before the ST
+// He thought he was kidnapped
+// guille:~  	avoids direct speech
+//if (G-EMBED(#2[guille:~], #1_MAIN) & G-PAST(#1_MAIN) & G-PAST(#2))
+//	ST-ORDER[temp_rel:before](#2).
+
+
+// EMBED INFINIT + ... => like PRESENT + ...
+//| IV{?*,verb#2[last]} |
+//	if (G-EMBED(#1, #2_MAIN) & G-PAST(#1))
+//		ORDER[temp_rel:before](#1, #2_MAIN).
+//
+//| IV{?*,verb#2[last]} |
+//	if (G-EMBED(#1, #2_MAIN) & (G-FUTURE(#1) | G-NEAR-FUTURE(#1)))
+//		ORDER[temp_rel:after](#1, #2_MAIN).
+//
+//| IV{?*,verb#2[last]} |
+//	if (G-EMBED(#1, #2_MAIN) & G-PRESENT(#1))
+//		ORDER[temp_rel:concomitant](#1, #2_MAIN).
+
+
+// EMBED FUTURE + PRESENT => EMBED is concomitant with the MAIN
+//  It will be taken as a suggestion that he offers to resign
+//if (G-EMBED(#2, #1_MAIN) & (G-FUTURE(#1_MAIN) | G-NEAR-FUTURE(#1_MAIN)) & G-PRESENT(#2))
+//	ORDER[temp_rel:concomitant](#2, #1).
+
+
+
+// EMBED PAST + PRESENT => EMBED has "concomitant" with the MAIN
+// We saw the fire go   (actually it's an infitive, but mistreated)
+// guille:~  	avoids direct speech
+//if (G-EMBED(#2[guille:~], #1_MAIN[indspeech:~]) & (G-PAST(#1) | G-PRES-OR-PAST(#1)) & G-PRESENT(#2))
+//	ORDER[temp_rel:concomitant](#2, #1).
+
+
+// EMBED PAST + FUTURE
+//  He said I will begin
+//  begin after said but also after ST (different from "he would begin")
+//if (G-EMBED[complthat](#1_EMB, #2_MAIN) & VTENSE[t_fut](#1_EMB) & VASPECT[a_simple](#1_EMB))
+//	ORDER[temp_rel:before](#2_MAIN, #1_EMB),
+//	ST-ORDER[temp_rel:after](#1_EMB).
+
+
+
+// G-EMBEDs where embed verb is a progressive verb
+// "He arrived seeking"
+//  the EMBED is DURING the MAIN
+// ~NUCL because the progrossive should be alone (not "was seeking")
+//| verb#1[vprog] |
+//	if (G-EMBED[prog](#1, #2_MAIN) & ~NUCL(?, #1))
+//		ORDER[temp_rel:during](#1, #2).
+
+
+
+
+// EMBEDs where embed verb is a modal (but "must", treated in the next rule)
+// I said I would leave
+//   the EMBED is AFTER the MAIN (with modality)
+// perfect:~ 	is used to avoid "I would have left"
+// guille:~  	avoids direct speech
+// VMODAL avoids non modal verbs (I said I will leave, already treated)
+//| verb#1[guille:~] |
+//	if (G-EMBED(#1, #2_MAIN) & VDOMAIN[modal,perfect:~](#1, ?[lemme:~must]) &
+//		VMODAL(#1))
+//	ORDER[temp_rel:after,modal:+](#1, #2_MAIN).
+
+
+
+// EMBEDs where embed verb is "must"
+// I said I would leave
+//   the EMBED is AFTER the MAIN (with modality)
+// perfect:~ 	is used to avoid "I would have left"
+// guille:~  	avoids direct speech
+//| verb#1[guille:~] |
+//	if (G-EMBED(#1, #2_MAIN) & VDOMAIN[modal,perfect:~](#1, ?[lemme:must]))
+//		ORDER[temp_rel:after_or_during,modal:+](#1, #2_MAIN).
+
+
+
+////////////////
+// CONDITION
+////////////////
+// EMBED[condition]
+// any tense + if + SIMPLE PRESENT => after the MAIN AND after the ST
+// They will do that if they boost the production
+if (EMBED[condition](#1, #2_MAIN) & 
+	(~VTENSE[t_past](#2_MAIN))
+	(VTENSE[t_pres](#1) & VASPECT[a_simple](#1) & ~VMODAL(#1)))
+		ORDER[temp_rel:after_or_during](#2, #1),
+		ST-ORDER[temp_rel:after](#1).
+
+// He would not be traveling if he did not have a good reason
+// (or he would not travel)
+if (EMBED[condition](#1, #2_MAIN) & 
+	VTENSE[t_pres](#2_MAIN) & VMODAL(#2_MAIN) &
+	VTENSE[t_past](#1) & VASPECT[a_simple](#1) & ~VMODAL(#1))
+		ORDER[temp_rel:concomitant](#1, #2),
+		ST-ORDER[temp_rel:concomitant](#1),
+		ST-ORDER[temp_rel:concomitant](#2).
+
+
+// They would do that if they had boosted the production
+//if (EMBED[condition](#1, #2_MAIN) & 
+//	(VTENSE[t_pres](#2_MAIN) & VASPECT[a_simple](#2_MAIN) & VMODAL(#2_MAIN)) &
+//	(VTENSE[t_past](#1) & VASPECT[a_perfect](#1)))
+//	ORDER[temp_rel:after_or_during](#2, #1),
+//	ST-ORDER[temp_rel:after_or_during](#1),
+//	ST-ORDER[temp_rel:before](#1).
+
+// They would have done that if they had boosted the production
+//if (EMBED[condition](#1, #2_MAIN) & 
+//	(VTENSE[t_pres](#2_MAIN) & VASPECT[a_perfect](#2_MAIN) & VMODAL(#2_MAIN)) &
+//	(VTENSE[t_past](#1) & VASPECT[a_perfect](#1)))
+//	ORDER[temp_rel:after_or_during](#2, #1),
+//	ST-ORDER[temp_rel:before](#1),
+//	ST-ORDER[temp_rel:before](#1).
+
+
+
+
+
+
+
+
+//| verb#1 | 
+//	if (~MAIN(#1) & ~G-EMBED(#1, ?) & ~COORD(?, #1) & ~NUCL(#1, ?) & G-PAST(#1))
+//		ST-ORDER[temp_rel:before](#1).	
+//
+//| verb#1 | 
+//	if (~MAIN(#1) & ~G-EMBED(#1, ?) & ~COORD(?, #1) & ~NUCL(#1, ?) & (G-FUTURE(#1) | G-NEAR-FUTURE(#1)))
+//		ST-ORDER[temp_rel:after](#1).
+//
+//| verb#1 | 
+//	if (~MAIN(#1) & ~G-EMBED(#1, ?) & ~COORD(?, #1) & ~NUCL(#1, ?) & G-PRESENT(#1))
+//		ST-ORDER[temp_rel:concomitant](#1).
+
+
+
+
+
+// SIMPLE PAST + PAST PERFECT => the second if before the first
+// Saddam accepted a border demarcation treaty he had rejected
+if (VTENSE[t_past](#1) & VASPECT[a_simple](#1) & ~VMODAL(#1) &
+	VTENSE[t_past](#2) & VASPECT[a_perfect](#2) & ~VMODAL(#2))
+	ORDER[temp_rel:before](#2, #1),
+	ST-ORDER[temp_rel:before](#2).
+
+
+
+// v_temp_rel verbs cannot be [before_or_during] the ST
+//  The war has begun
+// as temp_rel is free, I don't how to REPLACE the feature
+//  so I add a new dependency.
+| #1[v_temp_rel] |
+	if (ST-ORDER[temp_rel:before_or_during](#1))
+		ST-ORDER[temp_rel:before](#1).
+
+// indspeech verbs cannot be [before_or_during] the ST
+//  The spokesman has say
+// as temp_rel is free, I don't how to REPLACE the feature
+//  so I add a new dependency.
+// do not use indspeech because may strange verbs have indspeech
+| #1[lemme:say];#1[lemme:tell];#1[lemme:talk];#1[lemme:call];#1[lemme:agree] |
+	if (ST-ORDER[temp_rel:before_or_during](#1))
+		ST-ORDER[temp_rel:before](#1).
+
+
+
+// G-EMBEDs, G-PAST, G-FUTURE, G-NEAR-FUTURE, G-PRESENT
+//  are now removed
+if (^G-EMBED(#1, #2))
+	~.
+if (^G-MAIN(#1))
+	~.
+if (^G-FUTURE(#1))
+	~.
+if (^G-PRES-OR-FUT(#1))
+	~.
+if (^G-NEAR-FUTURE(#1))
+	~.
+if (^G-PRESENT(#1))
+	~.
+if (^G-PAST(#1))
+	~.
+if (^G-PRES-OR-PAST(#1))
+	~.
+
+
+// experimental
+// the time_span_n subject of a verb gets the same ST-ORDER
+//| #1[time_span_n] |
+//	if (SUBJ-N(#2, #1) & ST-ORDER(#1))
+//		ST-ORDER(#2).
+
+
+// experimental
+// he says => PAST
+//| #1[lemme:say];#1[lemme:tell];#1[lemme:talk];#1[lemme:call] |
+//	if (VTENSE[t_pres](#1) & VASPECT[a_simple](#1) & ~VMODAL(#1))
+//		ST-ORDER[temp_rel:before](#1).
+
+
+

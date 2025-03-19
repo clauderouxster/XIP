@@ -1,0 +1,1957 @@
+
+<project name="xip" default="default" basedir=".">
+    <property name="name" value="xip" />
+    <property name="env" environment="env" value="env"/>
+    <property name="common.dir" location="${basedir}/../../common" />
+    <import file="${common.dir}/buildInclude.xml" />
+
+    <target name="default" depends="setAllProperties" description="compile + test">
+        <echo message="XIP.VERSION = ${xip.version}   XIP.BUILD = ${xip.build}  
+            start: ${curDate.nowFull}" />
+        <ant antfile="build.xml" dir="${basedir}" target="compile" inheritAll="false" />
+        <ant antfile="build.xml" dir="${basedir}" target="test" inheritAll="false" />
+        <tstamp prefix="curDateEnd">
+            <format property="nowFull" pattern="hh:mm" locale="en"/>
+        </tstamp>
+        <echo message="XIP.VERSION = ${xip.version}   XIP.BUILD = ${xip.build}   
+            start: ${curDate.nowFull}  end: ${curDateEnd.nowFull}" />
+    </target>
+    
+    <target name="test" depends="testWindows, testUnix" description="test" />
+    
+    <target name="testWindows" depends="setAllProperties" description="test" if="windows">
+        <property name="testRecFile" location="${log.dir}/test" />
+        <delete file="${testRecFile}" />
+        <record name="${testRecFile}" loglevel="${log.level}" action="start"/>
+        <exec dir="${basedir}/GRAMMARS" executable="cmd.exe" failonerror="true" >
+            <arg line="/c ant -q"/>
+        </exec>
+        <record name="${testRecFile}" action="stop"/>
+    </target>
+    
+    <target name="testUnix" depends="setAllProperties" description="test" unless="windows">
+        <property name="testRecFile" location="${log.dir}/test" />
+        <delete file="${testRecFile}" />
+        <record name="${testRecFile}" loglevel="${log.level}" action="start"/>
+        <exec dir="${basedir}/GRAMMARS" executable="ant" failonerror="true" >
+            <arg line="-q"/>
+        </exec>
+        <record name="${testRecFile}" action="stop"/>
+    </target>
+
+    <target name="testJava">
+        <subant target="test" inheritAll="false" failonerror="false" >
+            <fileset dir="java/testReg" includes="*/build.xml"/>
+        </subant>
+    </target>
+    
+    <target name="gram"  description="crypte all grammar in the delivery dir">
+        <exec executable="ant" dir="${basedir}/GRAMMARS" failonerror="true" >
+            <arg line="gram -q" />
+        </exec>
+    </target>
+    
+    <target name="sendMail" depends="setAllProperties" description="send a mail">
+        <!-- send a mail to the parSem team -->
+        <property name="mailingList" value="parsing-semantics@xrce.xerox.com" />
+        <!--
+        <property name="mailingList" value="gilbert.rondeau@xrce.xerox.com" />
+        -->
+        <property name="sender.mail" value="${user.name}@xrce.xerox.com" />
+        <input
+            message="Do I send a Email now to ${mailingList} ? (y or n) "
+            addproperty="send.mail"
+            defaultvalue="n"
+        />
+        <if>
+            <equals arg1="${send.mail}" arg2="y" />
+            <then>
+                <input
+                    message="Give the body of mail now    (just one line, the RC close the message ): "
+                    addproperty="body.mail"
+                    defaultvalue=""
+                />
+                <property name="message.mail"
+                    value="new XIP version in /opt/ParSem/bin/xip-${xip.version}-${xip.build}" />
+                <mail from="${sender.mail}" tolist="${mailingList}" subject="${message.mail}"
+                         mailhost="mailhost" mailport="25">
+                    <message>
+                        ${message.mail}
+                        ${body.mail}
+                    </message>
+                </mail>
+            </then>
+        </if>
+    </target>
+    
+    <target name="install" depends="checkPlatform, delivery, inst, mvn.deploy, sendMail"
+        description="build the delivery + install the delivery in /opt/ParSem/bin + send mail" />
+
+    <target name="checkPlatform" depends="setAllProperties">
+        <fail message="must be run on choranche:${hostname}">
+            <condition>
+                <not>
+                    <equals arg1="${hostname}" arg2="choranche.grenoble.xrce.xerox.com"/>
+                </not>
+            </condition>
+        </fail>
+    </target>
+    
+    <target name="inst" depends="setAllProperties" description="install the delivery in /opt/ParSem/bin">
+        <delete file="${log.dir}/install" />
+        <record name="${log.dir}/install" loglevel="${log.level}" action="start"/>
+        <property name="root.install.dir" location="/opt/ParSem/bin" />
+        <property name="install.dir" location="${root.install.dir}/xip-${xip.version}-${xip.build}" />
+        <delete dir="${install.dir}" />
+        <!-- il faut faire les delete de lien sur dir ici, car il detruise aussi le contenu du dir -->
+        <delete dir="${root.install.dir}/linux" />
+        <delete dir="${root.install.dir}/linux64" />
+        <delete dir="${root.install.dir}/solaris5.10-x86" />
+        <delete dir="${root.install.dir}/windows" />
+        <delete dir="${root.install.dir}/windows64" />
+        <mkdir dir="${install.dir}" />
+        <mkdir dir="${root.install.dir}/linux" />
+        <mkdir dir="${root.install.dir}/linux64" />
+        <mkdir dir="${root.install.dir}/solaris5.10-x86" />
+        <mkdir dir="${root.install.dir}/windows" />
+        <mkdir dir="${root.install.dir}/windows64" />
+        <mkdir dir="${install.dir}/bin" />
+        <copy todir="${install.dir}/bin">
+            <fileset dir="${delivery.dir}/bin" />
+        </copy>
+        <chmod file="${install.dir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <chmod file="${install.dir}/bin/solaris5.10-x86/xip" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux/xipparse" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux/xip" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux/xips" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux64/xipparse" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux64/xip" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux64/xips" perm="a+x"/>
+        <chmod file="${install.dir}/bin/mac-i386/xip" perm="a+x"/>
+        <chmod file="${install.dir}/bin/mac-i386/xips" perm="a+x"/>
+        <mkdir dir="${install.dir}/lib" />
+        <copy todir="${install.dir}/lib">
+            <fileset dir="${delivery.dir}/lib" />
+        </copy>
+        <mkdir dir="${install.dir}/java" />
+        <mkdir dir="${install.dir}/java/doc" />
+        <copy todir="${install.dir}/java/doc">
+            <fileset dir="${delivery.dir}/java/doc" />
+        </copy>
+        <copy todir="${install.dir}/java">
+            <fileset dir="${delivery.dir}/java/dist" />
+        </copy>
+        <mkdir dir="${install.dir}/doc" />
+        <copy todir="${install.dir}/doc">
+            <fileset dir="${delivery.dir}/doc" />
+        </copy>
+        <mkdir dir="${install.dir}/include" />
+        <copy todir="${install.dir}/include">
+            <fileset dir="${delivery.dir}/include" />
+        </copy>
+        <!-- gui -->
+        <mkdir dir="${install.dir}/ui" />
+        <copy file="${basedir}/xipui/dist/ideInt.jar" tofile="${install.dir}/ui/ui.jar" />
+        <copy file="${basedir}/xipui/dist/xipui_basic.jar" tofile="${install.dir}/ui/xipui_basic.jar" />
+        <!-- ui -->
+        <echo file="${install.dir}/ui/ui" append="false" message="#!/bin/sh ${line.separator}" />
+        <echo file="${install.dir}/ui/ui" append="true"
+              message="java ${java.options} -jar ${install.dir}/ui/ui.jar ${line.separator}" />
+        <chmod perm="a+x" file="${install.dir}/ui/ui" />
+        <!-- ui.bat -->
+        <echo file="${install.dir}/ui/ui.bat" append="false"
+              message="java ${java.options} -jar ui.jar ${line.separator}" />
+        <!-- jcoref -->
+        <mkdir dir="${install.dir}/jcoref" />
+        <copy file="${basedir}/GRAMMARS/ENGLISH/APPLICATIONS/JCOREF/dist/jcoref.jar" todir="${install.dir}/jcoref" />
+        <!-- sample -->
+        <copy todir="${install.dir}/sample">
+            <fileset dir="${basedir}/sample"/>
+        </copy>
+        <!--    ++++++++++ linux64  ++++++++++  -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux64/xip ${root.install.dir}/linux64/xip" />
+        </exec>
+        <!-- xips -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux64/xips ${root.install.dir}/linux64/xips" />
+        </exec>
+        <!-- libxip.so -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux64/sharedLib/libxip.so ${root.install.dir}/linux64/libxip.so" />
+        </exec>
+        <!-- libxips.so -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux64/sharedLibPy/libxips.so ${root.install.dir}/linux64/libxips.so" />
+        </exec>
+        <!-- xips.so is required by python -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux64/sharedLibPy/libxips.so ${root.install.dir}/linux64/xips.so" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux64/sharedLib/libkifsys.so ${root.install.dir}/linux64/libkifsys.so" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux64/sharedLib/libkifsqlite.so ${root.install.dir}/linux64/libkifsqlite.so" />
+        </exec>
+        <!-- java doc -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/doc ${root.install.dir}/linux64/jdoc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/doc ${root.install.dir}/linux64/doc" />
+        </exec>
+        <!-- jxip.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxip.jar ${root.install.dir}/linux64/jxip.jar" />
+        </exec>
+        <!-- jxipPy.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxipPy.jar ${root.install.dir}/linux64/jxipPy.jar" />
+        </exec>
+        <!-- ui.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.jar ${root.install.dir}/linux64/ui.jar" />
+        </exec>
+        <!-- ui -->
+        <delete file="${root.install.dir}/linux64/ui" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui ${root.install.dir}/linux64/ui" />
+        </exec>
+        <!--    ++++++++++ linux  ++++++++++  -->
+        <!-- xip -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux/xip ${root.install.dir}/linux/xip" />
+        </exec>
+        <!-- xips -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux/xips ${root.install.dir}/linux/xips" />
+        </exec>
+        <!-- libxip.so -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux/sharedLib/libxip.so ${root.install.dir}/linux/libxip.so" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux/sharedLib/libkifsys.so ${root.install.dir}/linux/libkifsys.so" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux/sharedLib/libkifsqlite.so ${root.install.dir}/linux/libkifsqlite.so" />
+        </exec>
+        <!-- libxips.so -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux/sharedLibPy/libxips.so ${root.install.dir}/linux/libxips.so" />
+        </exec>
+        <!-- xips.so is required by python -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/lib/linux/sharedLibPy/libxips.so ${root.install.dir}/linux/xips.so" />
+        </exec>
+        <!-- java doc -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/doc ${root.install.dir}/linux/jdoc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/doc ${root.install.dir}/linux/doc" />
+        </exec>
+        <!-- jxip.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxip.jar ${root.install.dir}/linux/jxip.jar" />
+        </exec>
+        <!-- jxipPy.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxipPy.jar ${root.install.dir}/linux/jxipPy.jar" />
+        </exec>
+        <!-- ui.jar -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.jar ${root.install.dir}/linux/ui.jar" />
+        </exec>
+        <!-- xipui_basic.jar -->
+        <delete file="${root.install.dir}/linux/xipui_basic.jar" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/xipui_basic.jar ${root.install.dir}/linux/xipui_basic.jar" />
+        </exec>
+        <!-- ui -->
+        <delete file="${root.install.dir}/linux/ui" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui ${root.install.dir}/linux/ui" />
+        </exec>
+        <!-- jcoref.jar -->
+        <delete file="${root.install.dir}/linux/jcoref.jar" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/jcoref/jcoref.jar ${root.install.dir}/linux/jcoref.jar" />
+        </exec>
+        <!-- sample -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/sample ${root.install.dir}/linux/sample" />
+        </exec>
+        <!-- lastVersNb -->
+        <echo message="echo xip-${xip.version}-${xip.build}" file="${root.install.dir}/linux/lastVersNb" />
+        <chmod perm="a+x" file="${root.install.dir}/linux/lastVersNb" />
+        <!-- ++++++++++++++ windows 32 ++++++++++++ -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows/xip.exe ${root.install.dir}/windows/xip.exe" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows/xips.exe ${root.install.dir}/windows/xips.exe" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxip.jar ${root.install.dir}/windows/jxip.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxipPy.jar ${root.install.dir}/windows/jxipPy.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/doc ${root.install.dir}/windows/jdoc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/doc ${root.install.dir}/windows/doc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.jar ${root.install.dir}/windows/ui.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/xipui_basic.jar ${root.install.dir}/windows/xipui_basic.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.bat ${root.install.dir}/windows/ui.bat" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/jcoref/jcoref.jar ${root.install.dir}/windows/jcoref.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/sample ${root.install.dir}/windows/sample" />
+        </exec>
+        <!-- ++++++++++++++ windows 64 ++++++++++++ -->
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows64/xip.exe ${root.install.dir}/windows64/xip.exe" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows64/xips.exe ${root.install.dir}/windows64/xips.exe" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxip.jar ${root.install.dir}/windows64/jxip.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/jxipPy.jar ${root.install.dir}/windows64/jxipPy.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/java/doc ${root.install.dir}/windows64/jdoc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/doc ${root.install.dir}/windows64/doc" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.jar ${root.install.dir}/windows64/ui.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/xipui_basic.jar ${root.install.dir}/windows64/xipui_basic.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/ui/ui.bat ${root.install.dir}/windows64/ui.bat" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/jcoref/jcoref.jar ${root.install.dir}/windows64/jcoref.jar" />
+        </exec>
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/sample ${root.install.dir}/windows64/sample" />
+        </exec>
+        <record name="${log.dir}/install" action="stop"/>
+    </target>
+    
+    <target name="tag" depends="setAllProperties"
+        description=" cvs tag all the files uses to build the delivery">
+        <property name="tag.default.value" value="XIP-${xip.ver}-${xip.rev}-B${xip.build}-tmp"/>
+        <echo message="" />
+        <echo message="" />
+        <echo message="Enter the cvs tag value ${tag.default.value}-for-????     (where ???? is the customer name) " />
+        <echo message=" or just hit return (the default value is: ${tag.default.value})" />
+        <input
+            message="ENTER THE CVS TAG VALUE: "
+            addproperty="tag.value"
+            defaultvalue="${tag.default.value}"
+        />
+        <echo message="" />
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}" />
+        </antcall>
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}/../../common" />
+        </antcall>
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}/../../fst" />
+        </antcall>
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}/../../ntm" />
+        </antcall>
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}/../../python" />
+        </antcall>
+        <antcall target="cvsTag" inheritAll="true" >
+            <param name="cvs.tag.value" value="${tag.value}" />
+            <param name="cvs.list.dirs" value="${basedir}/../../xml" />
+        </antcall>
+    </target>
+    
+     <!-- copy key key.exe in the delivery dir  (keyGenTool) + doc -->
+    <target name="deliveryKeygen" depends="setAllProperties"
+        description="add the key and key.exe in the delivery dir ">
+        <property name="delivery.keygen.dir" location="${delivery.dir}/keyGenTool" />
+        <mkdir dir="${delivery.keygen.dir}/bin/linux" />
+        <mkdir dir="${delivery.keygen.dir}/bin/windows64" />
+        <copy todir="${delivery.keygen.dir}" file="${basedir}/gramRef/howToCryptGrammar"  />
+        <copy tofile="${delivery.keygen.dir}/bin/linux/keyGen" file="${basedir}/gramRef/clef"  />
+        <copy tofile="${delivery.keygen.dir}/bin/windows/keyGen.exe" file="${basedir}/gramRef/clef.exe"  />
+    </target>
+    
+    <target name="deliveryDerivation" depends="setAllProperties, deliveryCommon, derivation"
+        description=" build the delivery with derivation (without gram )" />
+
+    <!--  copy src/derivation in the delivery + all include  -->
+    <target name="derivation" depends="setAllProperties"
+        description="copy src/derivation in the delivery + all include" >
+        <record name="${log.dir}/derivation" loglevel="${log.level}" action="start"/>
+        <ant antfile="build.xml" dir="src/derivation" target="clean" inheritAll="false" />
+        <copy todir="${delivery.dir}/sample/derivation">
+            <fileset dir="src/derivation"  />
+        </copy>
+        <chmod file="${delivery.dir}/sample/derivation/run32" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/derivation/run64" perm="a+x"/>
+        <!-- include -->
+        <copy  todir="${delivery.dir}/include" >
+            <fileset dir="${xip.inc.dir}" includes="*.h" excludes="pasofficiel.h" />
+        </copy>
+        <record name="${log.dir}/derivation" action="stop"/>
+    </target>
+    
+    
+    <target name="deliveryGui" depends="setAllProperties" description=" build gui the delivery">
+        <property name="delivery.gui.dir" location="${delivery.dir}/gui" />
+        <mkdir dir="${delivery.gui.dir}" />
+        <copy  tofile="${delivery.gui.dir}/gui.jar" file="${basedir}/xipui/dist/ideInt.jar" />
+        <echo file="${delivery.gui.dir}/gui" append="false" message="#!/bin/sh ${line.separator}" />
+        <echo file="${delivery.gui.dir}/gui" append="true"
+            message="java ${java.options} -jar gui.jar ${line.separator}" />
+        <chmod file="${delivery.dir}/gui/gui" perm="a+x"/>
+        <echo file="${delivery.gui.dir}/gui.bat" append="false"
+            message="java ${java.options} -jar gui.jar ${line.separator}" />
+        <!-- doc -->
+        <copy  tofile="${delivery.gui.dir}/gui.html" file="${basedir}/xipui/xipui_basic/doc/gui.html" />
+        <copy  todir="${delivery.gui.dir}/images" >
+            <fileset dir="${basedir}/xipui/xipui_basic/doc/images" includes="*"/>
+        </copy>
+        <copy  tofile="${delivery.gui.dir}/README" file="${basedir}/xipui/xipui_basic/doc/README" />
+    </target>
+    
+    <target name="delivery" depends="setAllProperties, deliveryCommon, gram"
+        description=" build the delivery(with gram)" />
+        
+    <target name="deliveryCommon" depends="setAllProperties" description=" build the delivery">
+        <record name="${log.dir}/delivery" loglevel="${log.level}" action="start"/>
+        <!-- clean and create the delivery directory -->
+        <delete dir="${delivery.dir}" />
+        <mkdir dir="${delivery.dir}" />
+        <delete file="${log.dir}/delivery" />
+        <if>
+            <equals arg1="${platform}" arg2="mac" />
+            <then>
+                <echo message="" />
+            </then>
+            <else>
+                <!-- check if all the modules has been compiled -->
+                <condition property="compilation.complete">
+                    <and>
+                        <available file="${xip.lib.dirs}/linux/staticLib/lib${name}.a"/>
+                        <available file="${xip.lib.dirs}/linux/sharedLib/lib${name}.so"/>
+                        <available file="${xip.lib.dirs}/windows/staticLib/${name}.lib"/>
+                        <available file="${xip.lib.dirs}/windows/sharedLib/${name}.dll"/>
+                        <available file="${xip.bin.dirs}/windows/${name}.exe"/>
+                        <available file="${xip.bin.dirs}/linux/${name}"/>
+                    </and>
+                </condition>
+                <fail unless="compilation.complete" message="compilation not completed" />
+                <!-- cvs tag the sources of this delivery -->
+                <ant antfile="build.xml" dir="${basedir}" target="tag" inheritAll="false" />
+                <!-- doc -->
+                <copy  todir="${delivery.dir}/doc" >
+                    <fileset dir="${doc.dir}/user" includes="EvaluationSurvey.pdf, XIPAPIUserGuide.pdf,
+                    XIPReferenceGuide.pdf, XIP_scripting.pdf, XIPUserGuide.pdf, tutorial.ppt, KIF.pdf" />
+                </copy>
+            </else>
+        </if>
+        <!-- bin -->
+        <copy todir="${delivery.dir}/bin">
+            <fileset dir="${xip.bin.dirs}" excludes="**/history.xml, **/*.rsp, **/*.exp, **/*.lib, **/*.profile"
+            includes="linux/*, linux64/*, solaris5.10-x86/*, windows/*, windows64/*, mac-i386/*" />
+        </copy>
+        <!-- lib -->
+        <copy todir="${delivery.dir}/lib">
+            <fileset dir="${xip.lib.dirs}" excludes="**/history.xml, **/*.rsp, **/*.exp, **/*.profile"
+            includes="linux/**/*, linux64/**/*, solaris5.10-x86/**/*, windows/**/*, windows64/**/*, mac-i386/**/*" />
+        </copy>
+        <!-- include -->
+        <copy  todir="${delivery.dir}/include" >
+            <fileset dir="${xip.inc.dir}" includes="xipstlres.h, xipvecta.h" excludes="pasofficiel.h" />
+        </copy>
+        <!-- other -->
+        <copy file="filesToDeliver/README" 		tofile="${delivery.dir}/README"/>
+        <copy file="filesToDeliver/xipparse.sh.mac" 	tofile="${delivery.dir}/bin/mac-i386/xipparse"/>
+        <copy file="filesToDeliver/xipparse.sh.L" 	tofile="${delivery.dir}/bin/linux/xipparse"/>
+        <copy file="filesToDeliver/xipparse.sh.L" 	tofile="${delivery.dir}/bin/linux64/xipparse"/>
+        <copy file="filesToDeliver/xipparse.sh.S" 	tofile="${delivery.dir}/bin/solaris5.10-x86/xipparse"/>
+        <copy file="filesToDeliver/xipparse.bat" 	tofile="${delivery.dir}/bin/windows/xipparse.bat"/>
+        <!-- copy VS2005 dll(MFCxx.dll, MSVCPxx.dll, MSVCRxx.dll) installer -->
+        <copy file="filesToDeliver/vcredist_x86.exe" 	todir="${delivery.dir}/bin/windows"/>
+        <copy file="filesToDeliver/vcredist_x64.exe" 	todir="${delivery.dir}/bin/windows64"/>
+        <!-- sample -->
+        <copy  todir="${delivery.dir}/sample" >
+            <fileset dir="${basedir}/sample" includes="**/*" />
+        </copy>
+        <!-- generate java doc -->
+        <ant antfile="${basedir}/java/build.xml" dir="${basedir}/java" target="doc" inheritAll="false" />
+        <!-- java -->
+        <property name="delivery.java.dir" location="${delivery.dir}/java" />
+        <mkdir dir="${delivery.java.dir}" />
+        <copy  todir="${delivery.java.dir}/doc" >
+            <fileset dir="java/build/doc" includes="**/*" />
+        </copy>
+        <copy  todir="${delivery.java.dir}/dist" >
+            <fileset dir="java/dist" includes="jxip.jar, jxipPy.jar"  />
+        </copy>
+        <!-- chmod -->
+        <chmod file="${delivery.dir}/sample/clean" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/c++/sample1/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/grammar/sample1/sample" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/grammar/sample0/parse" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/grammar/sample0/parsePy" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/grammar/sample1/parse" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/java/sample1/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/java/sample2/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/java/sample3/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/java/sample4/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/python/sample0/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/python/sample1/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/sample/python/sample3/run" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/mac-i386/xipparse" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux/xipparse" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux64/xipparse" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/mac-i386/xip" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/mac-i386/xips" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux/xip" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux/xips" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux64/xip" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/linux64/xips" perm="a+x"/>
+        <chmod file="${delivery.dir}/bin/solaris5.10-x86/xip" perm="a+x"/>
+        <!-- gui -->
+        <ant antfile="build.xml" dir="${basedir}" target="deliveryGui" inheritAll="false" />
+        <record name="${log.dir}/delivery" action="stop"/>
+    </target>
+    
+    <target name="jcoref" depends="setAllProperties" description="compile jcoref">
+        <record name="${log.dir}/jcoref" loglevel="${log.level}" action="start"/>
+        <ant antfile="build.xml" dir="${basedir}/GRAMMARS/ENGLISH/APPLICATIONS/JCOREF"
+            target="jar" inheritAll="false" />
+        <record name="${log.dir}/jcoref" action="stop"/>
+    </target>
+    
+    <target name="ui" depends="setAllProperties" description="compile xip ui">
+        <record name="${log.dir}/ui" loglevel="${log.level}" action="start"/>
+        <ant antfile="build.xml" dir="xipui" target="all" inheritAll="false" />
+        <record name="${log.dir}/ui" action="stop"/>
+    </target>
+    
+    <target name="javaCompile" depends="setAllProperties" description=" compile  C++ API for Java ">
+        <record name="${log.dir}/java" loglevel="${log.level}" action="start"/>
+        <ant antfile="build.xml" dir="java" target="jar" inheritAll="false" />
+        <ant antfile="build.xml" dir="java" target="doc" inheritAll="false" />
+        <record name="${log.dir}/java" action="stop"/>
+    </target>
+    
+    <target name="valgrind" depends="valgrind1, valgrind2, valgrind3" />
+    
+    <target name="valgrindInit" >
+        <property name="valgrindOptions" 
+            value="-v --tool=memcheck --num-callers=10 --track-fds=yes --leak-check=full --show-reachable=yes --track-origins=yes" />
+        <property name="valgrindOptions1" 
+            value="-v --tool=memcheck --num-callers=10 --track-fds=yes --leak-check=yes " />
+    </target>
+        
+    <target name="valgrind1" depends="setAllProperties, valgrindInit"
+        description="compile mode debug  + launch valgrind + apply valgrind(memcheck) on xip cmdLine tool  ">
+        <echo message="*****************************************************************" />
+        <echo message="run ant compileAll.debug to compile xip,jxip,fst,xml,ntm in debug mode" />
+        <echo message="*****************************************************************" />
+        <record name="${log.dir}/valgrind1" loglevel="${log.level}" action="start"/>
+        <property name="grm" value="GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+        <property name="input" value="GRAMMARS/ENGLISH/TEST/entity/joeStrummer/input.txt" />
+        <property name="log1" value="res-memcheck-${platform-arch}-cmdLine.val" />
+        <property name="cmdLine" value="xipFst/bin/${platform-arch}.debug/xip -grm ${grm} -tr -f -text ${input}" />
+        <delete file="${log1}" />
+        <exec executable="/opt/ParSem/tools/valgrind/${valgrind.version}/${platform-arch}/bin/valgrind" dir="${basedir}">
+            <arg line="--log-file=${log1} ${valgrindOptions}" />
+            <arg line="${cmdLine}" />
+        </exec>
+        <record name="${log1.dir}/valgrind1" action="stop"/>
+        <echo message="result in: ${log1}" />
+    </target>
+    
+    <target name="valgrind2" depends="setAllProperties, valgrindInit"
+        description="compile mode debug  + launch valgrind  + apply valgrind(memcheck) on xip C++ application (with callBack)  ">
+        <echo message="*****************************************************************" />
+        <echo message="run ant compileAll.debug to compile xip,jxip,fst,xml,ntm in debug mode" />
+        <echo message="*****************************************************************" />
+        <record name="${log.dir}/valgrind2" loglevel="${log.level}" action="start"/>
+        <property name="grm" value="GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+        <property name="log2" value="res-memcheck-${platform-arch}-c++Test.val" />
+        <property name="input" value="java/testAna/testMem1/input-1000" />
+        <property name="cmdLine" value="java/testAna/testMem1/versionC++/test ${grm} ${input}" />
+        <delete file="${log2}" />
+        <exec executable="/opt/ParSem/tools/valgrind/${valgrind.version}/${platform-arch}/bin/valgrind" dir="${basedir}">
+            <env key="LD_LIBRARY_PATH" value="xipFst/lib/linux/sharedLib" />
+            <arg line="--log-file=${log2} ${valgrindOptions}" />
+            <arg line="${cmdLine}" />
+        </exec>
+        <record name="${log2.dir}/valgrind2" action="stop"/>
+        <echo message="result in: ${log2}" />
+    </target>
+    
+    <target name="valgrind3" depends="setAllProperties"
+        description="compile mode debug  + launch valgrind + apply valgrind(memcheck) on xip java application (with callBack)   ">
+        <record name="${log.dir}/valgrind3" loglevel="${log.level}" action="start"/>
+        <ant antfile="build.xml" dir="java" target="valgrind" inheritAll="false" />
+        <record name="${log3.dir}/valgrind3" action="stop"/>
+    </target>
+    
+    <target name="valgrind4" depends="setAllProperties"
+        description="compile mode debug  + launch valgrind  + apply valgrind(Ptrcheck ) on xip C++ application (with callBack)  ">
+        <echo message="*****************************************************************" />
+        <echo message="run ant compileAll.debug to compile xip,jxip,fst,xml,ntm in debug mode" />
+        <echo message="*****************************************************************" />
+        <record name="${log.dir}/valgrind2" loglevel="${log.level}" action="start"/>
+        <property name="grm" value="GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+        <property name="log4" value="res-ptrcheck-${platform-arch}-c++Test.val" />
+        <property name="input" value="java/testAna/testMem1/input-1000" />
+        <property name="cmdLine" value="java/testAna/testMem1/versionC++/test ${grm} ${input}" />
+        <property name="valgrindOptions" value="-v --tool=exp-ptrcheck  " />
+        <delete file="${log4}" />
+        <exec executable="/opt/ParSem/tools/valgrind/${valgrind.version}/${platform-arch}/bin/valgrind" dir="${basedir}">
+            <env key="LD_LIBRARY_PATH" value="xipFst/lib/linux/sharedLib" />
+            <arg line="--log-file=${log4} ${valgrindOptions}" />
+            <arg line="${cmdLine}" />
+        </exec>
+        <record name="${log4.dir}/valgrind2" action="stop"/>
+        <echo message="result in: ${log4}" />
+    </target>
+    
+    <target name="valgrind5" depends="setAllProperties"
+        description="compile mode debug  + launch valgrind  + apply valgrind ( Callgrind ) on xip C++ application (with callBack)  ">
+        <echo message="*****************************************************************" />
+        <echo message="run ant compileAll.debug to compile xip,jxip,fst,xml,ntm in debug mode" />
+        <echo message="*****************************************************************" />
+        <record name="${log.dir}/valgrind2" loglevel="${log.level}" action="start"/>
+        <property name="grm" value="GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm" />
+        <property name="log5" value="res-callgrind-${platform-arch}-c++Test.val" />
+        <property name="input" value="java/testAna/testMem1/input-1000" />
+        <property name="cmdLine" value="java/testAna/testMem1/versionC++/test ${grm} ${input}" />
+        <property name="valgrindOptions" value="-v --tool=callgrind --tree=both --inclusive=yes" />
+        <delete file="${log5}" />
+        <exec executable="/opt/ParSem/tools/valgrind/${valgrind.version}/${platform-arch}/bin/valgrind" dir="${basedir}">
+            <env key="LD_LIBRARY_PATH" value="xipFst/lib/linux/sharedLib" />
+            <arg line="--callgrind-out-file=${log} ${valgrindOptions}" />
+            <arg line="${cmdLine}" />
+        </exec>
+        <record name="${log.dir}/valgrind2" action="stop"/>
+        <echo message="result in: ${log5}" />
+    </target>
+    
+    <target name="compileAll.debug" depends="setAllProperties"
+        description="compile fst, xml, ntm, xip mode debug  ">
+        <record name="${log.dir}/compileAll.debug" loglevel="${log.level}" action="start"/>
+        <!--
+        <ant antfile="build.xml" dir="../../fst/dev" target="compile.debug" inheritAll="false" />
+        <ant antfile="build.xml" dir="../../xml/dev" target="compile.debug" inheritAll="false" />
+        <ant antfile="build.xml" dir="../../ntm/dev" target="compile.debug" inheritAll="false" />
+        <ant antfile="build.xml" dir="." target="compile.debug" inheritAll="false" />
+        <ant antfile="build.xml" dir="java" target="clean" inheritAll="false" />
+        -->
+        <ant antfile="build.xml" dir="java" target="jar.debug" inheritAll="false" />
+        <record name="${log.dir}/compileAll.debug" action="stop"/>
+    </target>
+    
+    <target name="compile" depends="setAllProperties" description="compile And Link all " >
+        <record name="${log.dir}/compile" loglevel="${log.level}" action="start"/>
+        <antcall target="staticLib" inheritAll="false" />
+        <antcall target="staticLibPy" inheritAll="false" />
+        <antcall target="staticExe" inheritAll="false" />
+        <antcall target="staticExeKiF" inheritAll="false" />
+        <antcall target="staticExePy" inheritAll="false" />
+        <antcall target="sharedLib" inheritAll="false" />
+        <antcall target="sharedLibPy" inheritAll="false" />
+        <antcall target="sharedLibKifSQLite" inheritAll="false" />
+      <!-- antcall target="sharedLibKifFLTK" inheritAll="false" /-->
+        <antcall target="sharedLibKifregex" inheritAll="false" />
+        <antcall target="sharedLibKifSys" inheritAll="false" />
+        <antcall target="sharedLibKifSocket" inheritAll="false" />
+        <antcall target="javaCompile" inheritAll="false" />
+        <antcall target="jcoref" inheritAll="false" />
+        <antcall target="ui" inheritAll="false" />
+        <record name="${log.dir}/compile"  action="stop"/>
+    </target>
+    
+    <target name="compile.debug" depends="setAllProperties"
+        description="compile And Link all in DEBUG MODE" >
+        <record name="${log.dir}/compile.debug" loglevel="${log.level}" action="start"/>
+        <antcall target="staticLib.debug" inheritAll="false" />
+        <antcall target="staticLibPy.debug" inheritAll="false" />
+        <antcall target="staticExe.debug" inheritAll="false" />
+        <antcall target="staticExePy.debug" inheritAll="false" />
+        <antcall target="sharedLib.debug" inheritAll="false" />
+        <antcall target="sharedLibPy.debug" inheritAll="false" />
+        <record name="${log.dir}/compile.debug"  action="stop"/>
+    </target>
+    
+    <target name="compile.profile" depends="setAllProperties" description="compile And Link all in DEBUG MODE" >
+        <record name="${log.dir}/compile.profile" loglevel="${log.level}" action="start"/>
+        <antcall target="staticLib.profile" inheritAll="false" />
+        <antcall target="staticLibPy.profile" inheritAll="false" />
+        <antcall target="staticExe.profile" inheritAll="false" />
+        <antcall target="staticExePy.profile" inheritAll="false" />
+        <!--
+	<antcall target="sharedLib.profile" inheritAll="false" />
+	<antcall target="sharedLibPy.profile" inheritAll="false" />
+        -->
+        <record name="${log.dir}/compile.profile"  action="stop"/>
+    </target>
+    
+    <target name="setPython"  description="set the python property" unless="solaris" >
+        <property name="python" value="true" />
+    </target>
+
+
+    <target name="staticExePy.debug" depends="setDebugMode, staticExePy" description="debug mode" />
+    <target name="staticExePy.profile" depends="setProfileMode, staticExePy" description="profile mode" />
+    <target name="staticExePy" depends="setAllProperties, setPython, staticLibPy"
+        description="compile and link static executable with python " unless="solaris">
+        <property name="static.exe.obj.dir.name.py" value="staticExePy" />
+        <property name="static.exe.bin.dir.name.py" value="${bin.dir}" />
+        <antcall target="staticExeCom" inheritAll="true" >
+            <param name="staticExeOutfile" value="xips"/>
+            <param name="staticExeRecordFile" location="${log.dir}/${static.exe.obj.dir.name.py}" />
+            <param name="staticExeObjDir" location="${obj.dir}/${static.exe.obj.dir.name.py}" />
+            <param name="staticExeDir" location="${static.exe.bin.dir.name.py}" />
+        </antcall>
+    </target>
+    
+    <target name="staticExe.debug" depends="setDebugMode, staticExe" description="debug mode" />
+    <target name="staticExe.profile" depends="setProfileMode, staticExe" description="profile mode" />
+    <target name="staticExe" depends="setAllProperties, staticLib"
+        description="compile and link static executable without python ">
+        <property name="static.exe.obj.dir.name" value="staticExe" />
+        <property name="static.exe.bin.dir.name" value="${bin.dir}" />
+        <antcall target="staticExeCom" inheritAll="true" >
+            <param name="staticExeOutfile" value="xip" />
+            <param name="staticExeRecordFile" location="${log.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeObjDir" location="${obj.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeDir" location="${static.exe.bin.dir.name}" />
+        </antcall>
+    </target>
+
+    <target name="staticExeKiF" depends="setAllProperties, staticLibKiF"
+      description="compile and link static executable KiF">
+        <property name="static.exe.obj.dir.name" value="staticExeKiF" />
+        <property name="static.exe.bin.dir.name" value="${bin.dir}" />
+        <antcall target="staticExeKiFCom" inheritAll="true" >
+            <param name="staticExeOutfile" value="kif"/>
+            <param name="staticExeRecordFile" location="${log.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeObjDir" location="${obj.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeDir" location="${static.exe.bin.dir.name}" />
+        </antcall>
+    </target>
+
+    <target name="staticExeKiFCom" depends="setDefinesKifRaw, setAllProperties" description="compile and link static executable ">
+        <record name="${staticExeRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${staticExeObjDir}" />
+        <mkdir dir="${staticExeDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+                exceptions="true" multithreaded="true" runtime="dynamic"
+                objdir="${staticExeObjDir}" outtype="executable" outfile="${staticExeDir}/${staticExeOutfile}" >
+            <compiler  extends="compilerC++basic" name="${compilerCplus.name}" >
+                <fileset refid="kifSQLiteFileC++" />
+                <fileset refid="kifSysFileC++" />
+                <fileset refid="kifSocketFileC++" />
+                <fileset refid="kifLibMain" />
+            </compiler>
+            <compiler  extends="compilerCbasic" name="${compilerC.name}" >
+                <fileset refid="kifSQLiteFileC" />
+            </compiler>
+            <linker extends="xipLinkerCommon" name="${compilerCplus.name}" >
+                <libset dir="${lib.dir}/staticLibKiF" libs="kif" />
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${staticExeDir}/${staticExeOutfile}.exe.manifest" />
+            <param name="libOrExe" location="${staticExeDir}/${staticExeOutfile}.exe" />
+            <param name="libOrExeDir" location="${staticExeDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#1" />
+        </antcall>
+        <!-- in the case of profileMode=true, gcc must be call with -pg option to link the files but there is no way to do
+	that (linkerparam is not implemented)
+	 -->
+        <if>
+            <istrue value="${profileMode}"/>
+            <then>
+                <echo message="link for profiling" />
+                <delete file="${staticExeDir}/${staticExeOutfile}" />
+                <exec dir="${staticExeDir}" executable="gcc" >
+                    <arg line="-pg -mt -o ${staticExeDir}/${staticExeOutfile} ${staticExeObjDir}/kifmain.o 
+                        -L${lib.dir}/staticLib -lkif -lm -lpthread -lz -lstdc++" />
+                </exec>
+            </then>
+        </if>
+        <!--
+        <copy file="filesToDeliver/xipparse.sh.L" tofile="${basedir}/bin/linux/xipparse" />
+        <chmod file="${basedir}/bin/linux/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.sh.S" tofile="${basedir}/bin/solaris5.10-x86/xipparse" />
+        <chmod file="${basedir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.bat" tofile="${basedir}/bin/windows/xipparse.bat" />
+        -->
+        <record name="${staticExeRecordFile}" action="stop"/>
+    </target>
+
+    <target name="staticExeKiFULL" depends="setAllProperties, staticLibKiF"
+        description="compile and link static executable KiF">
+        <property name="static.exe.obj.dir.name" value="staticExeKiF" />
+        <property name="static.exe.bin.dir.name" value="${bin.dir}" />
+        <antcall target="staticExeKiFULLCom" inheritAll="true" >
+            <param name="staticExeOutfile" value="KiF"/>
+            <param name="staticExeRecordFile" location="${log.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeObjDir" location="${obj.dir}/${static.exe.obj.dir.name}" />
+            <param name="staticExeDir" location="${static.exe.bin.dir.name}" />
+            <param name="staticLibFLTKDir" location="${basedir}/../../fltk/dev/lib/linux" />
+            <param name="staticIncludeFLTK" location="${basedir}/../../fltk/dev/include" />
+            <param name="staticLibRegexDir" location="${basedir}/../../regex/dev/lib/${platform-arch}" />
+            <param name="staticIncludeRegex" location="${basedir}/../../regex/dev/include" />
+        </antcall>
+    </target>
+  
+    <target name="staticExeKiFULLCom" depends="setDefinesKifFULL, setAllProperties" description="compile and link static executable ">
+        <record name="${staticExeRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${staticExeObjDir}" />
+        <mkdir dir="${staticExeDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+            exceptions="true" multithreaded="true" runtime="dynamic"
+            objdir="${staticExeObjDir}" outtype="executable" outfile="${staticExeDir}/${staticExeOutfile}" >
+            <compiler  extends="compilerC++basic" name="${compilerCplus.name}" >
+                <includepath path="${staticIncludeFLTK}" />
+                <includepath path="${staticIncludeRegex}" />
+                <fileset refid="kifSQLiteFileC++" />
+                <fileset refid="kifSysFileC++" />
+                <fileset refid="kifSocketFileC++" />
+                <fileset refid="kifLibMain" />
+                <fileset refid="kifFLTKFileC++" />
+                <fileset refid="kifRegexFileC++" />
+            </compiler>
+            <compiler  extends="compilerCbasic" name="${compilerC.name}" >
+                <fileset refid="kifSQLiteFileC" />
+            </compiler>
+            <linker extends="xipLinkerCommon" name="${compilerCplus.name}" >
+                <libset dir="${lib.dir}/staticLibKiF" libs="kif" />
+                <libset libs="boost_regex"/>
+                <libset dir="${staticLibFLTKDir}" libs="fltk"/>
+                <libset dir="${staticLibFLTKDir}" libs="fltk_images"/>
+                <libset dir="${staticLibFLTKDir}" libs="fltk_jpeg"/>
+                <libset dir="" libs="Xext"/>
+                <libset dir="" libs="Xft"/>
+                <libset dir="" libs="Xinerama"/>
+                <libset dir="" libs="X11"/>
+                <libset dir="" libs="fontconfig"/>
+                <libset dir="" libs="dl"/>
+            </linker>
+        </cc>
+    <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${staticExeDir}/${staticExeOutfile}.exe.manifest" />
+            <param name="libOrExe" location="${staticExeDir}/${staticExeOutfile}.exe" />
+            <param name="libOrExeDir" location="${staticExeDir}" />
+      <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#1" />
+        </antcall>
+    <!-- in the case of profileMode=true, gcc must be call with -pg option to link the files but there is no way to do
+	that (linkerparam is not implemented)
+	 -->
+        <if>
+            <istrue value="${profileMode}"/>
+            <then>
+                <echo message="link for profiling" />
+                <delete file="${staticExeDir}/${staticExeOutfile}" />
+                <exec dir="${staticExeDir}" executable="gcc" >
+                    <arg line="-pg -mt -o ${staticExeDir}/${staticExeOutfile} ${staticExeObjDir}/kifmain.o 
+                        -L${lib.dir}/staticLib -lkif -lm -lpthread -lz -lstdc++" />
+                </exec>
+            </then>
+        </if>
+    <!--
+        <copy file="filesToDeliver/xipparse.sh.L" tofile="${basedir}/bin/linux/xipparse" />
+        <chmod file="${basedir}/bin/linux/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.sh.S" tofile="${basedir}/bin/solaris5.10-x86/xipparse" />
+        <chmod file="${basedir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.bat" tofile="${basedir}/bin/windows/xipparse.bat" />
+        -->
+        <record name="${staticExeRecordFile}" action="stop"/>
+    </target>  
+    
+    <target name="staticExeCom" depends="setDefines, setAllProperties" 
+        description="compile and link static executable " unless="transMode">
+        <record name="${staticExeRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${staticExeObjDir}" />
+        <mkdir dir="${staticExeDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" 
+                    optimize="${cc.optimize}" subsystem="console"
+                    exceptions="true" multithreaded="true" runtime="dynamic"
+                    objdir="${staticExeObjDir}" outtype="executable" 
+                    outfile="${staticExeDir}/${staticExeOutfile}" >
+            <compiler  extends="compilerC++basic" name="${compilerCplus.name}" >
+                <fileset refid="xipMainC++SrcFiles" />
+            </compiler>
+            <linker extends="linkerStaticLib" name="${compilerCplus.name}" unless="mac">
+                <!-- On linux, to avoid to specify the LD_LIBRARY_PATH (to access to lib dyn) link with lib static -->
+                <libset dir="${python.lib.dir}" libs="${python.lib.name}"  type="static" if="python" />
+            </linker>
+            <linker extends="linkerStaticLib" name="${compilerCplus.name}"  if="mac">
+                         <!-- on mac "type=..." must be not defined -->
+                <libset dir="${python.lib.dir}" libs="${python.lib.name}" if="python" />
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${staticExeDir}/${staticExeOutfile}.exe.manifest" />
+            <param name="libOrExe" location="${staticExeDir}/${staticExeOutfile}.exe" />
+            <param name="libOrExeDir" location="${staticExeDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#1" />
+        </antcall>
+        <!-- in the case of profileMode=true, gcc must be call with -pg option 
+            to link the files but there is no way to do
+            that (linkerparam is not implemented)
+	 -->
+        <if>
+            <istrue value="${profileMode}"/>
+            <then>
+                <echo message="link for profiling" />
+                <delete file="${staticExeDir}/${staticExeOutfile}" />
+                <if>
+                    <istrue value="${python}"/>
+                    <then>
+                        <exec dir="${staticExeDir}" executable="gcc" >
+                            <arg line="-pg -mt -o ${staticExeDir}/${staticExeOutfile} ${staticExeObjDir}/main.o 
+                            -Wl,-export-dynamic -L${lib.dir}/staticLibPy -lxips -L${python.lib.dir} -l${python.lib.name}
+                            -lm -lpthread -lz -ldl -lutil -lstdc++" />
+                        </exec>
+                    </then>
+                    <else>
+                        <exec dir="${staticExeDir}" executable="gcc" >
+                            <arg line="-pg -mt -o ${staticExeDir}/${staticExeOutfile} ${staticExeObjDir}/main.o 
+                            -L${lib.dir}/staticLib -lxip -lm -lpthread -lz -lstdc++" />
+                        </exec>
+                    </else>
+                </if>
+            </then>
+        </if>
+        <!--
+        <copy file="filesToDeliver/xipparse.sh.L" tofile="${basedir}/bin/linux/xipparse" />
+        <chmod file="${basedir}/bin/linux/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.sh.S" tofile="${basedir}/bin/solaris5.10-x86/xipparse" />
+        <chmod file="${basedir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.bat" tofile="${basedir}/bin/windows/xipparse.bat" />
+        -->
+        <record name="${staticExeRecordFile}" action="stop"/>
+    </target>
+    
+    <target name="staticLibPy.debug" depends="setDebugMode, staticLibPy" description="debug mode" />
+    <target name="staticLibPy.profile" depends="setProfileMode, staticLibPy" description="profile mode" />
+    <target name="staticLibPy" depends="setAllProperties, setPython"
+        description="compile and link static lib with python " unless="solaris" >
+        <property name="static.lib.obj.dir.name.py" value="staticLibPy" />
+        <antcall target="staticLibCom" inheritAll="true" >
+            <param name="staticLibOutfile" value="xips" />
+            <param name="staticLibRecordFile" location="${log.dir}/${static.lib.obj.dir.name.py}" />
+            <param name="staticLibObjDir" location="${obj.dir}/${static.lib.obj.dir.name.py}" />
+            <param name="staticLibDir" location="${lib.dir}/${static.lib.obj.dir.name.py}" />
+        </antcall>
+    </target>
+
+    <target name="staticLib.debug" depends="setDebugMode, staticLib" description="debug mode" />
+    <target name="staticLib.profile" depends="setProfileMode, staticLib" description="profile mode" />
+    <target name="staticLib" depends="setAllProperties" description="compile and link static lib without python" >
+        <property name="static.lib.obj.dir.name" value="staticLib" />
+        <antcall target="staticLibCom" inheritAll="true" >
+            <param name="staticLibOutfile" value="xip" />
+            <param name="staticLibRecordFile" location="${log.dir}/${static.lib.obj.dir.name}" />
+            <param name="staticLibObjDir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        </antcall>
+    </target>
+
+    <target name="staticLibKiF" depends="setAllProperties" description="compile and link static lib without python" >
+        <property name="static.lib.obj.dir.name" value="staticLibKiF" />
+        <antcall target="staticLibKiFCom" inheritAll="true" >
+            <param name="staticLibOutfile" value="kif" />
+            <param name="staticLibRecordFile" location="${log.dir}/${static.lib.obj.dir.name}" />
+            <param name="staticLibObjDir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        </antcall>
+    </target>
+
+    <target name="staticLibKiFCom" depends="setDefinesKifRaw, setAllProperties" description="compile and link static lib" >
+        <record name="${staticLibRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${staticLibObjDir}" />
+        <mkdir dir="${staticLibDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+        objdir="${staticLibObjDir}" outtype="static" outfile="${staticLibDir}/${staticLibOutfile}"  >
+            <!-- C++ compilation -->
+            <compiler  extends="compilerC++Dyn" name="${compilerCplus.name}" >
+                <fileset refid="kifLibSrc" />
+                <fileset refid="kifXMLFileC++"/>
+            </compiler>
+            <!-- link -->
+            <linker name="${compilerCplus.name}" debug="${cc.debug}">
+                <fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" />
+            </linker>            
+        </cc>
+        <record name="${staticLibRecordFile}" action="stop"/>
+    </target>
+
+
+  <target name="staticLibCom" depends="setDefines, setAllProperties" description="compile and link static lib" >
+    <record name="${staticLibRecordFile}" loglevel="${log.level}" action="start"/>
+    <mkdir dir="${staticLibObjDir}" />
+    <mkdir dir="${staticLibDir}" />
+    <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+        objdir="${staticLibObjDir}" outtype="static" outfile="${staticLibDir}/${staticLibOutfile}"  >
+      <!-- C++ compilation -->
+      <compiler  name="${compilerCplus.name}" extends="compilerC++basic"  >
+        <fileset refid="xipC++SrcFiles" />
+      </compiler>
+      <!-- C compilation -->
+      <compiler name="${compilerC.name}" extends="compilerCbasic"   unless="transMode" >
+        <fileset refid="tokLookCSrcFiles" />
+      </compiler>
+      <!-- link -->
+      <linker name="${compilerCplus.name}" debug="${cc.debug}" >
+        <fileset dir="${fst.static.obj.dir}" includes="*.${obj.suffixe}" unless="transMode"/>
+        <fileset dir="${ntm.static.obj.dir}" includes="*.${obj.suffixe}" unless="transMode"/>
+        <fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" />
+      </linker>
+    </cc>
+    <record name="${staticLibRecordFile}" action="stop"/>
+  </target>
+
+  <!--
+    <target name="sharedExePy.debug" depends="setDebugMode, sharedExePy" description="debug mode" />
+    <target name="sharedExePy.profile" depends="setProfileMode, sharedExePy" description="profile mode" />
+    <target name="sharedExePy" depends="setAllProperties, setPython, sharedLibPy"
+        description="compile and link shared executable with python " unless="solaris">
+        <property name="shared.exe.obj.dir.name.py" value="sharedExePy" />
+        <property name="shared.exe.bin.dir.name.py" value="${bin.dir}" />
+        <antcall target="sharedExeCom" inheritAll="true" >
+            <param name="sharedExeOutfile" value="xips"/>
+            <param name="sharedExeRecordFile" location="${log.dir}/${shared.exe.obj.dir.name.py}" />
+            <param name="sharedExeObjDir" location="${obj.dir}/${shared.exe.obj.dir.name.py}" />
+            <param name="sharedExeDir" location="${shared.exe.bin.dir.name.py}" />
+        </antcall>
+    </target>
+    
+    <target name="sharedExe.debug" depends="setDebugMode, sharedExe" description="debug mode" />
+    <target name="sharedExe.profile" depends="setProfileMode, sharedExe" description="profile mode" />
+    <target name="sharedExe" depends="setAllProperties, sharedLib"
+        description="compile and link shared executable without python ">
+        <property name="shared.exe.obj.dir.name" value="sharedExe" />
+        <property name="shared.exe.bin.dir.name" value="${bin.dir}" />
+        <antcall target="sharedExeCom" inheritAll="true" >
+            <param name="sharedExeOutfile" value="xip" />
+            <param name="sharedExeRecordFile" location="${log.dir}/${shared.exe.obj.dir.name}" />
+            <param name="sharedExeObjDir" location="${obj.dir}/${shared.exe.obj.dir.name}" />
+            <param name="sharedExeDir" location="${shared.exe.bin.dir.name}" />
+        </antcall>
+    </target>
+    
+    <target name="sharedExeCom" depends="setDefines, setAllProperties" description="compile and link shared executable ">
+        <record name="${sharedExeRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedExeObjDir}" />
+        <mkdir dir="${sharedExeDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+            objdir="${sharedExeObjDir}" outtype="executable" outfile="${sharedExeDir}/${sharedExeOutfile}" >
+            <compiler  extends="compilerC++basic" name="${compilerCplus.name}" >
+                <fileset refid="xipMainC++SrcFiles" />
+            </compiler>
+            <linker extends="linkerSharedLib" name="${compilerCplus.name}" >
+                <libset dir="${python.lib.dir}" libs="${python.lib.name}"  if="python" />
+            </linker>
+        </cc>
+        <copy file="filesToDeliver/xipparse.sh.L" tofile="${basedir}/bin/linux/xipparse" />
+        <chmod file="${basedir}/bin/linux/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.sh.S" tofile="${basedir}/bin/solaris5.10-x86/xipparse" />
+        <chmod file="${basedir}/bin/solaris5.10-x86/xipparse" perm="a+x"/>
+        <copy file="filesToDeliver/xipparse.bat" tofile="${basedir}/bin/windows/xipparse.bat" />
+        <record name="${sharedExeRecordFile}" action="stop"/>
+    </target>
+    -->
+  
+    <target name="sharedLibPy.debug" depends="setDebugMode, sharedLibPy" description="debug mode" />
+    <target name="sharedLibPy.profile" depends="setProfileMode, sharedLibPy" description="profile mode" />
+    <target name="sharedLibPy" depends="setAllProperties, setPython"
+        description="compile and link shared lib with python " unless="solaris">
+        <property name="shared.lib.obj.dir.name.py" value="sharedLibPy" />
+        <antcall target="sharedLibCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="xips" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name.py}" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name.py}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name.py}" />
+        </antcall>
+        <!-- xips.so is required to import xips.so in python program -->
+        <if>
+            <equals arg1="${platform}" arg2="linux" />
+            <then>
+                <copy file="${lib.dir}/${shared.lib.obj.dir.name.py}/libxips.so"
+                      tofile="${lib.dir}/${shared.lib.obj.dir.name.py}/xips.so" />
+            </then>
+        </if>
+    </target>
+    
+    <target name="sharedLib.debug" depends="setDebugMode, sharedLib" description="debug mode" />
+    <target name="sharedLib.profile" depends="setProfileMode, sharedLib" description="profile mode" />
+    <target name="sharedLib" depends="setAllProperties" description="compile and link shared lib without python ">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedLibCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="xip" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        </antcall>
+    </target>
+    
+    <target name="sharedLibCom" depends="setDefines, setAllProperties" description="compile and link shared lib " >
+        <record name="${sharedLibRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+                    exceptions="true" multithreaded="true" runtime="dynamic"
+                    objdir="${sharedLibObjDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+            <!-- C++ compilation -->
+            <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+                <fileset refid="xipC++SrcFiles" />
+            </compiler>
+            <!-- derivation mode: we need to generate all the *.o to build a dynamic lib used by java.
+            XipGrmFile must be defined only to be able to generate this shareLibCom (there is always
+            a default link even if I use a unless="transMode" with the link...). So all *.o (not derivation.o)
+            will be used to be able to generate libjXip.a and libjXipPy.a: these static libs will allow
+            to build a user dependent libJXip.so and libjXipPy.so (with its own derivation .cxx) -->
+            <compiler  extends="compilerC++Dyn" name="${compilerCplus.name}" if="transMode">
+                <fileset file="${basedir}/src/derivation/derivation.cxx" />
+            </compiler>
+            <!-- C compilation -->
+            <compiler  extends="compilerCbasic" name="${compilerC.name}"  unless="transMode" >
+                <fileset refid="tokLookCSrcFiles" />
+            </compiler>
+            <!-- link -->
+            <linker extends="linkerShared" name="${compilerCplus.name}"  >
+                <libset dir="${python.lib.dir}" libs="${python.lib.name}"  if="python" />
+                        <!-- To build this shared lib on linux and solaris the object files of
+                        the libraries like fst must be compile for
+                        a shared lib (with -fPIC) but if we use the shared lib(fsp.so) it
+                        will be linked dynamically at runtime: so
+                        to avoid this, we include directly these object files in this link. -->
+                <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" />
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedLibRecordFile}" action="stop"/>
+    </target>
+
+    <target name="sharedKiFLib" depends="setAllProperties" description="compile KiFSQLite lib" unless="mac">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedKifLibCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="kif" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjKifSQLDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kif" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        </antcall>
+    </target>
+
+    <target name="sharedKifLibCom" depends="setDefinesKifRaw, setAllProperties" description="compile and link KiF shared lib " >
+        <property name="sharedKifLibRecordFile" value="${log.dir}/sharedKifLib" />
+        <record name="${sharedKifLibRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <mkdir dir="${sharedLibObjKifSQLDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+            exceptions="true" multithreaded="true" runtime="dynamic"
+            objdir="${sharedLibObjKifSQLDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+      <!-- C++ compilation -->
+            <compiler  extends="compilerC++Dyn" name="${compilerCplus.name}" >
+                <fileset refid="kifSQLiteFileC++" />
+                <fileset refid="kifSysFileC++" />
+                <fileset refid="kifXMLFileC++" />
+                <fileset refid="kifSocketFileC++" />
+                <fileset refid="kifLibSrc" />
+            </compiler>
+            <compiler  extends="compilerCbasic" name="${compilerC.name}" >
+                <fileset refid="kifSQLiteFileC" />
+            </compiler>
+            <linker extends="xipLinkerCommon" name="${compilerCplus.name}" >
+                <fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" />
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedKifLibRecordFile}" action="stop"/>
+    </target>
+
+    <target name="sharedLibKifSQLite" depends="setAllProperties, staticLibKiF" 
+        description="compile KiFSQLite lib" unless="mac">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedLibKifSQLiteCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="kifsqlite" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjKifSQLDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifsqlite" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+        </antcall>
+    </target>
+
+    <target name="sharedLibKifSQLiteCom" depends="setDefines, setAllProperties" description="compile and link KiF shared lib " >
+        <property name="sharedLibKifSQLiteRecordFile" value="${log.dir}/sharedLibKifSQLite" />
+        <record name="${sharedLibKifSQLiteRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <mkdir dir="${sharedLibObjKifSQLDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+                exceptions="true" multithreaded="true" runtime="dynamic"
+                objdir="${sharedLibObjKifSQLDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+            <!-- C++ compilation -->
+            <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+                <fileset refid="kifSQLiteFileC++" />
+            </compiler>
+            <compiler  name="${compilerC.name}" extends="compilerCbasic"  >
+                <fileset refid="kifSQLiteFileC" />
+            </compiler>
+            <!-- link -->
+            <linker name="${compilerCplus.name}" extends="linkerShared"   >
+                <libset dir="${sharedLibDir}" libs="xip" if="linux64"/>
+                <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+              <!-- libset dir="${sharedLibDir}" libs="xip" if="linux64"/>
+              <libset dir="${staticLibDir}" libs="xip" if="linuxpure"/>
+              <libset dir="${staticLibDir}" libs="xip" if="mac"/>
+              <libset dir="${sharedLibDir}" libs="xip" if="windows"/ -->
+              <!-- fileset dir="${sharedLibObjDir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" /-->
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+      <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedLibKifSQLiteRecordFile}" action="stop"/>
+    </target>
+
+    <target name="sharedLibKifSys" depends="setAllProperties, staticLibKiF"
+        description="compile KiFSys lib" unless="mac">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedLibKifSysCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="kifsys" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjKifDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifsys" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+        </antcall>
+    </target>
+
+    <target name="sharedLibKifSysCom" depends="setDefines, setAllProperties" description="compile and link KiF shared lib " >
+        <property name="sharedLibKifSysComRecordFile" value="${log.dir}/sharedLibKifSys" />
+        <record name="${sharedLibKifSysComRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibObjKifDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+                exceptions="true" multithreaded="true" runtime="dynamic"
+                objdir="${sharedLibObjKifDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+                <!-- C++ compilation -->
+            <compiler name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+                <fileset refid="kifSysFileC++" />
+            </compiler>
+            <!-- link -->
+            <linker name="${compilerCplus.name}" extends="linkerShared"   >
+                <libset dir="${sharedLibDir}" libs="xip" if="linux64"/>
+                <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+              <!-- libset dir="${staticLibDir}" libs="xip" if="linuxpure"/>
+              <libset dir="${staticLibDir}" libs="xip" if="mac"/>
+              <libset dir="${sharedLibDir}" libs="xip" if="windows"/>
+              <libset dir="${sharedLibDir}" libs="xip" if="linux64"/-->
+              <!-- fileset dir="${sharedLibObjDir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" /-->
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedLibKifSysComRecordFile}" action="stop"/>
+    </target>
+
+    <target name="sharedLibKifSocket" depends="setAllProperties,staticLibKiF" 
+        description="compile KiFSys lib" unless="mac">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedLibKifSocketCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="kifsocket" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjKifDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifsys" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+        </antcall>
+    </target>
+
+    <target name="sharedLibKifSocketCom" depends="setDefines, setAllProperties" description="compile and link KiF shared lib " >
+        <property name="sharedLibKifSocketComRecordFile" value="${log.dir}/sharedLibKifSocket" />
+        <record name="${sharedLibKifSocketComRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibObjKifDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+            exceptions="true" multithreaded="true" runtime="dynamic"
+            objdir="${sharedLibObjKifDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+            <!-- C++ compilation -->
+            <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+                <fileset refid="kifSocketFileC++" />
+            </compiler>
+            <!-- link -->
+            <linker name="${compilerCplus.name}" extends="linkerShared"   >
+                <libset dir="${sharedLibDir}" libs="xip" if="linux64"/>
+                <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+                <!-- libset dir="${staticLibDir}" libs="xip" if="linuxpure"/>
+                <libset dir="${staticLibDir}" libs="xip" if="mac"/>
+                <libset dir="${sharedLibDir}" libs="xip" if="windows"/>
+                <libset dir="${sharedLibDir}" libs="xip" if="linux64"/-->
+                <!-- fileset dir="${sharedLibObjDir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+                <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" /-->
+            </linker>
+        </cc>
+        <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedLibKifSocketComRecordFile}" action="stop"/>
+    </target>
+    <target name="sharedLibKifFLTK" depends="setAllProperties,staticLibKiF"
+      description="compile KiFFltk lib" unless="mac">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <antcall target="sharedLibKifFLTKCom" inheritAll="true" >
+            <param name="sharedLibOutfile" value="kifltk" />
+            <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibObjKifDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifltk" />
+            <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+            <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+            <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+            <param name="staticLibFLTKDir" location="${basedir}/../../fltk/dev/lib/linux" />
+            <param name="staticIncludeFLTK" location="${basedir}/../../fltk/dev/include" />
+        </antcall>
+    </target>
+
+    <target name="sharedLibKifFLTKCom" depends="setDefines,setDefinesKifFLTK, setAllProperties" description="compile and link KiF shared lib " >
+        <property name="sharedLibKifFLTKComRecordFile" value="${log.dir}/sharedLibKifFLTK" />
+        <record name="${sharedLibKifFLTKComRecordFile}" loglevel="${log.level}" action="start"/>
+        <mkdir dir="${sharedLibObjDir}" />
+        <mkdir dir="${sharedLibObjKifDir}" />
+        <mkdir dir="${sharedLibDir}" />
+        <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+        objdir="${sharedLibObjKifDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+      <!-- C++ compilation -->
+            <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+                <includepath path="${staticIncludeFLTK}" />
+                <fileset refid="kifFLTKFileC++" />
+            </compiler>
+      <!-- link -->
+            <linker name="${compilerCplus.name}" extends="linkerShared">
+                <libset dir="${staticLibFLTKDir}" libs="fltk"/>
+                <libset dir="${staticLibFLTKDir}" libs="fltk_images"/>
+                <libset dir="${staticLibFLTKDir}" libs="fltk_jpeg"/>
+                <libset dir="" libs="Xext"/>
+                <libset dir="" libs="Xft"/>
+                <libset dir="" libs="Xinerama"/>
+                <libset dir="" libs="X11"/>
+                <libset dir="" libs="fontconfig"/>
+                <libset dir="" libs="dl"/>
+                <libset dir="${sharedLibDir}" libs="xip" if="linux64"/>
+                <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+                <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+        <!-- libset dir="${staticLibDir}" libs="xip" if="linuxpure"/>
+        <libset dir="${staticLibDir}" libs="xip" if="mac"/>
+        <libset dir="${sharedLibDir}" libs="xip" if="windows"/>
+        <libset dir="${sharedLibDir}" libs="xip" if="linux64"/-->
+        <!-- fileset dir="${sharedLibObjDir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" /-->
+            </linker>
+        </cc>
+    <!-- only on VS2005: manifest must be included to run anywhere  -->
+    <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+            <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+            <param name="libOrExeDir" location="${sharedLibDir}" />
+      <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#2" />
+        </antcall>
+        <record name="${sharedLibKifFLTKComRecordFile}" action="stop"/>
+    </target>
+
+  <target name="sharedLibKifcurl" depends="setAllProperties,staticLibKiF" description="compile KiFcurl lib">
+    <property name="shared.lib.obj.dir.name" value="sharedLib" />
+    <antcall target="sharedLibKifcurlCom" inheritAll="true" >
+      <param name="sharedLibOutfile" value="kifcurl" />
+      <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+      <param name="sharedLibObjKifDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifcurl" />
+      <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+      <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+      <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+      <param name="staticLibcurlDir" location="${basedir}/../../curl/dev/lib/${platform}" />
+      <param name="staticIncludecurl" location="${basedir}/../../curl/dev/include" />
+    </antcall>
+  </target>
+
+  <target name="sharedLibKifcurlCom" depends="setDefines,setDefinesKifRaw, setAllProperties" description="compile and link KiF shared lib " >
+    <property name="sharedLibKifcurlComRecordFile" value="${log.dir}/sharedLibKifcurl" />
+    <record name="${sharedLibKifcurlComRecordFile}" loglevel="${log.level}" action="start"/>
+    <mkdir dir="${sharedLibObjDir}" />
+    <mkdir dir="${sharedLibObjKifDir}" />
+    <mkdir dir="${sharedLibDir}" />
+    <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+        objdir="${sharedLibObjKifDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+      <!-- C++ compilation -->
+      <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+        <includepath path="${staticIncludecurl}" />
+        <fileset refid="kifcurlFileC++" />
+      </compiler>
+      <!-- link -->
+      <linker name="${compilerCplus.name}" extends="linkerShared">
+        <libset dir="${staticLibcurlDir}" libs="idn" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="ssl" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="crypto" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="ldap" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="rt" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="ssl" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="crypto" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="dl" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="z" if="linux"/>
+        <libset dir="${staticLibcurlDir}" libs="curl"/>
+        <libset dir="${staticLibDir}" libs="kif"/>
+      </linker>
+    </cc>
+    <!-- only on VS2005: manifest must be included to run anywhere  -->
+    <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+    <antcall target="genVS2005Manifest" >
+      <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+      <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+      <param name="libOrExeDir" location="${sharedLibDir}" />
+      <!-- #1 for an exe, #2 for a dll -->
+      <param name="typeFile" value="#2" />
+    </antcall>
+    <record name="${sharedLibKifcurlComRecordFile}" action="stop"/>
+  </target>
+
+  <target name="sharedLibKifregex" depends="setAllProperties,staticLibKiF" description="compile Kifregex lib">
+    <property name="shared.lib.obj.dir.name" value="sharedLib" />
+    <antcall target="sharedLibKifregexCom" inheritAll="true" >
+      <param name="sharedLibOutfile" value="kifregex" />
+      <param name="sharedLibRecordFile" location="${log.dir}/${shared.lib.obj.dir.name}" />
+      <param name="sharedLibObjKifDir" location="${obj.dir}/${shared.lib.obj.dir.name}/kifregex" />
+      <param name="sharedLibObjDir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+      <param name="sharedLibDir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+      <param name="staticLibDir" location="${lib.dir}/staticLibKiF" />
+      <param name="staticLibregexDir" location="${basedir}/../../regex/dev/lib/${platform-arch}" />
+      <param name="staticIncluderegex" location="${basedir}/../../regex/dev/include" />
+    </antcall>
+  </target>
+
+  <target name="sharedLibKifregexCom" depends="setDefines,setDefinesKifRaw, setAllProperties" description="compile and link KiF shared lib " >
+    <property name="sharedLibKifregexComRecordFile" value="${log.dir}/sharedLibKifregex" />
+    <record name="${sharedLibKifregexComRecordFile}" loglevel="${log.level}" action="start"/>
+    <mkdir dir="${sharedLibObjDir}" />
+    <mkdir dir="${sharedLibObjKifDir}" />
+    <mkdir dir="${sharedLibDir}" />
+    <cc name="${compilerCplus.name}" warnings="${cc.warnings}" optimize="${cc.optimize}" subsystem="console"
+        exceptions="true" multithreaded="true" runtime="dynamic"
+        objdir="${sharedLibObjKifDir}" outtype="shared" outfile="${sharedLibDir}/${sharedLibOutfile}"  >
+      <!-- C++ compilation -->
+      <compiler  name="${compilerCplus.name}" extends="compilerC++Dyn"  >
+        <includepath path="${staticIncluderegex}" />
+        <fileset refid="kifRegexFileC++" />
+      </compiler>
+      <!-- link -->
+      <linker name="${compilerCplus.name}" extends="linkerShared">
+        <libset dir="${staticLibDir}" libs="kif" unless="linux64"/>
+        <libset dir="${staticLibregexDir}" libs="boost_regex" if="mac"/>
+        <libset dir="" libs="boost_regex" unless="mac"/>
+        <libset dir="" libs="iconv" if="mac"/>
+
+        <!-- libset dir="${staticLibDir}" libs="xip" if="linuxpure"/>
+        <libset dir="${staticLibDir}" libs="xip" if="mac"/>
+        <libset dir="${sharedLibDir}" libs="xip" if="windows"/>
+        <libset dir="${sharedLibDir}" libs="xip" if="linux64"/-->
+        <!-- fileset dir="${sharedLibObjDir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${ntm.shared.obj.dir}" includes="*.${obj.suffixe}" unless="transMode" />
+        <fileset dir="${xml.shared.obj.dir}" includes="*.${obj.suffixe}" /-->
+      </linker>
+    </cc>
+    <!-- only on VS2005: manifest must be included to run anywhere  -->
+    <!-- it's necessary to add this manifest, mainly when used with python: check with the following
+        test: .../xip/delivery/xip-9.63-89/sample/python/sample1
+        -->
+    <antcall target="genVS2005Manifest" >
+      <param name="manifest.fileName" location="${sharedLibDir}/${sharedLibOutfile}.dll.manifest" />
+      <param name="libOrExe" location="${sharedLibDir}/${sharedLibOutfile}.dll" />
+      <param name="libOrExeDir" location="${sharedLibDir}" />
+      <!-- #1 for an exe, #2 for a dll -->
+      <param name="typeFile" value="#2" />
+    </antcall>
+    <record name="${sharedLibKifFLTKComRecordFile}" action="stop"/>
+  </target>
+
+  <target name="init" >
+        <property name="parSem.dir" 	location="${basedir}/../.." /> <!-- used by platformProperties.xml -->
+        <property name="xip.dev.dir"	location="${basedir}" /> <!-- used by xipVesrion.xml -->
+        <!-- ftp -->
+        <property name="ftp.login" value="ftp-xip" />
+        <property name="ftp.password" value="lmdpdXIP2003" />
+        <property name="ftp.login.client" value="guest-xip" />
+        <property name="ftp.password.client" value="Montrouge" />
+        <property name="ftp.remote.dir" value="/" />
+        <!-- log -->
+        <property name="log.level" value="verbose" />
+        <!-- java arg -->
+        <property name="java.options" value="-Xmx512m" />
+    </target>
+    
+    <target name="setDefines"  >
+        <defineset id="define.basic" >
+            <define name="XMLINPUT"/>
+            <define name="XIPSTLUSE"/>
+            <define name="XIPLIBXML"/>
+            <define name="XIPSTLAPI"/>
+            <define name="KIF_HASH_MAP"   if="fullkif"/>
+            <define name="SQLITE_ENABLE_COLUMN_METADATA"/>
+            <define name="NTMCONNECTION"        unless="transMode"/>
+            <define name="XIPEXTENALDERIVATION" if="transMode"/>
+            <define name="NOUNSIGNEDINT"        if="arch64bits"/>
+            <define name="ARCH64"               if="arch64bits"/>
+            <define name="WIN32"                if="windows"/>
+            <define name="XIPDLL_EXPORT"        if="windows"/>
+            <define name="XIPFSTAT64"           if="solaris"/>
+            <define name="UNIX"                 if="solaris"/>
+            <define name="UNIX"                 if="linux"/>
+            <define name="XIPSTDC"              if="linux"/>
+            <define name="APPLE"                if="mac"/>
+            <define name="UNIX"                 if="mac"/>
+            <define name="XIPSTDC"              if="mac"/>
+            <define name="NOUNSIGNEDINT"        if="mac"/>
+            <define name="XIPPYTHON"            if="python"/>
+            <define name="linuxpure"            unless="linux64"/>
+        </defineset>
+    </target>
+
+    <target name="setDefinesKifRaw"  >
+        <defineset id="define.basic" >
+            <define name="KIF_RAW"/>
+            <define name="KIF_HASH_MAP" if="fullkif"/>
+            <define name="ARCH64" if="arch64bits"/>
+            <define name="SQLITE_ENABLE_COLUMN_METADATA"/>
+            <define name="NOUNSIGNEDINT"        if="arch64bits"/>
+            <define name="WIN32"                if="windows"/>
+            <define name="UNIX"                 if="solaris"/>
+            <define name="UNIX"                 if="linux"/>
+            <define name="APPLE"                if="mac"/>
+            <define name="UNIX"                 if="mac"/>
+            <define name="NOUNSIGNEDINT"        if="mac"/>
+        </defineset>
+    </target>
+
+    <target name="setDefinesKifFLTK"  >
+        <defineset id="define.basic" >
+            <define name="KIF_RAW"/>
+            <define name="KIF_HASH_MAP" if="fullkif"/>
+            <define name="ARCH64" if="arch64bits"/>
+            <define name="SQLITE_ENABLE_COLUMN_METADATA"/>
+            <define name="_THREAD_SAFE"/>
+            <define name="_REENTRANT"/>
+            <define name="_LARGEFILE_SOURCE"/>
+            <define name="_LARGEFILE64_SOURCE"/>
+            <define name="_FILE_OFFSET_BITS" value="64"/>
+            <define name="NOUNSIGNEDINT"        if="arch64bits"/>
+            <define name="WIN32"                if="windows"/>
+            <define name="UNIX"                 if="solaris"/>
+            <define name="UNIX"                 if="linux"/>
+            <define name="APPLE"                if="mac"/>
+            <define name="UNIX"                 if="mac"/>
+            <define name="NOUNSIGNEDINT"        if="mac"/>
+        </defineset>
+    </target>
+
+    <target name="setDefinesKifFULL"  >
+        <defineset id="define.basic" >
+            <define name="KIF_RAW"/>
+            <define name="FLTKCODE"/>
+            <define name="KIF_HASH_MAP" if="fullkif"/>
+            <define name="KIF_REGEX"/>
+            <define name="ARCH64" if="arch64bits"/>
+            <define name="SQLITE_ENABLE_COLUMN_METADATA"/>
+            <define name="_THREAD_SAFE"/>
+            <define name="_REENTRANT"/>
+            <define name="_LARGEFILE_SOURCE"/>
+            <define name="_LARGEFILE64_SOURCE"/>
+            <define name="_FILE_OFFSET_BITS" value="64"/>
+            <define name="NOUNSIGNEDINT"        if="arch64bits"/>
+            <define name="WIN32"                if="windows"/>
+            <define name="UNIX"                 if="solaris"/>
+            <define name="UNIX"                 if="linux"/>
+            <define name="APPLE"                if="mac"/>
+            <define name="UNIX"                 if="mac"/>
+            <define name="NOUNSIGNEDINT"        if="mac"/>
+        </defineset>
+    </target>
+
+    <target name="setAllProperties" 
+        depends="setCommonProperties, xipCompilerLinkerSetting, majvcredist">
+    </target>
+
+    <!-- <target name="setCommonProperties" 
+        depends="init, getXipVersionAnBuild, platformSetting, setMode"> -->
+        
+    <target name="setCommonProperties" 
+        depends="init, getXipVersionAnBuild, platformSetting">
+        <property name="commonPropertiesSet" value="true" />
+        <!-- source file names -->
+        <property name="common.c++.src.files" value="
+                  varlibxml.cxx, avl.cxx, analyse.cxx, avlcat.cxx, avlreg.cxx, avltrait.cxx, avlvoc.cxx,
+                  chainefr.cxx, chaineen.cxx, divers.cxx, lecttest.cxx, applique.cxx, indexation.cxx,
+                  lire.cxx, noeud.cxx, pls.cxx, vecteur.cxx, traitement.cxx, initial.cxx, automate.cxx,
+                  avlfonc.cxx, parseur.cxx, affiche.cxx, sinput.cxx, disamb.cxx, mathemat.cxx, transduct.cxx,
+                  lliste.cxx, result.cxx, xmlxip.cxx, xipaxip.cxx, xiplibxml.cxx, ontologies.cxx, 
+                  tokenplus.cxx, graphe.cxx, createaut.cxx, generation.cxx arbren.cxx, kiflibs.cxx, kif.cxx, kifn.cxx, stlresul.cxx,
+                  testutf8.cxx, xipkif.cxx, kifraw.cxx, kifsqlite/kifxml.cxx
+            "/>
+        <!-- dir -->
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+            </then>
+            <else>
+                <property name="fst.dir"     location="${basedir}/../../fst/dev" />
+                <property name="ntm.dir"     location="${basedir}/../../ntm/dev" />
+            </else>
+        </if>
+        <property name="xml.dir"     location="${basedir}/../../xml/dev" />
+        <property name="xip.src.dir" location="${basedir}/src" />
+        <!-- include -->
+        <property name="xip.inc.dir" location="${basedir}/include" />
+        <fileset id="kifSQLiteFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifsqlite.cxx" />
+        <fileset id="kifSQLiteFileC" dir="${xip.src.dir}/kifsqlite" includes="sqlite3.c" />
+        <fileset id="kifSysFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifsys.cxx" />
+        <fileset id="kifRegexFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifregex.cxx" />
+        <fileset id="kifXMLFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifxml.cxx" />
+        <fileset id="kifSocketFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifsocket.cxx" />
+        <fileset id="kifFLTKFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifltk.cxx" />
+        <fileset id="kifcurlFileC++" dir="${xip.src.dir}/kifsqlite" includes="kifcurl.cxx" />
+        <property name="kif.c++.src.files" value="automate.cxx,kif.cxx,kiflibs.cxx,kifn.cxx, testutf8.cxx, kifraw.cxx"/>
+        <fileset id="kifLibSrc" dir="${xip.src.dir}" includes="${kif.c++.src.files}"/>
+        <fileset id="kifLibMain" dir="${xip.src.dir}" includes="kifmain.cxx"/>
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+                <fileset id="xipC++SrcFiles" dir="${xip.src.dir}" includes="${common.c++.src.files}" />
+            </then>
+            <else>
+                <fileset id="xipC++SrcFiles" dir="${xip.src.dir}" includes="${common.c++.src.files}, ntm.cxx" />
+                <fileset id="tokLookCSrcFiles" dir="${xip.src.dir}/tokLook"
+                         includes="ems.c, lookup.c, networks.c, readscript.c, tok-aux.c, text-io.c" />
+            </else>
+        </if>
+        <fileset id="xipMainC++SrcFiles" dir="${xip.src.dir}" includes="main.cxx" />
+        <!--include path definition -->
+        <includepath id="include.common.path">
+            <pathelement location="${xip.inc.dir}"/>
+            <pathelement location="${xml.dir}/libxml2-${xml.version}/include"/>
+        </includepath>
+        <includepath id="include.fstxip.path">
+            <pathelement location="${xip.inc.dir}/kifsqlite"/>
+            <pathelement location="${xip.inc.dir}/tokLook"/>
+            <pathelement location="${fst.dir}/src"/>
+            <pathelement location="${fst.dir}/src/fst"/>
+            <pathelement location="${ntm.dir}/include"/>
+        </includepath>
+        <includepath id="include.python.path">
+            <pathelement location="${python.include.dir}" />
+        </includepath>
+        <!-- lib -->
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+            </then>
+            <else>
+                <property name="fst.root.lib.dir" location="${fst.dir}/lib" />
+                <property name="ntm.root.lib.dir" location="${ntm.dir}/lib" />
+            </else>
+        </if>
+        <property name="xml.root.lib.dir"	location="${xml.dir}/lib" />
+        <property name="archive.name"		value="archive-${xip.version}-${xip.build}-${curDate.now}" />
+        <property name="archive.zip.file"	location="${archive.root}/${archive.name}.zip" />
+        <property name="delivery.name"		value="${name}-${xip.version}-${xip.build}" />
+        <property name="delivery.dir"		location="${delivery.root}/${delivery.name}" />
+        <property name="delivery.zip.file"	location="${delivery.root}/${delivery.name}.zip" />
+        <property name="xip.lib.dirs" 	location="${basedir}/${fstOrTrans.dir}/lib" />
+        <property name="xip.obj.dirs" 	location="${basedir}/${fstOrTrans.dir}/obj" />
+        <property name="xip.bin.dirs" 	location="${basedir}/${fstOrTrans.dir}/bin" />
+        <property name="xip.log.dirs" 	location="${basedir}/${fstOrTrans.dir}/log" />
+        <if>
+            <istrue value="${debugMode}"/>
+            <then>
+                <property name="lib.dir" 	location="${xip.lib.dirs}/${platform-arch}.debug" />
+                <property name="obj.dir" 	location="${xip.obj.dirs}/${platform-arch}.debug" />
+                <property name="bin.dir" 	location="${xip.bin.dirs}/${platform-arch}.debug" />
+                <property name="log.dir" 	location="${xip.log.dirs}/${platform-arch}.debug" />
+                <property name="cc.debug"       value="true" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optimize"     value="none" />
+            </then>
+            <elseif>
+                <istrue value="${profileMode}"/>
+                <then>
+                    <property name="lib.dir" 	location="${xip.lib.dirs}/${platform-arch}.profile" />
+                    <property name="obj.dir" 	location="${xip.obj.dirs}/${platform-arch}.profile" />
+                    <property name="bin.dir" 	location="${xip.bin.dirs}/${platform-arch}.profile" />
+                    <property name="log.dir" 	location="${xip.log.dirs}/${platform-arch}.profile" />
+                    <property name="cc.debug"       value="false" />
+                    <property name="cc.warnings"    value="none" />
+                    <property name="cc.optimize"     value="none" />
+                </then>
+            </elseif>
+            <else>
+                <property name="lib.dir" 	location="${xip.lib.dirs}/${platform-arch}" />
+                <property name="obj.dir" 	location="${xip.obj.dirs}/${platform-arch}" />
+                <property name="bin.dir" 	location="${xip.bin.dirs}/${platform-arch}" />
+                <property name="log.dir" 	location="${xip.log.dirs}/${platform-arch}" />
+                <property name="cc.debug"       value="false" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optimize"     value="extreme" />
+            </else>
+        </if>
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${obj.dir}" />
+        <mkdir dir="${bin.dir}" />
+        <mkdir dir="${log.dir}" />
+        <if>
+            <istrue value="${debugMode}"/>
+            <then>
+                <property name="fst.lib.dir" location="${fst.root.lib.dir}/${platform-arch}.debug" />
+                <property name="ntm.lib.dir" location="${ntm.root.lib.dir}/${platform-arch}.debug" />
+                <property name="xml.lib.dir" location="${xml.root.lib.dir}/${platform-arch}.debug" />
+                <property name="ntm.static.obj.dir" location="${ntm.dir}/obj/${platform-arch}.debug/staticLib" />
+                <property name="fst.static.obj.dir" location="${fst.dir}/obj/${platform-arch}.debug/staticLib" />
+                <property name="xml.static.obj.dir" location="${xml.dir}/obj/${platform-arch}.debug/staticLib" />
+                <property name="fst.shared.obj.dir" location="${fst.dir}/obj/${platform-arch}.debug/sharedLib" />
+                <property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platform-arch}.debug/sharedLib" />
+                <property name="ntm.shared.obj.dir" location="${ntm.dir}/obj/${platform-arch}.debug/sharedLib" />
+            </then>
+            <else>
+                <property name="fst.lib.dir" location="${fst.root.lib.dir}/${platform-arch}" />
+                <property name="ntm.lib.dir" location="${ntm.root.lib.dir}/${platform-arch}" />
+                <property name="xml.lib.dir" location="${xml.root.lib.dir}/${platform-arch}" />
+                <property name="ntm.static.obj.dir" location="${ntm.dir}/obj/${platform-arch}/staticLib" />
+                <property name="fst.static.obj.dir" location="${fst.dir}/obj/${platform-arch}/staticLib" />
+                <property name="xml.static.obj.dir" location="${xml.dir}/obj/${platform-arch}/staticLib" />
+                <property name="fst.shared.obj.dir" location="${fst.dir}/obj/${platform-arch}/sharedLib" />
+                <property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platform-arch}/sharedLib" />
+                <property name="ntm.shared.obj.dir" location="${ntm.dir}/obj/${platform-arch}/sharedLib" />
+            </else>
+        </if>
+        <antcall target="majvcredist" />
+    </target>
+    
+    <target name="majvcredist" depends="" if="windows">
+        <!-- les machines windows peuvent etre maj automatiquement et le fichier vcredist_xxx.exe
+        peut donc etre modifie cette mise a jour -->
+        <if>
+            <equals arg1="${platform-arch}" arg2="windows" />
+            <then>
+                <property name="vcredistx86" 
+                    value="C:\Program Files\Microsoft Visual Studio 8\SDK\v2.0\BootStrapper\Packages\vcredist_x86\vcredist_x86.exe" />
+                <property name="vcredistx86FileToDel" value="filesToDeliver/vcredist_x86.exe" />
+                <!-- check if there is a maj -->
+                <if>
+                    <filesmatch file1="${vcredistx86}" file2="${vcredistx86FileToDel}" />
+                    <then>
+                        <echo message="same file: ${vcredistx86FileToDel} and ${vcredistx86}" />
+                    </then>
+                    <else>
+                        <echo message="the file ${vcredistx86FileToDel} does not matche the file: ${vcredistx86}" />
+                        <!-- updating -->
+                        <delete file="${vcredistx86FileToDel}"/>
+                        <copy file="${vcredistx86}" tofile="${vcredistx86FileToDel}"/>
+                        <if>
+                            <equals arg1="${user.name}" arg2="grondeau" />
+                            <then>
+                                <fail message="the file ${vcredistx86FileToDel} has been updated, you have to commit it" />
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <property name="vcredistx64" 
+                    value="C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bootstrapper\Packages\vcredist_x64\vcredist_x64.exe" />
+                <property name="vcredistx64FileToDel" value="filesToDeliver/vcredist_x64.exe" />
+                <!-- check if there is a maj -->
+                <if>
+                    <filesmatch file1="${vcredistx64}" file2="${vcredistx64FileToDel}" />
+                    <then>
+                        <echo message="same file: ${vcredistx64FileToDel} and ${vcredistx64}" />
+                    </then>
+                    <else>
+                        <echo message="the file ${vcredistx64FileToDel} does not matche the file: ${vcredistx64}" />
+                        <!-- updating -->
+                        <delete file="${vcredistx64FileToDel}"/>
+                        <copy file="${vcredistx64}" tofile="${vcredistx64FileToDel}"/>
+                        <if>
+                            <equals arg1="${user.name}" arg2="grondeau" />
+                            <then>
+                                <fail message="the file ${vcredistx64FileToDel} has been updated, you have to commit it" />
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </else>
+        </if>
+    </target>
+    
+    <target name="localClean"  >
+    </target>
+    
+    <target name="localCleanAll" depends="setCommonProperties" > 
+        <delete dir="${lib.dirs}" /> <!-- to remove unused fs link (ln -s) -->
+        <delete dir="${obj.dirs}" /> <!-- to remove unused fs link (ln -s) -->
+        <delete dir="${bin.dirs}" /> <!-- to remove unused fs link (ln -s) -->
+        <delete dir="${log.dirs}" /> <!-- to remove unused fs link (ln -s) -->
+        <delete dir="${basedir}/${fstOrTrans.dir}" />
+        <ant antfile="build.xml" dir="${basedir}/java" target="cleanAll" inheritAll="false" />
+        <ant antfile="build.xml" dir="${basedir}/xipui" target="clean" inheritAll="false" />
+        <ant antfile="build.xml" dir="${basedir}/test" target="clean" inheritAll="false" />
+            <!-- ne marche pas
+            <ant antfile="build.xml" dir="${basedir}/GRAMMARS" target="cleanAll" inheritAll="false" />
+            -->
+        <exec dir="${basedir}/GRAMMARS" executable="ant" failonerror="true" >
+            <arg line="cleanAll"/>
+        </exec>
+    </target>
+
+    <!-- deployment to maven repository -->
+    <property name="mvn.repo.url" 
+        value="http://lautaret.grenoble.xrce.xerox.com:8081/nexus/content/repositories/releases/"/>
+    <property name="mvn.group.id" value="com.xerox.jxip"/>
+
+    <target name="mvn.deploy" depends="setCommonProperties">
+        <property name="mvn.artifact.version" value="${xip.version}-${xip.build}"/>
+        <deployfile file="java/dist/jxip.jar" id="jxip" packaging="jar"/>
+        <deployfile file="java/dist/jxipPy.jar" id="jxipPy" packaging="jar"/>
+	<!-- would like to handle javadoc and src as well, so that
+	     IDEs can find them automatically.  First I'd
+	     have to jar them up. I see no clean way to have jxip.jar
+	     and jxipPy.jar share the same src and doc jars. -->
+    </target>
+
+    <macrodef name="deployfile">
+        <attribute name="file"/>
+        <attribute name="id"/>
+        <attribute name="packaging"/>
+        <sequential>
+            <echo>file=@{file} id=@{id} packaging=@{packaging}</echo>
+            <exec executable="mvn">
+                <arg value="-B"/>
+                <arg value="deploy:deploy-file"/>
+                <arg value="-Dfile=@{file}"/>
+                <arg value="-Durl=${mvn.repo.url}"/>
+                <arg value="-DgroupId=${mvn.group.id}"/>
+                <arg value="-DartifactId=@{id}"/>
+                <arg value="-Dversion=${mvn.artifact.version}"/>
+                <arg value="-Dpackaging=@{packaging}"/>
+            </exec>
+        </sequential>
+    </macrodef>
+
+</project>

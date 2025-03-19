@@ -1,0 +1,718 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Copyright (c) 2006 Xerox Corporation.  All Rights Reserved.
+//!
+//! File:	disamb.xip
+//! Encoding:	UTF-8
+//! Content:	rules for disambiguation
+//!
+//! Language:	DUTCH
+//!
+//! Author:	Anne Schiller, Joeri Honnef
+//!
+//! Date: 	07-Mar-2007	:: initial version
+//!
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// Abbreviations:
+// NFR = 'needs further research'
+
+
+Tagging:
+
+// Compounds (If something has a compound feature on it just negate it.)
+1> ?[compound] = ?[compound:~] .
+1> noun<lemma:eens> = ?[noun:~] .
+
+
+// There is a counter example for this rule when a thing is said by somebody and it is in the beginning
+// (cex: ''Als je in het Velodrome aankomt, kun je nooit ontevreden zijn’, zei de kopman van Rabobank trots 
+//         over zijn tweede plaats.')
+3> ?[surface:Als] = | punct[quote] | conj .
+3> ?[conj, cap, start:~] = ?[conj:~, adv:~].
+
+// ('president Pervez Musharraf')
+4> noun[cap, allcap:~, first:~,country:~] = | noun[cap, proper, allcap:~] | noun[lastname=+, proper=+] .
+// 'start'  is included here because else:
+// (ex: 'Communicatiedirecteur Hans Blok')
+// will become one NP. We want two NP's
+4> noun[start:~, cap, allcap:~, proper] =  noun[firstname=+] | noun[cap, proper, lastname] | .
+
+// Ambiguity of preposition (e.g. in)
+// (ex: 'ik in het geld')
+5> prep, verb = | pron#1[nom] | verb[fin] ,
+	where ( #0[number] : #1[number] & #0[person] : #1[person] ).
+// otherwise not verb
+// in het huis
+// hij ging er niet op in.  
+5> prep<lemma:in> = ?[verb:~].
+
+// An infinitive after the particle 'te' is definitely a particle.
+6> ptcl<inf> = ptcl[inf] | verb[inf,noun:~,adj:~] |.
+6> ptcl<inf> = ptcl[inf:~], ?[ptcl:~] | ?[verb:~];verb[inf:~]|.
+
+// Adjective modifier "te"
+// (ex: 'te groet')
+7> ptcl<amod> = ?[amod:~] | ?[adj:~,adv:~] |.
+
+// A hack for the verb/noun 'stammen'
+8> ?<lemma:stammen> = ~| noun[proper]; pron | ?[verb:~] ~| adv;ptcl | .
+
+9> noun[deriv_adj,neut,sg] = ~| pron<lemma:iets>;pron<lemma:niets> | ?[noun:~], noun[deriv_adj:~] .
+
+// Simple hack
+// (ex: 'een |stenen| gooiende menigte')
+10>?<surface:steen> = |?[surface:een]| ?[verb:~].
+
+// (ex: '|in| het huis')
+// (ex: '|in| Paris')
+// (ex: 'het zit |in| flessen')
+// (ex: 'het water |in| groene flessen')
+// (ex: '|In| de groene flessen zat het blauwe water.')
+// (cex: 'Als je dat niet doet ... ')
+11> prep[start:~, noambiguity] = prep | det[art] ; adj[noambiguity] ; noun | .
+11> prep[start, noambiguity] = ?[sep:~,postp:~] .
+11> prep[start, noambiguity] = prep |det;pron|.
+
+// when a prep,noun reading appears at the end, exclude the prep.
+11> prep[end] = ?[prep:~] .
+11> prep = ?[prep:~] | punct | .
+
+// NFR
+12> (adv, num)[lemma:geen] = num.
+
+// A plural noun cannot follow the determiner 'een'
+// We exclude the noun reading from this ambiguity.
+// Too strong...
+// (ex: 'verliet haar baan voor een post bij een ander bedrijf.')
+// Square brackets are replaced by angle brackets.
+13> noun<pl> = |?[lemma:een]| ?[noun:~].
+
+// Hack. Just take 'niet' as an adv because if it is a noun it becomes a 
+// dimunitive: 'nietje'
+14> ?<surface:niet> = adv.
+
+// cex: dat is het natuurlijk niet.
+15> ?<noun, decl:~> = |det[lemma:het], adj| noun .
+
+// NFR
+16> quant,verb = |det[lemma:een, noambiguity]| quant.
+// If there is an noun,adj reading in the beginning of a sentence and the adj is inflected (decl:+)
+// then choose the adj reading if there is a noun or propernoun afterwards.
+// (ex: 'Toen hij in 2006 de overstap naar CSC maakte, overtuigde Sunderland zijn landgenoot ...')
+//15> adj<decl>, noun = adj | noun | .	
+
+// If there is an inflected verb which could sometimes also act as an Adj but also as a Noun
+// and we do have a determiner in front of it and no noun behind it we can select the noun reading.
+17> (adj, noun, verb)[pastpart, decl] = | det[noambiguity] | noun | ?[noun:~] | .
+17> (adj, noun, verb)[pastpart, decl] = ~| det[noambiguity] | verb | det ; ?[proper] | .
+
+// NFR
+// An adjective/noun amb can be resolved if the word is inflected and is following another adjective
+// which is also inlfected. We should in this case choose the adj reading
+18> adj<decl>, noun<DERIV_ADJ> = | adj[decl];noun[DERIV_ADJ] | adj .
+
+// If you have an ambiguity between an adj and a noun and there is a declension 
+// and no noun following we choose the noun reading.
+// study the next example with the subphrase: 'dat zijn handelswijze de integriteit en doel......'.
+// (ex: 'In een brief staat dat de president van de bank moet erkennen dat zijn |handelwijze| de integriteit 
+//       en doelmatigheid van de Wereldbank heeft geschaad.')
+19> noun, adj<decl> = | det | noun | ?[noun:~, comma:~, adj:~]  | .
+
+// (ex: 'het meeste')
+20> ?<lemma:het> = det |quant[decl, sup], ?*[adj:~], ?[noun:~]|.
+
+// reduce a noun,verb reading after an inflected adjective to a noun since adjectives only aply to nouns and not verbs
+// (ex: 'Hij zegt dat hij het goed/noun/adj vindt/verb.')
+//  cex: '..., omdat de tijd verstreken |was|.'
+// More examples needed. Does not apply anymoer to this sentence.
+21> noun, verb = | adj<decl, pastpart:~> | ?[verb:~] .
+
+// This rule could be too strict, but it appears quite often  (ex: 'het leger zei')
+// (ex: 'De |lange| zei dat ik het op moest pakken.')  --> det-adj-verb
+// (ex: 'De IND |liet| hem niet gaan.')                --> det-propn-ver
+22> noun,verb = |det[noambiguity]| ?[verb:~] |verb[noambiguity]|.
+
+
+// This rule should not apply to pastpart adjectives because the
+// it will rule out the adj reading.
+23> adj<pastpart:~> = adj[decl], ?[adj:~] | noun[fem];noun[masc] | .
+
+
+// (ex: 'de ontstane situatie')
+// does work for:
+// (ex: 'We moeten geweld gebruiken)
+// added noambiguity because 'een' could be a noun...
+// (ex: 'Dat gebeurde een half jaar nadat ... ')
+24> verb[decl:+] = | det ; pron ; adj | adj | noun[noambiguity] | .
+
+// Vaak is only an adjective when it is declined.
+// A problem is the noun reading which hardly occurs...
+// so we rule it out too. 
+// (cex: 'Ik heb vaak tussen de tanden.')
+25> ?[lemma:vaak, decl:~] = ?[adj:~, noun:~] .
+
+// A plural noun cannot be followed by a noun.  
+// (ex: 'Pakistanen stammen' af van Nederlanders. )
+// 24> noun<pl>, verb = |noun[pl]| verb.
+// (ex: GERMAN: 'Er gibt seinen Kindern Milch.')
+// (ex: DUTCH: 'Er geeft zijn kinderen/noun melk/noun.')
+// (ex: DUTCH: 'Er geeft zijn kind/noun melk/noun.')
+// But the next examlple is ok since 'hazelnoten' is just a noun and no verb:
+// (ex: 'Hij geeft zijn kinderen hazelnoten.')
+// But... this example goes wrong since the plural noun at the end could be a verb too:
+// (ex: 'Hij geeft zijn kinderen stammen.')
+
+// if an noun is inflected it is an adjective  (example: 'het/twee gele vruchtje(s)')
+26> adj<decl>, noun = |det;num| adj | noun |.
+26> adj<decl>, noun = |noun[noambiguity]| adj |noun|.
+
+// A determiner at the end of a sentence is impossible.
+27> ?[det] = ?[det:~] |punct[punct]|.
+
+// (ex: 'De bewindsman, die volgende week de voorjaarsvergadering van de Wereldbank 
+//       bijwoont, |wil| precies weten wat er is gebeurd voordat hij conclusies trekt. ')
+28> noun, verb = |verb[fin], punct[comma]| verb.
+
+// NFR
+// (ex: 'De held van morgen |laat| zich vormen door de adoratie voor de held van vandaag.')
+29> verb, adj, adv = verb |pron[refl]|.
+29> ?<surface:laat> = | det;adj*, noun | verb | det;adj*, noun |.
+
+// 'laat' could be an adj but only if the there is an inflected word after it.
+// So if there is no inflected word after it we remove the adj reading.
+29>?<lemma:laat> = ?[adj:~] | ?[decl:~] | .
+
+// (ex: 'Je moet er niets achter zoeken.')
+// (ex: 'Je moet er het beste van maken.')
+// (cex: '... om aanvallen uit te voeren'.)
+30> adv<pronpart, pronom> = adv |verb[inf, noambiguity]|.
+
+// Constructs of modal-auxiliary or auxiliary-modal verbs cannot be followed or preceded by 
+// nouns or adjectives. Note that modal and aux verbs and be switched in place.
+
+//(ex: 'Ik zou dat |gezegd|  kunnen hebben.')
+//(ex: 'Ik zou dat |gezegd|  hebben kunnen.')
+31> verb =  verb[adj:~, noun:~] | verb[modal], verb[inf, aux] | .
+31> verb =  verb[adj:~, noun:~] | verb[inf, aux], verb[modal] | .
+
+//(ex: 'Ik zou dat hebben kunnen |gezegd|.')
+//(ex: 'Ik zou dat kunnen hebben |gezegd|.')
+32> verb = | verb[modal], verb[inf, aux] | verb[adj:~, noun:~] .
+32> verb = | verb[inf, aux], verb[modal] | verb[adj:~, noun:~] .
+
+// When there is an ambguity with a verb we can check if it is preceded or followed by an 
+// infinite verb. If that is the case we classify it as an past participle.
+
+//(ex: 'Ik zou dat |gezegd| hebben.')
+//(ex: 'Ik zou dat hebben |gezegd|.')
+33> verb = |verb[inf, aux]| verb[pastpart:+] .
+33> verb = 	        verb[pastpart:+] |verb[inf, aux]| .
+
+
+
+// (Je hebt hem laten schrikken.)
+34> ?[surface:laten] = ~|?[surface:het]| ?[noun:~].
+
+
+36> verb[inf:+, aux:+] =                                    verb |verb[pastpart:+, noambiguity]|.
+36> verb[inf:+, aux:+] =    |verb[pastpart:+, noambiguity]| verb.
+
+// (ex: 'Ze vonden |dat| president Bush niet erg gezellig was.')
+37> conj, pron, det = conj |noun[noambiguity, proper:~]|.
+
+// NFR
+// (ex: 'Een mooie snelle paars |gelakte|, groen rood verpakte auto.')
+38> noun[pastpart] = |adj[noambiguity]| ?[noun:~, verb:~] | punct[comma] | .
+
+// (ex: 'Hij wil precies weten wat er is gebeurd.')
+39> ?[lemma:wat] = pron |adv|.
+
+// When a determiner precedes the noun/verb and the noun/verb is followed by a 
+// verb we remove the verb reading:
+// (ex: De stammen liepen door het bos.)
+// (ex: Ook had het Pakistaanse leger ontkend dat het aan het offensief van de stammen deelnam.)
+// But, what about: ('Het fietsen ging erg goed vandaag.')
+// ## cf. ENGLISH :  "these/det fish/noun[pl] fish/verb 
+// ##		"this/pron shows/verb shows/noun[pl]
+// The counter examples are of course possible but rarely occur I think.
+41> verb = | det[noambiguity] | ?[verb:~] .
+41> noun, verb = noun | verb[fin,noambiguity] | .
+
+// Perhaps some more constraining features could be added to the ambiguity 
+// class to refine it a bit more because verb occurs of course a lot.
+41> verb = | det[noambiguity] | ?[verb:~] .
+
+// When the number and gender features match of a verb-noun reading
+// we can rule out the verb reading.
+// (ex: 'de huizen')
+// (ex: 'de lopen')
+// (cex: 'Ze zijn |niet| erg handig bezig geweest.')
+42> verb, noun = |det#1[poss:~]| noun, 
+             where (#0[number] : #1[number] & #0[gender] : #1[gender]) .
+
+// NFR
+// (ex: 'een |veel| lager dodental.')
+43> det, num, noun = det |quant;verb|.
+
+// (ex: 'een veel lager dodental')
+// Should be: det-adv-adj-noun
+44> adv[decl] = | quant | adj | noun[noambiguity] | .
+
+// (Een veel lager dodental.')
+45> adv, adj = | det, quant | adj | noun | .
+
+// (ex: 'een heel laag dodental')
+46> adv, adj = | det | adv | adj, noun | .
+
+// If a neuter determiner is in front of noun<pl>/verb[inf] reading we select the noun reading.
+// any counter examples are welcome! :-)
+// (ex: 'het lopen')
+// (ex: 'de huizen')
+// (cex: 'Haar lopen waren bevuild.')
+47> noun<pl>, verb<inf> = | det[neut, poss:~] | verb[inf] .
+
+// NFR
+49> ?[infconj] = conj | ?*[comma:~], ?[surface:te], verb[inf] | .
+
+// (ex: 'Bovendien zijn volgens de BBC Oezbeekse militanten slechts | op | zeer kleine schaal betrokken bij de strijd in Afghanistan. ')
+49> ptcl, prep, adv = | ?[verb:~] |  prep |(adj;adv)*, noun[noambiguity]| .
+
+
+
+// The following rules rule out 1st/2nd person verbs readings for input sentences
+// that do not contain the according pronoun "ik"/"jij".
+51> verb<p1,sg> = ~| pron[nom,p1,sg], ?* | verb[p1:~], ?[verb:~] ~| ?*, pron[nom,p1,sg] | .
+51> verb<p2,sg> = ~| pron[nom,p2,sg], ?* | verb[p2:~], ?[verb:~] ~| ?*, pron[nom,p2,sg] | . 
+
+// NFR
+// The verb 'zijn' functions as a pronoun when it is followed by a noun.
+// (ex: 'Er |zijn| nog geen boekingen.')
+// (ex: 'Hij heeft er |zijn| drankje voor over.')
+// (cex: 'Er zijn mensen aanwezig.')
+// 78> det<lemma:zijn> = ?[verb:~] |noun[noambiguity]|.
+// An adhoc rule for the ambiguity in the verb 'zijn'. If it is followed 
+// by an noun which is definitely a noun(so no ambiguity) we select the 
+// possesive det reading instead of the verb reading.
+//210> ?<lemma:zijn> = det |noun[noambiguity]|.
+//210> ?<lemma:zijn> = det |noun[verb:~,adv:~,conj:~]|.
+
+// 'als' is not a prep.
+56> ?<surface:als> = ?[prep:~].
+
+// Define 'concreet' to be an adv when there are one or more adv's in front of it.
+58> ?<surface:genoeg> = | adv+ | adv.
+
+// (ex: 'Als je nou niet ophoudt dan ... ')
+61> ?<lemma:als, start> = conj | pron ; noun[proper] | . 
+
+// (ex: '... en |dat| daarmee de NP bla bla Verb')
+63> conj, det, pron = | conj[noambiguity] | conj |adv[pronom, noambiguity]|.
+
+// NFR
+// When we have a fin verb in front of a noun it could have 
+// been also an adjective. We can distinguish this amb with 
+// searching for a determiner in the left context. If no determiner, 
+// call it a fin verb, else call it an adjective. 
+// (ex: '... en |veroorzaakte| stroomstoringen')
+// cex: 'de met modder besmeurde renners'
+71> adj[pastpart, decl] = ~|(det, adv*, adj*, prep) ; noun| verb | noun | . 
+
+// NFR
+// (ex: 'en |plaatsen| daarom bla bla ...')
+74> noun[pl] = |?[lemma:en]| verb | adv | .
+
+// If there is no pronoun in front of uit we know that it is 
+// not a verb.
+75> ?<surface:uit> = ~| pron | ?[verb:~].
+
+// A noun with the num feature followed by an adjective 
+// or a noun should be an numeral
+// (ex: 'driehonderd mannen'/'driehonderd rode mannen')
+// Too strong!
+// (cex: 'een volle pagina')
+// Here 'een' is a noun/det/num
+// So we revise the rule and add another amb class, 'det', to it and restrict the noun to be sg.
+81> noun, num, det = det | adj ; noun[sg] | .
+
+// (ex: 'Wie leest die verhalen nou?')
+82> pron, det = det |noun[cap:~, pron:~]|.
+
+// NFR 
+// (ex: 'maar |wat|') wat is a pron in this case!
+84> ?<surface:wat> = |?[surface:maar]| pron .
+
+// An ambiguity between determiner,pronoun can be resolved if there is an noun following
+// which is not ambiguous.
+// It then becomes a determiner. 
+// (ex: Deze man.)
+// (ex: '... is er voorstander van |dat president| Poetin ...')
+86> det, pron, ~pron = det | (adj[noambiguity, cap:~])*, noun[noambiguity, cap:~, weekday:~] | .
+// Added the cap feature later because sometimes it should be an Conj :
+// (cex: 'dat ABN AMRO het ...')
+
+87> (det, pron)[lemma:dit] = pron | noun[weekday] | .
+
+89> ?<surface:dat> = conj |?[surface:het], adv |.
+
+// (cex: '... dat je Parijs-Roubaix niet kan winnen aangezien ...')
+//( cex: 'We hadden een inhoudelijke boodschap, dan ben je |aangewezen| op dagbladadvertenties. ')
+91> det<poss:+>, pron = det | noun[cap:~] | .
+
+// NFR 'niet' as a verb and 'niet' as negation/adv
+// (ex: 'Ik niet het blaadje.')
+// (ex: 'Wij nieten het rapport.')
+// (ex: 'Wij doen daar niet aan.')
+// (ex: 'Wij hebben dat |niet| gezegd.')
+101> ?<lemma:niet> = adv | verb[pastpart] | .
+
+// (ex: 'Hij kwam daardoor in het nauw.')
+//102> adv, adj = |?[lemma:het]| .
+
+// (ex: 'Hij kwam daardoor |in| het nauw.')
+103> adv[pronpart] = ?[adv:~, ptcl:~] |det[noambiguity]| .
+
+// NFR
+// (ex: 'Snel niet ik het blaadje.')
+106> verb, adv, noun = verb |pron|.
+107> verb, adv = adv | verb, pron | .
+
+// (ex: 'Hij kwam daardoor in het nauw.')
+108> det, pron, ptcl = det | adj;noun[noambiguity] |.
+
+// Lemma rule
+109> ?[lemma:behoeven] %= |?[lemma:ten]| noun.
+
+// NFR (especially the ambiguity of the noun)
+// (ex: '|geen| berichten')
+111> (adv, num)[indef:+] = num |noun| .
+111> verb, noun = |num[indef:+]| noun .
+
+116> ?<lemma:niet> = ~| pron | ?[verb:~].
+
+// (ex: 'Het is al sinds 1932 een natuurgebied 
+//       en vormt vrijwel het laatste stuk ongerept 
+//       regenwoud van Uganda.')
+117> conj, prep, adv = prep | num[year] |.
+
+// (ex: 'De 18-jarige Almeerse.')
+// (cex: de Oezbeekse militanten.)
+118> adj<guessed, cap>, noun<cap, guessed, proper> = | adj | noun.
+
+// When an indef pronoun or adv is followed by an adj which is a post modifier
+// then the pronoun/adv is a pronoun. (ex: 'iets leuks')
+121> (pron, adv)[indef:+] = pron | adj[postmod] | .
+
+// select the adv of an adj/adv ambiguity when the adj is a postmodifier
+141> (adj, adv)[postmod:+] = adv |?[noun:~]|.
+
+// 'zeggen' is also a noun but has no pl.
+// (ex: 'naar eigen zeggen')
+// (ex: 'van horen zeggen')
+// (ex: 'naar zijn zeggen')
+146> ?<surface:zeggen> = |?[surface:eigen]| noun.
+146> ?<surface:zeggen> = |pron[poss]| noun.
+146> ?<surface:zeggen> %= |?[surface:horen]| noun[sg=+,neut=+,lemma=zeggen].
+
+// The word 'velen' could be a verb too....
+// When it is followed by an infinitve or past-participle it is a pronoun.
+181> ?<lemma:velen> = ?[verb:~] | ?+, ?+[verb, noambiguity] | .
+
+// A rule to disambiguate the readings of the word 'vlak'.
+// It often occurs as an adj but as noun too. Probably has to 
+// revised when new cases occur. Take care!
+191> ?<lemma:vlak> = ~|det;adj| ?[noun:~] .
+
+// (ex: 'politiek asiel')
+// (ex: 'generaal pardon')  
+// Note: The last examples does not work yet since 'pardon' get's the Interj feature assigned.
+// This is going to be solved in the morph. Noun feature is added.
+201> noun<decl:~>,adj<decl:~> =  adj | noun[neut,sg] |.
+
+211> ?<surface:weken> = noun .
+
+// A verb which is preceded by a prep and adjective(s) is a noun.
+// Note: not completely sure here ...
+// (ex: 'de ruzie ontaardde |in fel anti-Aziatisch geweld|')
+// (cex: 'die door |verdwaalde| kogels is geraakt.')
+221> verb<pastpart>, noun = | prep, adj* | noun ~| noun |.
+
+225> ?<lemma:deel> = noun | prep |.
+
+
+// This rule disambs a noun/verb amb in the beginning of a sentence
+// when it is followed by an prep.
+// (ex: '|Herstellen| van beschadigde gebouwen is lastig in oorlogs tijd.')
+// Note: it could ... be too strong.
+231> (noun, verb)[start] = verb | prep | .
+// Note: this construction appeared in a quoted context like:
+// (cex: ' |"Herstellen| van beschadigde gebouwen is lastig in oorlogs tijd." ')
+// So we can not use the start feature and have to rely on the left context which is 
+// punctuation here with a start feature.
+231> noun, verb = | punct[start] | verb | prep | .
+
+// 'bij gebaat'
+232> ?<surface:bij> = ?[noun:~] |verb|.
+
+// Bit of hacking again but it probably will work!
+// (ex: 'Het is bepaald niet goedkoop.')
+234> ?<surface:bepaald> = ?[verb:~] |?[surface:niet]|.
+
+// (ex: 'veel meer')
+235> ?<surface:meer> = |?<surface:veel>| quant.
+
+// (ex: '|Mijn instinct| zegt me dat ...')
+236> det, noun = det |noun[noambiguity]|.
+
+// (ex: 'Mijn instinct zegt me dat |het| vooral een vorm van kopieergedrag is.')
+237> ?<surface:het> = |?[surface:dat]| pron |adv|.
+
+// (ex: 'Communicatieadviseur Dig Istha herinnert zich nog |hoe| het fenomeen ontstond. ')
+238> ?<surface:hoe> = conj |det, noun|.
+
+// (ex: 'Ik vind het niet aardig dat je die oude man hebt doen schrikken.')
+239> det, pron = det | adj*, noun | .
+
+
+// noun/verb ambiguity 
+// (ex: 'De nettowinst van de bank |steeg| met .....')
+// In this case it should be the verb that has to be selected.
+241> noun, verb = | det, noun | verb | prep | .
+
+244> pron, det = |pron[dem]| pron |noun[cap]| .
+
+245> ?<lemma:om> = conj |(det), adj*, noun, ptcl[lemma:te], verb[inf]|.
+
+// When a possesive det follows a determiner/pronoun we definitely know
+// it is an pronoun.
+246> det, pron = ~|(verb[aux], verb+[modal], verb[pastpart]) ; (verb+[modal], verb[inf]) | pron | det[poss] | .
+
+// ...
+247> ?<surface:laat> = |punct[comma]| verb |?*[comma:~], verb, punct[comma]|.
+
+// NFR
+// A pronoun without any ambiguity is never followed by a noun.
+// Try to find counter examples.
+// (cex: 'Hij herinnert zich |niet| dat zij zich misdragen hadden.')
+248> noun, verb = | pron[refl:~] | verb .
+
+// An ambiguity of qaunt/verb and lemma=veel is never a verb.
+250> ?<lemma:veel>, verb, quant = | adv |quant.
+
+// NFR
+// Specific rule for the demonstrative determiner 'dat'
+// Perhaps to specific.
+
+251> ?<surface:dat> = |noun, punct[comma]| pron |?*[comma:~], verb[fin]| .
+251> det<lemma:dat> = conj | noun[cap] | .
+
+// 'zijn' at the end of a sentence is not a possesive pronoun.
+252> ?<surface:zijn> = ?[det:~, poss:~] |punct[end]|.
+
+// NFR
+// (ex: 'In een brief staat dat de president van de bank moet erkennen |dat|
+//       zijn handelwijze de integriteit en doelmatigheid van de Wereldbank 
+//       heeft geschaad en dat hij het vertrouwen van het personeel in zijn 
+//       autoriteit heeft verwoest.')
+256> ?<surface:zijn> = ?[verb:~] | noun[pl:~] | .
+
+257> ?[lemma:tegen] = ?[noun:~] .
+
+// Realy specific rule for 'voors en tegens' or:
+// (ex: 'Het heeft |zijn voor en tegen|.')
+258> ?[lemma:voor] = noun |conj[lemma:en], ?[lemma:tegen]|.
+259> ?[lemma:tegen] = | ?[lemma:voor], conj[lemma:en]| noun .
+
+260> verb, adv = |verb[lemma:zijn], (noun)| ?[impv:~].
+
+// Rule for an noun/adj ambiguity which is capitalized.
+// We know for sure that it is not an adj if it is preceded by an NP(adj-noun)
+// which on their turn do not have any ambiguity anymore.
+261> (noun, adj)[cap] = | adj[noambiguity], noun[noambiguity] | noun .
+
+// (ex: 'Ik raad |het| mijn klanten nooit aan.')
+262> pron, det, ptcl = pron | det[poss], noun | .
+
+// 'vervroegd'
+// (ex: 'ABN Amro publiceert vervroegd de cijfers.')
+// (ex: 'ABN Amro heeft maandag vervroegd de resultaten bekendgemaakt over het afgelopen kwartaal.')
+263> ?<surface:vervroegd> = | noun[weekday];?[nobj] | adj .
+263> ?<surface:vervroegd> = |verb[lemma:hebben]| ?[verb:~] .
+263> ?<surface:vervroegd> = |verb[lemma:zijn]| verb .
+263> ?<surface:vervroegd> = |verb| ?[verb:~] .
+
+// (ex: 'De man was compleet |gestoord|.')
+// (cex: 'Haar hoedje werd |vastgeknoopt| met een roze lint.')
+//262> adj<pastpart>, verb<pastpart> = | verb[pred], (adv)* | adj .
+
+// (ex: 'is |goed| gepositioneerd')
+264> noun, adv, adj = | verb | ?[noun:~] | verb;adj[pastpart] |.
+
+
+// (ex: 'Als u over een extern bestandssysteem of een aangesloten vaste schijf beschikt, |controleer| dan 
+//       of deze is opgezet en toegankelijk is.')
+265> ?[surface:dan] = |verb[impv]| ?[conj:~].
+
+
+// If 'ruim' is followed by a numeral it is definitely not an noun.
+266> ?<lemma:ruim> = ?[noun:~, adv:~] | num[noambiguity] | .
+266> ?<lemma:ruim> = | prep[noambiguity] |?[verb:~] .
+
+// 'echt'
+267> ?<lemma:echt> = | det | ?[noun:~] | adj | .
+268> ?<lemma:echt> = ~| det | adv .
+
+// 'op' is not an adjective.
+269> ?<lemma:op> = ?[adj:~].
+
+// (ex: 'We hebben enorm veel |positieve| reacties gekregen.')
+270> adj<decl>, noun = adj |noun[noambiguity]|.
+
+// (ex: 'kwam uit op')
+271> ?<lemma:uit> = | det; adv; noun; verb | ?[verb:~] .
+
+// NFR
+// (ex: 'In een brief staat dat de president van de bank moet erkennen |dat|
+//       zijn handelwijze de integriteit en doelmatigheid van de Wereldbank 
+//       heeft geschaad en dat hij het vertrouwen van het personeel in zijn 
+//       autoriteit heeft verwoest.')
+// Only use the preceding two verbs if they are unambiguous. The following 
+// poss pronoun and noun are ambigous so not usable.
+272> ?<lemma:dat> = |verb[aux], verb+[modal], verb[pastpart] ; verb+[modal], verb[inf] | conj .
+
+// NFR we need some special treatement for this....
+// cex:
+273> ?<surface:Van, start:~> = ptcl.
+
+// NFR
+// I think this rule works to disamb preps from conjunctions
+// but it could be far too strong.
+// (cex: 'Nog twee Oegandezen zijn |om| het leven gekomen.')
+// Should be a prep here.
+274> ?<lemma:om> = conj | noun[pl] ; verb[inf] | .
+
+// (ex: ' ... omdat |deze| hadden geprobeerd de lokale stamleider te doden.')
+275> det, pron = pron | verb[noambiguity] | .
+  
+// NFR
+// (cex: 'We moeten geweld gebruiken |om| dit regime omver te werpen. ')
+// adv/prep ambiguity: if there is an numeral or det behind it 
+// we rule out the adv reading. Can be dagerous.
+// new: added the left verb context. Still not sure if this is the right solution.
+276> adv, prep = ~|verb[inf] | prep | det[noambiguity] ; num[noambiguity] | .
+
+// (ex: 'Een vent zou dat nooit hebben gedaan.')
+277> (pron, conj, det)[lemma:dat] = | verb | pron | adv | .
+
+// (ex: 'In een brief staat dat de president van de bank moet erkennen |dat| zijn handelwijze 
+//       de integriteit en doelmatigheid van de Wereldbank heeft geschaad en dat hij het 
+//       vertrouwen van het personeel in zijn autoriteit heeft verwoest.')
+278> (pron, conj, det)[lemma:dat] = | verb | conj |det, noun| .
+
+// NFR
+// Try to disambiguate verb forms. if a verb is preceded by an aux we are likely to 
+// find a past participle.
+279> ?[verb] = |verb[aux], adv*, prep*, det+, noun+, prep*| verb[pastpart] .
+
+// NFR
+// When a pron[dem, rel] follows a noun phrase and is on its turn again followed by a 
+// personal pronoun it acts as relative pronoun.
+280> conj, det, pron = | noun[noambiguity] | pron[rel] | pron[pers] | .
+
+// NFR
+// When we have a verb, mostly 'is' and two adv/adj after it is 'often'
+// the case that it is an adv followed by an adj.
+281> adj, adv = | verb | adv | adv ; adj[pastpart:~] | .
+282> adj, adv = | verb[noambiguity], adv, adv | adj ~|?[surface:te], verb[inf]| .
+
+283> ?[surface:u] = |verb[fin]| ?[refl:~] ~| pron[refl] |.
+
+
+284> ?[surface:dan] = |verb[fin]| ?[conj:~].
+
+// verb/quantifier with the verb[sg] and a plural noun with a numeral in front becomes
+// a quantifier.
+285> verb<sg>, quant = | num, noun[pl] | quant . 
+
+
+// (ex:'meer dan/als')
+286> verb, quant, noun = quant | conj | .
+287> adv, conj = | quant | conj .
+
+// NFR
+// when you have a verb/quantifier amb we will choose the 
+// quantifier reading if it is after an noun which is not ambiguous.
+288> verb[quant] = | noun[noambiguity] | quant .
+
+// NFR
+// (Het pannenkoeken |bakken|.)
+289> noun, verb = |det[lemma:het], noun[pl]| verb.
+
+// An adj/verb in between two nouns that are unambiguous we select the
+// verb reading.
+291> adj, verb = | noun[cap, proper] ; pron | verb | noun[noambiguity] | . 
+
+// (ex: 'Indien er aan de linkerkant van het apparaat een afwerkeenheid |zit|, 
+//       pakt u de bovenkant van de afwerkeenheid vast en schuift u deze helemaal 
+//       naar links.')
+// (ex: 'Fractievoorzitter Mark Rutte heeft Verdonk vrijdagmiddag echter officieel 
+//       uit de VVD-fractie in de Tweede Kamer gezet, omdat de termijn van 24 uur verstreken was.')
+300> verb, adv, adj = |adj*, noun|  verb |punct[comma]|.
+
+// (ex: 'Zoek de verzonden opdracht op als volgt: ga naar de directory X op de server |waar| de printer is gedefinieerd.')
+310> ?[surface:waar] = ?[noun:~, adj:~] |pron[pers]; det|.
+
+// Perhaps too strong...
+320> ?[surface:plaatsen] = |verb| ?[noun:~].
+
+// (ex: 'Verwijder nu de onderste rol indien deze niet met de cassette meekwam.')
+330> ?[surface:nu, start:~] = ?[conj:~, interj:~].
+
+// (ex: 'Voer het IP-adres of de hostnaam en het poortnummer van de SMTP-server |in in| het daarvoor bedoelde veld.')
+// (cex: 'Fusermodule |naar buiten| trekken en daarna stevig naar binnen duwen.')
+//335> ?[prep, adv, ptcl] = ptcl |?[prep, adv, ptcl]|.
+
+340> adj, ptcl, adv, prep = ptcl |?[surface:te], verb[inf]|.
+
+// (ex: 'Ervoor zorgen dat het directorypad dat in het bevestigingsoverzicht |staat|, precies zo op de scanserver wordt ingevuld.')
+// (ex: 'Als er nog geen bestanden bestaan, worden de gescande bestanden naar de map verzonden.')
+345> noun, verb = |adj*, noun| ?[noun:~] |punct[comma]|.
+
+350> verb<cap, start:~> = ?[verb:~].
+
+
+// (ex: 'Indien er aan de linkerkant van het apparaat een afwerkeenheid |zit|, 
+//       pakt u de bovenkant van de afwerkeenheid |vast| en schuift u deze helemaal 
+//       naar links.') 
+360> verb<fin>, adv, adj = | verb[fin], ?*[comma:~,coord:~]| ?[fin:~] .
+
+// 'vast is not a verb here but this rules applies to all verb raeadings that
+// get the impv verb reading if they are not directly after a comma or at the start 
+// of a sentence.'
+// (ex: 'Als u op de hendel drukt, kan de module |vast| komen te zitten.')
+370> ?[impv] = ~|punct[comma]; ?[start]| ?[impv:~].
+
+380> verb[modal], noun = ?[noun:~ ] |verb[inf]|.
+380> verb[modal:~,aux:~] = ?[verb:~] |verb[inf], ptcl[lemma:te], verb[inf]|.
+
+
+390> adj, noun = | adj | noun | det| .
+
+400> ?<surface:van> = prep |det, noun|.
+
+// (ex: 'de als goed beoordeelde aanvragen')
+410> ?[lemma:goed] = ~|det;adj| ?[noun:~].
+410> ?[lemma:goed] = |?[surface:als]| ?[noun:~].
+
+
+415> adj, verb = |?[surface:als], adj| adj |noun; verb[inf]|.
+
+418>noun<pl>, verb<inf> = |?[surface:als], adj*| noun.
+
+//  van de als ... * verb/noun.
+420> noun, verb = |?[surface:de], ?[surface:als], ?* | noun |punct[sent]|.
+
+430> noun, verb = | quant | ?[verb:~] .
+
+440> det, pron = |det, adj*, noun, punct[comma] | pron[rel].
+

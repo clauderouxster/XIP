@@ -1,0 +1,40 @@
+#!/bin/sh
+set -x
+vers=`cd ../../scripts;./getVersion`
+GRMDIR=../../grammar/english/basic;export GRMDIR
+UNAME=`uname`
+if [ "$UNAME" = "Linux" ]; then
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../../delivery/xip_$vers/lib/linux
+	if ./bin/linux/ex -grm $GRMDIR/english.grm >out 2>log; then
+		echo ""
+	else 
+		echo "ERROR"
+		cat log
+		exit 
+	fi
+else
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:../../../delivery/xip_$vers/lib/solaris
+	echo $LD_LIBRARY_PATH
+	if ./bin/solaris/ex -grm $GRMDIR/english.grm >out 2>log; then
+		echo ""
+	else 
+		echo "ERROR"
+		cat log
+		exit
+	fi
+fi
+
+dir=`pwd`
+testName=`basename $dir`
+
+echo "-------------- $testName ------------------------"
+diff -wb out outRef
+if [ $? -eq 0 ]
+then
+	echo "test OK: $testName"
+	rm -f out log
+	exit 0
+else
+	echo "test ERROR: $testName"
+        exit 1
+fi

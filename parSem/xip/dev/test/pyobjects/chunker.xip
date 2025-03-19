@@ -1,0 +1,178 @@
+Variables:
+
+string nv;
+
+/ the rules in this section define delimiters for input stream: english key word is SPLIT\
+// Comented out because in EASY sentences are already defined with <E> and </E>
+
+DécoupeSéquence:
+|?*,SENT#| .
+
+
+Multimots:
+1> "à propos de" = prep[motif=+]. 
+1> "au sujet de" = prep[motif=+].
+1> "à partir de" = prep[origine=+,form=fde].
+1> "en huit" = adv[!enhuit=+].
+1> "en quinze" = adv[!enquinze=+].
+1> "en 8" = adv[!enhuit=+].
+1> "en 15" = adv[!enquinze=+].
+1> "pour une durée de" = prep[duree=+].
+1> "d'une durée de" = prep[duree=+].
+1> "pour une période de" = prep[duree=+].
+1> "durée de" = prep[duree=+].
+1> "a cote de" = prep[form=fdans].
+1> "a cote du" = prep[form=fdans].
+1> "il y a" = prep[passe=+].
+
+//Traitement du tiret
+1> "%C%c+-%C%c" = noun[proper=+,maj=+].
+
+Marqueur:
+//Pour les expressions reunion de 20 mn
+2> noun[reunion], prep[duramb,duree=+], noun[duree].
+2> noun[reunion], prep[duramb,duree=+], adv[duree,hcourt].
+2> noun[reunion], prep[duramb,duree=+], det[fem,indef,sg],noun[lemme:heure,duree=+].
+2> noun[reunion], prep[duramb,duree=+], num,noun[lemme:heure,duree=+].
+2> noun[reunion], prep[duramb,duree=+], num,noun[lemme:minute,duree=+].
+
+
+Séquence:
+3> adj[passe=+,ilya=+] = prep[passe],num, noun[jour].
+3> adj[passe=+,ilya=+] = prep[passe],det[indef], noun[jour].
+3> np[jour=+,nepastoucher=+] = noun[jour], adj[lemme:prochain].
+4> noun[motif=+] @= ?+[guille:+].
+4> noun @= noun[jour,!temps:!],(punct),det,num#1[!temps:!],(noun[mois,!temps:!]),(num[base:4,!temps:!]), where (#1[base]<=2). //ICI mon gars
+//cas particulier, pour l'expression "de 4 à 6"
+4> adv[!heure=+] =  |prep[surface:"de"]| num#1 |prep[surface:"à"],num|, where (#1[base]<=2).
+4> adv[!heure=+] =  |prep[surface:"de"],num,prep[surface:"à"]| num#1, where (#1[base]<=2).
+
+//autre cas pour les intervales de jours
+4> noun[!origine=+] @= PREP[FORM:FDE,MASC:+,SG:+,DEF:+],NUM[NUM:+,DEC:+,!temps:!],(noun[mois,!temps:!]) |PREP[FORM:FA,MASC:+,SG:+,DEF:+],NUM[NUM:+,DEC:+]|.
+4> noun[!arrivee=+] @= |PREP[FORM:FDE,MASC:+,SG:+,DEF:+],NUM[NUM:+,DEC:+,!temps:!],(noun[mois])| PREP[FORM:FA,MASC:+,SG:+,DEF:+],NUM[NUM:+,DEC:+],(noun[mois,!temps:!]).
+
+//Autres cas, pour les durees.
+4> noun[!duree=+] @= |prep[duree]| num, noun[temps].
+4> noun[!duree=+] = |prep[duree]| adv[duree,!measure:!].
+4> noun[maj=+] = noun[maj], coord, noun[maj].
+
+DiRègles:
+
+//Regles de construction du temps
+5> noun ->   noun[jour,!temps:!,first],num#1[!temps:!],(noun[mois,!temps:!]),(num[last,base:4,!temps:!]), where (#1[base]<=2).
+5> noun ->  num#1[first,!temps:!],noun[mois,!temps:!],num[last,base:4,!temps:!], where (#1[base]<=2).
+5> noun ->  |det[masc,sg];prep[surface:du]| num#1[first,!temps:!],(noun[mois,!temps:!,last]), where(#1[base]<=2).
+
+5> noun ->  ~|det| num#1[first,!temps:!],noun[mois,!temps:!,last], where(#1[base]<=2).
+
+
+5> noun[nepastoucher=+,!temps:!] -> noun[jour,!temps:!],adj[passe,!temps:!,last].
+
+6> NP[nepastoucher=+,temps:!] -> noun[temps,!temps:!,first],adv[enhq].
+
+Séquence:
+7> NP[duree=+,nepastoucher=+,temps:!] = det,noun[semaine].
+
+
+DiRègles:
+8> adv -> num, noun[!temps:!,lemme:"heure"].
+8> adv[!heure=+,unh=+] -> num, noun[!temps:!,lemme:"h"],num.
+9> NP[nepastoucher=+,temps:!] -> (det[first]),(num),noun[temps,!temps:!,last].
+9> NP[nepastoucher=+,temps:!] -> (prep[surface:"du",first]), (num),noun[temps,!temps:!,last].
+9> NP[nepastoucher=+,temps:!] -> adv[jour,!temps:!].
+9> PP[origine=+,nepastoucher=+,temps:!] -> prep[form:fde,first], adv[heure,!temps:!,duree=~].
+9> PP[arrivee=+,nepastoucher=+,temps:!] -> prep[first,form:fa,arrivee:~], adv[heure,!temps:!,duree=~].
+9> PP[origine=+,nepastoucher=+,temps:!] -> prep[form:fpour,first], adv[heure,!temps:!,duree=~].
+
+9> PP[duree=+,temps:!] -> prep[duree,!duree:!,first], np[!temps:!,duree,duree=~].
+
+9> PP[origine=+,nepastoucher=+,temps:!,form=fentre] -> prep[form:fentre,first], adv[heure,!temps:!,duree=~].
+10>PP[arrivee=+,nepastoucher=+,temps:!] -> |PP[form:fentre]| coord[first], adv[heure,!temps:!,duree=~].
+
+
+DiRègles:
+//Regles de construction des lieux
+12> NP[nepastoucher=+] -> (det[first]), adj*,noun*[reunion:~,salle:~],noun[reunion:~,endroit,!endroit:!,!maj:!,maj,salle:~,last,!deplacement:!].
+
+//Cas particulier, on a un mot avec le trait: salle, il peut etre suivi d'un nom propre ou d'une expression
+14> PP[endroit:~,origine=+] -> prep[first,form:fde], NP[endroit,sujet=~].
+14> PP[endroit:~,arrivee=+] -> prep[first,form:fa], NP[endroit,sujet=~].
+
+//Reste des regles a l'exception des "salles"
+16> np[motif=+,maj:!] -> (det[first]),adj*,num*,noun*[salle:~,!maj:!],noun[last,salle:~,!maj:!].
+16> np[motif=+] -> pron.
+//Reperage d'un groupe PP particulier, ou la preposition en est suivi d'un nom en MAJ
+
+17> PP[lieu=+] -> prep[form:fen,first], np[maj,sujet=~].
+17> PP[lieu=+] -> prep[form:fdans,first], np[maj,sujet=~].
+
+17> PP -> prep[endroit,!endroit:!,first], np[maj,sujet=~].
+17> PP[duree=+] -> prep[first,duree], np[duree].
+
+18> PP[decalage=+] -> prep[form:fdans,first], np[decalage=+,temps,!temps:!].
+
+19> PP[motif=+] -> prep[first,endroit:~], np.
+
+
+//Les regles de nom de salle
+20> np[nepastoucher=+] -> |prep[form:fdevant];prep[form:fdans];prep[form:fen];prep[form:fa]| (det), noun[salle,!endroit:!].
+//S'il reste encore des mots non utilisees
+21> np[salle=+,nepastoucher=+] -> |prep[form:fdans]| np[salle,endroit=~,nepastoucher=+,sujet=~,salle=~], np*[endroit=~,nepastoucher=+,temps:~,sujet=~],pp*[temps:~,sujet=~],(num).
+
+22> pp[salle=+,nepastoucher=+] -> prep[first], np[salle,sujet=~,salle=~], np*[temps:~,sujet=~],pp*[temps:~,sujet=~],(num).
+24> np[nepastoucher=+] -> ~|det;prep| noun[first,salle,!endroit:!],np*[maj,sujet=~],num*.
+
+
+//Gestion des verbes
+27> SC[motif=+] -> verb[first,start], np*[endroit:~,temps:~],pp*[endroit:~,temps:~].
+29> PP[motif=+] -> prep[first], verb.
+
+séquence:
+//Pour tous les éléments terminaux qui sont encore en rade, on construit un NP
+30> NP[motif=+] @= ?+[terminal,prep:~,punct:~,sent:~].
+//Dans le cas des prepositions en rade...
+31> PP[motif=+] = prep[first], NP[deplacement:~,temps:~].
+
+reconstructeur:
+//Petite regle pour fusionner les lieux
+
+32> PP#1[salle]{prep#2,NP{?-#3},NP{?-#4},NP{?-#5},?-#6} = #1{#2, NP{#3,#4,#5},#6}.
+33> PP#1[salle]{prep#2,NP{?-#3},NP{?-#4},?-#5} = #1{#2, NP{#3,#4},#5}.
+34> PP#1[salle]{prep#2,NP{?-#3},num#5} = #1{#2, NP{#3,#5}}.
+
+
+DiRègles:
+//les verbes
+35> SC[motif=+] -> verb,PP*[endroit:~,temps:~],np*[endroit:~,temps:~].
+//un adverbe de temps esseule
+35> NP[temps:!] -> adv[heure,!temps:!].
+
+Marqueur:
+//On retire le trait sujet des NP inferieurs
+37> PP[sujet=~]{prep,NP[temps,sujet:~]}.
+
+38> PP[sujet]{prep,NP[sujet=~]}.
+
+38> PP[sujet]{prep,verb[sujet=~]}.
+38> PP[sujet:~]{prep,NP[sujet=~]}.
+38> PP[sujet=~,duree].
+42> SC[motif=+]{?*[sujet=~],?[sujet=~,last]}.
+
+DiRègles:
+//Les coordinations
+52> PP -> coord[first],PP[!temps:!,!deplacement:!,!sujet:!].
+52> NP -> coord[first],NP[!temps:!,!deplacement:!,!sujet:!].
+
+Marqueur:
+62> PP[sujet]{coord,PP[sujet=~]}.
+62> NP[sujet]{coord,NP[sujet=~]}.
+64> PP{prep,NP[danspp=+]}.
+64> SC{?*[danspp=+],?[last,danspp=+]}.
+//La regle finale
+67>  NP[nepastoucher:~,danspp:~,deplacement:~,reunion:~,sujet:~,motif=+,temps:~].
+
+Séquence:
+//Les PP finaux...
+69> PP[motif=+] = prep, np[sujet=~].
+
+

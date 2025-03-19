@@ -1,0 +1,2624 @@
+DependencyRules:
+
+// principal is not a position when it is an adjective
+
+| NOUN{#1[first,lemme:principal,posit=~,corporatetitle=~], ?[last]} |
+  ~.
+
+// change PERSON
+//PERSON(Ponzi - like)
+
+| #1{#2[celeb], ?[lemme:-], #3[maj:~]} |
+if ( ^PERSON(#1) )
+    ~.
+
+// There are no inverted person names: PERSON(last_name,first_name) )
+//    if ( ^PERSON(#1,punct[comma],#2[firstname]) )
+//    ~.
+
+| #1{#2,punct[comma],#3[firstname]} |
+    if ( ^PERSON(#1) )
+    ~.
+
+
+// PERSON in NCOORD
+
+//NCOORD(Messrs. Brott,Gallagher)
+//PERSON_EXTRACTED_ACFE(Messrs. Brott)
+//NOUN{Messrs. Brott}
+
+| noun#2{?[lemme:Misters], #1} |
+if ( NCOORD(#2,#3[proper]) & ^PERSON(#2) )
+   PERSON(#1), PERSON(#3).
+
+//propagate [maj]
+
+| noun[maj=+]{?+[maj]} |
+  ~.
+
+// numbers smaller than 1900 cannot be dates
+
+if ( ^DATE(#1[noyear]) )
+   ~.
+
+// Nicholas Fund
+//NOUN{Nicholas Fund}
+//PERSON(Nicholas Fund)
+
+| noun#2{?+, #1[lemme:Fund]} |
+if ( ^PERSON(#2) )
+   ~.
+
+//SEC Charges Former Senior Executives of Public Company Subsidiary with Falsifying Financial Records and Circumventing Internal Controls.
+//PERSON(Senior Executives)
+
+| #1{#2[hmm_tit],#3[prof]} |
+if ( ^PERSON(#1) )
+   ~.
+
+// TIMEX supplement
+
+// since 1/6
+//PREPD(1 / 06,since)
+//PP{since NP{DIG{1 / 06}}
+
+| pp#1{#2[lemme:since],np[dig]} |
+  TIMEX3[secdep=+](#1).
+
+| TOP#1{#2[lemme:since],#3np[dig]} |
+  TIMEX3[secdep=+](#1).
+
+// 2005-present
+// DATE_SEC-OFF-DIR(2005)
+//{2005 - present}
+
+| #2{#1, ?[lemme:-], ?[lemme:present]} |
+if ( ^DATE(#1) )
+   TIMEX3[secdep=+](#2).
+
+// Indefinite (tenure)
+/
+| ?{?{#1[lemme:indefinite,start,endword]}} |
+   TIMEX3[secdep=+](#1).
+\
+
+// SENT
+
+| TOP#1{ ?+ } |
+  SENT(#1).
+/
+// marking full sentences
+
+if ( ^SENT(#1) & MAIN(#2) )
+   SENT[fullsent=+](#1)
+\
+
+
+///////////////////////////////////////////////////
+///////////// OFFICERS AND DIRECTORS \\\\\\\\\\\\\\
+///////////////////////////////////////////////////
+
+// Features for the indicators of officers and directors: trustfunction, fund, i,nformation, govern. 
+
+///////////// PREPARATORY CONCEPTS \\\\\\\\\\\\\\
+
+
+/// *** INTEREST *** \\\
+
+/// *** a common feature for (un)interested *** \\\
+
+| ?[interested,interest=+] |
+ ~.
+
+| ?[uninterested,interest=+] |
+ ~.
+
+/// *** FUND *** \\\
+
+/// Words referring to the Fund [fund:+] from lexicon_sec.xip: only when they are the head of a DETD or are the starting word \\\
+
+| #1[fund=~,start:~] |
+if ( ~DETD(#1,#2) )
+   ~.
+
+// master fund
+
+| #1[fund=+]{#2[lemme:Master],#3[lemme:Fund]}|
+  ~.
+
+/// *** TRUSTFUNCTION *** \\\
+
+// concept matching for trustfunction
+// The People Who Govern Your Fund.
+
+| #1[genperson,trustfunction=+] |
+if ( $1(#1,#2[govern]) | $1(#2[govern],#1) )
+   ~.
+
+| #1[genperson,trustfunction=+] |
+if ( $1(#1,#2[fund]) | $1(#2[fund],#1) )
+   ~.
+
+// Principal officers
+// propagate _trustunction to Principal to recognize indicator
+// QUALIF(officers_TRUSTFUNCTION:+,Principal)
+
+| #1[interested:~,uninterested:~,trustfunction=+,fund:~,lemme:~The\ Independent] |
+if ( QUALIF(#2[trustfunction],#1) )
+   ~.
+
+// Non-director Officers:
+// MOD_PRE(Officers_TRUSTFUNCTION:+,Non - director_TRUSTFUNCTION:+)
+
+
+| #1[interested:~,uninterested:~,trustfunction=+,fund:~,lemme:~The\ Independent] |
+if ( MOD[pre](#2[trustfunction],#1) )
+   ~.
+
+// special case: Management and Organization 
+//NCOORD(Management_TRUSTFUNCTION:+,Organization)
+
+if ( NCOORD(#1[lemme:management,start],#2[last]) | $1(#2[start],#1[lemme:management,last]) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+
+///////////// MARKING THE OFF-DIR TABLE INDICATORS \\\\\\\\\\\\\\
+
+//Rule: a sentence both beginning and ending with a word having an officer-director feature and not containing another content word that does not have this feature
+
+///////////// PREPARATORY RULES \\\\\\\\\\\\\\
+
+
+/// *** MARKING FIRST AND LAST WORDS OF SENTENCES *** \\\
+
+| #1[start] |
+WORD[start=+](#1).
+
+| #1[endword] |
+WORD[endword=+](#1).
+
+| #1[endword=~] |
+if ( WORD[endword](#1) & WORD[endword](#2) & #2 < #1 )
+   ~.
+
+/// *** MARKING CONTENT WORDS BETWEEN THE FIRST AND LAST WORDS THAT ARE NOT OFF-DIR WORDS: NO-INDICATOR  *** \\\
+
+| noun#1[trustfunction:~,fund:~,info:~,govern:~,interest:~,no-indicator=+] |
+if ( WORD[start](#2) & WORD[endword](#3) & #2 < #1 & #1 < #3 )
+   ~.
+
+| verb#1[trustfunction:~,fund:~,info:~,govern:~,lemme:~be,interest:~,no-indicator=+] |
+if ( WORD[start](#2) & WORD[endword](#3) & #2 < #1 & #1 < #3 )
+ ~.
+
+| nadj#1[trustfunction:~,fund:~,info:~,govern:~,interest:~,no-indicator=+] |
+if ( WORD[start](#2) & WORD[endword](#3) & #2 < #1 & #1 < #3 )
+ ~.
+
+| adj#1[trustfunction:~,fund:~,info:~,govern:~,interest:~,no-indicator=+] |
+if ( WORD[start](#2) & WORD[endword](#3) & #2 < #1 & #1 < #3 )
+ ~.
+
+
+// parts of compounds of off-dirwords are not no-indicator
+
+| #1[trustfunction]{?*,#2[no-indicator=~]} |
+  ~.
+
+| #1[trustfunction]{#2[no-indicator=~],?*} |
+  ~.
+
+| #1[fund]{?*,#2[no-indicator=~]} |
+  ~.
+
+| #1[fund]{#2[no-indicator=~],?*} |
+  ~.
+
+
+
+///////////// OFF-DIR TABLE TITLE PATTERNS \\\\\\\\\\\\\\
+
+/
+
+//The table titles are not used, so I comment them
+
+
+// Officers[trustfunction,start] and Directors[trustfunction,end]
+// The[det,start] People[trustfunction] Who Govern Your Fund[fund,end]
+// Officers[trustfunction,start] of the fund[fund,end]
+// Fund[fund,start] Governance[trustfunction,end]
+// Director[trustfunction,start] and Officer Information[information,end]
+
+// Title concepts: trustfunction, fund, information
+
+// Mark title for Officers and Directors' table: blocks that both begin and end with trustfunctions 
+
+| #1[trustfunction,start,endword:~] |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[trustfunction,pl,endword,start:~] |
+  POT-INDICATOR(#1).
+
+| #1[trustfunction,pl,endword,start:~] |
+if ( POT-INDICATOR[off-dir](#2) & SENT(#3) )
+  INDICATOR[off-dir=+](#3).
+
+| #1[trustfunction,start,endword,pl] |
+if ( SENT(#2) )
+  INDICATOR[off-dir=+](#2).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+// The People[trustfunction] Who Govern Your Fund[fund].
+
+| np{det[start], #1[trustfunction,endword:~]} |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[fund,endword] |
+if ( POT-INDICATOR(#2) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+//Officers of the fund
+
+| #1[trustfunction,start,endword:~] |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[fund,endword] |
+if ( POT-INDICATOR(#2) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+// Fund Governance
+
+| #1[trustfunction,endword,start:~] |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[fund,start] |
+if ( POT-INDICATOR(#2) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+//Director and Officer Information
+
+| #1[trustfunction,start,endword:~] |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[info,endword] |
+if ( POT-INDICATOR(#2) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+| #1[trustfunction,start:~,endword] |
+  POT-INDICATOR[off-dir=+](#1).
+
+| #1[info,start] |
+if ( POT-INDICATOR(#2) & SENT(#3) )
+   INDICATOR[off-dir=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+// Mark if a INDICATOR is a continuation
+
+| #1[cont] |
+if ( ^INDICATOR[off-dir](#2) )
+INDICATOR[off-dir,cont=+](#2).
+
+// Sentences containing other than indicator words are not indicators
+
+| #1[no-indicator] |
+if ( ^INDICATOR(#2) )
+   ~.
+\
+
+///////////// (UN)INTERESTED TRUSTEES \\\\\\\\\\\\\\
+
+///////////// PREPARATORY RULES \\\\\\\\\\\\\\
+
+// If a general person name is in a dependency relationship with (un)interested, it denotes a trustfunction
+
+| #1[genperson,trustfunction=+] |
+if ( $1(#1,#2[interest]) | $1(#2[interest],#1) )
+   ~.
+
+// delete interested in negated expressions
+
+//ADJ_UNINTERESTED:+{non - interested_INTERESTED:+} - delete INTERESTED
+| adj[uninterested]{?+, #1[last,interested=~,interest=~]} |
+  ~.
+
+///////////// NUMBERS \\\\\\\\\\\\\\
+
+// ages and values (for investment tables)
+
+| #1[num,rom:~,ord:~,dec:~,time:~,guess:~] |
+if ( ~NUMBER(#1) )
+   NUMBER[num=+](#1).
+
+| #1[card,rom:~,ord:~,dec:~,time:~,guess:~] |
+if ( ~NUMBER(#1) )
+   NUMBER[dig=+](#1).
+
+// except references (usually a single number)
+
+if ( ^NUMBER(#1[lemme:1]) | ^NUMBER(#1[lemme:2]) || ^NUMBER(#1[lemme:3]) | ^NUMBER(#1[lemme:4]) | ^NUMBER(#1[lemme:5]) | ^NUMBER(#1[lemme:6]) | ^NUMBER(#1[lemme:7]) | ^NUMBER(#1[lemme:8]) | ^NUMBER(#1[lemme:9]) )
+   ~. 
+
+// except dates
+
+if ( ^NUMBER(#1) & DATE(#1) )
+   ~.
+
+// except numbers in dates
+
+//DIG{3 / 7 / 11}
+
+| #1{?*, #2, ?*} |
+if ( ^NUMBER(#2) & DATE(#1) )
+   ~.
+
+//TIMEX3(since 1 / 06)
+//PP{since NP{DIG{6 / 11}}}
+
+| #1{?, np{dig{#2,?,#3}}} |
+if ( TIMEX3(#1) & ^NUMBER(#2) )
+   ~.
+
+| #1{?, np{dig{#2,?,#3}}} |
+if ( TIMEX3(#1) & ^NUMBER(#3) )
+   ~.
+
+// except percentages
+
+| #2{?*, #1, ?*} |
+if ( ^NUMBER(#1) & PERCENT(#2) )
+   ~.
+
+if ( ^NUMBER(#1) & PERCENT(#1) )
+   ~.
+
+// except in expressions having letters, ":" and "/"
+
+//DIG{/ 28 / 2011}
+
+| #1{?*, ?[lemme:\/], ?*} |
+if ( ^NUMBER(#1) )
+   ~.
+
+// except in compounds ADJ{10 - Year}
+
+| adj{#1, ?[lemme:-], ?+} |
+if ( ^NUMBER(#1) )
+   ~.
+  
+// except numbers in addresses
+
+| #1{#2, ?+} |
+if ( ^NUMBER(#2) & LOCATION(#1) )
+   ~.
+
+//NP{901 S. NOUN{Marquette Ave.}}
+//LOCATION(Marquette Ave.)
+
+| ?{#1, ?+, #2} |
+if ( ^NUMBER(#1) & LOCATION(#2) )
+   ~.
+
+//NP{MN 55402}
+
+| #1[usastate], #2 |
+if ( ^NUMBER(#2) )
+   ~.
+
+//NOUN{24 28 Street}
+//LOCATION_ADDRESS(24 28 Street)
+
+| #1{?, dig#2, ?} |
+if ( LOCATION[address](#1) & ^NUMBER(#2) )
+   ~.
+
+// except numbers in TIMEX3
+
+| #1{?{?*,#2[dig],?*}} |
+if ( TIMEX3(#1) & ^NUMBER(#2) )
+   ~.
+
+// A NUMBER is a potential age if it consists of two numbers
+
+if ( ^NUMBER(#1[potage]) )
+   NUMBER[potage=+](#1).
+
+// TIMEX3 is not DATE
+
+
+| #1{#2} |
+if ( ^DATE(#2) & TIMEX3(#1) )
+   ~.
+
+if ( DATE(#1) & ^TIMEX3(#1) )
+   ~.
+
+//As of February 28, 2011
+//PP{As of NP{NOUN{February 28 , 2011}}
+
+| #1{?+, ?{#2} } |
+if ( TIMEX3(#1) & ^DATE(#2) )
+   ~
+
+// Treasurer, since September, 2012 .
+//DATE_SEC-OFF-DIR_INSENT(September , 2012)
+//TIMEX3_SEC-OFF-DIR_INSENT(since September , 2012)
+//PP{since NOUN{September , 2012}}
+
+| #1pp{?, #2} |
+if ( TIMEX3(#1) & ^DATE(#2) )
+   ~.
+
+///////////// MARKING THE (UN)INTERESTED TRUSTEES INDICATORS IN TITLES \\\\\\\\\\\\\\
+
+
+| #1[interest,start,endword:~] |
+  POT-INDICATOR[interest=+](#1).
+
+//We exclude real sentences from the indicators, i.e. where the trustfunction is a subject. It is wrongly analyzed as a subject in cont titles
+//Independent Trustees (continued)
+//SUBJ_PRE(continued,Trustees_TRUSTFUNCTION:+_ENDWORD:+)
+//SUBJ-N_PRE(continued,Trustees_TRUSTFUNCTION:+_ENDWORD:+)
+
+if ( ^SUBJ-N(#1[cont],#2[trustfunction,endword]) )
+   ~.
+
+//Independent Directors (concluded)
+//SUBJ-N_PRE(concluded,Directors)
+
+if ( ^SUBJ-N(#1[lemme:conclude],#2[trustfunction,endword]) )
+   ~.
+
+| #1[trustfunction,posit=~,endword,start:~] |
+if ( POT-INDICATOR[interest](#2) & ~SUBJ-N(#4,#5[trustfunction]) & SENT(#3) )
+  INDICATOR[interest=+](#3).
+
+| #1[trustfunction,posit=~]{?, noun#4[endword]} |
+if ( POT-INDICATOR[interest](#2) & SENT(#3) )
+  INDICATOR[interest=+](#3).
+
+| #1[fund,endword,start:~] |
+if ( POT-INDICATOR[interest](#2) & ~SUBJ-N(#4,#5[trustfunction]) & SENT(#3) )
+  INDICATOR[interest=+](#3).
+
+if ( ^POT-INDICATOR(#1) )
+   ~.
+
+// Interested Trustees Background
+//TOP{NP{AP{Interested} Trustees Background}}
+
+| np{ap{#1[interest]}, #2[trustfunction,posit=~], ?[endword]} |
+  INDICATOR[interest=+](#1).
+
+| np{#1[interest], #2[trustfunction,posit=~], ?[endword]} |
+  INDICATOR[interest=+](#1).
+
+| #1[posit=~] |
+if ( INDICATOR[interest](#2) )
+   ~.
+
+//Interested Board Member Not Affiliated with Investment Manager
+
+
+| #1[interested] |
+if ( ^INDICATOR[interest](#2) )
+   INDICATOR[interested=+](#2).
+
+| #1[uninterested] |
+if ( ^INDICATOR[interest](#2) )
+   INDICATOR[uninterested=+](#2).
+
+| #1[cont] |
+if ( ^INDICATOR[uninterested](#2) )
+   INDICATOR[uninterested,cont=+](#2).
+
+
+| #1[cont] |
+if ( ^INDICATOR[interested](#2) )
+   INDICATOR[interested,cont=+](#2).
+
+// Officers in titles are interested if there is no other trustfunction
+/
+| #2[lemme:officer] |
+if ( ^INDICATOR[interest:~](#1) )
+   INDICATOR[interested=+,officer=+](#1).
+
+| #1[lemme:~officer,trustfunction] |
+if ( ^INDICATOR[interest:~,interested,officer](#2) )
+   INDICATOR[interested=~](#2)
+\
+///////////// MARKING THE (UN)INTERESTED TRUSTEES INDICATORS IN SENTENCES \\\\\\\\\\\\\\
+
+// metadiscourse marker + interest + posit
+
+//Indicates an Interested Manager .
+//MOD_PRE(Manager,Interested)
+//OBJ_POST(Indicates,Manager)
+
+if ( $1(#1[posit],#2[interested]) & OBJ(#3[md],#1) & SENT(#4) )
+   INDICATOR[interested=+,md=+](#4).
+
+if ( $1(#1[posit],#2[uninterested]) & OBJ(#3[md],#1) & SENT(#4) )
+   INDICATOR[uninterested=+,md=+](#4).
+
+// info + indicate co-occuring with interest + posit
+
+//The identity of the Independent Managers and officers of the Funds and brief biographical information regarding each such person during the past five years is set forth below .
+//SUBJ_PRE(is,information)
+//NUCL_VLINK_PASSIVE(is,set)
+//MOD_PRE(Managers,Independent)
+
+if ( $1(#1[posit],#2[interested]) & SUBJ-N(#3,#4[info]) & NUCL(#3,#5[indicate]) & SENT(#6) )
+   INDICATOR[interested=+,md=+](#4).
+
+if ( $1(#1[posit],#2[uninterested]) & SUBJ-N(#3,#4[info]) & NUCL(#3,#5[indicate]) & SENT(#6) )
+   INDICATOR[uninterested=+,md=+](#6).
+
+if ( $1(#1[posit],#2[interested]) & SUBJ(#3,#4[info]) & NUCL(#3,#5[indicate]) & SENT(#6) )
+   INDICATOR[interested=+,md=+](#4).
+
+if ( $1(#1[posit],#2[uninterested]) & SUBJ(#3,#4[info]) & NUCL(#3,#5[indicate]) & SENT(#6) )
+   INDICATOR[uninterested=+,md=+](#6).
+
+/
+//Each Independent Manager who is deemed to be an interested person of the Fund , as defined in the 1940 Act ( an Interested Manager ) , is indicated by an asterisk .
+//SUBJ-N(indicated,asterisk)
+
+if ( $1(#1[posit],#2[interested]) & SUBJ-N(#3[indicate],#4[info]) & SENT(#5) )
+   INDICATOR[interested=+,md=+](#5).
+
+if ( $1(#1[posit],#2[uninterested]) & SUBJ-N(#3[indicate],#4[info]) & SENT(#5) )
+   INDICATOR[uninterested=+,md=+](#5).
+\
+   
+// deict + posit co-coccurring with interest
+
+//The following members of the Audit Committee have been determined by the Registrant ' s Board of Trustees to be Audit Committee Financial Experts serving on its Audit Committee , and to be independent :
+//MOD_PRE(member,follow)
+
+| #3[interested] |
+if ( $1(#1[posit],#2[deict]) | $1(#2[deict],#1[posit]) & SENT(#4) )
+   INDICATOR[interested=+,md=+](#4).
+
+| #3[uninterested] |
+if ( $1(#1[posit],#2[deict]) | $1(#2[deict],#1[posit]) & SENT(#4) )
+   INDICATOR[uninterested=+,md=+](#4).
+
+///////////// OFFICER INDICATOR \\\\\\\\\\\\\\
+
+| #1[lemme:officer,pl,start,endword,posit=~]{?[posit=~]} |
+  INDICATOR[corpoff=+](#1).
+
+| #1[lemme:officer,pl,start,endword,posit=~] |
+  INDICATOR[corpoff=+](#1).
+
+
+
+// Officers of the funds
+//MOD_POST(Officers,Funds)
+
+| noun#1[lemme:officer,start,posit=~] |
+if ( MOD(#1,#2[lemme:fund,endword]) & SENT(#3) )
+  INDICATOR[corpoff=+](#3).
+
+| noun#1[lemme:officer,start,posit=~] |
+if ( MOD(#1,#2[lemme:Fund,endword]) & SENT(#3) )
+  INDICATOR[corpoff=+](#3).
+/
+// Officers 4
+//NP{Officers 4}
+
+| #2[start],#1[end] |
+if ( MOD(#1[dig,end],#2[lemme:officer,start]) )
+  INDICATOR[corpoff=+](#2).
+\
+//Executive Officers, Other Officers, Company Officers, Corporate Officers
+
+| #1[start,endword,posit=~]{?, ?[lemme:officer,posit=~,pl]} |
+   INDICATOR[corpoff=+](#1).
+
+// Interested Officers
+
+if ( ^INDICATOR[interest](#1) & INDICATOR[corpoff](#2) )
+   INDICATOR[corpoff=+](#1).
+
+if ( INDICATOR[interest,corpoff](#1) & ^INDICATOR[corpoff](#2) )
+   ~.
+
+
+//Officers who are not Directors
+
+| #1[officer] |
+if ( SENT(#2) )
+   INDICATOR[corpoff=+](#2).
+
+| #1[posit=~] |
+if ( INDICATOR[corpoff](#2) )
+   ~.
+
+
+///////////// TENURE INDICATOR \\\\\\\\\\\\\\
+
+
+// concept matching for tenureind
+
+// concepts: time + service
+
+// length: length, time, since, year
+// service: service, serve, election, elect, elected, appoint, apponted, appontment, [trustfunction]
+
+
+// dependencies do not always work because the input for the analysis of the indicators is the entire table concatenated with spaces
+
+// create missing dependency between length & service
+
+//Year of Election or Appointment:
+//PREPD(Election,of)
+//NP{year} PP{of NP{Election}}
+
+| np{#1[length]}, pp{#2,NP{?*,#3[service,last]}} |
+if ( PREPD(#3,#2) & ~MOD(#1,#3) )
+   MOD[secdep=+](#1,#3).
+
+//Year first elected trustee of the fund
+
+//SC{NP{Year} FV{first elected}}
+
+| sc{np{#1[length]}, fv{?*,#2[service,last]}} |
+if ( ~MOD(#1,#2) )
+   MOD[secdep=+](#1,#2).
+
+
+| #1[tenureind=+] |
+if ( ^$1(#1[length],#2[service]) | ^$1(#1[service],#2[length]) )
+   $1[tenureind=+](#1,#2).
+
+| #2[tenureind=+] |
+if ( ^$1(#1[length],#2[service]) | ^$1(#1[service],#2[length]) )
+   $1[tenureind=+](#1,#2).
+
+
+| #1[tenureind,trustfunction=~,positionind=~] |
+  ~.
+
+
+| #1[tenureind] |
+if ( ~INDICATOR[tenureind](#1) )
+   INDICATOR[tenureind=+](#1)
+
+
+///////////// TENURE EXTRACTED \\\\\\\\\\\\\\
+
+// Blocks beginning with trustfunction and ending with a number
+//Board Member since 1993
+// DATE_SEC-OFF-DIR(1993)
+//TEMP(Board Member,since 1993)
+
+| pp#2{?,#1} |
+if ( ^DATE(#1) & TIMEX3(#2) & TEMP(#3[trustfunction],#2) )
+   DATE[extracted=+,tenure=+](#1).
+
+| pp#1{?[lemme:since], np{?[lemme:inception]}} |
+   TIMEX3[extracted=+,tenure=+](#1).
+
+
+
+
+///////////// NAME INDICATOR \\\\\\\\\\\\\\
+
+
+| #1[nameind] |
+if ( ~INDICATOR[nameind](#1) )
+   INDICATOR[nameind=+](#1)
+
+///////////// AGE INDICATOR \\\\\\\\\\\\\\
+
+
+| #1[ageind] |
+if ( ~INDICATOR[ageind](#1) )
+   INDICATOR[ageind=+](#1)
+
+///////////// AGE EXTRACTED \\\\\\\\\\\\\\
+
+//a block beginning with a PERSON and ending in a NUMBER
+
+// Mary Anne Dolan, 64
+// {NP{NOUN{Mary Anne Dolan}} , NP{64}
+
+
+| np{#1[start,last]}, (punct), np{#2[endword]} |
+if ( PERSON(#1) & ^NUMBER(#2) & ~PERCENT(#2) )
+   NUMBER[extracted=+,age=+](#2).
+
+| np{noun#1[start,last]}, (punct), ins{?, np{#2[endword]}, ?} |
+if ( PERSON(#1) & ^NUMBER(#2) & ~PERCENT(#2) )
+   NUMBER[extracted=+,age=+](#2).
+
+
+ 
+
+
+///////////// POSITION INDICATOR \\\\\\\\\\\\\\
+
+| #1[positionind] |
+if ( ~INDICATOR[positionind](#1) )
+   INDICATOR[positionind=+](#1)
+
+//Principal occupation(s) during past 5 years
+
+| #1[otherpositionind] |
+if ( ^INDICATOR[positionind](#1) )
+   INDICATOR[otherpositionind=+](#1)
+
+| #3{?*, #1[lemme:5], #2[lemme:year]} |
+   INDICATOR[otherpositionind=+,positionind=+](#3).
+
+| #3{?*, #1[lemme:five], #2[lemme:year]} |
+   INDICATOR[otherpositionind=+,positionind=+](#3).
+
+/////////////////////////////////////////////////////
+///////////// CHIEF COMPLIANCE OFFICER \\\\\\\\\\\\\\
+/////////////////////////////////////////////////////
+
+
+| #1[cco] |
+if ( ~INDICATOR[cco](#1) )
+   INDICATOR[cco=+](#1)
+
+/////////////////////////////////////////////////////////////
+///////////// AUDIT COMMITTEE FINANCIAL EXPERT \\\\\\\\\\\\\\
+/////////////////////////////////////////////////////////////
+
+
+| #1[acfe] |
+if ( ^PERSON(#2) )
+   PERSON[acfe=+,extracted=+](#2).
+
+// no acfe
+
+//The registrant’s board of directors has determined that it does not have an audit committee financial expert serving on its audit committee.
+//OBJ_POST(have,audit committee financial expert)
+//MOD_NEG(have,not)
+
+if ( OBJ(#1,#2[acfe]) & MOD[neg](#1,#3) )
+   ABSENCE[acfe=+,sec-off-dir=+,extracted=+](#2).
+
+//The Company's Board of Directors ( Board ) has determined that it does not have a member who qualifies as an audit committee financial expert, as defined in Item 3 of Form N-CSR, serving on its audit committee.
+//OBJ_POST(have,member)
+//MOD_NEG(have,not)
+
+| #4[acfe] |
+if ( $1(#1,#2[lemme:member]) & MOD[neg](#1,#3) )
+   ABSENCE[acfe=+](#4).
+
+//The Fund's Board of Directors has determined that no member of the Board of Directors is an audit committee financial expert as that term is defined for purposes of this item.
+
+if ( SUBJATTR(#1,#2[acfe]) & QUANTD[neg](#1,#3) )
+    ABSENCE[acfe=+](#2).
+
+/
+// there is at least 1 acfe
+
+// The Registrant’s board of trustees has determined that the Registrant has at least one audit committee financial expert serving on the audit committee.
+//MOD_PRE(audit committee financial expert,at least one)
+
+if ( $1(#1[acfe],#2[lemme:at_least_one]) )
+   PRESENCE[acfe=+](#1).
+
+//The registrant's board of trustees has determined that there are audit committee financial experts serving on its audit committee.
+//NUCL_SUBJCOMPL(are,audit committee financial experts)
+//SC{BG{that} there FV{are}}
+
+| SC{BG, #1[lemme:there], fv{#2}} |
+if ( NUCL[subjcompl](#2,#3[acfe]) )
+    PRESENCE[acfe=+](#3).
+
+//Item 3 – Audit Committee Financial Expert – Each registrant's board of directors (the board of directors ), has determined that (i) the registrant has the following audit committee financial expert serving on its audit committee and (ii) each audit committee financial expert is independent:
+//QUANTD(audit committee financial expert,each)
+//MOD_PRE(audit committee financial expert,following)
+
+if ( $1(#1[acfe],#2[lemme:follow,vprog]) )
+   PRESENCE[acfe=+](#1).
+
+if ( QUANTD(#1[acfe],#2) )
+   PRESENCE[acfe=+](#1).
+
+//The Registrant's Board of Directors has determined that three members serving on the Registrant's audit committee are audit committee financial experts.
+//SUBJATTR(members,audit committee financial experts)
+//QUANTD(members,three)
+
+if ( SUBJATTR(#1,#2[acfe]) & QUANTD[neg:~](#1,#3) )
+    PRESENCE[acfe=+](#2).
+\
+//The boards of directors of five of those other funds have determined that one of their members meets the definition of an audit committee financial expert; however, that person is not a director of the Fund. - to ask!!!!
+
+//However, the Board determined that, although none of its members meet the technical definition of an audit committee financial expert, the Audit Committee members have sufficient financial expertise to address any issues that are likely to come before the Audit Committee, including the evaluation of the Company's financial statements, supervision of the Company's preparation of its financial statements, and oversight of the work of the Company's independent auditors. - to ask!!!!
+
+//The Fund believes that the joint meetings and presentations with the other funds in the Nicholas complex and the availability and presence of the board member of other funds in the Nicholas complex who is an audit committee financial expert gives the Fund some of the benefit of having a board member who meets the definition of an audit committee financial expert. - to ask!!!!
+
+//////////////////////////////////////////////
+///////////// SERVICE PROVIDERS \\\\\\\\\\\\\\
+//////////////////////////////////////////////
+
+///////////// PREPARATORY RULES \\\\\\\\\\\\\\
+
+//////////// CONTEXT DEPENDENT SERVICE PROVIDER FEATURES \\\\\\\\\\\\\\
+
+// service_provider features depending on [fund] feature
+//MOD_PRE(auditors,company)
+
+
+| #1[lemme:auditor,independent_auditor=+] |
+if ( MOD(#1,#2[fund]) )
+   ~.
+
+
+// giving a service_provider feature to the Fund's advisor/distributor
+
+| #1[lemme:advisor,investment_advisor=+] |
+if ( MOD[pre](#1,#2[fund]) )
+   ~.
+
+| #1[lemme:adviser,investment_advisor=+] |
+if ( MOD[pre](#1,#2[fund]) )
+   ~.
+
+| #1[lemme:distributor,distributor=+] |
+if ( MOD[pre](#1,#2[fund]) )
+   ~.
+
+| #1[lemme:administrator,administrator=+] |
+if ( MOD[pre](#1,#2[fund]) )
+   ~.
+
+// the Fund's accountant [independent_auditor]
+
+| #1[lemme:accountant,independent_auditor=+] |
+if ( $1(#1,#2[fund]) | $1(#2[fund],#1) )
+   ~.
+
+//////////// GENERAL SERVICE PROVIDER FEATURE \\\\\\\\\\\\\\
+
+
+| #1[investment_advisor,service_provider=+] |
+  ~.
+
+| #1[legal_counsel,service_provider=+] |
+  ~.
+
+| #1[distributor,service_provider=+] |
+  ~.
+
+| #1[administrator,service_provider=+] |
+  ~.
+
+| #1[transfer_agent,service_provider=+] |
+  ~.
+
+| #1[independent_auditor,service_provider=+] |
+  ~.
+
+| #1[custodian,service_provider=+] |
+  ~.
+
+// exceptions
+
+// not including service_provider
+// ... not including any sub-adviser ...
+//QUANTD(sub - adviser,any)
+
+| #1[investment_advisor=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[sub_advisor=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[legal_counsel=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[distributor=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[administrator=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[transfer_agent=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[independent_auditor=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+  ~.
+
+| #1[custodian=~,service_provider=~] |
+if ( QUANTD(#1,#2[lemme:any]) )
+   ~.
+
+
+
+
+//////////// SECDEP: DEPENDENCIES MISSING FROM THE GENERAL GRAMMAR \\\\\\\\\\\\\\
+
+// Since the rules build on syntactic dependencies, we create them when they are missed by the general grammar
+
+
+//// *** ORGANISATION *** \\\\
+
+
+// Missing ORGANISATION
+
+// USBFS also serves as the Fund's fund accountant, transfer agent, dividend disbursing agent and registrar.
+//SUBJ_PRE(serves,USBFS)
+//OBJ-N(serves,agent)
+
+if ( SUBJ(#1[potservice_provider],#2[guess,maj]) & OBJ-N(#1,#3[prof]) )
+   ORGANISATION[secdep=+](#2).
+
+if ( SUBJ(#1[potservice_provider],#2[guess,maj]) & OBJ-N(#1,#3[service_provider]) )
+   ORGANISATION[secdep=+](#2).
+
+| #3{?+, ?[prof]} |
+if ( SUBJ(#1[potservice_provider],#2[guess,maj]) & OBJ-N(#1,#3) )
+   ORGANISATION[secdep=+](#2).
+
+// Pursuant to a sub-advisory agreement, EVM has delegated the investment management of the Fund's options strategy to Parametric Risk Advisors LLC (PRA), an indirect affiliate of EVM.
+
+if ( MOD(#1[lemme:affiliate],#2[guess,toutmaj]) & PREPD(#2,#3[lemme:of]) )
+   ORGANISATION[secdep=+](#2).
+
+//to the transfer agent, Pear Tree Institutional Services,
+//ATTRIB_APPOS(transfer agent,Pear Tree Institutional Services)
+
+if ( ATTRIB[appos](#1[service_provider],#2[maj,mwe,proper]) &  ~ORGANISATION(#2) )
+   ORGANISATION[secdep=+](#2).
+
+//The fund has a transfer agent agreement with AFS for Classes A and B.
+
+if ( $1(#1[guess,toutmaj],#2[service_provider]) | $1(#2[service_provider],#1[guess,toutmaj]) & ~ORGANISATION(#1) )
+  ORGANISATION[secdep=+](#1).
+  
+
+//the fund compensates AFS
+//OBJ_POST(compensates,AFS)
+
+if ( OBJ-N(#1[lemme:compensate],#2[guess,toutmaj]) & ~ORGANISATION(#2) )
+   ORGANISATION[secdep=+](#2).
+  
+
+// Columbia Management provides investment advice
+
+// NP{Columbia Management}
+// SUBJ(provides_INVESTMENT_ADVISOR:+,Management)
+
+| np#1{?[proper], ?*[maj], #2[maj,last]} |
+if ( SUBJ(#3[investment_advisor],#2) & ~ORGANISATION(#1) & ~MOD(#3,#4[investment_advisor]) )
+   ORGANISATION[secdep=+](#1), SUBJ[secdep=+](#3,#1).
+
+// the acronym that is syntactically related to investment_advisor
+
+//The fund has an investment advisory and service agreement with CRMC that provides for monthly fees accrued daily.
+
+//MOD_POST(investment advisory and service agreement,CRMC)
+
+if ( MOD[post](#1[investment_advisor],#2[toutmaj,guess]) & ~ORGANISATION(#2) )
+   ORGANISATION[investment_advisor=+,secdep=+](#2).
+
+// the acronym that follows an organisation name in parentheses
+
+//PricewaterhouseCoopers LLP (PwC), independent registered public accounting firm and auditor to Fidelity and certain Fidelity funds, has been engaged annually by the Board as part of the Board's assessment of Fidelity's profitability analysis.
+
+| np{#1noun}, ins{?,np{#2[toutmaj]},?} |
+if ( ORGANISATION(#1) & ~ORGANISATION(#2) & SUBJ-N(?,?) )
+   ORGANISATION[secdep=+](#2).
+
+| pp{?, np{#1noun}}, ins{?,np{#2[toutmaj]},?} |
+if ( ORGANISATION(#1) & ~ORGANISATION(#2) & SUBJ-N(?,?) )
+   ORGANISATION[secdep=+](#2).
+
+// Change LOCORG for ORGANISATION
+
+//Mr. Lautenbach is Chairman of the Board of Directors of the Philharmonic Center for the Arts in Naples, Florida (2012-present) and a member of the Council on Foreign Relations (1994-present).
+//LOCORG(Philharmonic Center for the Arts)
+//MOD_POST(Chairman of the Board of Directors,Philharmonic Center for the Arts)
+
+if ( MOD[post](#1[body],#2) & ^LOCORG(#2) & PREPD(#2,#3[lemme:of]) )
+   ORGANISATION(#2).
+
+// Union Bank, National Association
+//{NP{NOUN{Union Bank}} , NP{NOUN{National Association}}}
+
+| #1{np{#2}, ?[comma], np{#3}} |
+if ( ^ORGANISATION(#2) & ORGANISATION(#3) )
+   ORGANISATION(#1)
+
+| #1{np{#2}, ?, np{#3}} |
+if ( ORGANISATION(#1) & ^ORGANISATION(#3) )
+   ~.
+
+//// *** NO ORGANISATION *** \\\\
+
+//According to the SEC's complaint filed in the U.S. District Court for the Southern District of New York, Martin-Artajo and Grout worked in JPMorgan's chief investment office (CIO), which created the portfolio known as Synthetic Credit Portfolio (SCP) as a hedge against adverse credit events.
+//ORGANISATION(SCP)
+//PP{as NP{AP{Synthetic} Credit Portfolio}} INS{( NP{SCP} )}
+
+| pp{?, #1}, ins{?, np{#2}, ?} |
+if ( ^ORGANISATION(#2) )
+    ~.
+
+// CIO
+if ( ^ORGANISATION(#1[lemme:CIO]) )
+    ~.
+
+//China-based Company
+
+| #1{?{#2[location], ?[strongbreak], verb[lemme:base]}, ?} |
+if ( ^ORGANISATION(#1) )
+    ~.
+
+//ORGANISATION(Investment Management)
+
+| #1{?[lemme:investment,first], ?[lemme:management,last]} |
+if ( ^ORGANISATION(#1) )
+   ~.
+
+| #1{?[lemme:master,first], ?[lemme:Fund,last]} |
+if ( ^ORGANISATION(#1) )
+   ~.
+
+if ( PERSON(#1) & ^ORGANISATION(#1) )
+   ~.
+
+
+// change of PERSON:
+//PERSON(Secretary Cynthia A. Sabol)
+//NOUN{Secretary NOUN{Cynthia A. Sabol}}
+
+| #1{#2[posit], #3} |
+if ( ^PERSON(#1) )
+   PERSON(#3)
+
+// no PERSON
+//John E. Anderson School of Management
+//PERSON(John)
+//PERSON(Anderson),
+//LOCORG(John E. Anderson School of Management)
+//NOUN{NOUN{NOUN{John E. Anderson} School} of Management}}}
+
+| noun#1{noun{noun{#2, (?), #3}, ?}, ?+} |
+if ( LOCORG(#1) & ^PERSON(#2) )
+   ~.
+
+| noun#1{noun{noun{#2, (?), #3}, ?}, ?+} |
+if ( LOCORG(#1) & ^PERSON(#3) )
+   ~.
+
+| noun#1{noun{noun{#2, (?), #3}, ?}, ?+} |
+if ( ORGANISATION(#1) & ^PERSON(#2) )
+   ~.
+
+| noun#1{noun{noun{#2, (?), #3}, ?}, ?+} |
+if ( ORGANISATION(#1) & ^PERSON(#3) )
+   ~.
+
+
+// subsidiary of Morgan Stanley - this phrase refers to a subsidiary, which is not named by this phrase, so Morgan Stanley is not a potential service provider, but its subsidiaries are - think about how to make rule 
+
+//NP{a NOUN{North Carolina corporation}}
+
+| np{det[indef], #1} |
+if ( ^ORGANISATION(#1) )
+   ~.
+
+// last word of the ORGANISATION beginning with a small letter
+
+| NOUN#2{?*,#1[last,maj:~]} |
+if ( ^ORGANISATION(#2) )
+   ~.
+
+// Management Fee and Total Fund - if the orghead is "Fund" and there are no proper nouns in the chain
+/
+//| #1{?+[proper:~], ?[lemme:fund]} |
+| #1{?[first,proper:~], ?*[proper:~], ?[orghead,last]} |
+if ( ^ORGANISATION(#1) )
+   ~.
+\
+//// *** COORD *** \\\\
+
+// an affiliated broker/dealer which serves as the underwriter and distributor of the Fund.
+//PP{as NP{the underwriter_SERVICE_PROVIDER:+}} and NP{distributor_DISTRIBUTOR:+_SERVICE_PROVIDER:+}
+
+| pp{?, np{?*, #1[service_provider]}}, #2[coord], np{?*,#3[service_provider]} |
+if ( ~NCOORD(#1,#2) )
+  NCOORD[secdep=+](#2,#3), NCOORD[secdep=+](#1,#3). 
+
+//// *** MOD *** \\\\
+
+// serve as: "The Dreyfus Corporation (the Manager or Dreyfus ), a wholly-owned subsidiary of The Bank of New York Mellon Corporation ( BNY Mellon ), serves as the fund's investment adviser." 
+//FV{serves} BG{as} NP{the fund 's NOUN_INVESTMENT_ADVISOR:+{investment adviser}} 
+
+| fv{?*, #1[potservice_provider,service_provider=+]}, bg{#2[lemme:as]}, np{?*,#3[last,service_provider]} |
+  MOD[secdep=+](#1,#3).
+
+//SC{BG{which} FV{serves}} PP{as NP{the underwriter_SERVICE_PROVIDER:+}} 
+
+| SC{BG, FV{#1[potservice_provider,service_provider=+]}}, pp{prep[lemme:as], np{?*,#2[last,service_provider]}} |
+  MOD[secdep=+](#1,#2).
+
+if ( ^$1[secdep](#1,#2) & $1[secdep:~](#1,#2) )
+   ~.
+
+// MOD between a company and "as function"
+//The Company utilizes the services of J.P. Morgan Investment Management, Inc. as its investment advisor and J.P. Morgan Chase Bank N.A. as its custodian for its investments.
+//ORGANISATION(J.P. Morgan Investment Management_TRUSTFUNCTION:+ , Inc.)
+//ASL(as,investment advisor)
+//PP{of NP{NOUN{J.P. Morgan Investment Management_TRUSTFUNCTION:+ , Inc.}}} BG{as}
+//ASL(as,custodian)
+//NP{NOUN{J.P. Morgan Chase Bank N.A.}} BG{as} NP{its custodian}
+
+| pp{?, np{noun#1}}, bg#2 |
+if ( ASL(#2,#3[service_provider]) & ORGANISATION(#1) )
+   MOD[secdep=+](#1,#3).
+
+//// *** SUBJ *** \\\\
+
+// the first noun of the sentence containing "serve"
+//PRESENT(serves[investment_advisor=+])
+
+| np{#1[det,start], #2} |
+if ( PRESENT(#3[service_provider]) & ~SUBJ[secdep](#3,#2) )
+   SUBJ[secdep=+](#3,#2).
+
+| np{#2[start]} |
+if ( ORGANISATION(#2) & PRESENT(#3[service_provider]) )
+   SUBJ[secdep=+](#3,#2).
+
+//// *** APPOSITION *** \\\\
+
+//Capital Research and Management Company ( CRMC ), the fund's investment adviser,
+
+//| {NP{NOUN{NOUN{Capital Research} and NOUN{Management_TRUSTFUNCTION:+ Company}}} INS{( NP{CRMC} )} , NP{the fund 's NOUN_INVESTMENT_ADVISOR:+{investment adviser}} , 
+
+
+| np#1{noun#5[service_provider:~]{?[maj,proper,time:~],?*}}, (ins), #2[comma], np#3{?*,#4[service_provider,last]} |
+if ( ~ORGANISATION(#5) )
+   ORGANISATION[secdep=+](#5), ATTRIB[appos=+,secdep=+](#4,#5).
+
+| np#1{noun#5{?[maj,proper],?*}}, (ins), #2[comma], np#3{?*,#4[service_provider,last]} |
+if ( ORGANISATION(#5) & ~ATTRIB[appos](#4,#5) )
+   ATTRIB[appos=+,secdep=+](#4,#5).
+
+
+//against OppenheimerFunds, Inc., the Fund's investment advisor
+
+//PP{against NP{NOUN{OppenheimerFunds , Inc.}}} , NP{the Fund 's NOUN_INVESTMENT_ADVISOR:+{investment advisor}}
+
+| pp#1{?, np{#5}}, (ins), #2[comma], np#3{?*,#4[service_provider,last]} |
+if ( ~ATTRIB[appos](#4,#5) & ORGANISATION(#5) )
+   ATTRIB[appos=+,secdep=+](#4,#5).
+
+//The Fund's investment adviser, Pioneer Investment Management, Inc. (PIM), is responsible for determining that the value of the collateral remains at least equal to the repurchase price.
+
+| np#1{?*,#2[service_provider,last]}, #3[comma], np#4{#5} |
+if ( ORGANISATION(#5) & ~ATTRIB[appos](#2,#5))
+   ATTRIB[appos=+,secdep=+](#2,#5).
+
+// Exception: the service_provider is OBJ, and the company is SUBJ When electing directors who are members of a companys Audit Committee, or when ratifying a companys auditors, Invesco considers the past performance of the Committee and holds its members accountable for the quality of the companys financial statements and reports.
+//ORGANISATION(#1Invesco)
+//SUBJ-N_PRE(#2considers,#1Invesco)
+//OBJ_POST(#3ratifying,#4auditors)
+//ATTRIB_SECDEP_APPOS(#4auditors,#1Invesco)
+
+if ( ORGANISATION(#1) & SUBJ(#2,#1) & OBJ(#3,#4[service_provider]) & ^ATTRIB[appos,secdep](#4,#1) )
+   ~.
+
+//with its investment adviser, EULAV Asset Management .
+
+| pp#1{?*, ?{?*, #2[service_provider,last]}}, #3[comma], np#4{#5} |
+if ( ORGANISATION(#5) )
+   ATTRIB[appos=+,secdep=+](#2,#5).
+
+//Fidelity Investments Institutional Operations Company, Inc. (FIIOC), an affiliate of FMR, is each Fund's transfer, dividend disbursing and shareholder servicing agent.
+//{NP{NOUN{Fidelity Investments Institutional Operations Company , Inc.}} INS{( NP{FIIOC} )} , NP{an affiliate} PP{of NP{FMR}} ,
+//ORGANISATION(FMR)
+//ORGANISATION(Fidelity Investments Institutional Operations Company , Inc.)
+
+| ?{noun#1}, ins, punct[comma], ?{?+, #2[lemme:affiliate]} |
+if ( ORGANISATION(#1) )
+  ATTRIB[appos=+,secdep=+](#1,#2).
+
+//PP{with NP{NOUN{Columbia Management Investment Distributors , Inc.}}} INS{( NP{the Distributor} )} , NP{an affiliate}
+
+| ?{?+, ?{noun#1}}, ins, punct[comma], ?{?+, #2[lemme:affiliate]} |
+if ( ORGANISATION(#1) )
+  ATTRIB[appos=+,secdep=+](#1,#2).
+
+
+
+//// *** PROPAGATION FOR CREATING LINKS BETWEEN INDIRECTLY RELATED DEPENDENCIES*** \\\\
+
+// propagation of investment_advisor to "serve/provide,etc"
+
+| #1[potservice_provider,investment_advisor=+] |
+if ( $1(#1,#2[investment_advisor]) & ~PREPD(#2,#3[lemme:to]) )
+   ~.
+
+| #1[potservice_provider,sub_advisor=+] |
+if ( $1(#1,#2[sub_advisor]) & ~PREPD(#2,#3[lemme:to]) )
+   ~.
+
+// propagation of distributor to "serve/provide,etc"
+
+| #1[potservice_provider,distributor=+] |
+if ( $1(#1,#2[lemme:distributor]) )
+   ~.
+
+| #1[potservice_provider,distributor=+] |
+if ( $1(#1,#2[distributor]) )
+   ~.
+
+// propagation of administrator to "serve/provide,etc"
+
+| #1[potservice_provider,administrator=+] |
+if ( $1(#1,#2[lemme:administrator]) )
+   ~.
+
+| #1[potservice_provider,administrator=+] |
+if ( $1(#1,#2[administrator]) )
+   ~.
+
+//The Advisor has employed Gemini Fund Services, LLC (GFS) to provide administration, fund accounting, and transfer agent services.
+//OBJ_POST(provide,administration)
+//NCOORD(administration,transfer agent services)
+
+| #1[potservice_provider,administrator=+] |
+if ( $1(#1,#2[lemme:administration]) & NCOORD(#2,#3[service_provider]) )
+   ~.
+
+// propagation of transfer_agent to "serve/provide,etc"
+
+| #1[potservice_provider,transfer_agent=+] |
+if ( $1(#1,#2[transfer_agent]) )
+   ~.
+
+//Multiple functions for a company:COORD
+//MOD_POST(serves_SERVICE_PROVIDER:+,underwriter_SERVICE_PROVIDER:+)
+//NCOORD_SECDEP(underwriter_SERVICE_PROVIDER:+,distributor_DISTRIBUTOR:+_SERVICE_PROVIDER:+)
+
+
+| #1[potservice_provider,distributor=+] |
+if ( $1(#1,#2[service_provider]) & NCOORD(#2,#3[distributor]) | NCOORD(#2[distributor],#3) )
+   ~.
+
+| #1[potservice_provider,administrator=+] |
+if ( $1(#1,#2[service_provider]) & NCOORD(#2,#3[administrator]) | NCOORD(#2[administrator],#3) )
+   ~.
+
+//Multiple functions for a company:COORD
+
+| #1[potservice_provider,investment_advisor=+] |
+if ( $1(#1,#2[service_provider]) & NCOORD(#2,#3[investment_advisor]) )
+   ~.
+
+//Multiple functions for a company:COORD
+//MOD_POST(serves_SERVICE_PROVIDER:+,underwriter_SERVICE_PROVIDER:+)
+//NCOORD_SECDEP(underwriter_SERVICE_PROVIDER:+,distributor_DISTRIBUTOR:+_SERVICE_PROVIDER:+)
+
+
+| #1[potservice_provider,distributor=+] |
+if ( $1(#1,#2[service_provider]) & NCOORD(#2,#3[distributor]) | NCOORD(#2[distributor],#3) )
+   ~.
+
+| #1[potservice_provider,administrator=+] |
+if ( $1(#1,#2[service_provider]) & NCOORD(#2,#3[administrator]) | NCOORD(#2[administrator],#3) )
+   ~.
+
+
+// Marking serve/furnish/provide as service_provider when their SUBJ is an ORGANISATION
+
+| #1[potservice_provider,service_provider=+] |
+if ( SUBJ-N(#1,#2) & ORGANISATION(#2) & ~PREPD(#3[investment_advisor],#4[lemme:to]) )
+   ~.
+
+// nonidentified service providers
+
+| #1[service_provider:~,nonidentified=+,service_provider=+]{?+, ?[lemme:agent,endword]} |
+ ~.
+
+//| lemme:agency,endword,start:~> = | ?[lemme:~-] | ?[nonidentified=+,service_provider=+].
+
+| #1[service_provider:~,nonidentified=+,service_provider=+]{?+, ?[lemme:service,endword]} |
+  ~.
+
+//2> ?<lemme:fund,pl,start,endword> = ?[nonidentified=+,service_provider=+].
+
+
+//// *** NO PERSON *** \\\\
+
+//Senior Vice President
+
+| noun#2{?*, #1[title,end]} |
+if ( ^PERSON(#2) )
+   ~.
+
+//Chief Financial Officer
+
+| noun#2{#1[lemme:Chief], ?+} |
+if ( ^PERSON(#2) )
+   ~.
+
+///////////////////////////////////////////////////////////////////////////////
+
+///////////// POSITION SENTENCE EXTRACTED \\\\\\\\\\\\\\
+
+/// DATE, TIMEX3 in sentences
+
+
+| #1{#2[start,endword,date]} |
+if ( ^DATE(#1) )
+    DATE[nosent=+](#2).
+
+| #1{#2[start,endword,date]} |
+if ( ^DATE(#2) )
+    DATE[nosent=+](#2).
+
+| #1{#2[start], ?*, ?[endword]} |
+if ( ^DATE(#1) )
+    DATE[nosent=+](#1).
+
+if ( ^DATE[nosent:~](#1) )
+   DATE[insent=+](#1).
+
+| #1{#2[start], ?*, ?[endword]} |
+if ( ^TIMEX3(#1) )
+    TIMEX3[nosent=+](#1).
+
+| #1[start,endword] |
+if ( ^TIMEX3(#1) )
+    TIMEX3[nosent=+](#1).
+
+
+if ( ^TIMEX3[nosent:~](#1) )
+   TIMEX3[insent=+](#1).
+
+
+/
+
+if ( $1(#2,#3) & ^DATE(#1) & #2~:#1 & #3~:#1 )
+   DATE[insent=+](#1).
+
+if ( $1(#2,#3) & ^TIMEX3(#1) & #2~:#1 & #3~:#1 )
+   TIMEX3[insent=+](#1).
+\
+   
+/
+// Preparatory features:
+
+// 1 unique feature for ORGANISATION + compref
+
+| #1[compref=+] |
+if ( ORGANISATION(#1) )
+   ~.
+
+// Mark prepositions that link a position within a company in  PREPD(#1[of/for],#2[compref])
+
+| #1[positionprep=+] |
+if ( PREPD(#2[compref],#1[lemme:of]) )
+   ~.
+
+| #1[positionprep=+] |
+if ( PREPD(#2[compref],#1[lemme:for]) )
+   ~.
+
+// Common feature for PERSON and (s)he
+
+| #1[personref=+] |
+if ( PERSON(#1) )
+   ~.
+
+| #1[lemme:he,personref=+] |
+  ~.
+
+| #1[lemme:she,personref=+] |
+  ~.
+
+// Mark sentences containing ATTR of personref + functions in organisations
+
+//Mr. Curvey is Trustee and Chairman of the Board of Trustees of certain Trusts.
+//ATTRIB(Mr. Curvey,Trustee)
+//ATTRIB(Mr. Curvey,Chairman)
+//PERSON(Mr. Curvey)
+//PREPD(Trusts,of)
+
+if ( ATTRIB(#1[personref],#2) & PREPD(#3[compref],#4[positionprep]) & ^SENT(#5) )
+   SENT[posit=+,sec-off-dir-extracted=+](#5).
+
+// Mark sentences containing ATTR position of personref 
+
+// Prior to his retirement in May 2003, Mr. Dirks was Chief Operating Officer and a member of the Board of The Depository Trust & Clearing Corporation (DTCC).
+//ATTRIB(Mr. Dirks,Chief Operating Officer)
+
+if ( ATTRIB(#1[personref],#2[posit]) & ^SENT(#3) )
+   SENT[posit=+,sec-off-dir-extracted=+](#3).
+
+// Sentences containing "personref serves as" 
+
+//Mr. Curvey also serves as Trustee (2007-present) of other investment companies advised by FMR.
+
+//MOD_POST(serves,Trustee)
+//SUBJ_PRE(serves,Mr. Curvey)
+//PERSON(Mr. Curvey)
+//PREPD(companies,of)
+
+if ( SUBJ(#2[lemme:serve],#1[personref]) & ^SENT(#5) )
+   SENT[posit=+,sec-off-dir-extracted=+](#5).
+
+// joined + DATE
+
+//He joined Mellon in February 1997.
+//TEMP_POST(joined,in February 1997)
+
+if ( TEMP[post](#1[lemme:join],#2) & ^SENT(#3) )
+    SENT[posit=+,sec-off-dir-extracted=+](#3).
+
+// Mark sentences starting with a position in a body
+//Member of the Advisory Board of Fidelity's Equity and High Income Funds.
+
+\
+
+
+
+| #1[posit] |
+POSITION(#1).
+
+| #1[boardtitle] |
+if ( ^POSITION(#1) )
+   POSITION[boardtitle=+](#1).
+
+| #1[functionaltitle] |
+if ( ^POSITION(#1) )
+   POSITION[functionaltitle=+](#1).
+
+| #1[corporatetitle] |
+if ( ^POSITION(#1) )
+   POSITION[corporatetitle=+](#1).
+
+
+
+
+// POSITION insent
+
+if ( ^POSITION(#1) & ( SUBJ-N(?,?) | OBJ(?,?) | MOD(?,?) ) ) 
+   POSITION[insent=+](#1).
+
+//////////////////////////////////////////////////////////////////////////////
+
+//////////// MARKING SERVICE PROVIDER COMPANIES \\\\\\\\\\\\\\
+
+
+// Marking the investment advisor company
+
+
+
+
+// The organisation followed by (the Adviser)
+
+| ins#3{ ?*, np{(det), noun#1[investment_advisor]}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[investment_advisor=+](#2)
+
+| ins#3{ ?*, np{(det), noun#1[investment_advisor,sub_advisor]}, ?*} |
+if ( ^ORGANISATION[investment_advisor](#2) & #2 < #3 )
+   ORGANISATION[sub_advisor=+](#2)
+
+| ins#3{ ?*, np{det, noun{#1[investment_advisor]}}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[investment_advisor=+](#2)
+
+| ins#3{ ?*, np{det, noun{#1[investment_advisor,sub_advisor]}}, ?*} |
+if ( ^ORGANISATION[investment_advisor](#2) & #2 < #3 )
+   ORGANISATION[sub_advisor=+](#2)
+
+// ( NP{the NOUN{Advisor_INVESTMENT_ADVISOR:+} ) fair values}
+
+| ?[paren,form:fopar], np{det, #1[investment_advisor], ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[investment_advisor=+](#2)
+
+| ?[paren,form:fopar], np{det, #1[investment_advisor,sub_advisor], ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION[investment_advisor](#2) & #2 < #1 )
+   ORGANISATION[sub_advisor=+](#2)
+
+// ( NP{the NOUN{Advisor_INVESTMENT_ADVISOR:+_SERVICE_PROVIDER:+} ) fair values}
+
+| ?[paren,form:fopar], np{det, noun{#1[investment_advisor]}, ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[investment_advisor=+](#2)
+
+| ?[paren,form:fopar], np{det, noun{#1[investment_advisor,sub_advisor]}, ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION[investment_advisor](#2) & #2 < #1 )
+   ORGANISATION[sub_advisor=+](#2)
+
+// eliminate a second ORGANISATION before the investment_adisor
+
+| ins#3{ ?*, np{det, noun#1[investment_advisor]}, ?*} |
+if ( ORGANISATION[investment_advisor](#2) & ^ORGANISATION[investment_advisor](#4) & #4 < #2 )
+   ORGANISATION[investment_advisor=~](#4).
+
+| ins#3{ ?*, np{det, noun{#1[investment_advisor]}}, ?*} |
+if ( ORGANISATION[investment_advisor](#2) & ^ORGANISATION[investment_advisor](#4) & #4 < #2 )
+   ORGANISATION[investment_advisor=~](#4).
+
+
+// the ORGANISATION that is syntactically related to investment_advisor
+
+//0> The Fund's investment advisor is Investment Research Corporation (IRC).
+//ORGANISATION(Investment Research Corporation)
+//ATTRIB(investment advisor,Investment Research Corporation)
+
+if ( $1(#1[investment_advisor],#2) & ^ORGANISATION(#2) )
+   ORGANISATION[investment_advisor=+](#2).
+
+if ( $1(#1,#2[investment_advisor]) & ^ORGANISATION(#1) )
+   ORGANISATION[investment_advisor=+](#1).
+
+if ( $1(#1[investment_advisor,sub_advisor],#2) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[sub_advisor=+](#2).
+
+if ( $1(#1,#2[investment_advisor,sub_advisor]) & ^ORGANISATION[investment_advisor](#1) )
+   ORGANISATION[sub_advisor=+](#1).
+
+
+
+// special case: "managed by X[investment advisor]
+//The fund is managed by T. Rowe Price Associates, Inc. (Price Associates), a wholly owned subsidiary of T. Rowe Price Group, Inc. (Price Group).
+//SUBJ-N(managed,T. Rowe Price Associates , Inc.)
+
+
+if ( SUBJ-N(#1[lemme:manage],#2) & ^ORGANISATION(#2) & OBJ-N(#1[lemme:manage],#3[fund]) )
+   ORGANISATION[investment_advisor=+](#2).
+
+//Columbia Funds are distributed by Columbia Management Investment Distributors, Inc., member FINRA, and managed by Columbia Management Investment Advisers, LLC.
+//OBJ-N(managed,Columbia Funds)
+//ORGANISATION(Columbia Funds)
+
+
+if ( SUBJ-N(#1[lemme:manage],#2) & ^ORGANISATION(#2) & OBJ-N(#1[lemme:manage],#3) & ORGANISATION(#3) )
+   ORGANISATION[investment_advisor=+](#2).
+
+// special case: X manages the investment
+// Pursuant to an Investment Advisory Agreement with the Company, BlackRock Fund Advisors (BFA) manages the investment of each Fund's assets.
+// SUBJ-N_PRE(manages,BlackRock Fund Advisors)
+// OBJ_POST(manages,investment)
+// ORGANISATION(BlackRock Fund Advisors)
+
+if ( SUBJ(#1[lemme:manage],#2) & OBJ(#1,#3[lemme:investment]) & ^ORGANISATION(#2) )
+   ORGANISATION[investment_advisor=+](#2).
+
+// Nuveen Fund Advisors, LLC, formerly known as Nuveen Fund Advisors, Inc., is the registrant's investment adviser (also referred to as the Adviser).
+//ORGANISATION(Nuveen Fund Advisors , LLC)
+//NUCL_SUBJCOMPL(is,investment adviser)
+
+if ( NUCL[subjcompl](#1[lemme:be],#2[investment_advisor]) & ^ORGANISATION(#3[start]) )
+   ORGANISATION[investment_advisor=+](#3).
+
+
+// exception
+
+// In the description of peoples' functions: Mr. Lucia is also CEO of RJL Wealth Management, LLC, a Registered Investment Advisor, and Lucia Securities, LLC, a Registered Broker Dealer and member FINRA/SIPC.
+//SUBJATTR(Mr. Lucia,CEO)
+//MOD_POST(CEO,RJL Wealth Management , LLC)
+//ORGANISATION_INVESTMENT_ADVISOR(RJL Wealth Management , LLC)
+
+if ( ^ORGANISATION[investment_advisor](#1) & MOD(#2[posit],#1) & SUBJATTR(#3,#2) )
+   ORGANISATION[investment_advisor=~](#1)
+
+// exception: when the organisation is the recipient:
+//Pioneer Investment Management, Inc. (PIM) serves as the investment adviser to Pioneer High Income Trust (the Trust) pursuant to an investment advisory agreement between PIM and the Trust.
+//ORGANISATION_INVESTMENT_ADVISOR(Pioneer High Income Trust)
+//RCP_POST(serves_INVESTMENT_ADVISOR:+,Pioneer High Income Trust)
+
+if ( ^ORGANISATION[investment_advisor](#1) & RCP(#2[investment_advisor],#1) )
+   ORGANISATION[investment_advisor=~](#1).
+
+// exception: when the organisation is the recipient, but there is no RCP
+// We selected St. James Investment Company as the Sub-Adviser to the Castle Focus Fund because their investment philosophy aligns with ours.
+//MOD_POST(Sub - Adviser,Castle Focus Fund)
+//PREPD(Castle Focus Fund,to)
+//ORGANISATION(Castle Focus Fund)
+
+if ( MOD[post](#1[investment_advisor],#2) & PREPD(#2,#3[lemme:to]) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[investment_advisor=~](#2)
+
+// exception: Investment Manager's Valuation Committee
+//PARTICLE(#2Investment Manager_TRUSTFUNCTION:+,'s)
+//MOD_PRE(Valuation Committee,#2Investment Manager_TRUSTFUNCTION:+)
+
+if ( ^ORGANISATION[investment_advisor](#1) & PARTICLE(#2[service_provider],?) & MOD[pre](#1,#2) )
+   ORGANISATION[investment_advisor=~](#1).
+
+// exception: NCOORD Dr. Santomero is not an affiliated person of the Investment Manager or Ameriprise Financial.
+//NCOORD(Investment Manager,Ameriprise Financial)
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[investment_advisor=~](#2).
+
+if ( NCOORD(#1,#2[service_provider]) & ^ORGANISATION[investment_advisor](#1) )
+   ORGANISATION[investment_advisor=~](#1).
+
+
+
+//the investment manager of the Investment Fund
+
+//MOD_POST(investment manager_TRUSTFUNCTION:+,Investment Fund)
+//PREPD(Investment Fund,of)
+
+if ( MOD[post](#1[investment_advisor],#2) & PREPD(#2,#3[lemme:of]) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[investment_advisor=~](#2).
+
+//Investment Fund investment managers
+
+//MOD_PRE(investment managers_TRUSTFUNCTION:+,Investment Fund)
+
+if ( MOD[pre](#1[investment_advisor],#2) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[investment_advisor=~](#2).
+
+// if an exception is a sub-advisor
+
+if ( ^ORGANISATION[investment_advisor:~,sub_advisor](#1) )
+   ORGANISATION[sub_advisor=~](#1).
+
+/
+// adviser with the Securities and Exchange Commission
+//PREPD(Securities and Exchange Commission,with)
+//MOD_POST(investment adviser,Securities and Exchange Commission)
+
+if ( MOD[post](#1[investment_advisor],#2) & PREPD(#2,#3[lemme:with]) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[investment_advisor=~](#2).
+\
+
+// The organisation followed by (the Distributor)
+
+| ins#3{ ?*, np{det, noun#1[distributor]}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[distributor=+](#2)
+
+| ins#3{ ?*, np{det, noun{#1[distributor]}}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[distributor=+](#2)
+
+| ?[paren,form:fopar], np{det, #1[distributor], ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[distributor=+](#2)
+
+// eliminate a second ORGANISATION before the distributor
+
+| ins#3{ ?*, np{det, noun#1[distributor]}, ?*} |
+if ( ORGANISATION[distributor](#2) & ^ORGANISATION[distributor](#4) & #4 < #2 )
+   ORGANISATION[distributor=~](#4).
+
+| ins#3{ ?*, np{det, noun{#1[distributor]}}, ?*} |
+if ( ORGANISATION[distributor](#2) & ^ORGANISATION[distributor](#4) & #4 < #2 )
+   ORGANISATION[distributor=~](#4).
+
+
+// The organisation followed by (the Administrator)
+
+
+| ins#3{ ?*, np{det, noun#1[administrator]}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[administrator=+](#2)
+
+| ins#3{ ?*, np{det, noun{#1[administrator]}}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[administrator=+](#2)
+
+| ?[paren,form:fopar], np{det, #1[administrator], ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[administrator=+](#2)
+
+// eliminate a second ORGANISATION before the administrator
+
+| ins#3{ ?*, np{det, noun#1[administrator]}, ?*} |
+if ( ORGANISATION[administrator](#2) & ^ORGANISATION[administrator](#4) & #4 < #2 )
+   ORGANISATION[administrator=~](#4).
+
+| ins#3{ ?*, np{det, noun{#1[administrator]}}, ?*} |
+if ( ORGANISATION[administrator](#2) & ^ORGANISATION[administrator](#4) & #4 < #2 )
+   ORGANISATION[administrator=~](#4).
+
+//ORGANISATIONs that have "distributor" in their names: Pioneer Funds Distributor, Inc.
+/
+| #1{?*,?[lemme:distributor],?*} |
+if ( ^ORGANISATION(#1) )
+   ORGANISATION[distributor=+](#1).
+\
+// In long sentences that contain "serves as distributor" the closest ORGANISATION
+
+//... by World Capital Brokerage, Inc. ("WCB"), an affiliated broker/dealer which serves as the underwriter and distributor of the Fund.
+
+| #1[potservice_provider,distributor] |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[distributor=+](#2).
+
+| #1[potservice_provider,administrator] |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[administrator=+](#2).
+
+// In long sentences that contain SUBJ(furnishes/provides/serves[service_provider],ORGANISATION) a distributor later in the sentence
+
+| #3[distributor] |
+if ( SUBJ-N(#1[service_provider],#2) & ^ORGANISATION(#2) )
+   ORGANISATION[distributor=+](#2)
+
+| #3[administrator] |
+if ( SUBJ-N(#1[service_provider],#2) & ^ORGANISATION(#2) )
+   ORGANISATION[administrator=+](#2)
+
+// syntactic dependency between an ORGANISATION and _DISTRIBUTOR
+
+if ( ^$1(#1,#2[distributor]) | $1(#2[distributor],#1) & ^ORGANISATION(#1) )
+   ORGANISATION[distributor=+](#1)
+
+if ( ^$1(#1,#2[administrator]) | $1(#2[administrator],#1) & ^ORGANISATION(#1) )
+   ORGANISATION[administrator=+](#1)
+
+// exception: Principal underwriter and distributor for the Calvert Funds.
+
+if ( ^ORGANISATION[distributor](#1) & $1(#2[lemme:distributor],#1) & PREPD(#1,#3[lemme:for]) )
+   ORGANISATION[distributor=~](#1).
+
+// The iShares Funds are distributed by BlackRock Investments, LLC (together with its affiliates, “BlackRock”).
+
+if ( SUBJ-N(#1[lemme:distribute],#2) & ^ORGANISATION(#2) & ~CONNECTOR[subord](#1,#3[condconj]) & ~OBJ(#1,#4[lemme:product]) )
+   ORGANISATION[distributor=+](#2).
+
+//transfer_agent
+
+// Transfer and Service Agents
+// NCOORD(Transfer,Service Agents)
+
+
+/
+//ORGANISATIONs that have "transfer" in their names: 
+
+| #1{?*,?[lemme:transfer],?*} |
+if ( ^ORGANISATION(#1) )
+   ORGANISATION[transfer_agent=+](#1).
+
+// except Transfer Agency
+
+| noun{?[lemme:transfer], ?[lemme:Agency]} |
+if ( ^ORGANISATION[transfer_agent=+](#1) )
+   ~.
+\
+// Organisations that are indicated to be transfer agents in parentheses: Under a Transfer and Dividend Disbursing Agent Agreement, Columbia Management Investment Services Corp. (the Transfer Agent), an affiliate of the Investment Manager and a wholly-owned subsidiary of Ameriprise Financial, is responsible for providing transfer agency services to the Fund.
+
+//NP{NOUN{Columbia Management Investment Services Corp.}} INS{( NP{the NOUN{Transfer Agent}} )} 
+
+| np{#1}, ins{?, np{?*, ?[transfer_agent]}} |
+if ( ^ORGANISATION(#1) )
+   ORGANISATION[transfer_agent=+](#1).
+
+
+// syntactic dependency between an ORGANISATION and _TRANSFER_AGENT
+
+if ( ^$1(#1,#2[transfer_agent]) | $1(#2[transfer_agent],#1) & ^ORGANISATION(#1) )
+   ORGANISATION[transfer_agent=+](#1)
+
+//Fidelity Investments Institutional Operations Company, Inc. (FIIOC), an affiliate of FMR, is the transfer, dividend disbursing and shareholder servicing agent for each class of the Fund.
+//SUBJATTR(Fidelity Investments Institutional Operations Company , Inc.,transfer)
+
+if ( SUBJATTR(#1,#2[lemme:transfer]) & ^ORGANISATION(#1) )
+   ORGANISATION[transfer_agent=+](#1).
+
+
+//in long sentences containing provide[transfer_agent], the ORGANISATION that is its subject, i.e. the ORGANISATION that has no preposition
+
+//Pioneer Investment Management Shareholder Services, Inc. (PIMSS), a wholly owned indirect subsidiary of UniCredit, through a sub-transfer agency agreement with American Stock Transfer & Trust Company, provides substantially all transfer agent and shareowner services related to the Trust's common shares at negotiated rates.
+
+| #1[potservice_provider,transfer_agent] |
+if ( ^ORGANISATION(#2) & #2 < #1 & ~PREPD(#2,?) )
+   ORGANISATION[transfer_agent=+](#2)
+
+//U.S. Bancorp Fund Services, LLC ( USBFS ) also serves as the fund accountant and transfer agent to the Fund.
+//NCOORD_SECDEP(#3fund accountant[prof],#4transfer agent)
+//MOD_POST(#2serves[potservice_provider],#3fund accountant)
+//SUBJ_PRE(#2serves,#1U.S. Bancorp Fund Services , LLC)
+//ORGANISATION_SEC-SP_INSENT(#1U.S. Bancorp Fund Services , LLC)
+
+| #3{?*,?[prof,last]} |
+if ( ^ORGANISATION(#1) & $1(#2[potservice_provider],#1) & MOD(#2,#3) & NCOORD(#3,#4[transfer_agent]) )
+   ORGANISATION[transfer_agent=+](#1).
+
+
+// Independent auditor
+
+// the Fund's accountant [independent_auditor]
+
+| #1[lemme:accountant,independent_auditor=+] |
+if ( $1(#1,#2[fund]) | $1(#2[fund],#1) )
+   ~.
+
+if ( $1(#1[independent_auditor],#2) | $1(#2,#1[independent_auditor]) & ^ORGANISATION(#2) )
+   ORGANISATION[independent_auditor=+](#2).
+
+//exception: Furthermore, we and EP may be unable to obtain the consent of the independent auditor of EP (which relies on the audit report of the independent auditor of the Joint Venture in its audit report on the audited financial statements of EP) to include or incorporate by reference its audit reports.
+//PREPD(EP,of)
+//MOD_POST(independent auditor,EP)
+
+if ( PREPD(#1,#2[lemme:of]) & MOD[post](#3[independent_auditor],#1) & ^ORGANISATION[independent_auditor](#1) )
+   ORGANISATION[independent_auditor=~](#1)
+
+//She previously served as an internal auditor for Bourns, Inc., a maker of electronic components, from 1994 to 1995, and an auditor for KPMG Peat Marwick from 1991 – 1994.
+
+if ( PREPD(#1,#2[lemme:for]) & MOD[post](#3[independent_auditor],#1) & ^ORGANISATION[independent_auditor](#1) )
+   ORGANISATION[independent_auditor=~](#1)
+
+// Coordination
+
+//U.S. Bancorp Fund Services, LLC serves as Transfer Agent, Administrator and Accounting Services Agent for the Fund.
+//COORD(and,Administrator)
+//COORD(and,Transfer Agent)
+//ORGANISATION_TRANSFER_AGENT(U.S. Bancorp Fund Services , LLC)
+
+if ( ORGANISATION[transfer_agent](#1) & COORD(#2,#3[transfer_agent]) & COORD(#2,#4[lemme:administrator]) )
+   ORGANISATION[administrator=+](#1).
+
+
+
+//////////// Dependencies that do not create service provider organisations \\\\
+
+// NCOORD
+// The Administrator and BRIL have agreed not to reduce or discontinue this contractual waiver or reimbursement until August 1, 2013 unless approved by the Board of Directors, including a majority of the Independent Directors.
+//NCOORD(Administrator,BRIL)
+//ORGANISATION_ADMINISTRATOR_SECDEP(BRIL)
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[administrator](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[investment_advisor](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[distributor](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[legal_counsel](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[custodian](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[transfer_agent](#2) )
+   ORGANISATION[administrator=~](#2).
+
+if ( NCOORD(#1[service_provider],#2) & ^ORGANISATION[independent_auditor](#2) )
+   ORGANISATION[administrator=~](#2).
+
+//////////// SERVICE PROVIDER INDICATORS \\\\\\\\\\\\\\
+
+//// *** A SERVICE PROVIDER STARTS AND ENDS THE SENTENCE *** \\\\
+
+| #2[service_provider,start,endword] |
+if ( SENT(#1) )
+   INDICATOR[service_provider=+](#1) 
+
+| #2[service_provider]{?[start],?+,?[endword]} |
+if ( SENT(#1) )
+   INDICATOR[service_provider=+](#1).
+
+| #2[service_provider,start,endword:~] |
+if ( SENT(#1) )
+   POT-INDICATOR[service_provider=+](#1) 
+
+| #2[service_provider,start:~,endword] |
+if ( ^POT-INDICATOR[service_provider](#1) )
+    INDICATOR[service_provider=+](#1).
+
+if ( ^POT-INDICATOR[service_provider](#1) )
+   ~.
+
+
+
+//// *** A SERVICE PROVIDER STARTS THE SENTENCE AND HAS A MODIFIER THAT ENDS THE SENTENCE *** \\\\
+
+//Transfer agent for shareholder account
+//MOD_POST(Transfer agent,account)
+//PP{for NP{shareholder account}}
+//{NP{NOUN_TRANSFER_AGENT:+{Transfer agent}} PP{for NP{shareholder account}}
+
+| np{#1[transfer_agent,start]}, pp{?+, np{?*,#2[endword]}} |
+if ( MOD[post](#1,#2) & SENT(#3) )
+    INDICATOR[service_provider=+](#3).
+
+
+//// *** SPECIFY WHICH SERVICE PROVIDER *** \\\\
+
+| #1[independent_auditor] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[independent_auditor=+](#2).
+
+| #1[distributor] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[distributor=+](#2).
+
+| #1[distributor,pl] |
+if ( INDICATOR[service_provider](#2) )
+   ~.
+
+| #1[administrator] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[administrator=+](#2).
+
+//| #1[sub_administrator] |
+//if ( INDICATOR[administrator](#2) )
+//   INDICATOR[sub_administrator=+](#2).
+
+| #1[transfer_agent] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[transfer_agent=+](#2).
+
+| #1[custodian] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[custodian=+](#2).
+
+| #1[legal_counsel] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[legal_counsel=+](#2).
+
+| #1[investment_advisor] |
+if ( INDICATOR[service_provider](#2) )
+   INDICATOR[investment_advisor=+](#2).
+
+| #1[investment_advisor,sub_advisor] |
+if ( ^INDICATOR[investment_advisor](#2) )
+   INDICATOR[sub_advisor=+](#2).
+
+| #1[service_provider,nonidentified] |
+if ( ^INDICATOR[positionind:~,ageind:~,tenureind:~,nameind:~,investment_advisor:~,sub_advisor:~,custodian:~,transfer_agent:~,distributor:~,independent_auditor:~](#2) )
+   INDICATOR[service_provider=+,nonidentified=+](#2).
+
+//// *** SPECIAL CASE: THE FUND IS MENTIONED IN THE INDICATOR *** \\\\
+
+//Principal underwriter and distributor for the Calvert Funds
+//ORGANISATION_DISTRIBUTOR(Calvert Funds)
+//MOD_POST(distributor,Calvert Funds)
+//NCOORD(Principal underwriter,distributor)
+//COORD(and,distributor)
+//COORD(and,Principal underwriter)
+
+| #1[distributor] |
+if ( COORD(?[lemme:and],?[service_provider,start]) & ORGANISATION(#2[endword]) & COORD(?[lemme:and],?[service_provider,start:~]) & SENT(#3) )
+   INDICATOR[distributor=+](#3).
+
+| #1[administrator] |
+if ( COORD(?[lemme:and],?[service_provider,start]) & ORGANISATION(#2[endword]) & COORD(?[lemme:and],?[service_provider,start:~]) & SENT(#3) )
+   INDICATOR[administrator=+](#3).
+
+//Investment advisor to the Calvert Funds
+//MOD_POST(Investment advisor,Calvert Funds)
+//PREPD(Calvert Funds,to)
+//ORGANISATION(Calvert Funds)
+
+if ( MOD[post](#1[investment_advisor,start],#2[endword]) & ORGANISATION(#2) & SENT(#3) )
+   INDICATOR[investment_advisor=+](#3).
+
+/
+//exception: Investment advisor to the Calvert Funds
+//ORGANISATION_INVESTMENT_ADVISOR(Calvert Funds)
+//INDICATOR_SEC-SP_INVESTMENT_ADVISOR(Investment advisor)
+
+if ( ^ORGANISATION[investment_advisor](#1) & INDICATOR[investment_advisor](#2) )
+   ~.
+\
+
+
+//exception: Principal underwriter and distributor for the Calvert Funds
+//ORGANISATION_DISTRIBUTOR(Calvert Funds)
+//INDICATOR_DISTRIBUTOR(distributor)
+
+if ( ^ORGANISATION[distributor](#1) & INDICATOR[distributor](#2) )
+   ~.
+
+
+// INDICATORS with coordination
+
+//Investment Adviser and Administrator  
+
+| np{#1[investment_advisor,start],?*}, ?[lemme:and], (?), ?[endword] |
+if ( SENT(#2) )
+   INDICATOR[investment_advisor=+](#2).
+
+| np{#1[investment_advisor,start],?*}, ?[lemme:and], (?), ?[lemme:administrator,endword] |
+if ( SENT(#2) )
+   INDICATOR[administrator=+](#2).
+
+| np{#1[distributor,start],?*}, ?[lemme:and], (?), ?[endword] |
+if ( SENT(#2) )
+   INDICATOR[distributor=+](#2).
+
+| np{#1[administrator,start],?*}, ?[lemme:and], (?), ?[endword] |
+if ( SENT(#2) )
+   INDICATOR[administrator=+](#2).
+
+| np{#1[transfer_agent,start],?*}, ?[lemme:and], (?), ?[endword] |
+if ( SENT(#2) )
+   INDICATOR[transfer_agent=+](#2).
+
+//Administrator, Fund Accountant and Transfer Agent
+//Transfer Agent, Fund Accountant and Administrator
+
+//COORD(and,Transfer Agent)
+//COORD(and,Accountant)
+//COORD(and,Administrator)
+
+if ( COORD(#1[lemme:and],#2[start,service_provider]) & COORD(#1[lemme:and],#3[endword,service_provider]) & & COORD(#1[lemme:and],#4[start:~,endword:~,service_provider]) & ^SENT(#5) )
+   INDICATOR[service_provider=+](#5).
+
+//Custodian of assets
+
+//MOD_POST(Custodian_CUSTODIAN:+_SERVICE_PROVIDER:+,assets)
+
+if ( $1(#1[start,custodian],#2[endword]) | $1(#1[start],#2[endword,custodian]) & SENT(#3) )
+   INDICATOR[custodian=+](#3).
+
+// The organisation followed by (the Custodian)
+
+////The Bank of New York Mellon (the “Custodian”) serves as the Custodian to the Fund.
+
+
+| ins#3{ ?*, np{det, noun#1[custodian]}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[custodian=+](#2).
+
+| ins#3{ ?*, np{det, noun{#1[custodian]}}, ?*} |
+if ( ^ORGANISATION(#2) & #2 < #3 )
+   ORGANISATION[custodian=+](#2).
+
+// ( NP{the NOUN{Advisor_CUSTODIAN:+} ) fair values}
+
+| ?[paren,form:fopar], np{det, #1[custodian], ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[custodian=+](#2).
+
+// ( NP{the NOUN{Advisor_CUSTODIAN:+_SERVICE_PROVIDER:+} ) fair values}
+
+| ?[paren,form:fopar], np{det, noun{#1[custodian]}, ?[paren,form:fcpar],?*} |
+if ( ^ORGANISATION(#2) & #2 < #1 )
+   ORGANISATION[custodian=+](#2).
+
+
+//The Company utilizes the services of J.P. Morgan Investment Management, Inc. as its investment advisor and J.P. Morgan Chase Bank N.A. as its custodian for its investments.
+// ASL(as,custodian_CUSTODIAN:+_SERVICE_PROVIDER:+)
+// NP{NOUN{J.P. Morgan Chase Bank N.A.}} BG{as} 
+
+| np{noun#1}, bg#2 |
+if ( ASL(#2,#3[custodian]) & ^ORGANISATION(#1) )
+   ORGANISATION[custodian=+](#1).
+
+// propagation of custiodian to "serve/provide,etc"
+
+| #1[potservice_provider,custodian=+] |
+if ( $1(#1,#2[custodian]) & ~PREPD(#2,#3[lemme:to]) )
+   ~.
+
+//dependency
+
+if ( $1(#1[custodian],#2) | $1(#2,#1[custodian]) & ^ORGANISATION(#2) )
+   ORGANISATION[custodian=+](#2).
+
+// exception: when the organisation is the recipient:
+// UMB Bank, N.A. provides custodial services for the Master Fund.
+// MOD_POST(provides_CUSTODIAN:+_SERVICE_PROVIDER:+,Master Fund)
+// PREPD(Master Fund,for)
+// ORGANISATION_CUSTODIAN(Master Fund)
+// ORGANISATION_CUSTODIAN(UMB Bank , N.A.)
+//SUBJ-N_PRE(provides_CUSTODIAN:+_SERVICE_PROVIDER:+,UMB Bank , N.A.)
+
+if ( SUBJ-N(#1,#2) & ORGANISATION[custodian](#2) & MOD[post](#1,#3) & ^ORGANISATION[custodian](#3) )
+   ORGANISATION[custodian=~](#3).
+
+
+// No service INDICATOR: if the service_agent ends with agreement, service, fee or contract
+
+| #1[lemme:agreement,last] |
+if ( ^INDICATOR(#2) )
+   ~.
+
+//| #1[lemme:service,last] 
+//if ( ^INDICATOR(#2) )
+//   ~.
+
+| #1[lemme:fee,last] |
+if ( ^INDICATOR(#2) )
+   ~.
+
+| #1[lemme:Fee,last] |
+if ( ^INDICATOR(#2) )
+   ~.
+
+| #1[lemme:contract,last] |
+if ( ^INDICATOR(#2) )
+   ~.
+
+///////////////// Adjustment for markup \\\\\\\\\\\\\\\\\\\\\
+
+//Fidelity Management &amp; Research (U.K.) Inc.
+//U.K. should be marked as a place
+
+| #1[place] |
+if ( ORGANISATION(#2) & ~LOCATION(#1) & ~LOCORG(#1) )
+   LOCATION(#1).
+
+
+//Mark which dependency is used for which kind of information
+
+// OFFICERS and DIRECTORS
+
+if ( ^PERSON(#1) )
+   PERSON[sec-off-dir=+](#1).
+
+if ( ^DATE(#1) )
+   DATE[sec-off-dir=+](#1).
+
+if ( ^TIMEX3(#1) )
+   TIMEX3[sec-off-dir=+](#1).
+
+if ( ^NUMBER(#1) )
+   NUMBER[sec-off-dir=+](#1).
+
+if ( ^POSITION(#1) )
+   POSITION[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[off-dir](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[interested](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[uninterested](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[corpoff](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[cont](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[tenureind](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[positionind](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[ageind](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+if ( ^INDICATOR[nameind](#1) )
+   INDICATOR[sec-off-dir=+](#1).
+
+// Chief Compliance officer
+
+if ( ^INDICATOR[cco](#1) )
+   INDICATOR[sec-cco=+,sec-off-dir=+](#1).
+
+// Service Providers
+
+if ( ^ORGANISATION[investment_advisor:~,independent_auditor:~,distributor:~,transfer_agent:~,custodian:~,administrator:~](#1) )
+    ORGANISATION[sec-sp=+](#1).
+
+if ( ^ORGANISATION[distributor](#1[start,end]) )
+   ORGANISATION[sec-sp=+,distributor=~](#1).
+
+if ( ^LOCORG(#1) )
+   LOCORG[sec-sp=+](#1).
+
+//LOCATION_SEC-SP(Bellevue)
+
+if ( ^LOCATION[city:~](#1[city]) )
+   LOCATION[city=+](#1).
+
+if ( ^LOCATION(#1) )
+   LOCATION[sec-sp=+](#1).
+
+if ( ^INDICATOR[investment_advisor](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+// State
+
+| #1[usastate,abr] |
+//if ( ^LOCATION(#2) | ^LOCORG(#2) )
+   LOCATION[usastate=+,sec-sp=+](#1).
+
+// LOCATIONS within another named entity should not be put out
+
+//480 Washington Blvd.
+
+ | #1{?*,#2,?+} |
+if ( LOCATION[address](#1) &  ^LOCATION(#2) )
+   ~.
+
+| #1{?*, #2, ?*} |
+if ( ORGANISATION(#1) &  ^LOCATION(#2) )
+   ~.
+
+| #1{?*, #2, ?*} |
+if ( ORGANISATION(#1) &  ^LOCORG(#2) )
+   ~.
+
+if ( ^INDICATOR[legal_counsel](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[independent_auditor](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[distributor](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[administrator](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[transfer_agent](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[custodian](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+if ( ^INDICATOR[nonidentified](#1) )
+   INDICATOR[sec-sp=+](#1).
+
+| #2[service_provider] |
+if ( ^INDICATOR[sec-sp:~,tenureind:~,positionind:~,interest:~](#1) )
+   ~.
+
+// Potential Service Provider Indicators: for cases that are not detected:
+// Offices of the fund and of the investment adviser
+
+| #1[investment_advisor] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+   INDICATOR[sec-sp=+,investment_advisor=+](#2).
+
+| #1[independent_auditor] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+   INDICATOR[sec-sp=+,independent_auditor=+](#2).
+
+| #1[report] |
+if ( ^INDICATOR[independent_auditor](#2) )
+   INDICATOR[report=+](#2).
+
+
+| #1[distributor] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+   INDICATOR[sec-sp=+,distributor=+](#2).
+
+| #1[administrator] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+   INDICATOR[sec-sp=+,administrator=+](#2).
+
+| #1[transfer_agent] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+   INDICATOR[sec-sp=+,transfer_agent=+](#2).
+
+| #1[custodian] |
+if ( SENT(#2) & ~INDICATOR(#2) )
+  INDICATOR[sec-sp=+,custodian=+](#2).
+
+// Service Providers that are not relevant for the xsd schema
+// exception: Position with Trust and Length of Service[nonidentified]
+
+| #1[nonidentified,service_provider] |
+if ( SENT(#2) & ~INDICATOR(#2) & ~INDICATOR[tenureind](?) & ~INDICATOR[positionind](?) )
+  INDICATOR[sec-sp=+,nonidentified=+](#2).
+
+
+
+
+// Distributors 0.4% - if there is a number in the block, it is not an INDICATOR
+
+| #1[dig] |
+if ( ^INDICATOR[sec-sp](#2) )
+   ~.
+
+
+
+
+// Information extracted from sentences
+
+if ( ^ORGANISATION[distributor](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+if ( ^ORGANISATION[administrator](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+if ( ^ORGANISATION[transfer_agent](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+if ( ^ORGANISATION[investment_advisor](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+if ( ^ORGANISATION[independent_auditor](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+if ( ^ORGANISATION[custodian](#1) )
+   ORGANISATION[sec-sp-extracted=+](#1).
+
+// exception: data from key peoples' tables
+
+//Director, Secretary and General Counsel of Constellation Trust Company since 2004; Secretary and General Counsel of Gemcom, LLC (financial printer) since 2004; Secretary, Manager and General Counsel of Northern Lights Compliance Services, LLC since 2004; Secretary and Chief Legal Officer of AdvisorOne Funds since 2003; ...
+
+if ( TIMEX3(#1) & TIMEX3(#2) & TIMEX3(#3) & ^ORGANISATION[sec-sp-extracted](#4) )
+   ORGANISATION[sec-sp-extracted=~,investment_advisor=~,sec-sp=+](#4).
+
+// Audit Committee Financial Expert
+
+if ( ^PERSON[acfe](#1) )
+   PERSON[extracted=+](#1).
+
+// Normalisation of ORGANISATIONS
+
+//Fidelity Investments Institutional Operations Company, Inc. (FIIOC), an affiliate of FMR, is the Fund's transfer, dividend disbursing and shareholder servicing agent.
+//ORGANISATION_SEC-SP(FIIOC)
+//ORGANISATION_SEC-SP-EXTRACTED_TRANSFER_AGENT(Fidelity Investments Institutional Operations Company , Inc.)
+//{NP{NOUN{Fidelity Investments Institutional Operations Company , Inc.}} INS{( NP{FIIOC} )}
+
+| np{#1noun}, ins{?,np{#2},?} |
+if ( ORGANISATION(#1) & ORGANISATION(#2) & SUBJ-N(?,?) )
+   ORGANISATION[sec-sp-extracted=+,norm=+](#2,#1).
+
+| pp{?, np{#1noun}}, ins{?,np{#2},?} |
+if ( ORGANISATION(#1) & ORGANISATION(#2) & SUBJ-N(?,?) )
+   ORGANISATION[sec-sp-extracted=+,norm=+](#2,#1).
+
+//As used below, "EVC" refers to Eaton Vance Corp., "EV" refers to Eaton Vance, Inc., "EVM" refers to Eaton Vance Management, "BMR" refers to Boston Management and Research and "EVD" refers to Eaton Vance Distributors, Inc. 
+//SUBJ_PRE(refers,EVC)
+//MOD_POST(refers,Eaton Vance Distributors , Inc.)
+
+//if ( SUBJ(#1[lemme:refer],#2) & ORGANISATION(#2) & MOD(#1,#3) & ORGANISATION(#3) )
+if ( SUBJ(#1[lemme:refer],#2) & MOD(#1,#3) & ORGANISATION(#3) )
+   ORGANISATION[sec-sp-extracted=+,norm=+](#2,#3).
+
+
+//Propagation of features
+
+if ( ORGANISATION[transfer_agent,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[transfer_agent=+](#2,#1).
+
+if ( ORGANISATION[distributor,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[distributor=+](#2,#1).
+
+if ( ORGANISATION[administrator,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[administrator=+](#2,#1).
+
+if ( ORGANISATION[independent_auditor,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[independent_auditor=+](#2,#1).
+
+if ( ORGANISATION[investment_advisor,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[investment_advisor=+](#2,#1).
+
+if ( ORGANISATION[custodian,sec-sp-extracted](#1) & ORGANISATION(#2) & ^ORGANISATION(#2,#1) )
+   ORGANISATION[custodian=+](#2,#1).
+
+
+//////////////////// Affiliated Service Providers \\\\\\\\\\\\\\\\\\\\\\\
+
+//Fidelity Investments Institutional Operations Company, Inc. (FIIOC), an affiliate of FMR, is each Fund's transfer, dividend disbursing and shareholder servicing agent.
+//ATTRIB_SECDEP_APPOS(Fidelity Investments Institutional Operations Company , Inc.,affiliate)
+//MOD_POST(affiliate,FMR)
+//ORGANISATION(FMR)
+//ORGANISATION_TRANSFER_AGENT(Fidelity Investments Institutional Operations Company , Inc.)
+
+if ( ATTRIB[appos](#1,#2[lemme:affiliate]) & MOD(#2,#3) & ORGANISATION(#3) & ^ORGANISATION(#1) )
+   ORGANISATION[affiliated=+](#1),
+   AFFILIATION(#1,#3).
+
+
+// The Fund has an agreement with Columbia Management Investment Distributors, Inc. (the Distributor), an affiliate of the Investment Manager and a wholly - owned subsidiary of Ameriprise Financial, for distribution and shareholder services.
+//ATTRIB_SECDEP_APPOS(Columbia Management Investment Distributors , Inc.,affiliate)
+//ORGANISATION(Columbia Management Investment Distributors , Inc.)
+//MOD_POST(affiliate,Investment Manager)
+
+if ( ATTRIB[appos](#1,#2[lemme:affiliate]) & MOD(#2,#3[lemme:investment\ manager]) & ^ORGANISATION(#1) )
+   ORGANISATION[affiliated=+](#1),
+   AFFILIATION(#1,#3).
+
+//For the six months ended January 31, 1999 commissions and sales charges paid by investors on the purchase of Fund shares totaled ,272 of which ,370 was retained by American Growth Fund Sponsors, Inc. (Sponsors), an affiliated broker/dealer which serves as the underwriter and distributor of the Fund.
+//MOD_PRE(broker,affiliated)
+//ATTRIB_SECDEP_APPOS(broker,American Growth Fund Sponsors , Inc.)
+//ORGANISATION(American Growth Fund Sponsors , Inc.)
+
+if ( MOD(#1[service_provider],#2[lemme:affiliated]) & $1(#1,#3) & ^ORGANISATION(#3) )
+   ORGANISATION[affiliated=+](#3).
+
+
+
+
+
+/////////////////// Unidentified service provider indicators \\\\\\\\\\\\\\\\\\
+
+//(Fund) Counsel, Fund Administrator, Funds Stockholder Service Agents
+
+
+///////////////////////// INSENT \\\\\\\\\\\\\\\\\\\\\\\\
+
+// Mark entities that are in sentences, so that are not taken into account for lists and tables
+
+// INDICATOR INSENT
+
+if ( ^INDICATOR[sec-sp,report:~](#1) & ( SUBJ-N(?,?) | OBJ(?,?) | MOD(?[verb],?) | MOD(?,?[verb]) )  )
+   INDICATOR[insent=+](#1)
+
+// if a service_provider has a preposition other than "of", it is not an indicator except when the preposition precedes an organisation
+// Due to custodian
+
+if ( PREPD(#1,#2[lemme:~of]) & ^INDICATOR[sec-sp](#3) & ~ORGANISATION(#4) )
+   ~.
+
+// Marking Organisations, Locations and Locorg that are parts of sentences
+
+
+// ORGANISATIONS
+
+| #1[start,endword] |
+if ( ^ORGANISATION(#1) )
+   ORGANISATION[nosent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,administrator](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,transfer_agent](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,distributor](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,legal_counsel](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,custodian](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,independent_auditor](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,investment_advisor](#1) )
+   ORGANISATION[insent=+](#1)
+
+if ( ^ORGANISATION[nosent:~,investment_advisor:~,independent_auditor:~,custodian:~,legal_counsel:~,distributor:~,transfer_agent:~,administrator:~](#1) )
+   ORGANISATION[insent=+](#1)
+
+
+
+// exceptions:
+//NP{The NOUN{Edgar Lomax Company}
+| det[start], #1[endword] |
+if ( ^ORGANISATION[insent](#1) )
+   ORGANISATION[insent=~](#1).
+
+//ORGANISATION(Union Bank , National Association)
+//{NP{NOUN{Union Bank}} , NP{NOUN{National Association}}}
+
+| #1top{np{#2}, ?, np{#3}} |
+if ( ^ORGANISATION[insent](#1) )
+   ORGANISATION[insent=~](#1).
+
+
+
+// Marking LOCATIONs and LOCORG that are parts of sentences
+
+if ( ^LOCORG(#1) & ( SUBJ-N(?,?) | OBJ(?,?) ) ) 
+   LOCORG[insent=+](#1).
+   
+if ( ^LOCATION(#1) & ( SUBJ-N(?,?) | OBJ(?,?) ) )
+   LOCATION[insent=+](#1).
+
+if ( ^LOCORG[insent](#1) & MOD(#2[usazipcode],?) )
+   LOCORG[insent=~](#1)
+
+if ( ^LOCATION[insent](#1) & MOD(#2[usazipcode],?) )
+   LOCATION[insent=~](#1)
+
+// Blocks containing dates and percentages are insent
+
+if ( DATE(#1) & ^$1[sec-sp](#2) )
+   $1[insent=+](#2)
+
+if ( PERCENT(#1) & ^$1[sec-sp](#2) )
+   $1[insent=+](#2)
+
+if ( MONEY(#1) & ^$1[sec-sp](#2) )
+   $1[insent=+](#2)
+
+// Blocks containing an ORGANISATION[insent] are insent
+
+if ( ORGANISATION[insent](#1) & ^LOCATION[insent:~](#2) )
+      LOCATION[insent=+](#2)
+
+if ( ORGANISATION[insent](#1) & ^LOCORG[insent:~](#2) )
+      LOCORG[insent=+](#2)
+/
+
+// commented because of Investment advisor to the Calvert Funds.
+
+
+if ( ORGANISATION[insent](#1) & ^INDICATOR[insent:~](#2) )
+      INDICATOR[insent=+](#2)
+\
+
+// We don't need INSENT for indicators
+
+if ( ^INDICATOR[sec-sp,insent](#1) )
+   ~.
+
+// Not indicators:
+
+| #1[tenureind,no-sp-indicator=+] |
+  ~.
+
+| #1[positionind,no-sp-indicator=+] |
+  ~.
+
+| det[indef] |
+  ~.
+
+// Transfer agent fees - not indicator
+
+| #2[no-sp-indicator] |
+if ( ^INDICATOR[sec-sp](#1) )
+   ~.
+
+//Franklin Custodian Funds except Investment advisor to the Calvert Funds.
+
+if ( ORGANISATION(#2) & ^INDICATOR[sec-sp](#1) & ~PREPD(#2,?) )
+   ~.
+
+if ( LOCORG(?) & ^INDICATOR(#1) )
+   ~.
+
+if ( LOCATION(?) & ^INDICATOR(#1) )
+   ~.
+
+// Testing insent to comment when commit
+/
+//if ( $1[sec-sp,insent,nonidentified](#1) & ^SENT(#2) )
+//   SENT[sec-sp=+,insent=+,nonidentified=+](#2).
+
+if ( INDICATOR[sec-sp](#1) & ^SENT(#2) )
+   SENT[sec-sp=+](#2).
+
+if ( INDICATOR[sec-sp,nonidentified](#1) & ^SENT(#2) )
+   SENT[sec-sp=+,nonidentified=+](#2).
+\
+/
+if ( LOCATION[sec-sp,insent](#1) & ^SENT(#2) )
+   SENT[sec-sp=+,insent=+](#2).
+
+if ( LOCATION[sec-sp,insent:~](#1) & ^SENT(#2) )
+   SENT[sec-sp=+](#2).
+
+if ( LOCORG[sec-sp,insent](#1) & ^SENT(#2) )
+   SENT[sec-sp=+,insent=+](#2).
+
+if ( LOCORG[sec-sp,insent:~](#1) & ^SENT(#2) )
+   SENT[sec-sp=+](#2).
+\
+
+

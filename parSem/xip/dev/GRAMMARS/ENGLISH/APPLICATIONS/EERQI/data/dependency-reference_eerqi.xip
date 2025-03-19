@@ -1,0 +1,207 @@
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! Xerox Research Centre Europe - Grenoble Laboratory
+//!
+//! Copyright (c) 2009 Xerox Corporation.  All Rights Reserved.
+//!
+//! --- CONTENTS ---
+//!   Project    : English XIP grammar for EERQI
+//!   filename   : dependency-regerence_eerqi.xip
+//!   Date       : 2009
+//!   Author     : Agnes Sandor
+//!  
+//!
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+DependencyRules:
+
+// new dependency PERSON
+// HUNTINGTON's polemic theory
+//MOD_PRE(theory,HUNTINGTON)
+//PARTICLE(HUNTINGTON,'s)
+
+if ( ( $1(#1[mentscopubl],#2[proper]) | $1(#1[proper],#2[mentscopubl]) ) & PARTICLE(#2,?) & ~PERSON(#2) )
+   PERSON(#2).
+if ( ( $1(#1[mentscopubl],#2[c_person,maj]) | $1(#1[proper],#2[mentscopubl]) ) & PARTICLE(#2,?) & ~PERSON(#2) )
+   PERSON(#2).
+
+
+//MOD_PRE(2003,Connolly)
+if ( MOD[pre](#1,#2[proper]) & DATE(#1) & ~PERSON(#2) )
+   PERSON(#2).
+
+
+//NP{NOUN{NOUN{John} NOUN{Dewey}}}
+//SUBJ-N_POTCONCEPT_PRE(conducted,Dewey)
+//HEAD(#2Dewey,#1John Dewey)
+//PERSON_IMPORTANCE(#1John Dewey)
+//MOD_PROPER(#2Dewey,#3John)
+
+//| noun#1{noun{#2}, noun{#3}} |
+| noun#1{#2noun, #3noun} |
+if ( PERSON(#1) & MOD[proper](#3,#2) )
+   PERSON(#3).
+
+//Authors such as PRAKASH
+//MOD_POTCONCEPT_POST(Authors,PRAKASH)
+//PREPD(PRAKASH,such as)
+
+if ( MOD(#1[lemme:author],#2[maj]) & ( PREPD(#2,#3[lemme:such_as]) | PREPD(#2,#3[lemme:as]) | PREPD(#2,#3[lemme:like]) ) & ~PERSON(#2) )
+   PERSON(#2).
+
+if ( MOD(#1[lemme:writer],#2[maj]) & ( PREPD(#2,#3[lemme:such_as]) | PREPD(#2,#3[lemme:as]) | PREPD(#2,#3[lemme:like]) ) & ~PERSON(#2) )
+   PERSON(#2).
+
+// according to Nash
+
+if ( PREPD(#1[proper],#2[lemme:according_to])& ~PERSON(#1) )
+   PERSON(#1).   
+
+
+//However, as Beamer & Varner (2003) suggests, linguistic fluency is not the only standard.
+//SUBJ_PRE(suggests,2003)
+//DATE(2003)
+//SC{BG{as} NP{Beamer} & NP{Varner} ( NP{2003} ) FV{suggests}}
+
+| sc{?, np{#1[proper]}, ?, np{#2[proper]}, ?, np{#3[dig]}, ?, fv{#4[mentscopubl]}} |
+if ( ^DATE(#3) )
+   DATE[reference=+](#3).
+
+| sc{?, np{#1[proper]}, ?, np{#2[proper]}, ?, np{#3[dig]}, ?, fv{#4[mentscopubl]}} |
+if ( ^SUBJ(#4,#3) )
+   SUBJ(#4,#1), SUBJ(#4,#2).
+
+| sc{?, np{#1[proper]}, ?, np{#2[proper]}, ?, np{#3[dig]}, ?, fv{#4[mentscopubl]}} |
+if ( SUBJ(#4,#1) & SUBJ(#4,#2) )
+   PERSON(#1), PERSON(#2).
+
+//Titles of publications
+
+| #1[publtit] |	 
+	 PUBLICATIONTITLE(#1).
+
+
+
+//************Find reference markers in sentences**********************
+   
+
+//Richard Pring's paper on 'The Common School' (2007)
+//MOD_PRE(paper,Richard Pring)
+//PERSON(Richard Pring)
+
+//Pring's approach
+
+if ( PERSON(#1) & ^$1(#2[mentscopubl],#1) )
+   $1[reference=+](#2,#1).
+
+if ( PERSON(#1) & ^$1(#1,#2[mentscopubl]) )
+   $1[reference=+](#2,#1).
+
+if ( PUBLICATIONTITLE(#1) & ^$1(#2[mentscopubl],#1) )
+   $1[reference=+](#2,#1).
+
+if ( PUBLICATIONTITLE(#1) & ^$1(#1,#2[mentscopubl]) )
+   $1[reference=+](#2,#1).
+
+// the paper´s
+
+
+if ( ^DETD(#1[publ],#2[lemme:the]) & PARTICLE(#1,?))
+   DETD[reference=+](#1,#2).
+
+// as H. D. Lewis would have it
+// ASL(as,H. D. Lewis)
+// AUTHOR(H. D. Lewis)
+
+if ( ASL(#1,#2) & ^PERSON(#2) )
+   AUTHOR[reference=+](#2).
+
+//(Carr and Hartnett, 1996, p. 57)
+//INS{( NP{Carr} and NP{Hartnett} , NP{1996} , NP{p. 57} )} 
+// DATE(1996)
+
+| INS{ ?*, np{#2}, ?* } |
+if ( ^DATE(#2) )
+   DATE[reference=+](#2).
+
+//(see Fielding 2005:129)
+//( FV{see} NP{Fielding 2005} : NP{129} ) 
+
+| punct[form:fopar], ?*[form:~fcpar], np{?*,#2}, ?*[form:~fcpar], punct[form:fcpar] |
+if ( ^DATE(#2) & ~DATE[reference](#2) )
+   DATE[reference=+](#2).
+
+// ( FV{see}} NP{Hart et al.} , NP{2004} ) 
+//TEMP_POST_T_ABSOLUT(see,2004)
+
+|  np#3{#2[dig]}, punct[form:fcpar] |
+if ( ^DATE(#2) & ~DATE[reference](#2) & TEMP(#1[lemme:see],#3) )
+   DATE[reference=+](#2).
+
+if ( $1[reference](#1,#2) & ^PERSON(#3) & ~AUTHOR(#3) )
+   AUTHOR[reference=+](#3).
+
+if ( $1[reference](#1) & ^PERSON(#3) & ~AUTHOR(#3) )
+   AUTHOR[reference=+](#3).
+
+//FV{see} NP{Fielding} , NP{2001} 
+//DATE_REFERENCE(2001)
+//OBJ_POST(see,Fielding)
+
+| fv{#1[lemme:see]}, np{#2}, ?[comma], np{#3} |
+if ( DATE[reference](#3) & OBJ(#1,#2) & ~AUTHOR(#2) )
+   AUTHOR[reference=+](#2).
+
+//An important post subject reflection is that profit for shareholders is important and can be pursued through stakeholder theory (Freeman, R. E., Wicks, A. C., & Parmar, B., 2004) � inclusion of all stakeholders for a superior long term result.
+//NP{Parmar} , NP{B.} , NP{2004}
+
+| np{#1[proper]}, ?[comma], np{#2[initial]} |
+if ( ^DATE(#3) )
+    DATE[reference=+](#3)
+
+| np{#1[proper]}, ?[comma], np{#2[maj,let]} |
+if ( ^DATE(#3) )
+    DATE[reference=+](#3)
+
+| np{#1[proper]}, ?[comma], np{#2[maj,let]} |
+if ( ^DATE[reference](#3) )
+    AUTHOR[reference=+](#1)
+
+//In a similar way to Simon Sinek (2009), on his talk about personal motive and inspiring action, I believe in understanding why I am doing something.
+//DATE(2009)
+
+if ( ^DATE(#1) & PERSON(#2) )
+    DATE[reference=+](#1).
+
+if ( DATE[reference](#1) & ^PERSON(#2) )
+    PERSON[reference=+](#2).
+
+if ( ^DATE(#1) & AUTHOR(#2) )
+    DATE[reference=+](#1).
+
+if ( DATE[reference](#1) & ^AUTHOR(#2) )
+    AUTHOR[reference=+](#2).
+
+
+Script:
+
+iftest ( AUTHOR(#1) ) { #1[other=+,publ=+,rf=+,mentscopubl=+]; }
+
+DependencyRules:
+
+if ( SUBJ-N(#1[rf],#2[proper,guess]) ) 
+   AUTHOR(#2).
+   
+
+//Pring's approach
+
+if ( AUTHOR(#1) & ^$1(#2[mentscopubl],#1) )
+   $1[reference=+](#2,#1).
+
+if ( AUTHOR(#1) & ^$1(#1,#2[mentscopubl]) )
+   $1[reference=+](#2,#1).
+
+if ( PUBLICATIONTITLE(#1) & ^$1(#2[mentscopubl],#1) )
+   $1[reference=+](#2,#1).
+
+if ( PUBLICATIONTITLE(#1) & ^$1(#1,#2[mentscopubl]) )
+   $1[reference=+](#2,#1).
