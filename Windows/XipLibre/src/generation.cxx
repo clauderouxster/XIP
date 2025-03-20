@@ -1,0 +1,626 @@
+/*
+ * Xerox Research Centre Europe - Grenoble Laboratory
+ *
+ * Copyright (C) 2003 - 2007 Xerox Corporation, XRCE-Grenoble, All Rights Reserved.
+ * This file can only be used with the XIP library, 
+ * it should not and cannot be used otherwise.
+ */
+/* --- CONTENTS ---
+   Project    : XIP
+   Version    : 9.64
+   filename   : generation.cxx
+   Date       : 05/03/2009
+   Purpose    : Generation
+   Programmer : Claude ROUX
+   Reviewer   : 
+*/
+
+#include <iostream>
+
+using namespace std;
+#include "xipvecta.h"
+
+#include "parsbin.h"
+#include "ntmhmm.h"
+#include "generation.h"
+#include "x_node.h"
+
+char* TV(GlobalParseur* parseur,Vecteur* v);
+char* TC(GlobalParseur* parseur,Traits* tr);
+
+
+void genereGraphe::profondeur(int p,int n) {
+	if (noeud!=NULL) {
+		noeud->profondeur=p;
+		noeud->numero_ordre=n;
+	}
+	for (int i=0;i<enfants.dernier;i++)
+		enfants[i]->profondeur(i+1,i);
+}
+
+genereGraphe* genereGraphe::recupere(ResultatFonction* r) {
+	genereGraphe* g=r->frere;
+	if (g==NULL)
+		g=new genereGraphe(r);
+	else {
+		//On garde la position de ce noeud avant son deplacement
+		g->parentancien=g->parent;
+		g->posancien=g->pos;
+		//On le retire de son ancienne position
+		if (g->pos!=-1 && g->parent!=NULL) {
+			g->parent->enfants.retireElement(g->pos);
+			for (int i=0;i<g->parent->enfants.dernier;i++)
+				g->parent->enfants[i]->pos=i;
+		}
+	}
+	g->parent=this;
+	return g;
+}
+
+void genereGraphe::ajoute(genereGraphe* g,int p) {
+	g->pos=p;
+	enfants.insere(p,g);
+	g->parent=this;
+}
+
+void genereGraphe::retire(int p) {
+	parent->enfants.retireElement(p);
+	if (parentancien==NULL)
+		return;
+
+	parentancien->enfants.insertion(posancien,this);
+	pos=posancien;
+	parentancien=NULL;
+	posancien=-1;	
+}
+
+
+//Cette fonction retire un element de la structure genereGraphe
+//Elle retourne NON, si l'element ne doit pas etre detruit
+//OUI si il doit etre detruit
+char genereGraphe::retire() {
+	if (parent==NULL)
+		return NON;
+	
+	parent->enfants.retireElement(pos);
+	
+	for (int i=0;i<parent->enfants.dernier;i++)
+		parent->enfants[i]->pos=i;
+	//On le replace a sa place
+	if (parentancien==NULL)
+		return OUI;
+	
+	parentancien->enfants.insertion(posancien,this);
+	pos=posancien;
+	parentancien=NULL;
+	posancien=-1;
+	return NON;
+}
+
+genereGraphe::genereGraphe(ResultatFonction* r) {
+	maj=NON;
+	tokenpos=-1;
+	noeud=r;
+	mot="";
+	formecalcule=NON;
+	if (r!=NULL)
+		r->frere=this;
+	pos=-1;
+	parent=NULL;
+	parentancien=NULL;
+	posancien=-1;
+}
+
+ genereGraphe::~genereGraphe() {
+	 if (noeud!=NULL)
+		 noeud->frere=NULL;
+	 enfants.raz();
+ }
+
+ void parcourspourdestruction(genereGraphe* g,VECTA<genereGraphe*>& gs) {
+	int i;
+	gs.ajoute(g);
+	for (i=0;i<g->enfants.dernier;i++)
+		parcourspourdestruction(g->enfants[i],gs);
+ }
+
+
+void genereGraphe::nettoie() {
+	int i;
+	VECTA<genereGraphe*> gs;
+	for (i=0;i<enfants.dernier;i++)
+		parcourspourdestruction(enfants[i],gs);
+	for (i=0;i<gs.dernier;i++)
+		delete gs[i];
+	enfants.raz();
+}
+
+void genereGraphe::affiche(ostream& os) {
+	if (noeud==NULL)
+		os<<"GEN_TREE";
+	else
+		noeud->Affiche(os,3);
+	if (enfants.dernier!=0) {
+		os<<"{";
+		for (int i=0;i<enfants.dernier;i++) {
+			if (i)
+				os<<",";
+			enfants[i]->affiche(os);
+		}
+		os<<"}";
+	}
+}
+
+char parentde(ResultatFonction* fille,ResultatFonction* parent) {
+	genereGraphe* gfille=fille->frere;
+	if (gfille==NULL || parent->frere==NULL)
+		return NON;
+	while (gfille!=NULL) {
+		if (gfille==parent->frere)
+			return OUI;
+		gfille=gfille->parent;
+	}
+	return NON;
+}
+
+ResultatFonction* suivantde(ResultatFonction* courant,ResultatFonction* suivant,int increment) {
+	genereGraphe* gcourant=courant->frere;
+	if (gcourant==NULL || gcourant->parent==NULL)
+		return NULL;
+
+	genereGraphe* lesuivant=gcourant->parent->enfants[gcourant->pos+increment];	
+	if (suivant==NULL) {
+		if (lesuivant!=NULL)
+			return lesuivant->noeud;
+		return NULL;
+	}
+
+	if (suivant->frere==lesuivant)
+		return suivant;
+	return NULL;
+}
+
+ResultatFonction* perede(ResultatFonction* courant,ResultatFonction* suivant) {
+	genereGraphe* gcourant=courant->frere;
+	if (gcourant==NULL || gcourant->parent==NULL)
+		return NULL;
+
+	genereGraphe* lesuivant=gcourant->parent;	
+	if (suivant==NULL) {
+		if (lesuivant!=NULL)
+			return lesuivant->noeud;
+		return NULL;
+	}
+
+	if (suivant->frere==lesuivant)
+		return suivant;
+	return NULL;
+}
+
+ResultatFonction* filsde(ResultatFonction* courant,ResultatFonction* suivant,char dernier) {
+	genereGraphe* gcourant=courant->frere;
+	if (gcourant==NULL || gcourant->parent==NULL)
+		return NULL;
+
+
+	genereGraphe* lesuivant;
+	if (dernier==OUI)
+		lesuivant=gcourant->enfants.fin();		
+	else
+		lesuivant=gcourant->enfants[0];		
+	if (suivant==NULL) {
+		if (lesuivant!=NULL)
+			return lesuivant->noeud;
+		return NULL;
+	}
+
+	if (suivant->frere==lesuivant)
+		return suivant;
+	return NULL;
+}
+
+
+void GlobalParseur::parcoursrecursif(genereGraphe* g) {
+	if (g->enfants.dernier==0) {
+		g->tokenpos=lestokens.dernier;
+		lestokens.ajoute(g);
+	}
+	else {
+		for (int i=0;i<g->enfants.dernier;i++)
+			parcoursrecursif(g->enfants[i]);
+	}
+}
+
+void GlobalParseur::parcoursrecursifinit(genereGraphe* g,char& premier) {
+	if (g->enfants.dernier==0) {
+		g->tokenpos=lestokens.dernier;
+		ConstruitMotGraphe(g,premier);
+		lestokens.ajoute(g);
+	}
+	else {
+		for (int i=0;i<g->enfants.dernier;i++)
+			parcoursrecursifinit(g->enfants[i],premier);
+	}
+}
+
+int GlobalParseur::ListeTokens(VECTA<automate*>& expressions) {	
+	char premier=OUI;
+	lestokens.raz();
+	parcoursrecursifinit(&graphegeneration,premier);
+	int i,j,nb=0;	
+	
+	listedetokens.nettoie();
+	//Nous explorons alors, l'ensemble de nos expressions par rapport a "lestokens"
+	for (j=0;j<lestokens.dernier;j++) {
+		if (expressions[0]->recherche(lestokens[j]->mot)!=NULL) {
+			char trouve=OUI;
+			for (i=1;i<expressions.dernier;i++) {
+				if ((j+i)>=lestokens.dernier) {
+					trouve=NON;
+					break;
+				}
+				if (expressions[i]->recherche(lestokens[j+i]->mot)==NULL) {
+					trouve=NON;
+					break;
+				}
+			}
+			if (trouve==OUI) {
+				listedetokens.ajoute(new VECTA<genereGraphe*>);
+				for (i=0;i<expressions.dernier;i++)
+					listedetokens.fin()->ajoute(lestokens[i+j]);
+				nb++;
+			}
+		}
+	}
+	return nb;
+}
+
+ResultatFonction* tokensuivant(GlobalParseur* parseur,ResultatFonction* courant,
+							   ResultatFonction* suivant,int pos) {
+	genereGraphe* gcourant=courant->frere;
+	if (gcourant==NULL || gcourant->parent==NULL)
+		return NULL;
+
+	parseur->lestokens.raz();
+	parseur->parcoursrecursif(&parseur->graphegeneration);
+	
+	int idx;
+	if (gcourant->tokenpos==-1) {
+		//Nous ne sommes pas sur un token, il nous faut descendre pour
+		//trouver le bon
+		genereGraphe* next=gcourant->enfants.fin();
+		while (next!=NULL && next->tokenpos==-1)
+			next=next->enfants.fin();
+		//On va chercher systematiquement le dernier a droite
+		//Si on ne le trouve pas, c'est une erreur
+		if (next==NULL)
+			return NULL;
+		idx=next->tokenpos+pos;
+	}
+	else
+		idx=gcourant->tokenpos+pos;
+
+	genereGraphe* lesuivant=parseur->lestokens[idx];
+
+	if (suivant==NULL) {
+		if (lesuivant!=NULL)
+			return lesuivant->noeud;
+		return NULL;
+	}
+
+	if (suivant->frere==lesuivant)
+		return suivant;
+	return NULL;
+}
+
+ResultatFonction* GlobalParseur::tokendufond(ResultatFonction* courant,ResultatFonction* suivant,char dernier) {
+	genereGraphe* gcourant=courant->frere;
+	if (gcourant==NULL || gcourant->parent==NULL)
+		return NULL;
+
+	lestokens.raz();
+	parcoursrecursif(gcourant);
+	
+	genereGraphe* lesuivant;
+	if (dernier==NON)
+		lesuivant=lestokens[0];
+	else
+		lesuivant=lestokens.fin();
+
+	if (suivant==NULL) {
+		if (lesuivant!=NULL)
+			return lesuivant->noeud;
+		return NULL;
+	}
+
+	if (suivant->frere==lesuivant)
+		return suivant;
+	return NULL;
+}
+
+void GlobalParseur::ConstruitMotGraphe(genereGraphe* g,char& premier) {
+	if (g->noeud==NULL) {
+		g->formecalcule=OUI;
+		return;
+	}
+	if (g->formecalcule==NON) {
+		char lem=NON;
+		if (g->noeud->Fx==Xcreationtoken) 
+			lem=construitchainegenere(g,g->noeud->arg[0]->source,g->mot);
+		else {
+			if (g->noeud->Fx==Xsurfacetoken) {
+				g->noeud->arg[0]->Surface(g->mot);
+				lem=OUI;
+			}
+		}
+
+		if (lem==NON && g->noeud->arg.dernier!=0)
+			g->noeud->arg[0]->Lemme(g->mot);
+
+		g->formecalcule=OUI;
+	}
+	g->maj=NON;
+	if (premier==OUI) {
+		premier=NON;
+		g->maj=OUI;
+	}
+}
+
+void GlobalParseur::parcourssousnoeud(genereGraphe* g,string& phrase,char& premier) {
+
+	if (g->noeud!=NULL && 
+		(g->noeud->Fx==Xcreationtoken || g->noeud->Fx==Xsurfacetoken || g->enfants.dernier==0)) {
+		ConstruitMotGraphe(g,premier);				
+		if (g->mot!="") {
+			phrase+=g->mot;
+			if (g->maj==OUI)
+				RenvoieMaj(phrase);
+			phrase+=" ";
+		}
+	}
+	else {
+		for (int i=0;i<g->enfants.dernier;i++)
+			parcourssousnoeud(g->enfants[i],phrase,premier);
+	}
+}
+
+
+void GlobalParseur::parcoursgeneration(string& s) {
+	char premier=OUI;
+	for (int i=0;i<graphegeneration.enfants.dernier;i++)
+		parcourssousnoeud(graphegeneration.enfants[i],s,premier);
+
+	ostream* os=&cout;
+    if (OS!=NULL)
+        os=OS;	
+	graphegeneration.affiche(*os);
+	*os<<Endl;
+}
+
+char GlobalParseur::initgenere(Liste* L,string& lestraits) {
+	return NON;
+}
+
+char GlobalParseur::lecturemontante(string& wrd,VECTA<string*>& reponse) {
+	return NON;
+}
+
+char GlobalParseur::lecturedescendante(string& wrd,string& feat,string& reponse) {
+	return NON;
+}
+
+char GlobalParseur::construitchainegenere(genereGraphe* graphe,Liste* L,string& s) {
+	return NON;
+}
+
+char GlobalParseur::comparecat(Cat* X,Cat* Y) {
+	if (Y==XCatVide)
+		return OUI;
+	if (X==Y)
+		return OUI;
+	return NON;
+}
+
+//Test en cas de presence d'un argument sur le noeud
+char GlobalParseur::TestArgNodeGauche(OrdreNoeuds* ord,ResultatFonction* r,VECTA<Noeud*>& args) {
+	if (ord->argsgauche.dernier==0)
+		return OUI;
+
+	//Il faut que l'arite soit la meme
+	if (ord->argsgauche.dernier!=r->nb_args)
+		return NON;
+
+	//Sinon, on parcourt nos arguments
+	for (int i=0;i<ord->argsgauche.dernier;i++) {
+		//qui doivent evidemment correspondre aux arguments de r
+		int num_noeud=ord->argsgauche[i];
+		//Si ce n'est pas le meme noeud deja rencontre, on part en erreur
+		if (args[num_noeud]!=NULL && args[num_noeud]!=r->arg[i])
+			return NON;
+		//On conserve la trace de notre noeud
+		args.affecte(num_noeud,r->arg[i]);
+		//On teste alors les traits
+		if (!ITR(this,ord->argtraitsgauche[i],r->arg[i]->lesTraits(),NONECRIT))
+			return NON;
+	}
+	
+	return OUI;
+}
+
+//Test en cas de presence d'un argument sur le noeud
+char GlobalParseur::TestArgNodeDroit(OrdreNoeuds* ord,ResultatFonction* r,VECTA<Noeud*>& args) {
+	if (ord->argsdroit.dernier==0)
+		return OUI;
+
+	//Il faut que l'arite soit la meme
+	if (ord->argsdroit.dernier!=r->nb_args)
+		return NON;
+
+	//Sinon, on parcourt nos arguments
+	for (int i=0;i<ord->argsdroit.dernier;i++) {
+		//qui doivent evidemment correspondre aux arguments de r
+		int num_noeud=ord->argsdroit[i];
+		//Si ce n'est pas le meme noeud deja rencontre, on part en erreur
+		if (args[num_noeud]!=NULL && args[num_noeud]!=r->arg[i])
+			return NON;
+		//On teste alors les traits
+		if (!ITR(this,ord->argtraitsdroit[i],r->arg[i]->lesTraits(),NONECRIT))
+			return NON;
+	}
+	
+	return OUI;
+}
+
+char GlobalParseur::VerifieOrdre(VECTA<OrdreNoeuds*>& liste,VECTA<genereGraphe*>& noeuds) {
+	//Nous parcourons toutes les regles...
+	VECTA<Noeud*> args;
+	for (int l=0;l<liste.dernier;l++) {
+		//Puis nous parcourons tous les noeuds dans noeuds susceptibles de correspondre a Xgauche[trgauche]
+		for (int n=0;n<noeuds.dernier;n++) {			
+			args.raz();
+			if (comparecat(noeuds[n]->noeud->Fx,liste[l]->Xgauche) &&
+				ITR(this,liste[l]->Tgauche,noeuds[n]->noeud->traits,NONECRIT) &&
+				TestArgNodeGauche(liste[l],noeuds[n]->noeud,args)) {
+				//Puis on reparcourt la liste et on verifie qu'aucun element ne correspond a Xdroit qui ne soit avant
+				for (int d=0;d<noeuds.dernier;d++) {
+					if (d==n)
+						continue;
+					if (comparecat(noeuds[d]->noeud->Fx,liste[l]->Xdroit) &&
+						ITR(this,liste[l]->Tdroit,noeuds[d]->noeud->traits,NONECRIT) &&
+						TestArgNodeDroit(liste[l],noeuds[d]->noeud,args)) {
+							if (n>d)
+								return NON;
+					}
+				}
+			}
+		}
+	}
+	return OUI;
+}
+
+
+char GlobalParseur::TestSimpleOrdreNoeuds(int couche,VECTA<genereGraphe*>& creees) {
+	if (creees.dernier==0)
+		return OUI;
+
+	if (VerifieOrdre(ListeOrdreNoeuds[couche],creees)==NON)
+		return NON;
+	if (VerifieOrdre(ListeOrdreNoeuds[0],creees)==NON)
+		return NON;
+
+	return OUI;
+}
+
+void GlobalParseur::recuperenom(int& iarg,x_node* x,TestFonctionDependance* ntf,VECTA<char>& variables_utilisees) {
+	Categorie* c=CatVide;
+
+	if (x->token=="namedep") {
+		if (x->value=="?")
+			ntf->vardep=1;
+	}
+	
+	if (x->token=="name") {
+		c=ChercheFonc((char*)x->value.c_str());
+		ntf->Fx=&c->X;
+	}
+	
+	if (x->token=="vardepnode") {
+		if (x->nodes[0]->token=="pointeur") {
+			ntf->pointeur=OUI;
+			ntf->vardep=atoi((char*)x->nodes[1]->value.c_str())+1;
+		}
+		else
+			ntf->vardep=atoi((char*)x->nodes[0]->value.c_str())+1;
+		return;
+	}
+	
+	if (x->token=="pos") {
+		ntf->arg.affecte(iarg,-1);
+		iarg++;
+		return;
+	}
+	
+	if (x->token=="var") {
+		ntf->arg.affecte(iarg,atoi((char*)x->nodes[0]->value.c_str()));
+		variables_utilisees.affecte(ntf->arg[iarg],OUI);
+		iarg++;
+		return;
+	}
+
+	if (x->token=="nodefeatures") {
+		istringstream traits(x->value.substr(1,x->value.size()-1));
+		Traits* tr=BatitTraits(traits,']');
+		ntf->traits.affecte(iarg-1,FactoriseTraits(tr));
+		return;
+	}
+		
+	if (x->token=="features") {
+		istringstream traits(x->value.substr(1,x->value.size()-1));
+		Traits* tr=BatitTraits(traits,']');
+		ntf->traitsFonction=FactoriseTraits(tr);
+		return;
+	}
+	
+	for (int i=0;i<x->nodes.size();i++)
+		recuperenom(iarg,x->nodes[i],ntf,variables_utilisees);
+}
+
+//Parcours recursif d'un x_node
+void GlobalParseur::parcoursxnode(TestFonctionDependance* tf,x_node* x,VECTA<char>& variables_utilisees) {
+
+	int i;
+	if (x->token=="subdependency") {
+		for (i=0;i<x->nodes.size();i++)
+			parcoursxnode(tf->fils.fin(),x->nodes[i],variables_utilisees);
+		return;
+	}
+
+	if (x->token=="dependency") {
+		TestFonctionDependance* ntf=new TestFonctionDependance(XCatVide);
+		StockeTestFonction((TestFonction*)ntf);
+		ntf->typecat=C_GENERATION;
+		ntf->leType=TESTNOEUDGENERATION;
+		tf->fils.ajoute(ntf);
+		int iarg=0;
+		recuperenom(iarg,x,ntf,variables_utilisees);
+		return;
+	}
+	
+	for (i=0;i<x->nodes.size();i++)
+		parcoursxnode(tf,x->nodes[i],variables_utilisees);
+
+}
+
+void initfinalTestFonctionDependance(TestFonctionDependance* e,char negation) {
+	if (e->fils.dernier!=0)
+		initfinalTestFonctionDependance(e->fils.fin(),negation);
+	else
+		e->final=1+negation;		
+}
+
+TestFonction* GlobalParseur::construitarbregenere(TestFonction* tinit,x_node* x,VECTA<char>& variables_utilisees,char negation) {
+	if (tinit==NULL) {
+		string message="Missing root in a GENERATION expression";
+		erreur(STR(message));
+	}
+
+	if (tinit->Type()!=TESTFONCTIONDEPENDANCE) {
+		string message="Wrong type of node";
+		erreur(STR(message));
+	}
+
+	TestFonctionDependance* tf=(TestFonctionDependance*)tinit;
+	if (tf->Fx->type!=C_GENERATION) {
+		string message="Wrong type of node";
+		erreur(STR(message));
+	}
+	tf->negation=negation;
+	//tf->leType=TESTRACINEGENERATION;
+	tf->leType=TESTNOEUDGENERATION;
+	//On parcourt notre structure x_node
+	parcoursxnode(tf,x,variables_utilisees);
+	initfinalTestFonctionDependance(tf,negation);
+	return tf;
+}
+
+

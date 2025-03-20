@@ -1,0 +1,1962 @@
+/*
+ * Xerox Research Centre Europe - Grenoble Laboratory
+ *
+ * Copyright (C) 2003, Xerox Corporation, XRCE-Grenoble.
+ * This file can only be used with the XIP library, 
+ * it should not and cannot be used otherwise.
+ */
+/* --- CONTENTS ---
+   Project    : XIP
+   Version    : 3.16
+   filename   : applique.cxx
+   Date       : 10/01/1999
+   Purpose    : Deduction+sequence+marking rules
+   Programmer : Claude ROUX
+   Reviewer   : 
+*/
+
+#include "parsbin.h"
+
+//Quelques variables pour les statistiques
+float resolution_tentative=0;
+float resolution_reussite=0;
+float resolution_quantite=0;
+float nombre_boucle_sequence=0;
+float nombre_boucle_marquage=0;
+
+void ListerCategories(STVecteur v,VECTA<int>& vv) {
+    
+    for (int i=NbCats-1;i>=0;i--) {
+        if (v==0)
+            return;
+        if (v<0) 
+            vv.ajoute(i);
+        v<<=1;
+    }            
+}
+
+//On instancie sur les noeuds les valeurs qui ont ete initialise...
+void StabiliseTraitsVocabulaire(VECTA<ListeVoc*>& pile,VECTA<Traits*>& treg) {
+    for (int i=0;i<pile.dernier;i++) {
+        ListeVoc* voc=pile[i];
+        if (treg[i]!=NULL) {
+            for (int iv=0;iv<voc->nbX;iv++)
+                voc->tr[iv]->ou(treg[i]);
+        }
+    }
+}
+
+
+//On instancie sur les noeuds les valeurs qui ont ete initialise...
+void StabiliseTraitsNoeud(VECTA<Noeud*>& pile) {
+    for (int i=0;i<pile.dernier;i++) {
+        Liste* l=pile[i]->source;
+        
+        if (l!=NULL && l->instanciateur!=NULL)
+            l->StabiliseTraits(OUI);
+    }
+}
+
+
+//On instancie sur les noeuds les valeurs qui ont ete initialise...
+inline void InstancieTraitsNoeud(GlobalParseur* parseur,VECTA<Traits*>& pile,VECTA<Noeud*>& pileNoeuds) {
+    Liste* l;
+    Noeud* n;
+
+    for (int i=0;i<pile.dernier;i++) {
+        n=pileNoeuds[i];
+
+        l=n->source;
+
+        l->instanciateur=pile[i];
+        if (parseur->TRACE || parseur->TRACEDEPENDANCE) {
+            if (pile[i]!=NULL) {
+                trace<<(l->X)->nom<<"<"<<l->N.gauche<<"-"<<l->N.droite<<"> = ";
+                (l->traitsactif)->TraitsEnChaine(parseur,parseur->Chaine_traits);
+                trace<<parseur->Chaine_traits;
+                trace<<parseur->CHAINES[8];
+                pile[i]->TraitsEnChaine(parseur,parseur->Chaine_traits);
+                trace<<parseur->Chaine_traits;
+            }
+        }
+        
+        if (l!=NULL) {
+            //l=n->source
+            //l'instanciateur est alors ecrit
+            l->SauveTraits();//duplication du champ traits            
+            if (l->instanciateur != NULL) {
+                parseur->InstancieTraits(l->traitsactif,l->instanciateur); 
+                if (parseur->TRACE || parseur->TRACEDEPENDANCE) {   
+                    (l->traitsactif)->TraitsEnChaine(parseur,parseur->Chaine_traits);
+                    trace<<parseur->CHAINES[7]<<parseur->Chaine_traits<<Endl;
+                }
+            }
+        }        
+    }
+}
+
+//--------------------------------------------------------------------------------
+inline void Depile(GlobalParseur* parseur,ExtractionFonction& pile,int sp) {
+    ResultatFonction* r;
+    for (int bp=pile.dernier;bp>sp;bp--) {
+        r=pile.retire();
+        parseur->RendreResFonc(r);
+    }
+}
+
+
+inline void Depile(VECTA<Traits*>& pile,int sp) {
+    pile.dernier=sp;
+}
+
+inline void Depile(VECTA<Noeud*>& pile,int sp) {
+    pile.dernier=sp;
+}
+
+inline void Depile(VECTA<ListeVoc*>& pile,int sp) {
+    pile.dernier=sp;
+}
+//--------------------------------------------------------------------------------
+//Cette fonction ne garde dans une pile que les solutions...
+inline void ReorganisePile(GlobalParseur* parseur,ExtractionFonction& pile,int bp) {
+    
+    if (pile.dernier==0 || pile.dernier==bp+1)
+        return;
+
+    ResultatFonction* r=pile.fin();
+    static VECTA<ResultatFonction*> garde(3);
+    garde.raz();
+
+    int i;
+    //Cette variable va servir de reference pour la taille des elements que l'on conserve dans la pile
+    int nbvar=pile.fin()->nb_noeuds;
+
+    for (i=pile.dernier-1;i>bp;i--) {
+        r=pile.retire();
+
+        if (r!=NULL && r->nb_noeuds==nbvar)
+            garde.ajoute(r);
+        else
+            parseur->RendreResFonc(r); 
+    }
+    
+    for (i=garde.dernier-1;i>=0;i--)
+        pile.ajoute(garde[i]);  
+}
+
+//-------------------------------------------------------------------------------
+//Cette methode est utilise pour verifier a l'avance si un noeud est compatible avec un element de la regle
+//Comme la comparaison est une operation couteuse, on transmet un booleen pour indiquer a la recursion 
+//suivante que la comparaison a deja ete effectuee et qu'elle a abouti a un succes, si elle a fonctionne
+//evidemment...
+inline char PreTestCategorie(GlobalParseur* parseur,SousArbre* ar,Noeud* n,char& calcul) {
+    calcul=OUI;
+    if (ar->X!=NULL && !ar->profondeurNonBornee && ar->plus!=SAUTE) 
+        if (ar->saute==NON || !ar->derivations.dernier) {
+            if (parseur->CompareNoeudSousArbre(ar,n)==NON) 
+                return NON;
+            else
+                calcul=NON;
+        }
+    return OUI;
+}
+
+inline char PreTestEtatCategorie(GlobalParseur* parseur,EtatArbre* et,Noeud* n,char& calcul) {
+    calcul=OUI;
+    ArcArbre* ar;
+    
+    //S'il y a un plus d'un arc, on ne peut rien tester
+    if (et->arcs.dernier>1)        
+        return OUI;   
+    
+    ar=et->arcs[0];
+    
+    //C'est un simple deplacement
+    if (ar->X==parseur->XCatEpsilon)
+        return OUI;
+    
+    if (!ar->profondeurNonBornee) {
+        if (parseur->CompareNoeudSousArbre(ar,n)==NON) 
+            return NON;
+        else
+            calcul=NON;
+    }
+    
+    return OUI;
+}
+
+inline char PreTestArcCategorie(GlobalParseur* parseur,ArcArbre* ar,Noeud* n,char& calcul) {
+    calcul=OUI;
+    
+    //C'est un simple deplacement
+    if (ar->X==parseur->XCatEpsilon)
+        return OUI;
+    
+    if (!ar->profondeurNonBornee) {
+        if (parseur->CompareNoeudSousArbre(ar,n)==NON) 
+            return NON;
+        else
+            calcul=NON;
+    }
+    
+    return OUI;
+}
+
+//------------------------------------------------------------------------
+char PreTestCategorie(SousArbre* ar,Cat* X) {
+
+    if (ar->X != NULL && ar->X->Val!=0 && !ar->derivations.dernier)
+        //si ce noeud ne peut etre compare, on le saute
+        if (ar->X != X)
+            return NON;
+
+    return OUI;
+}
+
+//------------------------------------------------------------------------
+char PreTestNoeudCat(GlobalParseur* parseur,SousArbre* ar,Liste* L) {
+    Noeud* n=NULL;
+    if (L!=NULL)
+        n=&L->N;
+
+    if (ar->X!=NULL && !ar->profondeurNonBornee && ar->plus!=SAUTE) 
+        if (ar->saute==NON || !ar->derivations.dernier) {
+//            if (n==NULL || n->nombre<ar->nombre) 
+//                return NON;
+            if (parseur->CompareNoeudSousArbre(ar,n)==NON) 
+                return NON;
+        }
+    
+    return OUI;
+}
+
+//--------------------------------------------------------------------------------
+
+char RetireExtremite(PileNoeuds* courant,int & sp) {
+    if (courant==NULL)
+        return NON;
+
+    for (int i=courant->noeuds.dernier-1;i>=0;i--) {
+        if (sp==0)
+            break;
+
+        PileNoeuds* pn=courant->pile[i];
+
+        if (pn!=NULL) {       
+            char detruire=RetireExtremite(pn,sp);
+            if (detruire==OUI) {
+                //On le marque pour une destruction ulterieure
+                pn->nb=-2;
+                //On detruit tous ceux qui sont semblables
+                for (int j=i;j>=0 && (courant->pile[j] && courant->pile[j]->nb==-2);j--)
+                    courant->pile.retire();
+                delete pn;
+                if (sp>0) {
+                    courant->noeuds.retire();
+                    sp--;
+                }
+            }
+        }
+        else {
+            courant->noeuds.retire();
+            sp--;
+        }
+    }
+    
+    if (courant->noeuds.dernier==0)
+        return OUI;
+    return NON;
+}
+
+//Remise a zero des variables affectes pendant une recursion
+void NettoiePileVariables(PileNoeuds& pile,int sp) {
+    int val=pile.nb-sp;
+
+    if (val==0)
+        return;
+
+    RetireExtremite(&pile,val);
+    pile.nb=sp;
+}
+
+void ConstruitListeVariables(PileNoeuds* pile,VECTA<Noeud*>* var, VECTA<VECTA<Noeud*>*>& variables) {
+    VECTA<Noeud*> nouveau;
+
+    for (int i=pile->noeuds.dernier-1;i>=0;i--) {
+        
+        if (var!=NULL)
+            nouveau.affecte(*var);
+        
+        nouveau.affecte(pile->argument,pile->noeuds[i]);
+        
+        if (pile->pile[i]!=NULL)
+            ConstruitListeVariables(pile->pile[i],&nouveau,variables);
+        else {//c'est une extremite
+            VECTA<Noeud*>* vn=new VECTA<Noeud*>;
+            vn->affecte(nouveau);
+            variables.ajoute(vn);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------
+//Cette fonction ne garde dans une pile que les solutions...
+inline void ReorganisePile(VECTA<PileNoeuds*>& pile,int bp) {
+    
+    if (pile.dernier==0 || pile.dernier==bp+1)
+        return;
+
+    PileNoeuds* r=pile.fin();
+    static VECTA<PileNoeuds*> garde(3);
+    garde.raz();
+    int i;
+    //Cette variable va servir de reference pour la taille des elements que l'on conserve dans la pile
+    int nbvar=pile.fin()->nb;
+    
+    for (i=pile.dernier-1;i>bp;i--) {
+        r=pile.retire();
+        
+        if (r!=NULL && r->nb==nbvar)
+            garde.ajoute(r);
+        else
+            delete r;
+    }
+    for (i=garde.dernier-1;i>=0;i--)
+        pile.ajoute(garde[i]);  
+}
+
+/*
+inline char rechercheCheminEpsilon(EtatArbre* et,Cat* vide) {
+    if (et->etatfin==1)
+        return OUI;
+    for (int i=0;i<et->arcs.dernier;i++) {
+        ArcArbre* ar=et->arcs[i];
+        if (ar->X==vide && ar->type!=1 && ar->marque!=2)
+            if (rechercheCheminEpsilon(ar->etatarbre,vide)==OUI)
+                return OUI;
+    }
+    return NON;
+}
+*/
+
+/*
+La description qui suit vaut pour l'ensemble des procedures ci-dessous
+Nous avons cinq possibilites de codage pour les elements suivants:
+
+ar ar+ ar* (ar) (ar1;ar2;ar3)
+
+1) ar: ar->X!=NULL && ar->saute==NON && ar->derivations.dernier==0
+2) ar+: ar->X!=NULL && ar->saute==NON && ar->derivations.dernier!=0
+3) ar*: ar->X==NULL && ar->saute==OUI && ar->derivations.dernier!=0
+4) (ar): ar->X!=NULL && ar->saute==OUI && ar->derivations.dernier!=0
+5) (ar1;ar2;ar3): ar->X==NULL && ar->saute==NON && ar->derivations.dernier!=0
+
+Attention, pour un element de type ar+, sa premiere interpretation impose la presence d'un element, mais pour les
+interpretations suivantes, il est transforme en ar* (pour cela on transforme son ar->saute==NON en ar->saute==OUI)
+*/
+
+//--------------------------------------------------------------------------------
+//Cette methode est appele dans le cadre d'une regle de deduction basee sur un automate d'arbre.
+// |automate| where (test) dependance. La difference fondamentale avec Applique reside dans la possibilite
+// d'une interpretation non deterministe du test. En revanche, dans Applique, le test reussit si au moins une interpretation
+// pour l'expression booleene est vraie.
+float resolution_boucle;
+void EtatArbre::AppliqueInference(ContexteAnalyse& ct,
+                                  char& chemin,                                  
+                                  char& fin,
+                                  Noeud* n,
+                                  Noeud* ndernier,
+                                  char profondeur,
+                                  char enProfondeur,
+                                  Piles& stacks,
+                                  PileNoeuds& pile,
+                                  char calculComparaison) {
+    ArcArbre* ar;
+    EtatArbre* boucle=this;
+    char solution;
+    int sp,st;
+    char debut =NON;
+    PileNoeuds* variables;
+    char UnEstPasse=NON;
+    char calculTest;    
+    char deterministe=ct.deterministe;
+    int bc;
+    
+    int maxbc=arcs.dernier;
+    int debutbc=0;
+
+    if (ct.borne!=-1) {
+        debutbc=ct.borne;
+        maxbc=ct.borne+1;
+        ct.borne=-1;
+    }
+
+
+    //Pas d'elements lexicaux a ce niveau d'analyse
+    if (n!=NULL && n->terminal())
+        return;
+    
+    if (fin==OUI)
+        return;
+    
+    if (fin==-1) {
+        fin=NON;
+        debut=OUI;
+    }
+
+//    if (n==NULL) {
+        //if (rechercheCheminEpsilon(this,ct.parseur->XCatEpsilon)==OUI)
+           // chemin=OUI;
+        //return;
+    //}
+
+    if (profondeur==1 && n!=NULL)
+        ndernier=n;       
+
+
+    char erreur=NON;                
+    Noeud* nsuivant;
+    EtatArbre* et;
+    bc=debutbc;
+    EtatArbre* courant=NULL;
+
+    while (bc<maxbc) {
+        
+
+        if (n==NULL) {                                           
+            //dans ce cas, il est possible d'avoir des etats epsilons de saut (type!=1)
+            if (boucle->rechercheCheminEpsilon(ct.parseur->XCatEpsilon)==OUI)
+                chemin=OUI;
+            break;
+        }
+        
+        ar=boucle->arcs[bc];
+        et=ar->etatarbre;
+        bc++;
+        //Les comparaisons ne sont executes qu'une seule fois
+        if (et->marque==n->num_noeud)
+            continue;
+        
+
+        resolution_boucle++;
+        
+        int dernierNoeudAjoute=stacks.dernier();
+        
+        SousArbre* arprofondeur=NULL;
+        erreur=OUI;
+        if (ar->profondeurNonBornee==OUI) {
+            st=stacks.dernier();
+            sp=pile.nb;
+            
+            stacks.ajoute(ar->traits,n);
+            
+            if (n->fils != NULL && (n->fils)->fils!=NULL) {
+                Noeud* fiston=n->fils;
+                while (fiston!=NULL) {
+                    //On explore les sous-noeuds;
+                    solution=NON;
+                    sp=pile.nb;
+                    st=stacks.dernier();
+                    AppliqueInference(ct,
+                        solution,
+                        fin,
+                        fiston,
+                        ndernier,
+                        profondeur+1,
+                        OUI, //enProfondeur
+                        stacks,pile,OUI);
+                    
+                    if (solution==OUI) {
+                        erreur=NON;
+                        chemin=enProfondeur;
+                    }
+                    else {
+                        stacks.depile(st);
+                        NettoiePileVariables(pile,sp);
+                        fin=NON;
+                    }
+                    fiston=fiston->frere;
+                }
+            }
+        }
+        
+        nsuivant=n->frere;
+        char boucleinterne=NON;
+        
+        //S'il s'agit d'une boucle sur soi-meme, on peut faire une derecursivation locale
+        if (nsuivant!=NULL && ar->type==1 && ar->etatarbre==boucle && maxbc==2 && boucle->fils==NULL) {
+            //Dans ce cas, nous verifions la presence d'un etat epsilon a la suite
+            //de cet etat arbre qui soit unique
+            ArcArbre* artest=boucle->arcs[2-bc];            
+            EtatArbre* suivant=boucle;            
+            if (artest->type==0 && artest->X==ct.parseur->XCatEpsilon) {
+                suivant=artest->etatarbre;
+                if (suivant!=NULL && suivant->arcs.dernier==1)
+                    artest=suivant->arcs[0];                
+            }
+            
+            
+            //Enfin il faut aussi n'avoir qu'un seul etat a la suite...
+            if (artest->X!=ct.parseur->XCatEpsilon) {
+                //dans ce cas, il s'agit d'un cas parfait de boucle
+                //Le test NULL est deja pris en compte par l'epsilon                  
+                EtatArbre* precedent=suivant;
+                suivant=artest->etatarbre;
+                //Test de continuation                                
+                sp=pile.nb;
+                st=stacks.dernier();                                  
+                while (nsuivant!=NULL) {
+                    //Tout d'abord, est-ce l'element que l'on attendait?
+                    if (ct.parseur->CompareNoeudSousArbre(artest,nsuivant)) {
+                        //Il y a donc une solution, on sort
+                        boucleinterne=OUI;
+                        //Tout d'abord, on enregistre le contexte courant d'analyse
+                        //ces deux elements deviennent le noeud courant
+                        et=suivant;
+                        ar=artest;
+                        courant=boucle;
+                        //On a deja calcule la comparaison Noeud-arc
+                        calculComparaison=NON;
+                        break;
+                    }
+                    //Sinon, a-t-on le droit de boucler dessus?
+                    if (!ct.parseur->CompareNoeudSousArbre(ar,nsuivant)) {
+                        //dans ce cas, il n'y a pas de solution
+                        boucleinterne=SAUTE;
+                        break;
+                    }
+                    nsuivant=nsuivant->frere;
+                }                
+            }
+            //Dans le cas d'une erreur, on passe a l'arc suivant
+            if (boucleinterne==SAUTE)
+                continue;
+        }
+
+        char testNoeud=NON;
+        char ajoute=NON;
+        
+        
+        if (ar->X==ct.parseur->XCatEpsilon) {
+            erreur=NON;
+            nsuivant=n;            
+        }
+        else {
+            //Le test sur les traits du noeud (en recherche non  bornee) ne
+            //peut s'effectuer que sur le noeud le plus haut
+            if (calculComparaison==NON) {
+                testNoeud=OUI;
+                calculComparaison=OUI; //evidement cela ne concerne que le premier element
+            }
+            else
+                testNoeud=ct.parseur->CompareNoeudSousArbre(ar,n);
+            
+            //On enregistre la position du dernier element entre sur la pile
+            sp=pile.nb;
+            if (testNoeud==OUI) {
+                stacks.ajoute(ar->traits,n);
+                
+                //dans le cas ou un argument doit etre ajoute
+                //on cree un nouvel element (sur base)
+                //et on l'ajoute (uniquement si l'on est pas dans la negation: increment=1
+                int finpile=pile.nb;
+                if (ar->argument!=-1 && ct.increment==1) {
+                    pile.nb++;
+                    if (pile.noeuds.dernier==0) {
+                        pile.argument=ar->argument;
+                        pile.noeuds.ajoute(n);
+                        pile.profondeur=profondeur;
+                    }
+                    else {
+                        //sinon on parcourt la totalite des noeuds...
+                        variables=&pile;
+                        PileNoeuds* prec=NULL;
+                        while (variables!=NULL) {                            
+                            if (variables->argument!=ar->argument) {
+                                prec=variables;
+                                variables=variables->pile[variables->noeuds.dernier-1];
+                            }
+                            else
+                                break;
+                        }
+                        ajoute=OUI;
+                        if (variables==NULL) {
+                            //On ajoute donc une nouvelle pile en face des derniers noeuds introduits
+                            int ip;
+                            for (ip=0;ip<prec->noeuds.dernier;ip++)
+                                if (prec->pile[ip]==NULL)
+                                    break;
+                                //Nous ne creons qu'une seule instance de pile...
+                                //de facon a conserver une repartition homogene des futures variables
+                                PileNoeuds* pn=new PileNoeuds(ar->argument,n,profondeur);
+                                for (;ip<prec->noeuds.dernier;ip++)
+                                    prec->pile.ajoute(pn);
+                        }
+                        else
+                            variables->noeuds.ajoute(n);
+                    }
+                }
+                
+                //clef contient le codage binaire de toutes les 
+                //categories situees sous un meme noeud.
+                //cette valeur est systematiquement stockee sur le noeud
+                //pere aussi bien pour l'arbre syntaxique
+                //Noeud que pour le sous-arbre... En une seule operation, 
+                //on peut savoir si les categories situees
+                //sous le noeud N contiennent l'ensemble des categories
+                //non optionnelles de la regle que l'on applique...
+                
+                if (et->fils != NULL) {
+                    if (n->fils != NULL && (n->fils)->fils!=NULL)
+                        if (((et->clef & n->clef) == et->clef) && 
+                            PreTestEtatCategorie(ct.parseur,et->fils,n->fils,calculTest)==OUI) {
+                            solution=NON;
+                            st=stacks.dernier();
+                            sp=pile.nb;
+                            et->fils->AppliqueInference(ct,solution,fin,n->fils,ndernier,
+                                profondeur+1,
+                                enProfondeur,
+                                stacks,pile,calculTest);
+                            if (solution==OUI)
+                                erreur=NON;
+                            else {
+                                stacks.depile(st);
+                                NettoiePileVariables(pile,sp);
+                                fin=NON;
+                            }
+                        }                           
+                        else
+                            erreur=OUI;
+                }
+                else
+                    erreur=NON;            
+            }            
+        }
+        
+        sp=pile.nb;
+        st=stacks.dernier();
+        solution=NON;                  
+        
+        if (maxbc==1 && boucleinterne==NON) {
+            if (erreur==OUI)
+                return;
+            //c'est une simple boucle, nul besoin de recursion
+            boucle=et;
+            bc=0;
+            maxbc=boucle->arcs.dernier;
+            n=nsuivant;
+        }//sinon, cas plus complexe
+        else {    
+            if (erreur==NON) {
+                if (nsuivant==NULL) {                                           
+                    //dans ce cas, il est possible d'avoir des etats epsilons de saut (type!=1)
+                    if (et->rechercheCheminEpsilon(ct.parseur->XCatEpsilon)==OUI)
+                        solution=OUI;
+                }
+                else {
+                    //dans le cas d'un saut epsilon 
+                    //On ne peut passer par la qu'une seule fois                    
+                    boucle->marque=n->num_noeud;
+                    
+                    et->AppliqueInference(ct,solution,fin,
+                        nsuivant,ndernier,
+                        profondeur,enProfondeur,
+                        stacks,pile,1);                        
+                    
+                    boucle->marque=-1;
+                }            
+                if (solution==OUI) {            
+                    chemin=OUI;
+                    sp=pile.nb;
+                    st=stacks.dernier();
+                }
+                else {
+                    stacks.depile(st);
+                    NettoiePileVariables(pile,sp);
+                }
+            }
+        }
+
+        //Dans le cas d'une boucle interne, on reboucle sur le meme arc avec n=nsuivant
+        if (boucleinterne==OUI) {
+            boucle=courant;
+            //On retrouve l'arc precedent 
+            bc--;
+            n=nsuivant;
+        }
+    }
+
+
+    if (fin==BLOQUEE)
+        fin=NON;
+
+    //Dans le cas de la negation, il est important de verifier que le chemin
+    //est vide,car alors il ne s'agit pas d'un cas d'erreur
+    if (ct.increment==-1 && profondeur==1 && UnEstPasse==NON)
+        return;
+
+    if (chemin==NON && boucle->etatfin!=1)
+        return;
+
+    //Si certains traits sont devenus libres, on les fait percoler sur un noeud temporaire
+    //en cas d'echec... fin de la mission...
+    //Si increment==-1, on est dans la negation, il ne faut rien generer alors
+    if (profondeur==1 && ct.increment==1) {
+
+        int nbvar=0;
+        char resultat=NON;        
+
+        if (pile.nb==0)
+            //Si la pile est vide, il faut necessairement qu'aucune variable ne soit attendue
+            //sinon, il s'agit d'un cas d'erreur
+            if ((ct.fonc->regle)->marque.dernier==0)
+                resultat=OUI;
+
+        InstancieTraitsNoeud(ct.parseur,stacks.traits,stacks.noeuds);
+
+        char manqueVariables;
+        static VECTA<Traits*> vecttr(3);
+        static VECTA<Traits*> affectation(3);
+        static VECTA<ResultatFonction*> chgts;
+        
+        static ContexteInference ci;
+
+        VECTA<VECTA<Noeud*>*> lesVariables;
+        ConstruitListeVariables(&pile,NULL,lesVariables);
+
+        //Quelque soit le resultat du calcul sur les inferences, on s'arrete dans le cas
+        //d'une analyse deterministe...
+        if (deterministe!=NON)
+            fin=OUI;           
+     
+        for (int isp=lesVariables.dernier-1;isp>=0;isp--) {
+            if (lesVariables[isp]==NULL)
+                return;
+            int i;
+            VECTA<Noeud*>& varias = *lesVariables[isp];
+
+            manqueVariables=NON;
+            //verification que toutes les variables sont initialisees
+            for (i=0;i<(ct.fonc->regle)->marque.dernier;i++) {
+                int vargf=(ct.fonc->regle)->marque[i];
+                if (vargf!=NON && varias[i]==NULL) {
+                    manqueVariables=OUI;
+                    break;
+                }
+            }
+
+            if (manqueVariables==OUI)
+                break;
+
+
+            //Recolte des traits libres transmis par les noeuds aux nouvelles dependances
+            static Traits temporaire(ct.parseur);
+            static Vecteur bloc(ct.parseur->iTailleVect);
+            char bloquer=NON;
+            temporaire.raz();
+            bloc.raz();
+            Traits* transmettre=NULL;
+
+            //Seuls les traits des noeuds superieurs sont transmis
+            ct.parseur->PTT(&temporaire,stacks.noeuds[0],ndernier);
+            
+            //De meme les traits des variables sont aussi transmis...
+            for (i=0;i<varias.dernier;i++) {
+                n=varias[i];
+                if (n!=NULL && 
+                    n->source->instanciateur!=NULL && 
+                    (n->source->instanciateur)->libre!=NULL) {
+                    temporaire.libre->ou(n->source->instanciateur->libre);
+                    if (n->source->instanciateur->bloquage!=NULL) {
+                        bloc.ou(n->source->instanciateur->bloquage);
+                        bloquer=OUI;
+                    }
+                }
+            }
+
+            //Si l'on a des traits libres, on les transmet
+            if (temporaire.Libre()) {
+                if (bloquer==OUI)
+                    temporaire.libre->etnon(&bloc);
+                transmettre=&temporaire;
+            }
+
+            int idep;
+            chgts.raz();
+            char reslocal=NON;
+            //dans le cas ou l'expression ne comprend pas de disjonction
+            if (ct.fonc->listes.liste.dernier>0) {
+                if (TestClef(ct.parseur,ct.fonc->clef)) {
+                    //Deux types de verification
+                    if (ct.fonc->typeTest==NON) {
+                        if (transmettre!=NULL)
+                            vecttr.ajoute(transmettre);                                   
+                        
+                        ci.initialise(ct.parseur,ct.fonc,varias);                        
+                            //Le "if", on explore toutes les possibilites
+                        ct.fonc->listes.calculInference(ci,vecttr,affectation,NULL,0,reslocal);                        
+                    }
+                    else {
+                        //Un simple test 
+                        reslocal = ct.fonc->listes.Test(ct.parseur,varias);
+                        if (reslocal==OUI && ct.fonc->allera==NON){
+                            for (idep=0;idep<ct.fonc->dependances.dernier;idep++)
+                                ct.parseur->MajDependance(varias,chgts,ct.fonc,ct.fonc->dependances[idep],NULL,idep,transmettre);
+                        }
+                    }
+                }
+            }
+            else {
+                if (ct.fonc->allera==NON) {
+                    for (idep=0;idep<ct.fonc->dependances.dernier;idep++)
+                        ct.parseur->MajDependance(varias,chgts,ct.fonc,ct.fonc->dependances[idep],NULL,idep,transmettre);
+                }
+                reslocal=OUI;
+            }
+
+            if (reslocal==OUI)
+                resultat=OUI;
+
+            vecttr.raz();
+            if (reslocal==OUI && deterministe)
+                break;
+        }
+        lesVariables.nettoie();
+        if ( resultat==OUI)
+            StabiliseTraitsNoeud(stacks.noeuds);        
+        else
+            return;
+    }
+
+    chemin=OUI;
+}
+
+void AnnuleArg(VECTA<Noeud*>& pile,int arg) {
+    if (arg!=-1)
+        pile.affecte(arg,NULL);
+}
+
+//--------------------------------------------------------------------------------
+//Cette methode est appele dans le cadre d'une regle de deduction basee sur un automate d'arbre.
+// |automate| where (test) dependance. La difference fondamentale avec Applique reside dans la possibilite
+// d'une interpretation non deterministe du test. En revanche, dans Applique, le test reussit si au moins une interpretation
+// pour l'expression booleene est vraie.
+void SousArbre::ExtraitMots(GlobalParseur* parseur,
+                            VECTA<Noeud*>& pile,
+                            char& fin,
+                            int increment,
+                            char& chemin,
+                            LListe& Phrase,
+                            int iListe,
+                            char deterministe,
+                            ListeTestArbre* listes) {
+
+
+
+
+#ifndef XIP_LIGHT
+    SousArbre* ar=this;
+    char solution;
+    char debut =NON;
+    Noeud* n;
+    Liste* L;
+
+    if (fin==OUI)
+        return;
+
+    if (fin==-1) {
+        fin=NON;
+        debut=OUI;
+    }
+
+    char erreur=NON;
+
+    while (fin==NON && ar != NULL && erreur==NON) {        
+        L=Phrase[iListe];
+
+        if (L==NULL)
+            return;
+
+        n=&L->N;
+        erreur=OUI;
+        char testNoeud=NON;
+        char ajoute=NON;
+
+        if (ar->X==NULL)
+            erreur=NON;
+        else 
+            testNoeud=parseur->CompareNoeudSousArbre(ar,n);
+
+        if (testNoeud==OUI) {
+            erreur=NON;
+            if (ar->argument!=-1 && increment==1 && L->voc!=NULL)
+                pile.affecte(ar->argument,n);
+        }
+            
+        char proms=OUI;
+        int ider=0; 
+        char boucle=OUI;
+
+        //Dans le cas d'une structure A+, si erreur==OUI, cela signifie que cette boucle n'a aucun interet, puisqu'il y
+        //a deja eu echec. Par consequent on n'entre pas...
+        if (!ar->derivations.dernier || (ar->saute==NON && ar->plus!=SAUTE && erreur==OUI))
+            boucle=NON;
+
+        while (boucle) {
+
+            solution=NON;
+            int isuivant=iListe;
+            
+            SousArbre* ars;
+
+            if ((ar->X!=NULL || ar->saute==OUI) &&
+                ((deterministe!=longue && proms==OUI) || 
+                (deterministe==longue && ider==ar->derivations.dernier))) {
+
+                if (deterministe==longue)
+                    boucle=NON;
+
+                ars=ar->suivant;
+
+                if (ar->saute==NON && ar->plus!=SAUTE && ars!=NULL) //dans ce cas, il faut se positionner sur l'element suivant
+                    isuivant++;
+            }
+            else {
+                //dans le cas ou l'on a deja analyse tous les cas de
+                //derivations, on s'arrete
+                if (ider==ar->derivations.dernier)
+                    break;
+
+                ars=ar->derivations[ider];
+                if (ar->reboucle==ider)
+                    isuivant++;
+                ider++;
+            }
+
+            //Dans le cas d'une analyse courte, on s'arrete des que le dernier element a ete analyse
+            //Dans le cas d'une analyse longue, il faut aussi pouvoir analyser l'element suivant
+            if (deterministe!=longue && ider==ar->derivations.dernier)
+                boucle=NON;
+            
+            //s'il s'agit d'une boucle avec une erreur detectee
+            //on doit relancer l'analyse sur l'element suivant de la regle
+            //mais toujours sur le noeud courant
+            if (ars==ar && erreur==OUI)
+                continue;
+
+            proms=NON;
+            
+                //si nous sommes au-dela des bornes, on place -1 dans isuivant comme indication
+            if (isuivant>=0 && isuivant< Phrase.dernier) {
+                if (ars==NULL) {
+                    if (erreur==NON)
+                        solution=OUI;
+                }
+                else {
+                    char leplus=ar->plus;
+                    if (ar->plus==OUI)
+                        ar->plus=SAUTE;
+                    ars->ExtraitMots(parseur,pile,fin,increment,solution,Phrase,isuivant,deterministe,listes);
+                    ar->plus=leplus;
+                }
+            }
+
+            if (solution==OUI)
+                chemin=OUI;
+            else
+                fin=NON;
+                
+
+            if (fin==OUI)
+                return;
+        }
+
+        if (ar->derivations.dernier!=0 || erreur==OUI) {
+            AnnuleArg(pile,ar->argument);
+            return;
+        }
+
+        debut=NON;
+
+        iListe++;
+        ar=ar->suivant;
+    }
+
+
+    if (fin==BLOQUEE)
+        fin=NON;
+
+    if (erreur==OUI)
+        return;
+
+    Noeud* n2=pile[2];
+    Noeud* n1=pile[1];
+    if (n1==NULL || n2==NULL)
+        return;
+
+    ListeVoc* v1=n1->source->voc;        
+    ListeVoc* v2=n2->source->voc;        
+
+    if (v1->nbX==1 && v2->nbX==1)
+        return;
+
+
+    Liste* l1=n1->source;
+    Liste* l2=n2->source;
+    v1->garder.raz();
+    v2->garder.raz();
+    l1->SauveTraits();
+    l2->SauveTraits();
+
+    char garder=NON;
+    for (int i1=0;i1<v1->nbX;i1++) {
+        l1->choixCatTraits(i1);
+           
+        for (int i2=0;i2<v2->nbX;i2++) {
+            if (v2->garder[i2]==OUI)
+                continue;
+            l2->choixCatTraits(i2);
+            if (listes->TestFormule(parseur,pile,0)) {
+                garder=OUI;
+                v1->garder.affecte(i1,OUI);
+                v2->garder.affecte(i2,OUI);
+            }
+        }
+    }
+
+    if (garder==NON)
+        return;
+
+    parseur->VireCategorie(v1,l1,OUI);
+    parseur->VireCategorie(v2,l2,OUI);
+    l1->RetrouveTraits();
+    l2->RetrouveTraits();
+
+    chemin=OUI;
+    if (deterministe!=NON)
+        fin=OUI;
+
+#endif
+}
+//-----------------------------------------------------------------------------
+inline void NettoyageVariable(VECTA<VECTA<Noeud*>*>* variables,VECTA<int>* pileArg,int bp) {
+    if (variables!=NULL) {
+        for (int i=pileArg->dernier-1;i>=bp;i--)
+            variables->vecteur[pileArg->vecteur[i]]->retire();
+        pileArg->dernier=bp;
+    }
+}
+//-----------------------------------------------------------------------------
+void SousArbre::Marquage(GlobalParseur* parseur,
+                         char& chemin,
+                         Noeud* n,
+                         char profondeur,
+                         Piles& stacks,
+                         Fonction* fonc,
+                         VECTA<VECTA<Noeud*>*>* variables,
+                         VECTA<int>* pileArg) {
+
+    SousArbre* ar=this;
+    SousArbre* ars;
+    char solution;
+    Noeud* premierN=n;
+    Noeud* dernierN=n;
+    int sp=stacks.dernier();
+    int vsp=0;
+    int vspLoc=0;
+    char erreur=NON;
+    char debut=NON;
+    char calcul;
+
+    if (variables!=NULL)
+        vsp=pileArg->dernier;
+
+    if (chemin==-1) {
+        chemin=NON;
+        debut=OUI;
+    }
+
+    if (n->nombre<nombre)
+        return;
+
+    while (ar != NULL && erreur==NON) {
+
+ 
+        if (n==NULL) {        
+            //Si toutes les elements de la regle qui restent a analyser sont optionnels
+            //On peut alors considerer que la regle s'est appliquee, sinon c'est evidemment un echec
+            ars=ar;
+            while (ars!=NULL && ars->saute!=NON)
+                ars=ars->suivant;
+            if (ars==NULL)
+                break;
+
+            stacks.depile(sp);
+            NettoyageVariable(variables,pileArg,vsp);
+            return;
+        }
+
+        nombre_boucle_marquage++;
+
+        dernierN=n;        
+        erreur=OUI;
+
+        if (ar->X==NULL)
+            erreur=NON;
+        else {
+            if (parseur->CompareNoeudSousArbre(ar,n)) {
+
+                //clef contient le codage binaire de toutes les 
+                //categories situees sous un meme noeud.
+                //cette valeur est systematiquement stockee sur le noeud
+                //pere aussi bien pour l'arbre syntaxique
+                //Noeud que pour le sous-arbre... En une seule operation, 
+                //on peut savoir si les categories situees
+                //sous le noeud N contiennent l'ensemble des categories
+                //non optionnelles de la regle que l'on applique...
+
+                if (ar->fils != NULL) {
+                    if (n->fils != NULL && (n->fils)->fils!=NULL)
+                        if (((ar->clef & n->clef) == ar->clef) && 
+                            PreTestCategorie(parseur,ar->fils,n->fils,calcul)==OUI) {
+                            solution=NON;
+                            sp=stacks.dernier();
+                            if (variables!=NULL)
+                                vspLoc=pileArg->dernier;
+                            
+                            (ar->fils)->Marquage(parseur,solution,n->fils,
+                                                 profondeur+1,stacks,fonc,variables,pileArg);
+
+                            if (solution==OUI)
+                                erreur=NON;
+                            else {
+                                stacks.depile(sp);
+                                NettoyageVariable(variables,pileArg,vspLoc);
+                            }
+                        }
+                }
+                else
+                    erreur=NON;
+            }
+            
+            if (erreur==OUI && ar->derivations.dernier==0) {
+                stacks.depile(sp);
+                NettoyageVariable(variables,pileArg,vsp);
+                return;
+            }
+        }
+
+        char proms=OUI;
+        int lsp=stacks.dernier();     
+        if (variables!=NULL) {
+            vspLoc=pileArg->dernier;
+            if (ar->saute==TOUS) {
+                if (ar->suivant==NULL)
+                    proms=NON;            
+                else
+                    //On le transforme en ?*
+                    ar->saute=OUI;
+            }
+        }
+
+        int ider=0; 
+        char boucle=OUI;
+        
+        //Dans le cas d'une structure A+, si erreur==OUI, cela signifie que cette boucle n'a aucun interet, puisqu'il y
+        //a deja eu echec. Par consequent on n'entre pas...
+        if (!ar->derivations.dernier || (ar->saute==NON && ar->plus!=SAUTE && erreur==OUI))
+            boucle=NON;
+
+        while (boucle) {
+            solution=NON;
+            Noeud* nsuivant=n;
+
+            char noeudSuivant=NON;
+            if (proms==OUI && (ar->X!=NULL || ar->saute==OUI)) {
+                ars=ar->suivant;
+                
+                if (ar->saute==NON && ar->plus!=SAUTE && ars!=NULL) //dans ce cas, il faut se positionner sur l'element suivant
+                    noeudSuivant=OUI;                    
+            }
+            else {
+                ars=ar->derivations[ider];
+                if (ar->reboucle==ider)
+                    noeudSuivant=OUI;
+                ider++;
+            }
+            
+            if (ider==ar->derivations.dernier)
+                boucle=NON;
+            
+            //s'il s'agit d'une boucle avec une erreur detectee
+            //on doit relancer l'analyse sur l'element suivant de la regle
+            //mais toujours sur le noeud courant
+            if (ars==ar && erreur==OUI)
+                continue;
+
+            proms=NON;
+            solution=NON;
+
+            if (noeudSuivant==OUI) {
+                nsuivant=n->frere;
+                stacks.ajoute(ar->traits,n);
+                if (ar->argument!=-1 && variables!=NULL) {
+                    if ( (*variables)[ar->argument]==NULL)
+                        variables->affecte(ar->argument,new VECTA<Noeud*>);
+                    (*variables)[ar->argument]->ajoute(n);
+                    pileArg->ajoute(ar->argument);
+                }
+            }
+
+            if (nsuivant!=NULL) {
+                if (ars==NULL) {
+                    if (erreur==NON)
+                        solution=OUI;
+                }
+                else {
+                    //On verifie la compatibilite entre la regle le noeud suivant
+                    if (PreTestCategorie(parseur,ars,nsuivant,calcul)==OUI) {
+                        char leplus=ar->plus;
+                        if (ar->plus==OUI)
+                            ar->plus=SAUTE;
+                        ars->Marquage(parseur,solution,nsuivant,profondeur,stacks,fonc,variables,pileArg);
+                        ar->plus=leplus;
+                    }
+                }
+            }
+            else //cas particulier, lorsque l'on analyse un ?- dans une regle de reconstruction
+                if (ar->saute==TOUS && erreur==NON && variables!=NULL && boucle==NON)
+                    solution=OUI;
+
+            //cas particulier
+            if (boucle==NON && ars!=NULL && ars->saute==TOUS)
+                solution=OUI;
+
+            if (solution==OUI) {
+                chemin=OUI; 
+                return;
+            }
+            stacks.depile(lsp);
+            NettoyageVariable(variables,pileArg,vspLoc);
+        }
+        
+        if (ar->derivations.dernier!=0 || erreur==OUI) 
+            return;
+        
+        n->marquage=-1;
+        if (ar->argument!=-1) {
+            n->marquage=ar->argument;
+            if (variables!=NULL) {
+                if ( (*variables)[ar->argument]==NULL)
+                    variables->affecte(ar->argument,new VECTA<Noeud*>);
+                (*variables)[ar->argument]->ajoute(n);
+                pileArg->ajoute(ar->argument);
+            }
+        }
+
+        stacks.ajoute(ar->traits,n);
+        debut=NON; 
+        n=n->frere;
+        ar=ar->suivant;
+    }
+
+    if (erreur==OUI)
+        return;
+
+    if (profondeur==1) {
+        //Initialisation dans le cas d'une regle de marquage
+        Traits temporaire(parseur);         
+
+        InstancieTraitsNoeud(parseur,stacks.traits,stacks.noeuds);
+            
+        if (premierN!=NULL) {
+            char test=parseur->PTT(&temporaire,premierN,dernierN);
+#ifndef XIP_LIGHT
+            static VECTA<Noeud*> varias;
+            if (test==OUI && fonc!=NULL && fonc->listes!=NULL) {
+                //on extrait un jeu de variable
+                varias.raz();
+                for (int i=0;i<stacks.dernier();i++)
+                    if (stacks.noeuds[i]->marquage!=-1)
+                        varias.affecte(stacks.noeuds[i]->marquage,stacks.noeuds[i]);
+                test=fonc->listes->Test(parseur,varias);
+            }
+#endif
+            
+            if (!test) {
+                stacks.depile(sp);
+                NettoyageVariable(variables,pileArg,vsp);
+                return;
+            }
+        }
+        StabiliseTraitsNoeud(stacks.noeuds);
+    }
+        
+    chemin=OUI;
+}
+//-------------------------------------------------------------------------------------
+inline void DepileAmb(VECTA<SousArbre*>& pile,int sp) {
+
+    //On retire les numeros de mot a desambiguiser rajoute lors de la recursion
+    for (int ip=pile.dernier-1;ip>sp;ip--) {
+        pile[ip]->numliste.retire();
+        pile.retire();
+    }
+}
+//-------------------------------------------------------------------------------------
+//Cette regle applique une regle de sequence ainsi qu'un contexte
+void SousArbre::AppliqueSequence(GlobalParseur* parseur,
+                         char& chemin,
+                         LListe& Phrase,
+                         int iListe,
+                         int increment,
+                         int deterministe,
+                         char maj,
+                         ResultatSequence* r,
+                         VECTA<Noeud*>* noeuds_arguments,
+                         VECTA<char>* majCategorie,
+                         int lePremier) {
+
+    SousArbre* ar=this;
+    SousArbre* ars;
+
+    int premierN=iListe;
+    int dernierN=iListe;
+    char solution;
+    Liste* L;
+    VECTA<SousArbre*> pile(0);
+    char auMoinsUnNoeud=NON;
+
+    if (chemin==-1) {
+        chemin=NON;      
+        if (r!=NULL)
+            r->fin=-1;
+    }
+
+    char erreur=NON;
+    int bp=pile.dernier;
+
+    while (chemin!=OUI && ar != NULL && erreur==NON) {
+
+        L=Phrase[iListe];
+
+        if (L==NULL) {
+            //Si toutes les elements de la regle qui restent a analyser sont optionnels
+            //On peut alors considerer que la regle s'est appliquee, sinon c'est evidemment un echec
+            ars=ar;
+            while (ars!=NULL && ars->saute==OUI)
+                ars=ars->suivant;
+            if (ars==NULL)
+                break;
+            DepileAmb(pile,-1);
+            return;
+        }
+        int sp=pile.dernier;
+
+        nombre_boucle_sequence++;
+
+        erreur=OUI;
+        //Un noeud fictif se traduit par ar->X==NULL
+        if (ar->X==NULL) 
+            erreur=NON;
+        else {
+            char couverture=NON;
+            
+            if (parseur->CompareNoeudSousArbre(ar,L,maj,couverture)) {
+                erreur=NON;
+                Noeud* n=&L->N;
+                if (ar->fils != NULL) {
+                    if (n->fils != NULL && (n->fils)->fils!=NULL)
+                        if (((ar->clef & n->clef) == ar->clef) &&
+                            PreTestCategorie(ar->fils,(n->fils)->X) == OUI) {
+                            erreur=OUI;
+                            solution=NON;
+                            int st=pile.dernier; 
+                            static Piles locstacks;
+                            locstacks.raz();
+                            (ar->fils)->Marquage(parseur,solution,n->fils,2,locstacks,NULL);
+                            if (solution) {
+                                if (noeuds_arguments!=NULL) {
+                                    for (int ipile=0;ipile<locstacks.dernier();ipile++)
+                                        if (locstacks.noeuds[ipile]->marquage!=-1)
+                                            noeuds_arguments->affecte(locstacks.noeuds[ipile]->marquage,locstacks.noeuds[ipile]);
+                                }                                        
+                                erreur=NON;
+                            }
+                            else {
+                                DepileAmb(pile,st);                            
+                                L->instanciateur=NULL;
+                                return;
+                            }
+                        }
+                }
+                if (maj==OUI && majCategorie!=NULL && lePremier!=-1) 
+                    majCategorie->affecte(iListe-lePremier,couverture);
+            }
+            
+            if (erreur==OUI && ar->derivations.dernier==0) {
+                L->instanciateur=NULL;
+                DepileAmb(pile,-1);
+                return;
+            }    
+            
+            if (noeuds_arguments!=NULL && ar->argument!=-1)
+                noeuds_arguments->affecte(ar->argument,&L->N);
+
+            //les ar de ce type permettent la desamb totale d'un noeud dans la liste des mots
+            if (ar->desamb==OUI && erreur==NON) {
+                ar->numliste.ajoute(iListe);
+                pile.ajoute(ar);
+            }
+
+            auMoinsUnNoeud=OUI;
+        }
+
+
+        //Remarque, dans le cas d'un element optionnel (A* ou (A) ), le systeme
+        //integre automatiquement l'element suivant (ar->suivant) dans la regle en premiere position
+        //Si l'analyse est longue, cet element suivant devra etre le dernier a etre
+        //analysee
+        char proms=OUI;
+        int ider=0; 
+        char boucle=OUI;
+        sp=pile.dernier;
+
+        //Dans le cas d'une structure A+, si erreur==OUI, cela signifie que cette boucle n'a aucun interet, puisqu'il y
+        //a deja eu echec. Par consequent on n'entre pas...
+        if (!ar->derivations.dernier || (ar->saute==NON && ar->plus!=SAUTE && erreur==OUI))
+            boucle=NON;
+        
+
+        while (boucle) {
+            solution=NON;
+            int isuivant=iListe;
+            
+            char noeudSuivant=NON;
+            
+            //ar->reboucle contient l'index de l'element qui reboucle au sein de la derivation.
+            //Cela correspond a une structure AR* ou AR+... Lorsque l'on tombe sur un element
+            //qui reboucle, il faut que le systeme puisse se reappliquer sur le noeud suivant
+            
+            //Si l'on est dans un cadre d'analyse au plus court: deterministe==court
+            //Alors, s'il s'agit du debut de la boucle, on saute l'application de cet
+            //element de regle. Il faut bien sur que cet element puisse s'appliquer et porte
+            //une vraie categorie. De plus, il faut que cet element soit optionnel (saute==OUI)
+
+            // Les cas sont les suivants:
+            // (AR), AR* --> saute==OUI et AR->X==NULL
+            // AR+ --> saute==NON et AR->X != NULL
+            //Attention cas particulier: ARS;ARS;ARS --> AR->X==NULL et AR->saute==NON, on ne peut sauter cet element
+            if ((ar->X!=NULL || ar->saute==OUI) &&
+                ((deterministe!=longue && proms==OUI) || 
+                 (deterministe==longue && ider==ar->derivations.dernier))) {
+
+                if (deterministe==longue)
+                    boucle=NON;
+                ars=ar->suivant;
+                //dans le cas ou il s'agit d'un element AR+, il faut evidemment passer a l'element suivant
+                if (ar->saute==NON && ar->plus!=SAUTE) {
+                    //Nous savons que cet element ne peut etre saute, il devient
+                    //par consequent le dernier de la liste
+                    dernierN=iListe;
+                    if (ars!=NULL)
+                        isuivant+=increment;
+                }
+            }
+            else {
+                //dans le cas ou l'on a deja analyse tous les cas de
+                //derivations, on s'arrete
+                if (ider==ar->derivations.dernier)
+                    break;
+                ars=ar->derivations[ider];
+                if (ar->reboucle==ider)
+                    isuivant+=increment;
+                ider++;
+            }
+            
+            if (deterministe!=longue && ider==ar->derivations.dernier)
+                boucle=NON;            
+            
+            //s'il s'agit d'une boucle avec une erreur detectee
+            //on doit relancer l'analyse sur l'element suivant de la regle
+            //mais toujours sur le noeud courant
+            if (ars==ar && erreur==OUI)
+                continue;
+            
+            proms=NON;
+            
+            if (isuivant>=0 && isuivant<Phrase.dernier) {
+                if (ars==NULL) {
+                    if (erreur==NON) {
+                        solution=NOEUDSAUTE;
+                        //Le noeud courant n'est pas pris en compte
+                        //puisque la regle s'est arrete sur le dernier noeud precedent
+                        if (r!=NULL && r->fin < dernierN)
+                            r->fin=dernierN;
+                    }
+                }
+                else {
+                    //Dans le cas ou il s'agit d'un ar+, on le transforme en ar*
+                    char leplus=ar->plus;
+                    if (ar->plus==OUI)
+                        ar->plus=SAUTE;
+                    //soit on applique l'element suivant
+                    if (PreTestNoeudCat(parseur,ars,Phrase[isuivant])==OUI) {
+                        ars->AppliqueSequence(parseur,solution,Phrase,isuivant,increment,deterministe,
+                                      maj,r,noeuds_arguments,majCategorie,lePremier);
+                        //Si nous avons saute la categorie courante dans la recursion
+                        if (solution==NOEUDSAUTE) {
+                            //Si nous sommes en train de sauter la categorie courante
+                            if (ars->X == NULL) {
+                                if (r!=NULL)
+                                //Nous reculons d'un cran le domaine de selection
+                                    r->fin=dernierN;
+                            }
+                            else
+                                //sinon le type de retour de recursion est le normal
+                                solution=OUI;
+                        }                                
+                    }
+                    ar->plus=leplus;
+                }
+            }
+            
+            if (solution) {
+                chemin=solution;
+                return;
+            }
+
+            //On revient au status precedent
+            if (Phrase[isuivant])
+                Phrase[isuivant]->instanciateur=NULL;
+            //On retire les numeros de mot a desambiguiser rajoute lors de la recursion
+            DepileAmb(pile,sp);
+        }
+
+        //Quatre possibilites d'analyse:
+        // AR, (AR), AR+, AR*
+        // Dans le cas d'un element optionnel, ou d'une boucle
+        
+        if (ar->derivations.dernier!=0 || erreur==OUI) {
+            L->instanciateur=NULL;
+            DepileAmb(pile,-1);
+            return;
+        }
+        
+        dernierN=iListe;
+
+        iListe+=increment;
+        ar=ar->suivant;
+    }
+
+    if (erreur==OUI || dernierN==-1) {
+        DepileAmb(pile,-1);
+        return;
+    }
+
+    chemin=OUI;
+    if (r!=NULL && auMoinsUnNoeud==OUI && r->fin<dernierN)
+        r->fin=dernierN;
+}
+
+//-------------------------------------------------------------------------------------
+
+void SousArbre::Applique(GlobalParseur* parseur,
+                         char& chemin,
+                         VECTA<ListeVoc*>& Phrase,
+                         int iListe,
+                         int increment,
+                         VECTA<ListeVoc*>& pile,
+                         VECTA<Traits*>& piletraits,
+                         int& coupe,
+                         char stabilise) {
+
+    SousArbre* ar=this;
+    char solution;
+
+    if (chemin==-1) 
+        chemin=NON;
+       
+    char erreur=NON;
+    int sp=pile.dernier;
+
+    while (chemin!=OUI && ar != NULL && erreur==NON) {
+
+        ListeVoc* L=Phrase[iListe];
+
+        if (L==NULL) {
+            Depile(pile,sp);
+            Depile(piletraits,sp);
+            return;
+        }
+
+        erreur=OUI;
+
+        if (ar->X==NULL)
+            erreur=NON;
+        else
+            if (parseur->CompareEntree(L,ar->X,ar->traits,ar->selectiontous,ar->selection))
+                erreur=NON;
+            else 
+                if (ar->derivations.dernier==0) {
+                    Depile(pile,sp);
+                    Depile(piletraits,sp);
+                    return;
+                }
+        
+        if (ar->argument!=-1)
+            coupe=iListe;
+
+        int lsp=pile.dernier;
+        char proms=OUI;
+        int ider=0; 
+        char boucle=OUI;
+
+        //Dans le cas d'une structure A+, si erreur==OUI, cela signifie que cette boucle n'a aucun interet, puisqu'il y
+        //a deja eu echec. Par consequent on n'entre pas...
+        if (!ar->derivations.dernier || (ar->saute==NON && ar->plus!=SAUTE && erreur==OUI))
+            boucle=NON;
+
+        while (boucle) {
+            solution=NON;
+            int isuivant=iListe;
+            
+            SousArbre* ars;
+            char noeudSuivant=NON;
+
+            if (proms==OUI && (ar->X!=NULL || ar->saute==OUI)) {
+                ars=ar->suivant;
+                //si nous sommes dans un cas de Cat+ (ar->saute==NON), alors on ne passe au noeud suivant que
+                //si il y a quelque chose a tester avant... Sinon le test a deja ete fait par ailleurs
+                //au-dessus entre le noeud courant et ar...
+                if (ar->saute==NON && ar->plus!=SAUTE && ars!=NULL) 
+                    noeudSuivant=OUI;
+            }
+            else {
+                ars=ar->derivations[ider];
+                if (ar->reboucle==ider)
+                    noeudSuivant=OUI;                
+                ider++;
+            }
+
+            if (ider==ar->derivations.dernier)
+                boucle=NON;
+            
+            //s'il s'agit d'une boucle avec une erreur detectee
+            //on doit relancer l'analyse sur l'element suivant de la regle
+            //mais toujours sur le noeud courant
+            if (ars==ar && erreur==OUI)
+                continue;
+
+            proms=NON;
+            if (noeudSuivant==OUI) {
+                pile.ajoute(L);
+                piletraits.ajoute(ar->traits);
+                isuivant+=increment;  
+                //si nous sommes au-dela des bornes, on place -1 dans isuivant comme indication
+                if (isuivant<0 || isuivant>= Phrase.dernier)
+                    isuivant=-1;
+            }
+            
+            if (isuivant!=-1) {
+                if (ars==NULL) {
+                    if (erreur==NON)
+                        solution=OUI;
+                }
+                else {
+                    char leplus=ar->plus;
+                    if (ar->plus==OUI)
+                        ar->plus=SAUTE;
+                    ars->Applique(parseur,solution,Phrase,isuivant,increment,pile,piletraits,coupe,stabilise);
+                    ar->plus=leplus;
+                }
+            }
+            
+            if (solution==OUI) {
+                chemin=OUI;
+                return;
+            }
+            
+            Depile(pile,lsp);
+            Depile(piletraits,lsp);
+        }
+        
+        if (ar->derivations.dernier!=0 || erreur==OUI)
+            return;
+
+        pile.ajoute(L);
+        piletraits.ajoute(ar->traits);
+
+        iListe+=increment;
+        ar=ar->suivant;
+    }
+    
+    if (erreur==OUI) {
+        Depile(pile,sp);
+        Depile(piletraits,sp);
+        return;
+    }
+
+    if (stabilise==OUI)
+        StabiliseTraitsVocabulaire(pile,piletraits);
+    chemin=OUI;
+}
+
+#ifndef XIP_LIGHT
+//-------------------------------------------------------------------------------------------------
+
+void GlobalParseur::AppliqueSemantiques(int laCouche) {
+    VECTA<Noeud*> variables(5);
+
+    static VECTA<Traits*> vecttr;
+    static VECTA<Traits*> affectation;    
+    static VECTA<char*> lesLemmes;
+    static VECTA<ResultatFonction*> chgts;
+
+    static ContexteInference ci;
+    int ilem;
+
+    for (int i=0; i<NoeudsLexicaux.dernier;i++) {
+        //Pour chacun des lemmes...
+        lesLemmes.raz();
+        if (NoeudsLexicaux[i]->source->voc!=NULL) {
+            for (ilem=0;ilem<NoeudsLexicaux[i]->source->voc->lemme.dernier;ilem++) {
+                char* lem=NoeudsLexicaux[i]->source->voc->lemme[ilem];
+                if (lem!=NULL) {
+                    char trouve=NON;
+                    for (int li=0;li<lesLemmes.dernier;li++) {
+                        if (!strcmp(lesLemmes[li],lem)) {
+                            trouve=OUI;
+                            break;
+                        }
+                    }
+                    if (trouve==NON)
+                        lesLemmes.ajoute(lem);
+                }
+            }
+        }
+
+        for (int ilem=0;ilem<lesLemmes.dernier;ilem++) {
+            //dans le cas ou l'expression ne comprend pas de disjonction
+            int indexMot = CalculClefHachage((unsigned char*)lesLemmes[ilem]);
+        
+            if (Semantiques[laCouche][indexMot]==NULL)
+                continue;
+        
+            avl_vocabulaire_semantique* voc_sem= 
+                (Semantiques[laCouche][indexMot])->recherchecasse(lesLemmes[ilem]);
+        
+            if (voc_sem==NULL)
+                continue;
+
+            char resultat=NON;
+            Traits* traitsDuMot=NoeudsLexicaux[i]->lesTraits();
+            Cat* categ=NULL;
+            if (NoeudsLexicaux[i]->source!=NULL)
+                categ= (NoeudsLexicaux[i]->source)->X;
+            char positionner=OUI;
+            while (voc_sem!=NULL) {
+                
+                //On recherche une entree qui convient dans la liste des regles
+                while (voc_sem!=NULL) {      
+                    if (voc_sem->X==categ || voc_sem->X==XCatVide) {
+                        if (voc_sem->traits_mot==NULL || 
+                            ITR(this,voc_sem->traits_mot,traitsDuMot,NONECRIT))
+                            break;
+                    }
+                    voc_sem=voc_sem->Autre();
+                }
+                
+                if (voc_sem==NULL)
+                    break;
+                
+                if (voc_sem->charge==NON)
+                    ChargeSem(voc_sem,positionner);
+                else
+                    voc_sem->compteur=memoiresem.max;
+
+                if (voc_sem->charge==NON) {
+                    voc_sem=voc_sem->Autre();
+                    continue;
+                }
+
+                variables.affecte(0,NoeudsLexicaux[i]);
+                VectTestFonction* fonc=voc_sem->semantique;
+
+                if (fonc->listes.liste.dernier>0) {
+                    if (TestClef(this,fonc->clef)) {
+                        vecttr.raz();
+                        affectation.raz();
+                        ci.initialise(this,fonc,variables);
+                        fonc->listes.calculInference(ci,vecttr,affectation,NULL,0,resultat);
+                    }
+                }
+                else {
+                    for (int idep=0;idep<fonc->dependances.dernier;idep++)
+                        MajDependance(variables,chgts,fonc,fonc->dependances[idep],NULL,idep,NULL);
+                    resultat=OUI;
+                }
+                
+                if (resultat==OUI) {
+                    MajINTERFONCTIONS();
+                    if (voc_sem->traits_mot!=NULL)
+                        InstancieTraits(traitsDuMot,voc_sem->traits_mot);
+                }
+            
+                voc_sem=voc_sem->Autre();
+            }        
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------
+void EtatArbre::ResolutionFictif(GlobalParseur* parseur,VectTestFonction* vtf,char& resultat) {
+    PileNoeuds pile;
+    static Piles stacks;
+    static VECTA<int> categories;
+    static ContexteAnalyse ct;
+    
+    int categorie=0;
+    
+    if (!TestClef(parseur,vtf->clef))
+        return;
+/*
+    if (parseur->num_phrase==609) {
+        cout<<endl;
+        cout<<endl;
+        parseur->VlabelInference[vtf->numero]->aff(cout);
+    }
+    > r:\XIPIIbis\grammaire\tests\resw.txt
+*/
+    for (int iarc=0;iarc<arcs.dernier;iarc++) {
+        
+        Cat* X=arcs[iarc]->X;
+        categories.raz();
+        if (arcs[iarc]->profondeurNonBornee==OUI)
+            categories.ajoute(0);
+        else {
+            if (X->val==CATFUSION)
+                ListerCategories(X->Val,categories);
+            else
+                categories.ajoute(X->val);
+        }
+        
+        for (int ic=0;ic<categories.dernier;ic++) {
+            categorie=categories[ic];
+            for (int i=0; i< parseur->IndexParCat[categorie].dernier;i++) {            
+                Noeud* n=&parseur->IndexParCat[categorie][i]->N;
+                
+                char calculTest;
+                
+                //On verifie si les noeuds suivants sont compatibles avec la regle
+                if ((n->clef_suivant  & vtf->regle->clef) != vtf->regle->clef)
+                    continue;
+                
+                //On regarde ensuite s'il y assez de noeuds pour que la regle puisse s'appliquer
+                if (n->nombre<vtf->regle->nombre)
+                    continue;
+                
+                //Test sur la compatibilite entre le pere du noeud courant et la regle qui doit s'appliquer
+                Noeud* nn=n->pere;
+                char calcul;
+                if (nn!=NULL) {
+                    if ((nn->clef & vtf->regle->clef) != vtf->regle->clef)
+                        continue;
+                }
+                
+                
+                //Tous les tests qui suivent sont destines a tester un cran en avant l'analyse.
+                //Des statistiques sur le comportement du code, montrent que les regles echouent
+                //en moyenne sur le deuxieme element de la regle, qu'il soit le suivant ou le fils
+                //du premier element de la regle.
+                
+                //On teste sur le suivant, si le premier element n'est pas optionnel
+                calculTest=1;
+                if (arcs[iarc]->X!=parseur->XCatEpsilon) {
+                    EtatArbre* suivant=arcs[iarc]->etatarbre;
+                    if (suivant->arcs.dernier==1) {
+                        nn=n->frere;
+                        if (nn==NULL) {
+                            if (!suivant->rechercheCheminEpsilon(parseur->XCatEpsilon))
+                                continue;
+                        }
+                        else
+                            if (PreTestEtatCategorie(parseur,suivant,nn,calcul)==NON)
+                                continue;
+                        calculTest=0;
+                    }
+                    
+                    //On teste sur le fils
+                    if (arcs[iarc]->etatarbre->fils!=NULL) {
+                        nn=n->fils;
+                        if (nn==NULL || nn->fils==NULL)
+                            continue;
+                        
+                        if ((n->clef & arcs[iarc]->etatarbre->clef) != arcs[iarc]->etatarbre->clef)
+                            continue;
+                        
+                        if (PreTestEtatCategorie(parseur,arcs[iarc]->etatarbre->fils,nn,calcul)==NON)
+                            continue;                            
+                    }
+                    
+                    
+                    if (!parseur->CompareNoeudSousArbre(arcs[iarc],n))
+                        continue;                        
+                }
+                
+                resolution_tentative++;
+                
+                stacks.raz();
+                char fin=-1;
+                char chemin=NON;
+                ct.initialise(parseur,-1,vtf->deterministe,vtf);
+                
+                fin=-1;
+                resolution_boucle=0;                 
+                ct.initialise(parseur,1,vtf->deterministe,vtf);
+                ct.borne=iarc;                
+                AppliqueInference(ct,chemin,fin,n,n,
+                    1,NON,
+                    stacks,
+                    pile,
+                    calculTest);
+                
+                if (chemin==OUI) {
+                    resolution_reussite++;
+                    resultat=OUI;
+                    //Dans le cas d'un GOTO, on s'arrete (deterministe)
+                    //S'il s'agit d'un _goto
+                    if (vtf->allera==OUI) {
+                        if (parseur->aller_label==NULL) {
+                            //alors dans stack nous avons stocke le label vers lequel sauter
+                            Label* l = parseur->ArbreLabel->recherche((uchar*)vtf->dependances[0]->stack[0]);
+                            //ce label ne correspond a rien, on le saute
+                            if (l==NULL) {
+                                if (parseur->TRACE)
+                                    trace<<"Unknown label:"<<vtf->dependances[0]->stack[0]<<endl;                            
+                            }
+                            else {
+                                //Sinon, on remet a jour la couche et le numero de regle a partir de laquelle on peut
+                                //commencer a reappliquer nos regles
+                                parseur->demarre_regle=l->index;
+                                parseur->demarre_couche=l->couche;
+                                parseur->aller_label=l;
+                                return;
+                            }
+                        }
+                        else
+                            return;
+                    }
+                }
+                else
+                    resolution_quantite+=resolution_boucle;
+                
+                parseur->MajINTERFONCTIONS();
+                pile.nettoie();
+        }
+    }
+    }
+}
+
+
+#endif
