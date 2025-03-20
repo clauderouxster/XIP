@@ -732,6 +732,14 @@
     <antcall target="staticLibPy" inheritAll="false" />
     <antcall target="staticExe" inheritAll="false" />
     <antcall target="staticExePy" inheritAll="false" />
+  </target>
+
+  <target name="compilefull" depends="setAllProperties" description="compile And Link all " >
+    <record name="${log.dir}/compile" loglevel="${log.level}" action="start"/>
+    <antcall target="staticLib" inheritAll="false" />
+    <antcall target="staticLibPy" inheritAll="false" />
+    <antcall target="staticExe" inheritAll="false" />
+    <antcall target="staticExePy" inheritAll="false" />
     <antcall target="sharedLib" inheritAll="false" />
     <antcall target="sharedLibPy" inheritAll="false" />
     <antcall target="javaCompile" inheritAll="false" />
@@ -821,13 +829,14 @@
         <!-- On linux, to avoid to specify the LD_LIBRARY_PATH (to access to lib dyn) link with lib static -->
         <libset dir="${python.lib.dir}" libs="${python.lib.name}"  type="static" if="pythonstatic" />
         <libset dir="${python.lib.dir}" libs="${python.lib.name}"  if="python" />
-        <libset dir="${regex.lib.dir}" libs="boost_regex" if="boost"/>
+        <!--libset dir="${regex.lib.dir}" libs="boost_regex" if="boost"/-->
         <libset dir="" libs="iconv" if="mac"/>
-        <fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" if="python"/>
+        <libset dir="${xml.root.lib.dir}" libs="xml2"/>
+        <!--fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" if="python"/-->
       </linker>
       <linker extends="linkerStaticLib" name="${compilerCplus.name}"  if="mac">
         <!-- on mac "type=..." must be not defined -->
-        <libset dir="${python.lib.dir}" libs="${python.lib.name}" if="python" />
+        <libset dir="${python.lib.dir}" libs="${python.lib.name}" if="python" />        
         <libset dir="" libs="iconv" if="mac"/>
       </linker>
     </cc>
@@ -932,7 +941,7 @@
       <linker name="${compilerCplus.name}" debug="${cc.debug}" >
         <fileset dir="${fst.static.obj.dir}" includes="*.${obj.suffixe}" unless="transMode"/>
         <fileset dir="${ntm.static.obj.dir}" includes="*.${obj.suffixe}" unless="transMode"/>
-        <fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" unless="python"/>
+        <!--fileset dir="${xml.static.obj.dir}" includes="*.${obj.suffixe}" unless="python"/-->
       </linker>
     </cc>
     <record name="${staticLibRecordFile}" action="stop"/>
@@ -1184,18 +1193,8 @@
     <fileset id="ntaggerCSrcFiles" dir="${ntagger.src.dir}" includes="${ntagger.c.src.files}" />
     <fileset id="ntaggerC++SrcFiles" dir="${ntagger.src.dir}" includes="${ntagger.cpp.src.files}" />
 
-    <if>
-      <equals arg1="${env.COMPUTERNAME}" arg2="pipey" />
-      <then>
-        <echo message="MAC ICI DONC"/>
-        <property name="regex.inc.dir" location=""/>
-        <property name="regex.lib.dir" location=""/>
-      </then>
-      <else>
-        <property name="regex.inc.dir" location="${basedir}/../../regex/dev/include"/>
-        <property name="regex.lib.dir" location="${basedir}/../../regex/dev/lib/${env.COMPUTERNAME}"/>
-      </else>
-    </if>
+    <property name="regex.inc.dir" location=""/>
+    <property name="regex.lib.dir" location=""/>
 
     <property name="C11" value="true"/>
     <echo message="COMPILING C++11"/>
@@ -1222,7 +1221,7 @@
       <pathelement location="${xip.inc.dir}"/>
       <pathelement location="${regex.inc.dir}"/>
       <pathelement location="${ntagger.inc.dir}"/>
-      <pathelement location="${xml.dir}/libxml2-${xml.version}/include"/>
+      <pathelement location="${xml.dir}/include"/>
     </includepath>
     <includepath id="include.fstxip.path">
       <pathelement location="${xip.inc.dir}/tokLook"/>
@@ -1243,7 +1242,7 @@
         <property name="ntm.root.lib.dir" location="${ntm.dir}/lib" />
       </else>
     </if>
-    <property name="xml.root.lib.dir"	location="${xml.dir}/lib" />
+    <property name="xml.root.lib.dir"	location="${basedir}/../../xml/dev/libs" />
     <property name="archive.name"		value="archive-${xip.version}-${xip.build}-${curDate.now}" />
     <property name="archive.zip.file"	location="${archive.root}/${archive.name}.zip" />
     <property name="delivery.name"		value="${name}-${xip.version}-${xip.build}" />
@@ -1295,24 +1294,24 @@
       <then>
         <property name="fst.lib.dir" location="${fst.root.lib.dir}/${platform-arch}.debug" />
         <property name="ntm.lib.dir" location="${ntm.root.lib.dir}/${platform-arch}.debug" />
-        <property name="xml.lib.dir" location="${xml.root.lib.dir}/${platformArch}.debug" />
+        <!-- property name="xml.lib.dir" location="${xml.root.lib.dir}/${platformArch}.debug" /-->
         <property name="ntm.static.obj.dir" location="${ntm.dir}/obj/${platform-arch}.debug/staticLib" />
         <property name="fst.static.obj.dir" location="${fst.dir}/obj/${platform-arch}.debug/staticLib" />
-        <property name="xml.static.obj.dir" location="${xml.dir}/obj/${platformArch}.debug/staticLib" />
+        <!-- property name="xml.static.obj.dir" location="${xml.dir}/obj/${platformArch}.debug/staticLib" /-->
         <property name="fst.shared.obj.dir" location="${fst.dir}/obj/${platform-arch}.debug/sharedLib" />
         <property name="ntm.shared.obj.dir" location="${ntm.dir}/obj/${platform-arch}.debug/sharedLib" />
-        <property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platformArch}.debug/sharedLib" />
+        <!-- property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platformArch}.debug/sharedLib" /-->
       </then>
       <else>
         <property name="fst.lib.dir" location="${fst.root.lib.dir}/${platform-arch}" />
         <property name="ntm.lib.dir" location="${ntm.root.lib.dir}/${platform-arch}" />
-        <property name="xml.lib.dir" location="${xml.root.lib.dir}/${platform-arch}" />
+        <!-- property name="xml.lib.dir" location="${xml.root.lib.dir}/${platform-arch}" /-->
         <property name="ntm.static.obj.dir" location="${ntm.dir}/obj/${platform-arch}/staticLib" />
         <property name="fst.static.obj.dir" location="${fst.dir}/obj/${platform-arch}/staticLib" />
-        <property name="xml.static.obj.dir" location="${xml.dir}/obj/${platform-arch}/staticLib" />
+        <!-- property name="xml.static.obj.dir" location="${xml.dir}/obj/${platform-arch}/staticLib" /-->
         <property name="fst.shared.obj.dir" location="${fst.dir}/obj/${platform-arch}/sharedLib" />
         <property name="ntm.shared.obj.dir" location="${ntm.dir}/obj/${platform-arch}/sharedLib" />
-        <property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platform-arch}/sharedLib" />
+        <!-- property name="xml.shared.obj.dir" location="${xml.dir}/obj/${platform-arch}/sharedLib" /-->
       </else>
     </if>
     <antcall target="majvcredist" />
