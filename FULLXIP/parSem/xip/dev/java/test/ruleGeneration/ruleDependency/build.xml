@@ -1,0 +1,76 @@
+<project name="" default="test" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}taskExt.xml" />
+<!--
+<import file="${common.dir}${fs}testInclude.xml" />
+-->
+
+<property name="root_xip.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}GRAMMARS" />
+<property name="gram" location="${root_xip.dir}${fs}ENGLISH${fs}GRMFILES${fs}GRAM_GEN${fs}gram_gen_entit.grm" />
+<property name="sentence" location="This is a test." />
+
+<property name="java_debug"    		value="off" />
+<property name="java_optimize" 		value="on" />
+<property name="java_deprecation"  	value="on" />
+<property name="log.level"		value="verbose" />
+<property name="output"			location="${basedir}${fs}output" />
+<property name="outputRef"		location="${basedir}${fs}outputRef" />
+
+<target name="check" depends="test"  >
+	<if> <available file="${output}" />
+        <then>
+		<if> <filesmatch file1="${output}" file2="${outputRef}" />
+		<then>
+			<!-- test OK -->
+			<echo message="test ok" />
+		</then>
+		<else>
+			<!-- test error -->
+			<echo message="TEST ERROR: the test output file ${output} does not matche the reference file: ${outputRef}" />
+			<fail unless="notFailing" message=" " />
+		</else>
+		</if>
+	</then>
+	<else>
+		<fail unless="notFailing" message="No output file " />
+	</else>
+	</if>
+</target>
+
+<target name="test" depends="compile"  >
+	 <java classpath="..${fs}..${fs}..${fs}dist${fs}jxip.jar:${basedir}${fs}build" classname="Test" fork="true" failonerror="true" maxmemory="128m">
+		<env key="LD_LIBRARY_PATH" path="/tmp/${user.name}/linux/sharedLib"/>
+		<env key="ROOT_XIP" path="${root_xip.dir}"/>
+		<arg value="${gram}"/>
+		<arg value="${sentence}"/>
+	</java>
+</target>
+
+<!-- compile java source file -->
+<target name="compile" depends="init">
+	<echo message=" -------------------- java: Compiling Java files -------------------------" />
+	<javac srcdir="${basedir}" 
+		destdir="build" 
+		debug="${java_debug}" 
+		deprecation="${java_deprecation}"
+		optimize="${java_optimize}"
+		classpath="..${fs}..${fs}..${fs}dist${fs}jxip.jar" >
+	</javac>
+</target>
+
+<target name="init" depends="">
+	<mkdir dir="build" />
+</target>
+
+<target name="clean" depends="" >
+	<delete dir="build" />
+</target>
+
+</project>
+

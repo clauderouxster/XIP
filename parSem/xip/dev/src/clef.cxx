@@ -158,7 +158,7 @@ char LitCommentaires(ifstream& fichier,unsigned char cc,unsigned char* r) {
 
 
 /****************************************************************************************************/
-/*On lit certaines chaines de caractères dont on se servira pour 
+/*On lit certaines chaines de caractï¿½res dont on se servira pour 
 construire 
 les attributs, les valeurs etc...*/
 char lit(ifstream& fichier,char *tampon) {
@@ -320,7 +320,7 @@ char Lettre(unsigned char c) {
 }
 
 /****************************************************************************************************/
-/* On lit dans une chaine de caractère le mot suivant*/
+/* On lit dans une chaine de caractï¿½re le mot suivant*/
 char lit(char *tampon,char* laPhrase,int* i) {
     int j=0;
     char k;

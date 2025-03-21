@@ -635,8 +635,10 @@ void FST_to_KifTransducer(NETptr net, string output, int latintable, bool normal
 	}
 
 	while (state != NULL) {
-		if (STATE_final(state) == TRUE)
+		if (STATE_final(state) == TRUE) {
 			etat->status |= xfarcend;
+			etat->status &= ~xfepsilonlower;
+		}
 
 		arc = STATE_arc_set(state);
 
@@ -654,7 +656,7 @@ void FST_to_KifTransducer(NETptr net, string output, int latintable, bool normal
 			else {
 				if ((lowerid == EPSILON) || (lowerid == ALTCHAIN_SYMBOL)) {
 					copy_label_name(id, UPPER, caracupper, 255, TRUE, FALSE);
-					etat->status |= xfepsilonlower;
+					etat->status |= xfepsilonlower | xfarcend;
 					cw = atrans.index(caracupper);
 					cw <<= 16;
 				}

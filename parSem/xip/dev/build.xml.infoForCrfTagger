@@ -1,0 +1,81 @@
+conclusion:
+- je ne comprends pas quand est comment on est linké aux librarie wapiti (lib dyn, mais devrait etre mentionné dans le link)
+- pour compiler sur windows il faut un compilo c99 => passer a visualStudio 13
+- regex: sur windows pas de pb: fourni par visualStudio
+	 sur linux, sur certaine machine les lib boost-regex existe mais en lib dynamique, comme toute les machines non pas ces lib fournies, il faut utiliser la lib static compilé par claude pour sirac/chichet
+y encore du boulot, ce n'est pas une priorité (petite amelioration)
+----------------------------------  new CRFtagger -------------------------------------
+le code du CRFtagger utilise wapiti et des expression regulieres (non dispo en C++) d'ou l'utilisation des RE fournies par Boost: http://www.boost.org/
+
+le code source du CRFtagger est dans: 	.../parSem/ntagger/dev/src
+
+il faut un C99 compiler pour compiler crfTagger. VisualStudio 10 is not C99 compliant.
+il semble que:
+	C99 library support in Visual Studio 2013
+	http://blogs.msdn.com/b/vcblog/archive/2013/07/19/c99-library-support-in-visual-studio-2013.aspx
+	Hello, I’m Pat Brenner, a developer on the Visual C++ Libraries team. In this blog post I want to share some information about the C99 support added to the C run-time library in Visual Studio 2013.
+
+----------------------------------  wapiti -------------------------------------
+Claude has compiled une version de wapiti pour windows les dll sont disponible ici:
+../../ntagger/dev/lib/windows/*.dll *.lib
+../../ntagger/dev/lib/windows64/*.dll *.lib
+
+mais je ne comprends pas comment et quand on est linké avec wapiti library???????? pourtant le code compilé dans ntagger/dev/src/*.c fait reference aux include wapiti
+
+
+----------------------------------  lib boost -------------------------------------
+claude a compilé une version lib static de la lib sur sirac, meme version de compilo que chichet:   gcc version 4.4.7
+/home/roux/ANTKIF/regex/dev/lib/sirac/libboost_regex.a   (pour eviter les lib dyn)
+
+j'ai copier le dir de claude:
+cd .../parSem
+cp -r /home/roux/ANTKIF/regex boostRegex
+
+sur windows: le compilo fournie ue version des regexp compatible avec celle de Boost
+sur linux: il y a une version de RE de Boost fournie avec linux sur chichet ou sirac  mais c'est une lib dynamic (*.so)
+
+---------------------------------- changes required to compile CRFtagger -------------------------------------
+818d817
+<         <libset dir="${regex.lib.dir}" libs="boost_regex" unless="windows"/>
+905d903
+<         <fileset refid="ntaggerC++SrcFiles" unless="windows"/>
+911,914d908
+<       <compiler name="${compilerC.name}" extends="compilerCbasic"   unless="transMode" >
+<         <compilerarg value="-std=c99" location="start"/>
+<         <fileset refid="ntaggerCSrcFiles" unless="windows"/>
+<       </compiler>
+1020d1013
+<                 <fileset refid="ntaggerC++SrcFiles" unless="windows"/>
+1034,1037d1026
+<             <compiler  extends="compilerCbasic" name="${compilerC.name}"  unless="transMode" >
+<                 <compilerarg value="-std=c99" location="start"/>
+<                 <fileset refid="ntaggerCSrcFiles" unless="windows"/>
+<             </compiler>
+1040d1028
+<                 <libset dir="${regex.lib.dir}" libs="boost_regex" unless="windows"/>
+1094,1095d1081
+<             <define name="CRFTAGGER" unless="windows"/>
+<             <define name="ATM_ANSI" unless="linux64"/>
+1135c1121
+<                   kif.cxx, kifmaps.cxx, kifpmaps.cxx, treemaps.cxx, kifautomaton.cxx, kifglobalthread.cxx, kifn.cxx, stlresul.cxx,
+---
+>                   kif.cxx, kifmaps.cxx, treemaps.cxx, kifautomaton.cxx, kifglobalthread.cxx, kifn.cxx, stlresul.cxx,
+1138,1140d1123
+<         <property name="ntagger.c.src.files" value="bcd.c, decoder.c, gradient.c, lbfgs.c, model.c, options.c,
+<               pattern.c, progress.c, quark.c, reader.c, rprop.c, sgdl1.c, thread.c, tools.c, vmath.c, wapiti.c"/>
+<         <property name="ntagger.cpp.src.files" value="tagger.cpp,extractFeature.cpp"/>    
+1153,1158d1135
+<         <property name="ntagger.src.dir" location="${basedir}/../../ntagger/dev/src" />
+<         <fileset id="ntaggerCSrcFiles" dir="${ntagger.src.dir}" includes="${ntagger.c.src.files}" />
+<         <fileset id="ntaggerC++SrcFiles" dir="${ntagger.src.dir}" includes="${ntagger.cpp.src.files}" />
+<         <property name="regex.inc.dir" location="${basedir}/../../regex/dev/include"/>
+<         <property name="regex.lib.dir" location="${basedir}/../../regex/dev/lib/${env.COMPUTERNAME}"/>
+<     
+1161,1162d1137
+<         
+<         <property name="ntagger.inc.dir" location="${basedir}/../../ntagger/dev/include" />
+1178,1179d1152
+<             <pathelement location="${regex.inc.dir}"/>
+<             <pathelement location="${ntagger.inc.dir}"/>
+1396d1368
+< 

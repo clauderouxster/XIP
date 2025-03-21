@@ -105,9 +105,10 @@ public class Test {
 		xipResultManager = new XipResultManager();
 		//input with fictif node
 		String inputStr = "Chancellor Gordon Brown has denied that extra money in the Budget for pensioners is a pre-election bribe.";
-		xipResultManager.xipResultBuilderFromString(gHandler, inputStr, this, "myCB2");
+		//System.out.println("inputStr = " + inputStr);
+		//xipResultManager.xipResultBuilderFromString(gHandler, inputStr, this, "myCB2");
 		//xipResultManager.xipResultBuilderFromString(gHandler, "Peter is happy. The cat is black.", this, "myCB1");
-		//xipResultManager.xipResultBuilderFromTextFile(gHandler, input, this, "myCB1");
+		xipResultManager.xipResultBuilderFromTextFile(gHandler, input, this, "myCB1");
 		//xipResultManager.xipResultBuilderFromXmlFile(gHandler, "input.xml", this, "myCB1", "myCBXml");
 	}
 

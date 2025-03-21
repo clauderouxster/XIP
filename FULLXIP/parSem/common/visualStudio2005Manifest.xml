@@ -1,0 +1,56 @@
+
+<project>
+    <target name="genVS2005Manifest" >
+        <if>
+            <equals arg1="${platform}" arg2="windows" />
+            <then>
+                <!-- check Visual Studio version -->
+                <exec executable="cl" outputproperty="mes" />
+                <if>
+                    <contains string="${mes}" substring="14.00.50727" />
+                    <then>
+                        <!-- Visual Studio 2005 -->
+                        <!--With Visual Studio 2005, it is recommended that a C/C++ application
+                        or library have its manifest embedded inside the final
+                        binary because this ensures proper runtime behavior in most scenarios. 
+                        The manifest file is build by the linker.  
+                        use #2 with a dll file or #1 with an exe file
+                        Manifest Generation in Visual Studio:
+                        http://msdn.microsoft.com/en-us/library/ms235229(VS.80).aspx
+                        How to: Embed a Manifest Inside a C/C++ Application:
+                        http://msdn.microsoft.com/en-us/library/ms235591(VS.80).aspx
+                        manifest Tool Mt.exe:
+                        http://msdn.microsoft.com/en-us/library/aa375649(VS.85).aspx
+                        general:
+                        http://www.grimes.demon.co.uk/workshops/fusWSThirteen.htm
+                        The Policies dir gives complete information identifying the assembly installed on this machine 
+                        (version 8.0.50727.762) and then, confusingly, it identifies 'dependent assemblies',
+                        with rebinding information to direct requests for all versions of 
+                        the CRT library between 8.0.41204.256 and 8.0.50608.0 so that the DLL loader uses 
+                        version 8.0.50727.42 instead:
+                        bindingRedirect oldVersion="8.0.41204.256-8.0.50608.0" newVersion="8.0.50727.762"/. 
+                        tools: depends.exe ou bien dumpbin.exe /dependents (pour connaitre les dll dont depend l'application)
+                        -->
+                        <echo message="+++++++ inserting manifest +++++++" />
+                        <echo message="      manifest: ${manifest.fileName}" />
+                        <echo message="      from: ${libOrExe}" />
+                        <echo message="      dir: ${libOrExeDir}" />
+                        <exec executable="mt" dir="${libOrExeDir}" failonerror="true" >
+                            <arg line="/nologo /manifest ${manifest.fileName} /outputresource:${libOrExe};${typeFile}" />
+                        </exec>
+                        <delete file="${manifest.fileName}" />
+                        <!--
+                        <echo message="+++++++ extracting manifest  +++++++++" />
+                        <delete file="${basedir}/extracted.manifest" />
+                        <echo message="mt /nologo /out:${basedir}/extracted.manifest /inputresource:${libOrExe};${typeFile}" />
+                        <exec executable="mt" dir="${libOrExeDir}" failonerror="true" >
+                            <arg line="/nologo /out:${basedir}/extracted.manifest /inputresource:${libOrExe};${typeFile}" />
+                        </exec>
+                        -->
+                    </then>
+                    <!-- mt.exe and manifest do not exist with VS2003 -->
+                </if>
+            </then>
+        </if>
+    </target>
+</project>

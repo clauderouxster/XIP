@@ -1,4 +1,4 @@
-/* $Id: lktypes.h,v 1.2 2005/06/03 14:22:12 grondeau Exp $ */
+/* $Id: lktypes.h,v 1.14 2017/03/17 09:37:26 roux Exp $ */
 /*
  * Xerox Research Centre Europe - Grenoble Laboratory
  *

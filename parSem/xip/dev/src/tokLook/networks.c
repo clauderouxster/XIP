@@ -1,4 +1,4 @@
-/* $Id: networks.c,v 1.66 2017/10/16 08:53:29 roux Exp $ */
+/* $Id: networks.c,v 1.63 2017/05/03 11:44:52 roux Exp $ */
 
 /*
 * Xerox Research Centre Europe - Grenoble Laboratory
@@ -187,7 +187,7 @@ new stuff - 04.96 Tamas Gaal - Alternative lookup algorithm functions
 - output by a simplified tree
 ======================================================================*/
 
-static char rcs_id_lookup[] = "$Id: networks.c,v 1.66 2017/10/16 08:53:29 roux Exp $";
+static char rcs_id_lookup[] = "$Id: networks.c,v 1.63 2017/05/03 11:44:52 roux Exp $";
 /* --- Debug help ----------------------------------------------------*/
 
 #ifdef DEBUG

@@ -1,0 +1,381 @@
+
+<project name="fst" default="compile" basedir=".">
+    <property name="name" value="fst" />
+    <property name="env" environment="env" value="env"/>
+    <property name="common.dir" location="${basedir}/../../common" />
+    <import file="${common.dir}/buildInclude.xml" />
+    <property name="archive.name"	value="archive-${fst.version}-${curDate.now}" />
+    <property name="archive.zip.file"	location="${archive.root}/${archive.name}.zip" />
+    <property name="delivery.name"	value="${name}-${fst.version}" />
+    <property name="delivery.dir"	location="${delivery.root}/${delivery.name}" />
+    <property name="delivery.zip.file"	location="${delivery.root}/${delivery.name}.zip" />
+    <property name="ftp.login" 		value="ftp-lg" />
+    <property name="ftp.password" 	value="lg23pt05" />
+    <property name="ftp.login.client"       value="" />
+    <property name="ftp.password.client"    value="" />
+    <property name="ftp.remote.dir"         value="" />
+    <property name="log.level" value="verbose" />
+    <property name="doc.name" value="" />
+    <property name="cvs.ws.dir"		location="${basedir}/cvs-ws" />
+    <property name="fst.source.dir"	location="${basedir}/src/fst" />
+    <property name="fsopt.source.dir"	location="${fst.source.dir}/fsopt" />
+    <property name="xerox.source.dir"	location="${fst.source.dir}/xerox/fst" />
+    <!-- source file names -->
+    <!-- This is the minimal set of file required by ntm (but it's not enought for xip => fstRequireForXip.src.files are added -->
+    <property name="fstBase.src.files" value="apply.c, arc-optimization.c, bin-in.c, bin-out.c, btree.c, cmp-net.c,
+    config.c, cons.c, context.c, ConvertUTF.c, copy-fsm.c, dbl-link.c, debug.c, define.c, eqv-labs.c, error.c,
+    fat-str.c, flags.c, fsm_io.c, hash-tbl.c, header.c, heap.c, label.c, lab-vect.c, machine.c, mark.c,
+    modify-base.c, net-io.c, net-traversal.c, pars-tbl.c, pretty-p.c, prompt.c, rename.c, share_arclist.c,
+    sig-prop.c, stack-mr.c, str-buf.c, struct.c, twol-net.c, utf8_fatstr_util.c,calculus.c,
+    utf8_util.c, vector.c, vectorize.c, compact.c, virtual-base.c" />
+    <!-- the fst lib for xip must include: fstBase.src.files + "fstRequireForXip.src.files -->
+    <property name="fstRequireForXip.src.files" value=" cfsm.c, modify.c, state-mr.c, fsm-fst-x.c" />
+    <!-- to generate fst executable it requires: fst.src.files + fsopt.src.files + xerox.src.files -->
+    <property name="fst.src.files" value="ambclass.c ,bimach.c ,calc-aux.c ,cfsm.c,
+    com-rep.c ,dot-net-io.c ,fsm-fst-x.c ,functions.c ,labpaste.c ,lex-aux.c ,lexicon-aux.c ,
+    lexicon.lex.c ,lexicon.tab.c ,look.c ,merge.c ,modify.c ,prolog.c ,prolog.lex.c ,prolog.tab.c ,
+    prop-ed.c ,prop-io.c ,prop-io.lex.c ,prop-io.tab.c ,re-aux.c ,recode.c ,regex-in.c ,
+    remove_epsilon.c ,replace.c ,state-mr.c ,subseq.c ,tabular.c ,text-io.c ,varstack.c ,
+    vcg-net-io.c ,virtual-fsm.c ,wprolog.c ,wprolog.lex.c ,wprolog.tab.c ,comm-def.c ,
+    iy-define.c ,iy-help.c ,iy-stack.c ,iy-fs-ops.c ,interface-aux.c , tk-inspect.c , ${fstBase.src.files} " />
+    <property name="fsopt.src.files" value="test-compression.c" />
+    <property name="xerox.src.files" value="interface.lex.yy.c, interface.tab.c, regex.tab.c, re.lex.yy.c" />
+    <property name="lib.src.files" value="${fstBase.src.files}, ${fstRequireForXip.src.files}" />
+    <property name="exe.src.files" value="${fstBase.src.files}, ${fst.src.files}, fst.c" />
+    <target name="all" depends="cleanAll, getSrc, compile" description=" clean + compile And Link (static)">
+    </target>
+
+    <!--  -->
+    <target name="getSrc" depends="cvsCo-c-fsm, removeSrc, copySrc" description="get the src and include with CVS">
+    </target>
+
+    <!-- -->
+    <target name="updateSrc" depends="cvsUp-c-fsm, copySrc" description="update the src and include">
+    </target>
+
+    <!-- -->
+    <target name="cvsCo-c-fsm" depends="" description="cvs co from cvs c-fsm">
+        <delete dir="${cvs.ws.dir}" />
+        <mkdir dir="${cvs.ws.dir}" />
+        <cvs dest="${cvs.ws.dir}" >
+            <commandline>
+                <argument line="co c-fsm/rules"/>
+            </commandline>
+        </cvs>
+        <cvs dest="${cvs.ws.dir}" >
+            <commandline>
+                <argument line="co c-fsm/src/fst"/>
+            </commandline>
+        </cvs>
+    </target>
+
+    <!-- -->
+    <target name="cvsUp-c-fsm" depends="" description="cvs co from cvs c-fsm">
+        <cvs dest="${cvs.ws.dir}" >
+            <commandline>
+                <argument line="-q up c-fsm/rules"/>
+            </commandline>
+        </cvs>
+        <cvs dest="${cvs.ws.dir}" >
+            <commandline>
+                <argument line="-q up c-fsm/src/fst"/>
+            </commandline>
+        </cvs>
+    </target>
+
+    <!-- -->
+    <target name="removeSrc" depends="" description="remove the src and include">
+        <delete>
+            <fileset dir="${fst.source.dir}" includes="*.c,*.h"/>
+            <fileset dir="${fsopt.source.dir}" includes="*.c,*.h"/>
+            <fileset dir="${xerox.source.dir}" includes="*.c,*.h"/>
+        </delete>
+    </target>
+
+    <!-- -->
+    <target name="copySrc" depends="setCommonProperties" description="copy the src and include from ${cvs.ws.dir}">
+        <!-- launch make on unix platform to generate fst/xerox dir  -->
+        <echo message="------------------------------------------------" />
+        <echo message="it's take some minutes to generate fst/xerox dir" />
+        <echo message="------------------------------------------------" />
+        <property name="fst.src.ori" value="${cvs.ws.dir}/c-fsm/src" />
+        <exec executable="make" failonerror="false" output="${log.dir}/make1" dir="${fst.src.ori}/fst" >
+        </exec>
+        <exec executable="make" failonerror="true" output="${log.dir}/make2" dir="${fst.src.ori}/fst" >
+        </exec>
+        <copy  todir="${fst.source.dir}" >
+            <fileset dir="${fst.src.ori}/fst" includes="*.c,*.h" />
+        </copy>
+        <copy  todir="${fsopt.source.dir}" >
+            <fileset dir="${fst.src.ori}/fst/fsopt" includes="*.c,*.h" />
+        </copy>
+        <copy  todir="${xerox.source.dir}" >
+            <fileset dir="${fst.src.ori}/fst/xerox/fst" includes="*.c,*.h" />
+        </copy>
+    </target>
+
+    <!--  -->
+    <target name="install" depends="" description="install the delivery">
+        <property name="root.install.dir" location="/opt/ParSem/bin" />
+        <property name="install.dir" location="${root.install.dir}/fst-${fst.version}" />
+        <delete dir="${install.dir}" />
+        <mkdir dir="${install.dir}/bin/linux" />
+        <mkdir dir="${install.dir}/bin/solaris" />
+        <mkdir dir="${install.dir}/bin/windows" />
+        <copy file="${basedir}/bin/linux/staticExe/fst" tofile="${install.dir}/bin/linux/fst" />
+        <copy file="${basedir}/bin/solaris/staticExe/fst" tofile="${install.dir}/bin/solaris/fst" />
+        <copy file="${basedir}/bin/windows/staticExe/fst.exe" tofile="${install.dir}/bin/windows/fst.exe" />
+        <chmod file="${install.dir}/bin/solaris/fst" perm="a+x"/>
+        <chmod file="${install.dir}/bin/linux/fst" perm="a+x"/>
+        <!-- linux -->
+        <delete file="${root.install.dir}/linux/fst" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux/fst ${root.install.dir}/linux/fst" />
+        </exec>
+        <!-- solaris -->
+        <delete file="${root.install.dir}/solaris/fst" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/solaris/fst ${root.install.dir}/solaris/fst" />
+        </exec>
+        <!-- windows -->
+        <delete file="${root.install.dir}/windows/fst" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows/fst.exe ${root.install.dir}/windows/fst.exe" />
+        </exec>
+    </target>
+
+    <!--  -->
+    <target name="delivery" depends="" description=" build the delivery">
+        <condition property="compilation.complete">
+            <and>
+                <available file="${lib.dirs}/linux/staticLib/lib${name}.a"/>
+                <available file="${lib.dirs}/solaris/staticLib/lib${name}.a"/>
+                <available file="${lib.dirs}/windows/staticLib/${name}.lib"/>
+                <available file="${bin.dirs}/windows/staticExe/${name}.exe"/>
+                <available file="${bin.dirs}/solaris/staticExe/${name}"/>
+                <available file="${bin.dirs}/linux/staticExe/${name}"/>
+            </and>
+        </condition>
+        <fail unless="compilation.complete" message="compilation not completed" />
+        <delete dir="${delivery.dir}" />
+        <mkdir dir="${delivery.dir}" />
+        <copy todir="${delivery.dir}/bin">
+            <fileset dir="${bin.dirs}" excludes="**/history.xml,**/*.rsp"/>
+        </copy>
+        <copy todir="${delivery.dir}/lib">
+            <fileset dir="${lib.dirs}" excludes="**/history.xml,**/*.rsp"/>
+        </copy>
+        <copy  todir="${delivery.dir}/include/fst" >
+            <fileset dir="${fst.source.dir}" includes="*.h" />
+        </copy>
+        <delete file="${delivery.zip.file}" />
+        <zip destfile="${delivery.zip.file}" >
+            <zipfileset dir="${delivery.dir}" prefix="${delivery.name}"/>
+        </zip>
+    </target>
+
+    <!--  -->
+    <target name="srcModified" depends="" description="copy some source manually mofified" >
+        <copy  todir="${fst.source.dir}" >
+            <!-- this file has been updated to be compiled on MAC OS -->
+            <fileset dir="${basedir}/srcModified" includes="*.c, *.h" />
+        </copy>
+        <copy  todir="${fst.source.dir}" >
+            <!-- this file has been modified to take in account 64bits machine -->
+            <fileset dir="${basedir}/srcModified/arch64" includes="*.c, *.h" />
+        </copy>
+    </target>
+
+    <!--  -->
+    <!--   staticExe ne compile pas sur certaine platforme
+    <target name="compile" depends="staticLib, sharedLib, staticExe" description="compile And Link (static)" >
+    -->
+    <target name="compile" depends="staticLib, sharedLib" description="compile And Link (static)" >
+    </target>
+    <target name="compile.debug" depends="staticLib.debug, sharedLib.debug"
+        description="compile And Link (static) debug mode" >
+    </target>
+
+    <!-- -->
+    <target name="staticExe" depends="srcModified, setCommonProperties, win32"
+        description="compile and link (static ) ">
+        <property name="static.exe.obj.dir.name" value="staticExe" />
+        <property name="staticExe.record.file" value="${log.dir}/${static.exe.obj.dir.name}" />
+        <record name="${staticExe.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="staticExe.obj.dir" location="${obj.dir}/${static.exe.obj.dir.name}" />
+        <mkdir dir="${staticExe.obj.dir}" />
+        <property name="static.exe.dir" location="${bin.dir}/${static.exe.obj.dir.name}" />
+        <mkdir dir="${static.exe.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${staticExe.obj.dir}" subsystem="console"
+            exceptions="true" multithreaded="true" outtype="executable" runtime="dynamic"
+            outfile="${static.exe.dir}/${name}" warnings="${cc.warnings}" debug="${cc.debug}" >
+            <compiler extends="fstCompilerCommon" name="${compilerC.name}" >
+                <defineset refid="define.basic" />
+                <fileset dir="${fst.source.dir}" includes="${exe.src.files}"  />
+                <fileset dir="${fsopt.source.dir}" includes="${fsopt.src.files}"  />
+                <fileset dir="${xerox.source.dir}" includes="${xerox.src.files}"  />
+            </compiler>
+            <linker extends="fstLinkerCommon" name="${compilerC.name}" >
+                <linkerarg value="${linker.static.arg}" location="start" unless="nomt"/>
+            </linker>
+        </cc>
+        <record name="${staticExe.record.file}" action="stop"/>
+    </target>
+
+    <!--  -->
+    <target name="staticLib" depends="staticLibCom" description="compile and link (static lib) " />
+    <target name="staticLib.debug" depends="setDebugMode, staticLibCom"
+        description="compile and link (static lib) debug mode"/>
+    <target name="staticLibCom" depends="srcModified, setCommonProperties, win32"
+        description="compile and link (static lib) ">
+        <property name="static.lib.obj.dir.name" value="staticLib" />
+        <property name="staticLib.record.file" value="${log.dir}/${static.lib.obj.dir.name}" />
+        <record name="${staticLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="static.lib.obj.dir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.obj.dir}" />
+        <property name="static.lib.dir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${static.lib.obj.dir}" subsystem="console"
+            exceptions="true" multithreaded="true" outtype="static" runtime="dynamic"
+            outfile="${static.lib.dir}/${name}" warnings="${cc.warnings}" debug="${cc.debug}" >
+            <compiler extends="fstCompilerCommon" name="${compilerC.name}" >
+		            <compilerarg value="-fPIC" location="start"/>
+                <defineset refid="define.basic" />
+                <fileset dir="${fst.source.dir}" includes="${fst.src.files}"  />
+                <fileset dir="${fsopt.source.dir}" includes="${fsopt.src.files}"/>
+                <fileset dir="${xerox.source.dir}" includes="${xerox.src.files}"  />
+            </compiler>
+            <linker name="${compilerC.name}"  />
+        </cc>
+        <record name="${staticLib.record.file}" action="stop"/>
+    </target>
+
+    <!--  -->
+    <target name="sharedLib" depends="sharedLibCom" description="compile and link (static lib)" />
+    <target name="sharedLib.debug" depends="setDebugMode, sharedLibCom" description="debug mode" />
+    <target name="sharedLibCom" depends="srcModified, setCommonProperties, win32"
+        description="compile and link (shared lib) ">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <property name="sharedLib.record.file" value="${log.dir}/${shared.lib.obj.dir.name}" />
+        <record name="${sharedLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="shared.lib.obj.dir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.obj.dir}" />
+        <property name="shared.lib.dir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.dir}" />
+        <echo message="${shared.lib.obj.dir}"/>
+        <echo message="${shared.lib.dir}"/>
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${shared.lib.obj.dir}"
+            subsystem="console" exceptions="true" multithreaded="true"  outtype="shared"
+            runtime="dynamic" outfile="${shared.lib.dir}/${name}" warnings="${cc.warnings}" debug="${cc.debug}">
+            <compiler extends="fstCompilerCommon" name="${compilerC.name}" >
+              <fileset dir="${fst.source.dir}" includes="${fst.src.files}"  />
+              <fileset dir="${fsopt.source.dir}" includes="${fsopt.src.files}"/>
+              <fileset dir="${xerox.source.dir}" includes="${xerox.src.files}"  />
+              <defineset refid="define.dll" />
+            </compiler>
+            <linker extends="fstLinkerCommon" name="${compilerC.name}">
+                <linkerarg value="${linker.shared.arg}" location="start"  unless="nomt"/>
+            </linker>
+        </cc>
+        <record name="${sharedLib.record.file}" action="stop"/>
+    </target>
+
+    <!--  -->
+    <target name="win32" depends="" if="windows">
+        <!-- the file unistd.h is empty only on windows -->
+        <property name="windows.include.dir" location="${fst.source.dir}/windows" />
+        <mkdir dir="${windows.include.dir}" />
+        <touch file="${windows.include.dir}/unistd.h" />
+    </target>
+
+    <!--  -->
+    <target name="setCommonProperties" depends="platformSetting, compilerLinkerCommonSetting"
+        description="action before compiling" unless="commonPropertiesSet">
+        <property name="commonPropertiesSet" value="true" />
+        <if>
+            <istrue value="${debugMode}"/>
+            <then>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}.debug" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}.debug" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}.debug" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}.debug" />
+                <property name="cc.debug"       value="true" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optmize"     value="none" />
+            </then>
+            <else>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}" />
+                <property name="cc.debug"       value="false" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optmize"     value="extreme" />
+            </else>
+        </if>
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${obj.dir}" />
+        <mkdir dir="${bin.dir}" />
+        <mkdir dir="${log.dir}" />
+        <!-- set defines -->
+        <defineset id="define.com1" >
+            <define name="WIN32"        if="windows"/>
+            <define name="_WIN32"       if="windows"/>
+            <define name="_WINDOWS"     if="windows"/>
+            <define name="FSTWIN64"     if="windows64"/>
+            <define name="ARCH64"   	if="arch64bits"/>
+            <define name="MAC--OS"      if="mac"/>
+            <define name="LINUX"        if="linux"/>
+        </defineset>
+        <defineset id="define.com2" >
+            <define name="_M_IX86"      if="mac"/>
+            <define name="_M_IX86"      if="linux"/>
+            <define name="_M_IX86"      if="solaris"/>
+        </defineset>
+        <defineset id="define.basic" >
+            <define name="_FSMFSTBUILDDLL"  if="windows"/>
+            <define name="_FSMFSTDLL"       if="windows"/>
+        </defineset>
+        <defineset id="define.dll" >
+            <define name="FSTBASE_EXPORTS"  if="windows"/>
+            <define name="_FSTBASEDLL"      if="windows"/>
+            <define name="_FSTBASEBUILDDLL" if="windows"/>
+        </defineset>
+        <!-- set compiler options -->
+        <compiler id="fstCompilerCommon" extends="compilerCommon" debug="${cc.debug}">
+            <defineset refid="define.com1" />
+            <defineset refid="define.com2" if="i386" />
+            <includepath>
+                <pathelement location="${fst.source.dir}"/>
+                <pathelement location="${source.dir}"/>
+                <pathelement location="${fst.source.dir}/xerox" />
+            </includepath>
+            <includepath if="windows">
+                <pathelement location="${fst.source.dir}/windows" />
+            </includepath>
+        </compiler>
+        <linker id="fstLinkerCommon" extends="linkerCommon" debug="${cc.debug}" >
+            <syslibset libs="${system.libC.names}"/>
+        </linker>
+        <if>
+            <equals arg1="${os.arch}" arg2="i386" />
+            <then>
+                <property name="i386" value="true" />
+            </then>
+        </if>
+    </target>
+
+    <!--  -->
+    <target name="srcMin" depends="" description="">
+        <delete dir="${basedir}/doc" />
+    </target>
+
+    <!--  -->
+    <target name="localCleanAll" depends="" >
+    </target>
+
+    <!--  -->
+    <target name="localClean" depends="" >
+    </target>
+</project>
+

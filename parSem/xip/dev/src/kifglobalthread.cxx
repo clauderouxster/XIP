@@ -26,9 +26,6 @@ Reviewer   :
 #include "kifpredicate.h"
 
 #ifdef WIN32
-#define _USE_MATH_DEFINES
-#include <math.h>
-
 #include <io.h>
 #define DUP _dup
 #define DUP2 _dup2
@@ -39,8 +36,6 @@ Reviewer   :
 #define DUP dup
 #define DUP2 dup2
 #endif
-
-
 
 //--------------------------------------------------------------------------------------------------------------------------
 extern const char* kifErrorStrings[];
@@ -308,27 +303,6 @@ union bitdouble {
 	double v;
 	unsigned char bits[sizeof(double)];
 };
-
-
-static inline double Radian(double num) {
-	return(M_PI*(num / 180));
-}
-
-KifElement* PreGPSDistance(KifElement* contextualpattern, KifDomain* dom, KifCallFunction* callfunc, int idthread) {
-	double a, b, c, d;
-	double R = 6371;
-
-	a = Radian(callfunc->Evaluatethread(0, dom, idthread)->Float());
-	c = Radian(callfunc->Evaluatethread(1, dom, idthread)->Float());
-	b = Radian(callfunc->Evaluatethread(2, dom, idthread)->Float());
-	d = Radian(callfunc->Evaluatethread(3, dom, idthread)->Float());
-
-	if (callfunc->Size() == 5)
-		R = callfunc->Evaluatethread(4, dom, idthread)->Float();
-
-	R = acos(cos(a)*cos(b)*cos(abs(c - d)) + sin(a)*sin(b)) * R;
-	return callfunc->kifcode->Providefloat(R);
-}
 
 KifElement* PreGetBit(KifElement* contextualpattern, KifDomain* dom, KifCallFunction* callfunc, int idthread) {
 	KifElement* kval = callfunc->Evaluatethread(0, dom, idthread);
@@ -3136,8 +3110,6 @@ void KifGlobalThread::InitPredefined(KifCode* kifcodeptr) {
 	KifCreatePredefined(kifcodeptr, "prime", P_ONE, &PrePrime);
 	KifCreatePredefined(kifcodeptr, "base", P_TWO, &PreBase);
 	KifCreatePredefined(kifcodeptr, "bit", P_TWO, &PreGetBit);
-
-	KifCreatePredefined(kifcodeptr, "GPSdistance", P_FOUR|P_FIVE, &PreGPSDistance);
 
 	KifCreatePredefined(kifcodeptr, "pause", P_ONE | P_TWO, &PrePause);
 	KifCreatePredefined(kifcodeptr, "sleep", P_ONE, &PreSleep);

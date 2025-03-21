@@ -58,11 +58,10 @@ public:
 	//---------------------------------------------------------------------------------------------------------------------
 	//This SECTION is for your specific implementation...
 	//Your personal variables here...
-	hmap<string, int> wordnetpos;
-	hmap<int, string> poswordnet;
-	hmap<string, int> wordnetsenses;
-	hmap<string, int> wordnettypes;
-	hmap<int, string> categories;
+	map<string, int> wordnetpos;
+	map<string, int> wordnetsenses;
+	map<string, int> wordnettypes;
+	map<int, string> categories;
 
 	//---------------------------------------------------------------------------------------------------------------------
 	KifWordnet(KifCode* kifcode, KifElement* base) : KifBasic(kifcode, base, Wordnet_type) {
@@ -74,12 +73,6 @@ public:
 		wordnetpos["ADV"] = 4;
 		wordnetpos["SATELLITE"] = 5;
 		wordnetpos["ADJSAT"] = 5;
-
-		poswordnet[1] = "NOUN";
-		poswordnet[2] = "VERB";
-		poswordnet[3] = "ADJ";
-		poswordnet[4] = "ADV";
-		poswordnet[5] = "ADJSAT";
 
 		/* Pointer type and search type counts */
 		/* Pointers */
@@ -240,12 +233,6 @@ public:
 			kcurrent->Push("nextform", knew);
 			Setstructure(knew, sw->nextform, def);
 		}
-
-		if (sw->ptrlist != NULL) {
-			knew = new KifMap(kifcode, NULL);
-			kcurrent->Push("list", knew);
-			Setstructure(knew, sw->ptrlist, def);
-		}
 	}
 
 
@@ -273,37 +260,15 @@ public:
 		}
 
 		int def = callfunc->Evaluate(4, domain)->Integer();
-		KifMap* kres = Selectmap(callfunc, contextualpattern);
-
-		if (pos == "ALL_POS") {
-			KifMap* kloc = NULL;
-			for (int ipos = 1; ipos <= 5; ipos++) {
-				SynsetPtr s_w;
-				{
-					ThreadLock _lock(kifTemporary);
-					s_w = findtheinfo_ds(STR(lasttoken), ipos, wordnettypes[mode], wordnetsenses[sense]);
-				}
-
-				if (s_w != NULL) {
-					kloc = new KifMap(kifcode, NULL);
-					kres->Push(poswordnet[ipos], kloc);
-					Setstructure(kloc, s_w, def);
-					free_syns(s_w);
-				}
-			}
-			return kres;
-		}
-
 		SynsetPtr s_w;
 		{
 			ThreadLock _lock(kifTemporary);
 			s_w = findtheinfo_ds(STR(lasttoken), wordnetpos[pos], wordnettypes[mode], wordnetsenses[sense]);
 		}
 
-		if (s_w != NULL) {
-			Setstructure(kres, s_w, def);
-			free_syns(s_w);
-		}
+		KifMap* kres = Selectmap(callfunc, contextualpattern);
+		Setstructure(kres, s_w, def);
+		free_syns(s_w);
 
 		//you may return any value of course...
 		return kres;
@@ -322,49 +287,32 @@ public:
 		char* wrd = NULL;
 		string lasttoken;
 		if (callfunc->Size() == 4) {
-			lasttoken = callfunc->Evaluate(3, domain)->String();
+			lasttoken = callfunc->Evaluate(2, domain)->String();
 			wrd = STR(lasttoken);
 		}
-
-		KifMap* kres = Selectmap(callfunc, contextualpattern);
-		if (pos == "ALL_POS") {
-			KifMap* kloc = NULL;
-			for (int ipos = 1; ipos <= 5; ipos++) {
-				SynsetPtr s_w;
-				{
-					ThreadLock _lock(kifTemporary);
-					s_w = read_synset(ipos, offset, wrd);
-				}				
-				if (s_w != NULL) {
-					kloc = new KifMap(kifcode, NULL);
-					Setstructure(kloc, s_w, def);
-					kres->Push(poswordnet[ipos], kloc);
-					free_syns(s_w);
-				}
-			}
-			return kres;
-		}
-
-
-
 		SynsetPtr s_w;
 		{
 			ThreadLock _lock(kifTemporary);
 			s_w = read_synset(wordnetpos[pos], offset, wrd);
 		}
-		if (s_w != NULL) {
-			Setstructure(kres, s_w, def);
-			free_syns(s_w);
-		}
-	
+		KifMap* kres = Selectmap(callfunc, contextualpattern);
+		Setstructure(kres, s_w, def);
+		free_syns(s_w);
 
 		return kres;
 	}
 
+	KifElement* MethodFindfrequence(KifElement* contextualpattern, KifDomain* domain, KifCallFunction* callfunc, int idthread) {
+		string pos = callfunc->Evaluate(1, domain)->String();
+		if (wordnetpos.find(pos) == wordnetpos.end()) {
+			pos = "WRN(002): Unkwown POS:" + pos;
+			return kifcode->Returnerror(pos);
+		}
 
-	long Frequence(string& word, int pos) {
+		string word = callfunc->Evaluate(0, domain)->String();
+
 		int familiar = 0;
-		IndexPtr idx = getindex(STR(word), pos);
+		IndexPtr idx = getindex(STR(word), wordnetpos[pos]);
 		if (idx != NULL) {
 			int cnt = idx->sense_cnt;
 			if (cnt == 0) familiar = 0;
@@ -377,28 +325,7 @@ public:
 			if (cnt > 32) familiar = 7;
 			free_index(idx);
 		}
-		return familiar;
-	}
-
-	KifElement* MethodFindfrequence(KifElement* contextualpattern, KifDomain* domain, KifCallFunction* callfunc, int idthread) {
-		string pos = callfunc->Evaluate(1, domain)->String();
-		if (wordnetpos.find(pos) == wordnetpos.end()) {
-			pos = "WRN(002): Unkwown POS:" + pos;
-			return kifcode->Returnerror(pos);
-		}
-
-		string word = callfunc->Evaluate(0, domain)->String();
-
-		if (pos == "ALL_POS") {
-			KifMap* kres = Selectmap(callfunc, contextualpattern);
-
-			for (int ipos = 1; ipos <= 5; ipos++)
-				kres->Push(poswordnet[ipos], kifcode->Provideinteger(Frequence(word, ipos)));
-
-			return kres;
-		}
-
-		return kifcode->Provideinteger(Frequence(word, wordnetpos[pos]));
+		return kifcode->Provideinteger(familiar);
 	}
 
 

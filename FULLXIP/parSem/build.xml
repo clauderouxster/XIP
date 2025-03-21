@@ -1,0 +1,298 @@
+
+<project name="buildFstXmlNtmXip" default="usage" basedir=".">
+    
+    <property name="env" environment="env" value="env"/>
+    <property name="common.dir" location="${basedir}/common" />
+    <import file="${common.dir}/taskExt.xml" />
+    <import file="${common.dir}/platformProperties.xml" />
+    <import file="${common.dir}/taskSync.xml" />
+    
+    <property name="fst.dir"	location="${basedir}/fst/dev" />
+    <!--property name="xml.dir"	location="${env.XMLDIR}" /-->
+    <property name="ntm.dir"	location="${basedir}/ntm/dev" />
+    <property name="xip.dir"	location="${basedir}/xip/dev" />
+    <property name="parsSem.dir"	location="${basedir}" />
+    <property name="grammars.dir" location="${basedir}/xip/dev/GRAMMARS" />
+    
+    <target name="usage" >
+        <echo message="ant build:   	clean and compile fst,ntm,xml,xip on the current platform" />
+        <echo message="ant debug:   	clean and compile in debug mode fst,ntm,xml,xip on the current platform" />
+        <echo message="ant clean:   	clean fst,ntm,xml,xip on the current platform" />
+        <echo message="ant cleanAll:   	clean fst,ntm,xml,xip on all platforms" />
+        <echo message="" />
+        <echo message="ant start:   	must be run on each platform where compilation will be launch(choranche, albaron, chevreuse, mont-dore) before using ant all" />
+        <echo message="ant all:   	clean and compile fst,ntm,xml,xip on all the platforms (choranche, albaron, chevreuse, mont-dore) + ant install (xip/dev)" />
+    </target>
+
+    <target name="build" depends="clean, compile" description=" clean, compile,  only for this platform" />
+    
+    <target name="compile" depends="init" description="" >
+        <delete file="${compileRecFile}" />
+        <record name="${compileRecFile}" loglevel="${log.level}" action="start"/>
+        <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="compile" inheritAll="false" />
+        <!--ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="compile" inheritAll="false" /-->
+        <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="compile" inheritAll="false" />
+        <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="default" inheritAll="false" />
+        <record name="${compileRecFile}" action="stop"/>
+    </target>
+    
+    <target name="clean" depends="init" description="">
+        <delete file="${cleanRecFile}" />
+        <record name="${cleanRecFile}" loglevel="${log.level}" action="start"/>
+        <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="clean" inheritAll="false" />
+        <ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="clean" inheritAll="false" />
+        <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="clean" inheritAll="false" />
+        <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="clean" inheritAll="false" />
+        <ant antfile="${xip.dir}/java/build.xml" dir="${xip.dir}/java" target="clean" inheritAll="false" />
+        <ant antfile="${xip.dir}/xipui/build.xml" dir="${xip.dir}/xipui" target="clean" inheritAll="false" />
+        <record name="${cleanRecFile}" action="stop"/>
+    </target>
+    
+    <target name="cleanAll" depends="cleanLock" description="">
+        <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="cleanAll" inheritAll="false" />
+        <ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="cleanAll" inheritAll="false" />
+        <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="cleanAll" inheritAll="false" />
+        <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="cleanAll" inheritAll="false" />
+        <ant antfile="${xip.dir}/java/build.xml" dir="${xip.dir}/java" target="cleanAll" inheritAll="false" />
+        <ant antfile="${xip.dir}/xipui/build.xml" dir="${xip.dir}/xipui" target="clean" inheritAll="false" />
+    </target>
+    
+    <target name="debug" depends="" description="">
+        <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="compile.debug" inheritAll="false" />
+        <ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="compile.debug" inheritAll="false" />
+        <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="compile.debug" inheritAll="false" />
+        <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="compile.debug" inheritAll="false" />
+    </target>
+    
+    <target name="all"  depends="cleanAll" 
+            description="clean compile for all the platforms: choranche,albaron, etretat, chevreuse, mont-dore">
+        <delete dir="logs" />
+        <mkdir dir="logs" />
+        <parallel> 
+            <antcall target="chorancheBuild" />
+            <antcall target="albaronBuild" />
+            <!--
+            <antcall target="etretatBuild" />
+            -->
+            <antcall target="chevreuseBuild" />
+            <antcall target="mont-doreBuild" /> 
+        </parallel>
+        <antcall target="check" >
+            <param name="hostName" value="choranche"/>
+        </antcall>
+        <antcall target="check" >
+            <param name="hostName" value="albaron"/>
+        </antcall>
+        <!--
+        <antcall target="check" >
+            <param name="hostName" value="etretat"/>
+        </antcall>
+        -->
+        <antcall target="check" >
+            <param name="hostName" value="chevreuse"/>
+        </antcall>
+        <antcall target="check" >
+            <param name="hostName" value="mont-dore"/>
+        </antcall>
+        <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="install" inheritAll="false" />
+    </target>
+    
+    <target name="check" >
+        <if>
+            <available file="logs/server.error.${hostName}"/>
+            <then>
+                <echo message="Error on: ${hostName}" />
+            </then>
+            <else>
+                <echo message="No error on: ${hostName}" />
+            </else>
+        </if>
+    </target>
+    
+    <target name="chorancheBuild" description="">
+        <antcall target="rmtBuild">
+            <param name="rmt.hostName" value="choranche"/>
+            <param name="rmt.dir" value="/opt/ParSem/users/${user.name}/parSem"/>
+        </antcall>
+    </target>
+    
+    <target name="albaronBuild" description="">
+        <antcall target="rmtBuild">
+            <param name="rmt.dir" value="/opt/ParSem/users/${user.name}/parSem"/>
+            <param name="rmt.hostName" value="albaron"/>
+        </antcall>
+    </target>
+    
+    <target name="etretatBuild" description="">
+        <antcall target="rmtBuild">
+            <param name="rmt.dir" value="/Volumes/PARSEM/users/${user.name}/parSem"/>
+            <param name="rmt.hostName" value="etretat"/>
+        </antcall>
+    </target>
+    
+    <target name="chevreuseBuild" description="">
+        <antcall target="rmtBuild">
+            <param name="rmt.dir" value="z:\users\${user.name}\parSem"/>
+            <param name="rmt.hostName" value="chevreuse"/>
+        </antcall>
+    </target>
+    
+    <target name="mont-doreBuild" description="">
+        <antcall target="rmtBuild">
+            <param name="rmt.dir" value="z:\users\${user.name}\parSem"/>
+            <param name="rmt.hostName" value="mont-dore"/>
+        </antcall>
+    </target>
+    
+    <target name="rmtBuild" depends="init" description="">
+        <property name="file.client.error" location="logs/client.error" />
+        <delete file="${file.client.error}"/>
+        <trycatch reference="exception_ref1">
+            <try>
+                <remoteant machine="${rmt.hostName}" port="${ant.port}" persistant="false" failonerror="true" >
+                    <runant dir="${rmt.dir}" antfile="build.xml" target="remoteBuild"  >
+                        <property name="hostName" value="${rmt.hostName}"/>
+                    </runant>
+                </remoteant>
+            </try>
+            <catch>
+                <property name="exception1" refid="exception_ref1" />
+                <if>
+                    <contains string="${exception1}" substring="java.io.EOFException" />
+                    <then>
+                        <echo message="Done on ${rmt.hostName}" file="${file.client.error}"/>
+                        <echo message="Done on ${rmt.hostName}" />
+                    </then>
+                    <else>
+                        <echo message="Error on ${rmt.hostName}: ${exception1}" file="${file.client.error}"/>
+                        <fail message="Error on ${rmt.hostName}: ${exception1}" />
+                    </else>
+                </if>
+            </catch>
+            <finally>
+            </finally>
+        </trycatch>
+    </target>
+    
+    <target name="remoteBuild1" >
+        <echo message="sleeping---- on ${hostName}"/>
+        <property name="file.server.error" location="logs/server.error.${hostName}" />
+        <sleep seconds="5"/>
+        <touch file="${file.server.error}"/>
+        <fail message="fff"/> <!-- no effect ??? -->
+        <echo message="end---- on ${hostName}"/>
+    </target>
+    
+    <target name="remoteBuild" depends="" description=" clean, compile,  only for this platform" >
+        <property name="file.server.done" location="logs/server.done.${hostName}" />
+        <property name="file.server.error" location="logs/server.error.${hostName}" />
+        <delete file="${file.server.done}" />
+        <delete file="${file.server.error}" />
+        <trycatch reference="exception_ref2">
+            <try>
+                <echo message="start clean and compile on ${hostName}"/>
+                <antcall target="clean"/>
+                <antcall target="compile"/>
+            </try>
+            <catch>
+                <property name="exception2" refid="exception_ref2" />
+                <echo message="Error on: ${hostName} ${exception2}" file="${file.server.error}"/>
+                <fail message="Error on: ${hostName} ${exception2}" />
+            </catch>
+            <finally>
+                <echo message="clean and compile done on: ${hostName} " file="${file.server.done}" />
+                <echo message="clean and compile done on: ${hostName} "/>
+            </finally>
+        </trycatch>
+    </target>
+    
+    <target name="start" depends="init" description="start ant server on current host">
+        <antserver port="${ant.port}" />
+    </target>
+    
+    <target name="stop" depends="init" description="stop ant server on current host">
+        <remoteant machine="localhost" port="${ant.port}">
+            <shutdown/>
+        </remoteant>
+    </target>
+    
+    <target name="init" depends="platformSetting" >
+        <mkdir dir="logs" />
+        <property name="ant.port" value="18000" />
+        <!-- Values= {error|warn|info|verbose|debug}  -->
+        <property name="log.level" value="info" />
+        <property name="compileRecFile" location="logs/${hostname}.compile.log" />
+        <property name="cleanRecFile" location="logs/${hostname}.clean.log" />
+    </target>
+    
+    <!--   
+    <target name="buildAll" depends="cleanAll" description="">
+        <delete file="" />
+        <parallel> 
+            <antcall target="build.choranche" />
+            <antcall target="build.albaron" />
+            <antcall target="build.etretat" />
+        </parallel>
+    </target>
+    
+    <target name="build.choranche">
+        <property name="dir.choranche" location="/opt/ParSem/users/${user.name}/parSem" />
+        <delete file="res.clean.choranche" />
+        <delete file="res.compile.choranche" />
+        <sshsession host="albaron" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa">
+            <sequential>
+                <ant antfile="build.xml" dir="${dir.choranche}" target="clean" output="res.clean.choranche" />
+                <ant antfile="build.xml" dir="${dir.choranche}" target="compile" output="res.compile.choranche" />
+            </sequential>
+        </sshsession>
+    </target>
+    
+    <target name="build.albaron">
+        <property name="dir.albaron" location="/opt/ParSem/users/${user.name}/parSem" />
+        <delete file="res.clean.albaron" />
+        <delete file="res.compile.albaron" />
+        <sshsession host="albaron" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa">
+            <sequential>
+                <ant antfile="build.xml" dir="${dir.albaron}" target="clean" output="res.clean.albaron" />
+                <ant antfile="build.xml" dir="${dir.albaron}" target="compile" output="res.compile.albaron" />
+            </sequential>
+        </sshsession>
+    </target>
+    
+    <target name="build.etretat">
+        <property name="dir.etretat" location="/Volumes/PARSEM/users/${user.name}/parSem" />
+        <delete file="res.clean.etretat" />
+        <delete file="res.compile.etretat" />
+        <sshsession host="etretat" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa" trust="yes">
+            <sequential>
+                <exec executable="mount" />
+                <ant antfile="build.xml" dir="${dir.etretat}" target="clean" output="res.clean.etretat" />
+                <ant antfile="build.xml" dir="${dir.etretat}" target="compile" output="res.compile.etretat" />
+            </sequential>
+        </sshsession>
+    </target>
+    
+    <target name="build1">
+        <sshsession host="albaron" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa">
+            <sequential>
+                <exec executable="mount" />
+            </sequential>
+        </sshsession>
+    </target>
+   
+    <target name="rmtBuildAlbaron">
+        <antcall target="rmtCmd">
+            <param name="rmtHostName" value="albaron"/>
+            <param name="rmtCmd" value="cd /opt/ParSem/users/${user.name}/parSem; ant build"/>
+        </antcall>
+    </target>
+    
+    <target name="rmtCmd">
+        <sshexec host="${rmtHostName}" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa"
+                 command="${rmtCmd}" >
+        </sshexec>
+    </target> 
+    -->
+    
+    
+</project>

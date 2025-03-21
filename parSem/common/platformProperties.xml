@@ -2,19 +2,6 @@
   <target name="platformSetting" depends="platformIdentification, setWin32Properties,
     setSolarisProperties, setLinuxProperties, setMacProperties, initLock" description="platform setting" />
 
-  <condition property="nomt" value="true">
-    <!-- flag used in the fst -->
-    <or>
-      <equals arg1="${env.GCCVERSION}" arg2="4.7.2" />
-      <equals arg1="${env.GCCVERSION}" arg2="4.8.2" />
-      <equals arg1="${env.GCCVERSION}" arg2="4.8.3" />
-      <equals arg1="${env.GCCVERSION}" arg2="4.8.5" />
-      <equals arg1="${env.GCCVERSION}" arg2="5.1.1" />
-      <equals arg1="${env.GCCVERSION}" arg2="5.2.1" />
-      <equals arg1="${env.GCCVERSION}" arg2="7" />
-      <equals arg1="${env.GCCVERSION}" arg2="8" />
-    </or>
-  </condition>
   <!--  +++++++++++++++++++++ Windows ++++++++++++++++++++++++++++++++ -->
   <target name="setWin32Properties"  if="windows" description="define properties for the platform : win32" >
     <property name="platform" 		value="windows" />
@@ -32,18 +19,16 @@
       <then>
         <property name="arch64bits"     value="true" />
         <property name="platform-arch" 	value="windows64" />
-        <property name="platformArch" 	value="windows64" />
       </then>
       <else>
         <property name="platform-arch" 	value="windows" />
-        <property name="platformArch" 	value="windows" />
       </else>
     </if>
-    <property name="python.version"         value="3.8" />
-    <property name="python.dir"             location="~/miniconda3" />
-    <property name="python.include.dir"     location="${python.dir}/include/python${python.version}" />
-    <property name="python.lib.dir"         location="${python.dir}/lib" />
-    <property name="python.lib.name"        value="python${python.version}" />
+    <property name="python.version"         value="${python.version.common}" />
+    <property name="python.dir"             location="/beegfs/scratch/user/roux/envs/finetuning/" />
+    <property name="python.include.dir"     location="${python.dir}/include/python{python.version}" />
+    <property name="python.lib.dir"         location="${python.dir}/lib/python{python.version}" />
+    <property name="python.lib.name"        value="python3.12.9" />
     <property name="python.libs"            value="" />
     <property name="python.linker.args"     value="" />
   </target>
@@ -106,64 +91,32 @@
     <property name="compilerCplus.name" 	value="g++" />
     <property name="system.libCplus.names"  value="m, pthread, z, dl" />
     <property name="compiler.arg"           value="-w" />
-    <property name="linker.static.arg"      value="" />
-    <property name="linker.shared.arg"      value="" />
+    <property name="linker.static.arg"      value="-g" />
+    <!-- value can't be a empty string otherwise "file not found error". "-g" is an ignored option -->
+    <property name="linker.shared.arg"      value="-g" />
+    <!-- value can't be a empty string otherwise "file not found error". "-g" is an ignored option -->
+    <!-- hostname == choranche or lautaret -->
+    <echo message="${env.MACHTYPE} pour linux" />
     <if>
-      <or>
-        <equals arg1="${hostname}" arg2="choranche.grenoble.xrce.xerox.com" />
-        <equals arg1="${hostname}" arg2="lautaret.grenoble.xrce.xerox.com" />
-      </or>
+      <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
       <then>
-        <!-- hostname == choranche or lautaret -->
-        <if>
-          <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
-          <then>
-            <property name="arch64bits"     value="true" />
-            <property name="platform-arch" 	value="${env.COMPUTERNAME}" />
-            <property name="platformArch" 	value="linux64" />
-            <property name="linux64" 	value="true" />
-          </then>
-          <else>
-            <property name="platform-arch" 	value="${env.COMPUTERNAME}" />
-            <property name="platformArch" 	value="linux" />
-          </else>
-        </if>
+        <property name="arch64bits"     value="true" />
+        <property name="platform-arch" 	value="linux64" />
+        <property name="platformArch" 	value="linux64" />
+        <property name="linux64" 	value="true" />
+        <property name="C11" 	value="true" />
       </then>
       <else>
-        <!-- hostname != choranche or lautaret -->
-        <if>
-          <equals arg1="${env.MACHTYPE}" arg2="x86_64" />
-          <then>
-            <property name="arch64bits"     value="true" />
-            <!--
-                        <property name="platform-arch" 	value="linux64-${hostname}" />
--->
-            <property name="platform-arch" 	value="${env.COMPUTERNAME}" />
-            <property name="platformArch" 	value="linux64" />
-            <property name="linux64" 	value="true" />
-          </then>
-          <else>
-            <!--
-    -                    <property name="platform-arch" 	value="linux-${hostname}" />
--->
-            <property name="platform-arch" 	value="${env.COMPUTERNAME}" />
-            <property name="platformArch" 	value="linux" />
-          </else>
-        </if>
+        <property name="platform-arch" 	value="linux" />
+        <property name="platformArch" 	value="linux" />
       </else>
     </if>
-    
-    <property name="python.version"         value="${python.version.common}" />    
-
-    <!-- As an example: PYTHONHOME = "~/miniconda3" -->
+    <property name="python.version"         value="${python.version.common}" />
     <property name="python.dir"             location="${env.PYTHONHOME}" />
     <property name="python.include.dir"     location="${python.dir}/include/python${python.version}" />
     <property name="python.lib.dir"         location="${python.dir}/lib" />
     <property name="python.lib.name"        value="python${python.version}" />
-
     <property name="python.libs"            value="dl, util" />
-
-    <echo message="${python.dir} ->  ${python.include.dir} -> ${python.lib.dir} = ${python.version}" />
     <!-- 
 	"-export-dynamic" is madatory to be able to "import math" in a user python module. Otherwise
 	we get the error: math.so: undefined symbol: PyExc_OverflowError  http://docs.python.org/ext/link-reqs.html
@@ -191,6 +144,7 @@
     <property name="python.lib.dir"         location="${python.dir}/lib" />
     <property name="python.lib.name"        value="python${python.version}" />
     <property name="python.libs"            value="" />
+    <property name="C11" 	value="true" />
     <!-- keep the -v option otherwise there is error -->
     <property name="python.linker.args"     value="-v" />
     <!-- 
@@ -223,14 +177,26 @@
         -->
   </target>
 
-  <target name="setMacProperties-64" description="define properties for MAC OS 64 bits" >
+  <target name="setMacProperties-xxx"  if="mac-ppc" description="define properties for ppc arch" >
+    <property name="system.libCplus.names"  value="m, pthread, z, gcc_s.10.4"/>
+    <property name="platform-arch" 		value="mac-ppc" />
+    <property name="compiler.arg"     	value="-fno-common" />
+  </target>
+
+  <target name="setMacProperties-i386"  if="mac-i386" description="define properties for I386 arch" >
+    <!--  add gcc_s.10.4 to avoid: undefined symbol "__Unwind_Resume -->
+    <property name="system.libCplus.names"  value="m, pthread, z, gcc_s.10.4"/>
+    <property name="platform-arch" 		value="mac-i386" />
+    <property name="compiler.arg"     	value="-fno-common" />
+  </target>
+
+  <target name="setMacProperties-64"  description="define properties for MAC OS 64" >
+    <!--  add gcc_s.10.4 to avoid: undefined symbol "__Unwind_Resume -->
     <property name="system.libCplus.names"  value="m, pthread, z"/>
-    <property name="platform-arch" 	value="${env.COMPUTERNAME}" />
-    <property name="platformArch" 	value="mac-i386" />
+    <property name="platform-arch" 		value="mac-i386" />
     <property name="compiler.arg"     	value="-fno-common" />
     <property name="arch64bits"     value="true" />
   </target>
-
 
   <target name="compilerLinkerCommonSetting"   >
     <!-- common to all the build xml,fst,ntm,xip,java -->
@@ -254,7 +220,31 @@
       <linkerarg value="${linker.arg.64b}" location="start" if="arch64bits-l-arg" />
     </linker>
   </target>
-  
+
+
+  <target name="compilerLinkerCommonSetting_MacOSX10.4"   >
+    <!-- common to all the build xml,fst,ntm,xip,java -->
+    <compiler id="compilerCommon" debug="${cc.debug}" >
+      <!-- universal binaries -->
+      <compilerarg value="-isysroot" location="start" if="mac" />
+      <compilerarg value="/Developer/SDKs/MacOSX10.4u.sdk" location="start" if="mac" />
+      <compilerarg value="-arch" location="start" if="mac" />
+      <compilerarg value="i386" location="start" if="mac" />
+      <!--
+            <compilerarg value="-arch" location="start" if="mac" />
+            <compilerarg value="ppc" location="start" if="mac" />
+            -->
+      <compilerarg value="${compiler.arg}" location="start"/>
+      <compilerarg value="${compiler.arg.64b}" location="start" if="arch64bits-c-arg" />
+      <compilerarg value="-pg" location="start" if="profileMode" />
+    </compiler>
+    <linker id="linkerCommon" debug="${cc.debug}" >
+      <!-- universal binaries -->
+      <linkerarg value="-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" location="start" if="mac" />
+      <linkerarg value="${linker.arg.64b}" location="start" if="arch64bits-l-arg" />
+    </linker>
+  </target>
+
   <target name="xipCompilerLinkerSetting" depends="compilerLinkerCommonSetting" >
     <!-- used by xip and java(cxxCompile) compilation -->
     <compiler id="xipCompilerCommon" extends="compilerCommon" >
@@ -281,13 +271,13 @@
       <syslibset libs="${python.libs}" if="python"/>
     </linker>
     <linker id="linkerStaticLib" extends="xipLinkerCommon">
-      <linkerarg value="${linker.static.arg}" location="start" unless="nomt"/>
+      <linkerarg value="${linker.static.arg}" location="start" />
       <libset dir="${lib.dir}/staticLib" libs="xip"  unless="python" />
       <libset dir="${lib.dir}/staticLibPy" libs="xips" if="python" />
     </linker>
     <linker id="linkerShared" extends="xipLinkerCommon">
       <!-- used also during java compilation -->
-      <linkerarg value="${linker.shared.arg}" location="start"  unless="nomt"/>
+      <linkerarg value="${linker.shared.arg}" location="start"  />
     </linker>
     <linker id="linkerSharedLib" extends="linkerShared">
       <libset dir="${lib.dir}/sharedLib" libs="xip"  unless="python" />
@@ -355,9 +345,6 @@
     </condition>
   </target>
 </project>
-
-
-
 
 
 

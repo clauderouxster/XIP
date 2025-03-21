@@ -8,11 +8,19 @@
     <import file="${common.dir}/taskSync.xml" />
     
     <property name="fst.dir"	location="${basedir}/fst/dev" />
-    <!--property name="xml.dir"	location="${env.XMLDIR}" /-->
+    <property name="xml.dir"	location="${basedir}/xml/dev" />
     <property name="ntm.dir"	location="${basedir}/ntm/dev" />
     <property name="xip.dir"	location="${basedir}/xip/dev" />
-    <property name="parsSem.dir"	location="${basedir}" />
     <property name="grammars.dir" location="${basedir}/xip/dev/GRAMMARS" />
+    
+    <property name="win32Host" value="chevreuse" />
+    <property name="win64Host" value="mont-dore" />
+    <property name="linux32Host" value="choranche" />
+    <property name="linux64Host" value="chichet" />     <!-- or sirac -->
+    <property name="macOsHost" value="etretat" />
+    
+    <!-- <property name="hostList" value="${win32Host} ${win64Host} ${linux32Host} ${linux64Host}" /> -->
+    <property name="hostList" value=" ${win64Host}  ${linux64Host}" />
     
     <target name="usage" >
         <echo message="ant build:   	clean and compile fst,ntm,xml,xip on the current platform" />
@@ -20,8 +28,8 @@
         <echo message="ant clean:   	clean fst,ntm,xml,xip on the current platform" />
         <echo message="ant cleanAll:   	clean fst,ntm,xml,xip on all platforms" />
         <echo message="" />
-        <echo message="ant start:   	must be run on each platform where compilation will be launch(choranche, albaron, chevreuse, mont-dore) before using ant all" />
-        <echo message="ant all:   	clean and compile fst,ntm,xml,xip on all the platforms (choranche, albaron, chevreuse, mont-dore) + ant install (xip/dev)" />
+        <echo message="ant start:   	must be run on each platform (${hostList}) where compilation will be launch before using ant all" />
+        <echo message="ant all:   	clean and compile fst,ntm,xml,xip on all the platforms (${hostList}) + ant install (xip/dev)" />
     </target>
 
     <target name="build" depends="clean, compile" description=" clean, compile,  only for this platform" />
@@ -30,7 +38,6 @@
         <delete file="${compileRecFile}" />
         <record name="${compileRecFile}" loglevel="${log.level}" action="start"/>
         <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="compile" inheritAll="false" />
-        <!--ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="compile" inheritAll="false" /-->
         <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="compile" inheritAll="false" />
         <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="default" inheritAll="false" />
         <record name="${compileRecFile}" action="stop"/>
@@ -40,7 +47,6 @@
         <delete file="${cleanRecFile}" />
         <record name="${cleanRecFile}" loglevel="${log.level}" action="start"/>
         <ant antfile="${fst.dir}/build.xml" dir="${fst.dir}" target="clean" inheritAll="false" />
-        <ant antfile="${xml.dir}/build.xml" dir="${xml.dir}" target="clean" inheritAll="false" />
         <ant antfile="${ntm.dir}/build.xml" dir="${ntm.dir}" target="clean" inheritAll="false" />
         <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="clean" inheritAll="false" />
         <ant antfile="${xip.dir}/java/build.xml" dir="${xip.dir}/java" target="clean" inheritAll="false" />
@@ -65,35 +71,47 @@
     </target>
     
     <target name="all"  depends="cleanAll" 
-            description="clean compile for all the platforms: choranche,albaron, etretat, chevreuse, mont-dore">
+            description="clean compile for all the platforms: ${hostList}">
         <delete dir="logs" />
         <mkdir dir="logs" />
+        <property name="error.file" location="logs/error"/>
         <parallel> 
-            <antcall target="chorancheBuild" />
-            <antcall target="albaronBuild" />
+            <antcall target="linux64Build" />
+            <antcall target="win64Build" /> 
             <!--
-            <antcall target="etretatBuild" />
+            <antcall target="linux32Build" />
+            <antcall target="macOsBuild" />
+            <antcall target="win32Build" />
             -->
-            <antcall target="chevreuseBuild" />
-            <antcall target="mont-doreBuild" /> 
         </parallel>
         <antcall target="check" >
-            <param name="hostName" value="choranche"/>
+            <param name="hostName" value="${linux32Host}"/>
         </antcall>
         <antcall target="check" >
-            <param name="hostName" value="albaron"/>
+            <param name="hostName" value="${linux64Host}"/>
         </antcall>
         <!--
         <antcall target="check" >
-            <param name="hostName" value="etretat"/>
+            <param name="hostName" value="${macOsHost}"/>
+        </antcall>
+        <antcall target="check" >
+            <param name="hostName" value="${win32Host}"/>
+        </antcall>
+        <antcall target="check" >
+            <param name="hostName" value="${win64Host}"/>
         </antcall>
         -->
-        <antcall target="check" >
-            <param name="hostName" value="chevreuse"/>
-        </antcall>
-        <antcall target="check" >
-            <param name="hostName" value="mont-dore"/>
-        </antcall>
+         <echo message="err: ${err} "/>
+	 <if>
+            <available file="${error.file}"/>
+            <then>
+		<echo message="error must stop    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+		<fail/>
+            </then>
+	    <else>
+		<echo message="no error xxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+	    </else>
+        </if>
         <ant antfile="${xip.dir}/build.xml" dir="${xip.dir}" target="install" inheritAll="false" />
     </target>
     
@@ -109,38 +127,38 @@
         </if>
     </target>
     
-    <target name="chorancheBuild" description="">
+    <target name="linux32Build" description="">
         <antcall target="rmtBuild">
-            <param name="rmt.hostName" value="choranche"/>
-            <param name="rmt.dir" value="/opt/ParSem/users/${user.name}/parSem"/>
+            <param name="rmt.hostName" value="${linux32Host}"/>
+            <param name="rmt.dir" value="/opt/ParSem_db/users/${user.name}/parSem"/>
         </antcall>
     </target>
     
-    <target name="albaronBuild" description="">
+    <target name="linux64Build" description="">
         <antcall target="rmtBuild">
-            <param name="rmt.dir" value="/opt/ParSem/users/${user.name}/parSem"/>
-            <param name="rmt.hostName" value="albaron"/>
+            <param name="rmt.dir" value="/opt/ParSem_db/users/${user.name}/parSem"/>
+            <param name="rmt.hostName" value="${linux64Host}"/>
         </antcall>
     </target>
     
-    <target name="etretatBuild" description="">
+    <target name="macOsBuild" description="">
         <antcall target="rmtBuild">
             <param name="rmt.dir" value="/Volumes/PARSEM/users/${user.name}/parSem"/>
-            <param name="rmt.hostName" value="etretat"/>
+            <param name="rmt.hostName" value="${macOsHost}"/>
         </antcall>
     </target>
     
-    <target name="chevreuseBuild" description="">
+    <target name="win32Build" description="">
         <antcall target="rmtBuild">
             <param name="rmt.dir" value="z:\users\${user.name}\parSem"/>
-            <param name="rmt.hostName" value="chevreuse"/>
+            <param name="rmt.hostName" value="${win32Host}"/>
         </antcall>
     </target>
     
-    <target name="mont-doreBuild" description="">
+    <target name="win64Build" description="">
         <antcall target="rmtBuild">
             <param name="rmt.dir" value="z:\users\${user.name}\parSem"/>
-            <param name="rmt.hostName" value="mont-dore"/>
+            <param name="rmt.hostName" value="${win64Host}"/>
         </antcall>
     </target>
     
@@ -165,6 +183,7 @@
                     </then>
                     <else>
                         <echo message="Error on ${rmt.hostName}: ${exception1}" file="${file.client.error}"/>
+                        <echo message="Error on ${rmt.hostName}: ${exception1}" file="${file.error}"/>
                         <fail message="Error on ${rmt.hostName}: ${exception1}" />
                     </else>
                 </if>
@@ -236,7 +255,7 @@
     </target>
     
     <target name="build.choranche">
-        <property name="dir.choranche" location="/opt/ParSem/users/${user.name}/parSem" />
+        <property name="dir.choranche" location="/opt/ParSem_db/users/${user.name}/parSem" />
         <delete file="res.clean.choranche" />
         <delete file="res.compile.choranche" />
         <sshsession host="albaron" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa">
@@ -248,7 +267,7 @@
     </target>
     
     <target name="build.albaron">
-        <property name="dir.albaron" location="/opt/ParSem/users/${user.name}/parSem" />
+        <property name="dir.albaron" location="/opt/ParSem_db/users/${user.name}/parSem" />
         <delete file="res.clean.albaron" />
         <delete file="res.compile.albaron" />
         <sshsession host="albaron" username="${user.name}" keyfile="${user.home}/.ssh/id_rsa">
@@ -283,7 +302,7 @@
     <target name="rmtBuildAlbaron">
         <antcall target="rmtCmd">
             <param name="rmtHostName" value="albaron"/>
-            <param name="rmtCmd" value="cd /opt/ParSem/users/${user.name}/parSem; ant build"/>
+            <param name="rmtCmd" value="cd /opt/ParSem_db/users/${user.name}/parSem; ant build"/>
         </antcall>
     </target>
     

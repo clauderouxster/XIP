@@ -1,0 +1,40 @@
+#!/bin/sh
+#set -x
+rm -rf Test.class output.xml errors.err
+
+GRMDIR=../../../grammar/english/entity
+export GRMDIR
+GRAM=$GRMDIR/englishEntity.grm
+
+GKLSFILES=../gklsFiles
+DB=$GKLSFILES/references.xml
+SCRIPTSPATH=$GKLSFILES/scripts
+INPUTDIR=$GKLSFILES/input
+
+JAR=../../dist/jxip.jar
+
+UNAME=`uname`
+if [ "$UNAME" = "Linux" ]; then
+	# only neccesary on Linux, due to bugs in the Linux native library loading mechanism
+	LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp/grondeau/linux
+fi
+
+SENTENCE="Peter is happy."
+
+javac -classpath $JAR Test.java 
+if java  -classpath $JAR:. Test $GRAM $SCRIPTSPATH $DB $INPUTDIR "$SENTENCE" >/dev/null ;  then
+        #echo "java execution OK"
+	if diff output.xml output.xml.ref; then
+		#echo "No diff between output.xml and output.xml.ref"
+		echo ""
+	else
+		echo ERROR 1
+		exit -1
+	fi
+else
+	echo ERROR 2
+        exit -1
+fi
+rm -rf Test.class output.xml errors.err
+exit 0
+

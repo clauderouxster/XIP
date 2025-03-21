@@ -1,4 +1,4 @@
-/* $Id: tok-aux.h,v 1.1 2005/06/03 12:11:51 grondeau Exp $ */
+/* $Id: tok-aux.h,v 1.16 2017/03/17 09:37:26 roux Exp $ */
 /*
  * Xerox Research Centre Europe - Grenoble Laboratory
  *

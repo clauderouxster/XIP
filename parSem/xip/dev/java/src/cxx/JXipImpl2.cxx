@@ -975,15 +975,15 @@ JNIEXPORT jstring JNICALL Java_com_xerox_jxip_JXip2_xipGetLabelsImplementation(
         JNIEnv *env, jobject obj, jint gHandler, jstring labelName) {
     KiFInitialisationMutex();
     KifThreadLock _lock(jniprotect);
-    string surface;
-    string lemme;
-    try {
+	string surface;
+	string lemme;
+	try {
         string labelNameStr = jstringToString(env, labelName);
         XipGetLabels(gHandler, surface, lemme);
         if (strcmp(labelNameStr.c_str(), "lemme")) {
-            return jstringFromString(env, (char*)surface.c_str());
+            return jstringFromString(env, surface);
         } else {
-            return jstringFromString(env, (char*)lemme.c_str());
+            return jstringFromString(env, lemme);
         }
     } catch (...) {
         checkXipErrorAndGenerateException(env, obj);
@@ -1089,6 +1089,5 @@ JNIEXPORT void JNICALL Java_com_xerox_jxip_JXip2_xipCopyAndEncryptGrammarImpleme
     env->ReleaseStringUTFChars(grmFileName, grmChars);
     env->ReleaseStringUTFChars(destDir, destChars);
 }
-
 
 

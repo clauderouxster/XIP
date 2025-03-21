@@ -147,7 +147,9 @@ public class GuesserTest {
             if (xipRes != null) {
                 for (XipUnit xipUnit : xipRes.getXipUnits()) {
                     if (xipUnit != null) {
-                        String language = xipUnit.getLanguage();
+                        String language = xipUnit.getLanguage();  
+						// return the value found in the grammar file "french.xip" for the 
+						// attribute "Language: french" or "GrammarLanguage: French" (I don't know which one is used)
                         //System.out.println("language:" + language);
                         if (langCnt.containsKey(language)) {
                             int cnt = langCnt.get(language);

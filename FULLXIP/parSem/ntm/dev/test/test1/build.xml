@@ -1,0 +1,118 @@
+<project name="" default="all" basedir=".">
+
+<property name="env" environment="env"	value="env"/>
+<property name="fs"			value="${file.separator}" />
+<property name="ps"                     value="${path.separator}" />
+
+<property name="common.dir" location="${basedir}${fs}..${fs}..${fs}..${fs}..${fs}common" />
+<import file="${common.dir}${fs}testInclude.xml" />
+
+<property name="name"			value="ntm" />
+<property name="root.dir"		location="${basedir}${fs}..${fs}..${fs}..${fs}delivery${fs}${name}-${ntm.version}" />
+<property name="delivery.include.dir"	location="${root.dir}${fs}include" />
+<property name="src.dir"		location="${basedir}${fs}..${fs}..${fs}src" />
+<property name="include.dir"		location="${basedir}${fs}..${fs}..${fs}include" />
+<property name="lib.names"		value="${name}" />
+<property name="app.name"		value="ntmapp" />
+<property name="cc.debug"		value="${cc.debug.common}" />
+<property name="input"			value="input.txt" />
+<property name="output"			value="output.txt" />
+<property name="outputRef"		value="outputRef.txt" />
+
+<target name="test" depends="testShared, testStatic">
+</target>
+
+<target name="testShared" depends="setCommonProperties, copyDll">
+        <exec os="SunOS" executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" output="${output}" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}${fs}sharedLib:/usr/lib:/opt/gnu/lib"/>
+		<arg line= "-f ../ntmscript/ntmscript -i ${input} " />
+        </exec>
+        <exec os="Linux" executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" output="${output}" >
+              	<env key="LD_LIBRARY_PATH" path="${lib.dir}${fs}sharedLib"/>
+		<arg line= "-f ../ntmscript/ntmscript -i ${input} " />
+        </exec>
+        <exec os="Windows 2000" executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" output="${output}" >
+		<arg line= "-f ../ntmscript/ntmscript -i ${input} " />
+	</exec>
+        <exec os="Windows XP" executable="${test.bin.dir}${fs}${app.name}D" failonerror="true" output="${output}" >
+		<arg line= "-f ../ntmscript/ntmscript -i ${input} " />
+	</exec>
+	<condition property="testFailed" >
+		<not>
+			<filesmatch file1="${output}" file2="${outputRef}" />
+		</not>
+	</condition>
+	<fail if="testFailed" message="-------------------- test shared fail ------------------------" />
+</target>
+
+<target name="copyDll" depends="" description="" if="windows">
+        <copy file="${lib.dir}${fs}sharedLib${fs}${name}.dll" todir="."/>
+</target>
+
+<target name="testStatic" depends="setCommonProperties" description=" ">
+        <exec executable="${test.bin.dir}${fs}${app.name}S" failonerror="true" output="${output}" >
+		<arg line= "-f ../ntmscript/ntmscript -i ${input} " />
+        </exec>
+	<condition property="testFailed" >
+		<not>
+			<filesmatch file1="${output}" file2="${outputRef}" />
+		</not>
+	</condition>
+	<fail if="testFailed" message="-------------------- test static fail ------------------------" />
+</target>
+
+<target name="compile" depends="static, shared" description="compile And Link (shared and static)" > </target>
+
+<!-- compile and link(shared lib)  code -->
+<target name="shared" depends="setCommonProperties" >
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}${fs}${app.name}D" >
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<fileset dir="${src.dir}" includes="${app.name}.c" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+				<pathelement location="${delivery.include.dir}"/>
+				<pathelement location="${delivery.include.dir}${fs}fst"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libC.names}"  />
+			<libset dir="${lib.dir}${fs}sharedLib" libs="${lib.names}" type="shared"/> 
+		</linker>
+	</cc>
+</target>
+
+<!-- compile and link(static lib)  code -->
+<target name="static" depends="setCommonProperties" >
+	<cc name="${compilerC.name}" optimize = "extreme" objdir="${test.bin.dir}" subsystem="console" exceptions="true" 
+		multithreaded="true" outtype="executable" runtime="dynamic" outfile="${test.bin.dir}${fs}${app.name}S" >
+		<compiler name = "${compilerC.name}" debug="${cc.debug}">
+			<fileset dir="${src.dir}" includes="${app.name}.c" />
+			<includepath> 
+				<pathelement location="${include.dir}"/>
+				<pathelement location="${delivery.include.dir}"/>
+				<pathelement location="${delivery.include.dir}${fs}fst"/>
+			</includepath>
+		</compiler>
+		<linker name= "${compilerC.name}" debug="${cc.debug}">
+			<syslibset libs="${system.libC.names}" />
+			<libset dir="${lib.dir}${fs}staticLib" libs="${lib.names}" type="static"/> 
+		</linker>
+	</cc>
+</target>
+ 
+<target name="localClean" depends="localCleanWindows" >
+        <delete file="${output}"/>
+</target>
+
+<target name="localCleanWindows" depends="" if="windows">
+        <delete file="${name}.dll"/>
+</target>
+
+<target name="localCleanAll" depends="" >
+        <delete file="${output}"/>
+        <delete file="${name}.dll"/>
+</target>
+
+</project>
+

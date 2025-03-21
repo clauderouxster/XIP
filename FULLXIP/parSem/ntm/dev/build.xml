@@ -1,0 +1,336 @@
+
+<project name="ntm" default="compile" basedir=".">
+    <property name="name" value="ntm" />
+    <property name="env" environment="env"  value="env"/>
+    <property name="ps"                     value="${path.separator}" />
+    <property name="common.dir" location="${basedir}/../../common" />
+    <import file="${common.dir}/buildInclude.xml" />
+    <property name="archive.name"           value="archive-${ntm.version}-${curDate.now}" />
+    <property name="archive.zip.file"       location="${archive.root}/${archive.name}.zip" />
+    <property name="delivery.name"          value="${name}-${ntm.version}" />
+    <property name="delivery.dir"           location="${delivery.root}/${delivery.name}" />
+    <property name="delivery.zip.file"      location="${delivery.root}/${delivery.name}.zip" />
+    <property name="ftp.login"              value="ftp-lg" />
+    <property name="ftp.password"           value="lg2k6mc." />
+    <property name="ftp.login.client"       value="" />
+    <property name="ftp.password.client"    value="" />
+    <property name="ftp.remote.dir"         value="" />
+    <property name="log.level"          value="verbose" />
+    <property name="doc.name"		value="apidoc" />
+    <property name="fst.dir"		location="${basedir}/../../fst/dev" />
+    <property name="fst.inc.dir"	location="${fst.dir}/src" />
+    <property name="delivery.fst.dir"	location="${basedir}/../../fst/delivery/fst-${fst.version}" />
+    <property name="delivery.fst.inc.dir" location="${delivery.fst.dir}/include" />
+    <property name="delivery.ntm.include"   value="ntm.h, ntm_windefs.h, ntmtypes.h, ntmlevels.h, 
+            ntmtoken.h, ntmmemory.h"  />
+    <property name="delivery.fst.include"   value="types.h, ConvertUTF.h, limits.h, utf8_fatstr_util.h,
+              struct.h, context.h, pars-tbl.h, modify.h, vectorize.h, bin-in.h, fat-str.h, utf8_util.h, label.h,
+              fst_windefs.h, id_type.h, syst-dep.h, hash-tbl.h, str-buf.h, dbl-link.h, copy-fsm.h, eqv-labs.h,
+              rename.h, modify-base.h, error.h, cons.h, stack-mr.h,lab-vect.h, vector.h, modify.h, net-io.h, heap.h	
+    " />
+    
+    <target name="all" depends="clean, compile" description=" clean + compile And Link (static)">
+    </target>
+    
+    <target name="install" depends="" description="install the delivery">
+        <property name="root.install.dir" location="/opt/ParSem/bin" />
+        <property name="install.dir" location="${root.install.dir}/ntm-${ntm.version}" />
+        <delete dir="${install.dir}" />
+        <mkdir dir="${install.dir}/bin/linux" />
+        <mkdir dir="${install.dir}/bin/windows" />
+        <copy file="${basedir}/bin/linux/staticExe/ntm" tofile="${install.dir}/bin/linux/ntm" />
+        <copy file="${basedir}/bin/windows/staticExe/ntm.exe" tofile="${install.dir}/bin/windows/ntm.exe" />
+        <chmod file="${install.dir}/bin/linux/ntm" perm="a+x"/>
+        <!-- linux -->
+        <delete file="${root.install.dir}/linux/ntm" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/linux/ntm ${root.install.dir}/linux/ntm" />
+        </exec>
+        <!-- windows -->
+        <delete file="${root.install.dir}/windows/ntm.exe" />
+        <exec executable="ln">
+            <arg line="-s ${install.dir}/bin/windows/ntm.exe ${root.install.dir}/windows/ntm.exe" />
+        </exec>
+    </target>
+    
+    <target name="delivery" depends="doc" description=" build the delivery">
+        <condition property="compilation.complete">
+            <and>
+                <available file="${lib.dirs}/linux/staticLib/lib${name}.a"/>
+                <available file="${lib.dirs}/linux/sharedLib/lib${name}.so"/>
+                <available file="${lib.dirs}/solaris/staticLib/lib${name}.a"/>
+                <available file="${lib.dirs}/solaris/sharedLib/lib${name}.so"/>
+                <available file="${lib.dirs}/windows/staticLib/${name}.lib"/>
+                <available file="${lib.dirs}/windows/sharedLib/${name}.dll"/>
+                <available file="${bin.dirs}/windows/staticExe/${name}.exe"/>
+                <available file="${bin.dirs}/solaris/staticExe/${name}"/>
+                <available file="${bin.dirs}/linux/staticExe/${name}"/>
+            </and>
+        </condition>
+        <fail unless="compilation.complete" message="compilation not completed" />
+        <delete dir="${delivery.dir}" />
+        <mkdir dir="${delivery.dir}" />
+        <!-- bin -->
+        <copy todir="${delivery.dir}/bin">
+            <fileset dir="${bin.dirs}" excludes="**/history.xml,**/*.rsp,**/*.exp,**/*.lib"/>
+        </copy>
+        <delete dir="${delivery.dir}/bin/linux.debug"/>
+        <delete dir="${delivery.dir}/bin/windows.debug"/>
+        <delete dir="${delivery.dir}/bin/solaris.debug"/>
+        <delete dir="${delivery.dir}/bin/mac.debug"/>
+        <!-- lib -->
+        <copy todir="${delivery.dir}/lib">
+            <fileset dir="${lib.dirs}" excludes="**/history.xml,**/*.rsp,**/*.exp"/>
+        </copy>
+        <delete dir="${delivery.dir}/lib/linux.debug"/>
+        <delete dir="${delivery.dir}/lib/windows.debug"/>
+        <delete dir="${delivery.dir}/lib/solaris.debug"/>
+        <delete dir="${delivery.dir}/lib/mac.debug"/>
+        <!-- include -->
+        <copy  todir="${delivery.dir}/include" >
+            <fileset dir="${include.dir}" includes="${delivery.ntm.include}"  />
+        </copy>
+        <copy  todir="${delivery.dir}/include/fst" >
+            <fileset dir="${fst.inc.dir}/fst" includes="${delivery.fst.include}"  />
+        </copy>
+        <!-- doc -->
+        <copy file= "${doc.dir}/apidoc.pdf" todir="${delivery.dir}/doc" />
+        <copy file= "${doc.dir}/ntmguide.pdf" todir="${delivery.dir}/doc" />
+        <!-- sample -->
+        <copy  todir="${delivery.dir}/sample/sample1" >
+            <fileset dir="${sample.dir}/sample1" includes="build.xml,sample.c,input.txt,ntmscript,*.fst"  />
+        </copy>
+        <!-- zip -->
+        <delete file="${delivery.zip.file}" />
+        <zip destfile="${delivery.zip.file}" >
+            <zipfileset dir="${delivery.dir}" prefix="${delivery.name}"/>
+        </zip>
+    </target>
+    
+    <target name="doc" depends="setCommonProperties" 
+        description=" build the documentation" unless="windows">
+        <delete>
+            <fileset dir="${doc.dir}" includes="*.ps" />
+            <fileset dir="${doc.dir}" includes="*.log" />
+            <fileset dir="${doc.dir}" includes="*.aux" />
+            <fileset dir="${doc.dir}" includes="*.dvi" />
+        </delete>
+        <exec executable="latex" failonerror="true" dir="${doc.dir}" >
+            <arg line= "apidoc.tex" />
+        </exec>
+        <exec executable="latex" failonerror="true" dir="${doc.dir}" >
+            <arg line= "ntmguide.tex" />
+        </exec>
+        <exec executable="latex" failonerror="true" dir="${doc.dir}" >
+            <arg line= "apidoc.tex" />
+        </exec>
+        <exec executable="latex" failonerror="true" dir="${doc.dir}" >
+            <arg line= "ntmguide.tex" />
+        </exec>
+        <exec executable="dvips" failonerror="true" dir="${doc.dir}" >
+            <arg line= "-o apidoc.ps apidoc" />
+        </exec>
+        <exec executable="dvips" failonerror="true" dir="${doc.dir}" >
+            <arg line= "-o ntmguide.ps ntmguide" />
+        </exec>
+        <exec executable="ps2pdf" failonerror="true" dir="${doc.dir}" >
+            <arg line= "apidoc.ps" />
+        </exec>
+        <exec executable="ps2pdf" failonerror="true" dir="${doc.dir}" >
+            <arg line= "ntmguide.ps" />
+        </exec>
+        <delete>
+            <fileset dir="${doc.dir}" includes="*.log" />
+            <fileset dir="${doc.dir}" includes="*.aux" />
+            <fileset dir="${doc.dir}" includes="*.dvi" />
+        </delete>
+    </target>
+    
+    
+    <target name="compile" depends="staticLib,sharedLib" description="static and shared lib and static exe" >
+    </target>
+    <target name="compile.debug" depends="staticExe.debug,sharedLib.debug" 
+        description="static and shared lib and static exe in DEBUG mode" >
+    </target>
+    
+    <target name="staticExe.debug" depends="setDebugMode, staticExe" 
+        description="compile and link (static exe ) in DEBUG mode " />
+    <target name="staticExe" depends="staticLib" description="compile and link (static exe ) ">
+        <property name="static.exe.obj.dir.name" value="staticExe" />
+        <property name="staticExe.record.file" value="${log.dir}/${static.exe.obj.dir.name}" />
+        <record name="${staticExe.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="staticExe.obj.dir" location="${obj.dir}/${static.exe.obj.dir.name}" />
+        <mkdir dir="${staticExe.obj.dir}" />
+        <property name="static.exe.dir" location="${bin.dir}/${static.exe.obj.dir.name}" />
+        <mkdir dir="${static.exe.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${staticExe.obj.dir}"
+            subsystem="console" exceptions="true" 
+            multithreaded="true" outtype="executable" runtime="dynamic" 
+            outfile="${static.exe.dir}/${name}" warnings="none" >
+            <compiler extends="ntmCompilerCommon" name ="${compilerC.name}" >
+		<compilerarg value="-fPIC" location="start"/>
+                <fileset dir="${source.dir}" includes="ntmapp.c" />
+            </compiler>
+            <linker extends="ntmLinkerCommon" name="${compilerC.name}" >
+                <linkerarg value="${linker.static.arg}" location="start" unless="nomt"/>
+                <libset dir="${static.lib.dir}" libs="${name}"  />
+                <libset dir="${delivery.fst.static.lib.dir}" libs="fst" if="useDelivery" />
+            </linker>
+        </cc>
+	 <!-- only on VS2005: manifest must be included to run anywhere  -->
+        <antcall target="genVS2005Manifest" >
+            <param name="manifest.fileName" location="${static.exe.dir}/${name}.exe.manifest" />
+            <param name="libOrExe" location="${static.exe.dir}/${name}.exe" />
+            <param name="libOrExeDir" location="${static.exe.dir}" />
+            <!-- #1 for an exe, #2 for a dll -->
+            <param name="typeFile" value="#1" />
+        </antcall>
+        <record name="${staticExe.record.file}" action="stop"/>
+    </target>
+    
+    <target name="staticLib" depends="setCommonProperties" description="compile and link (static lib) ">
+        <property name="static.lib.obj.dir.name" value="staticLib" />
+        <property name="staticLib.record.file" value="${log.dir}/${static.lib.obj.dir.name}" />
+        <record name="${staticLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="static.lib.obj.dir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.obj.dir}" />
+        <property name="static.lib.dir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${static.lib.obj.dir}"
+            subsystem="console" exceptions="true" 
+            multithreaded="true" outtype="static" runtime="dynamic" 
+            outfile="${static.lib.dir}/${name}" warnings="none" >
+            <compiler extends="ntmCompilerCommon" name="${compilerC.name}" >
+		<compilerarg value="-fPIC" location="start"/>
+                <fileset dir="${source.dir}" includes="*.c" excludes="ntmapp.c" />
+            </compiler>
+            <!--linker name="${compilerC.name}" debug="${cc.debug}">
+                <fileset dir="${fst.static.obj.dir}" includes="*.${obj.suffixe}" unless="useDelivery" />
+                <libset dir="${delivery.fst.static.lib.dir}" libs="fst" if="useDelivery" />
+            </linker-->
+        </cc>
+        <record name="${staticLib.record.file}" action="stop"/>
+    </target>
+    
+    <target name="sharedLib.debug" depends="setDebugMode, sharedLib" 
+        description="compile and link (static lib) in DEBUG MODE " />
+    <target name="sharedLib" depends="setCommonProperties" description="compile and link (static lib) ">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <property name="sharedLib.record.file" value="${log.dir}/${shared.lib.obj.dir.name}" />
+        <record name="${sharedLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="shared.lib.obj.dir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.obj.dir}" />
+        <property name="shared.lib.dir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optmize}" objdir="${shared.lib.obj.dir}" 
+            subsystem="console" exceptions="true" 
+            multithreaded="true" outtype="shared" runtime="dynamic"
+            outfile="${shared.lib.dir}/${name}" warnings="none" >
+            <compiler extends="ntmCompilerCommon" name="${compilerC.name}" >
+                <fileset dir="${source.dir}" includes="*.c" excludes="ntmapp.c" />
+                <defineset refid="define.dll" />
+            </compiler>
+            <linker extends="ntmLinkerCommon" name="${compilerC.name}" >
+                <linkerarg value="${linker.shared.arg}" location="start" unless="nomt"/>
+                <!--  To build this shared lib on linux and solaris the object
+			 files of the libraries like fst must be compile for
+			a shared lib (with -fPIC) but if we use the shared lib(fsp.so) 
+                        it will be linked dynamically at runtime: so
+			to avoid this, we include directly these object files in this link. -->
+                <fileset dir="${fst.shared.obj.dir}" includes="*.${obj.suffixe}" unless="useDelivery" />
+                <libset dir="${delivery.fst.shared.lib.dir}" libs="fst" if="useDelivery" />
+            </linker>
+        </cc>
+        <record name="${sharedLib.record.file}" action="stop"/>
+    </target>
+    
+    <target name="setDebugMode" depends="" description="set debug mode">
+        <property name="debugMode"     value="true" />
+    </target>
+   
+    <target name="setCommonProperties" depends="platformSetting, compilerLinkerCommonSetting" 
+        description="action before compiling" unless="commonPropertiesSet">
+        <property name="commonPropertiesSet" value="true" />
+        <if>
+            <istrue value="${debugMode}"/>
+            <then>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}.debug" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}.debug" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}.debug" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}.debug" />
+                <property name="cc.debug"       value="true" />
+                <property name="cc.optmize"     value="none" />
+            </then>
+            <else>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}" />
+                <property name="cc.debug"       value="false" />
+                <property name="cc.optmize"     value="extreme" />
+            </else>
+        </if>
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${obj.dir}" />
+        <mkdir dir="${bin.dir}" />
+        <mkdir dir="${log.dir}" />
+        <property name="fst.lib.dir"	location="${fst.dir}/lib/${platform-arch}" />
+        <property name="fst.shared.obj.dir"	location="${fst.dir}/obj/${platform-arch}/sharedLib" />
+        <property name="fst.static.obj.dir"     location="${fst.dir}/obj/${platform-arch}/staticLib" />
+        <property name="delivery.fst.static.lib.dir"	location="${delivery.fst.dir}/lib/${platform-arch}/staticLib" />
+        <property name="delivery.fst.shared.lib.dir"	location="${delivery.fst.dir}/lib/${platform-arch}/sharedLib" />
+        <condition property="useDelivery" >
+            <equals arg1="${user.name}" arg2="ait" />
+        </condition>
+        <!-- define setting -->
+        <defineset id="define.basic" >
+            <define name="WIN32"        if="windows"/>
+            <define name="_WIN32"       if="windows"/>
+            <define name="_WINDOWS"     if="windows"/>
+            <define name="_FSMFSTDLL"   if="windows"/>
+            <define name="ARCH64BITS"   if="arch64bits"/>
+        </defineset>
+        <defineset id="define.dll" >
+            <define name="_FSMNTMBUILDDLL"      if="windows"/>
+        </defineset>
+        <!-- compiler setting -->
+        <compiler id="ntmCompilerCommon" extends="compilerCommon" >
+            <defineset refid="define.basic" />
+            <!-- if do not use fst delivery -->
+            <includepath  unless="useDelivery">
+                <pathelement location="${include.dir}"/>
+                <pathelement location="${fst.inc.dir}"/>
+                <pathelement location="${fst.inc.dir}/fst"/>
+            </includepath>
+            <!-- if use fst delivery -->
+            <includepath if="useDelivery">
+                <pathelement location="${include.dir}"/>
+                <pathelement location="${delivery.fst.inc.dir}"/>
+                <pathelement location="${delivery.fst.inc.dir}/fst"/>
+            </includepath>
+        </compiler>
+        <linker id="ntmLinkerCommon" extends="linkerCommon" >
+            <syslibset libs="${system.libC.names}"/>
+        </linker>
+    </target>
+    
+    <!-- -->
+    <target name="srcMin" depends="" description="">
+        <delete dir="${basedir}/doc" />
+        <delete dir="${basedir}/sample" />
+        <delete dir="${basedir}/test" />
+    </target>
+    
+    <!-- -->
+    <target name="localClean" depends="" >
+    </target>
+    
+    <!-- -->
+    <target name="localCleanAll" depends="" >
+    </target>
+</project>
+
+
+
+
+

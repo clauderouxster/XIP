@@ -1,0 +1,98 @@
+parser myParser;
+myParser.getgrammar(_args[0]);
+svector features;
+
+function sauveinfo(string s) {
+     features.push(s);
+}
+
+// Xip grammar rules loaded using myParser.addendum(regle,true);     true => add at the end
+
+string regle=@"
+Variables:
+
+string str = "" ;
+
+script:
+
+
+|#1[punct:~,url:~,terminal,treated:~]| {
+     str = #1[lemme];
+     sauveinfo(str);
+}
+|#1[punct,lemme:"%?"]| {
+     str = #1[lemme];
+     sauveinfo(str);
+}
+
+|#1[punct,lemme:"%!"]| {
+     str = #1[lemme];
+     sauveinfo(str);
+}
+
+|#1[url]| {
+     str = "has_url" ;
+     sauveinfo(str);
+}
+
+|#1[emoticons,positive]| {
+     str = "positiveEmoticon" ;
+     sauveinfo(str);
+}
+
+|#1[emoticons,negative]| {
+     str = "negativeEmoticon" ;
+     sauveinfo(str);
+}
+
+if ( BIGRAM[neg:~](#1,#2)){
+     str = #1[lemme] + "," +  #2[lemme]  ;
+     sauveinfo(str);
+}
+
+if ( BIGRAM[neg](#1,#2)){
+     str = #1[lemme] + "_" +  #2[lemme]  ;
+     sauveinfo(str);
+}
+
+if (SENTIMENT[negative](#1,#2)){
+     str = "opinion_negative" ;
+     sauveinfo(str);
+}
+
+if (SENTIMENT[negative](#1)){
+     str = "opinion_negative" ;
+     sauveinfo(str);
+}
+
+if (SENTIMENT[positive](#1,#2)){
+     str = "opinion_positive" ;
+     sauveinfo(str);
+}
+
+if (SENTIMENT[positive](#1)){
+     str = "opinion_positive" ;
+     sauveinfo(str);
+}
+
+
+"@;
+
+myParser.addendum(regle,true);
+
+
+vector noeuds;
+
+function lire(xml n,self d) {
+     if (n.name()=="text")
+          noeuds.push(n);
+}
+
+function parseString(string input) {
+     features.clear();
+     string res=myParser.parse(input);
+     string s = features.join("\n");
+     return(s);
+}
+
+

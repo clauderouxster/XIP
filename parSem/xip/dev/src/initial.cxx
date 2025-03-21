@@ -15,7 +15,7 @@ Programmer : Claude ROUX
 Reviewer   :
 */
 
-char VERSION_XIP_BUILD[] = "13.04 \"build 20\"";
+char VERSION_XIP_BUILD[] = "13.04 \"build 16\"";
 
 #ifdef WIN32
 
@@ -372,7 +372,6 @@ void GlobalParseur::renseigne(char* f) {
 void GlobalParseur::raz(char premier) {
 	int i;
 
-	ajoute_info_erreur[0] = 0;
 	initlamajuscule();
 	actif = NON;
 	taille_phrase = -1;

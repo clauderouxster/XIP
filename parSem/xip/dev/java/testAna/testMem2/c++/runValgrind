@@ -1,0 +1,38 @@
+#!/bin/sh
+set -x
+
+LD_LIBRARY_PATH=../../../../xipFst/lib/linux/sharedLib
+export LD_LIBRARY_PATH
+#test compilation
+rm -f test
+g++ -o test -I../../../../include -L$LD_LIBRARY_PATH -lxip test.cxx
+
+valgrind=/opt/ParSem/tools/valgrind/3.6.1/linux/bin/valgrind 
+progToAnalyse="./test ../../../../GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen_entit.grm ../input-10"
+log1=valgrind-1.log
+log2=valgrind-2.log
+genSupFile=suppressionGen.supp
+xipSupFile=suppressionXip.supp
+xipLeakSupFile=suppressionXipLeak.supp
+ntmSupFile=suppressionNtm.supp
+options0="-v --tool=memcheck --leak-check=full --show-reachable=yes --error-limit=no"
+options2="--track-origins=yes"
+options3="--gen-suppressions=all"
+options4="--suppressions=$xipSupFile --suppressions=$xipLeakSupFile --suppressions=$ntmSupFile"
+options5="--suppressions=$genSupFile"
+options6="--demangle=yes --num-callers=20"
+
+rm -rf $log1 $log2
+#generate suppression file
+options1="--log-file=$log1"
+$valgrind $options0 $options1 $options2 $options3 $options4 $progToAnalyse
+cat $log1 | ../../../generateSuppressionFile.sh >$genSupFile
+
+#rerun with the use of the suppression file generated
+options1="--log-file=$log2"
+$valgrind $options0 $options1 $options2 $options3 $options4 $options5 $options6 $progToAnalyse
+
+grep Leak $genSupFile | wc -l
+grep Memcheck $genSupFile | wc -l
+
+grep Memcheck $log2 | wc -l

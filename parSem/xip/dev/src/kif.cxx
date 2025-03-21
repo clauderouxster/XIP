@@ -100,6 +100,7 @@ ThreadLock::ThreadLock(KifType i) {
 
 void ThreadLock::Initialise() {}
 
+
 ThreadLock::~ThreadLock() {
 	if (kifGlobals == NULL)
 		return;
@@ -14928,7 +14929,6 @@ char KifIndex::Indexes(int sz, KifDomain* dom, int& ileft, int& iright) {
 	}
 	return 2;
 }
-
 
 
 

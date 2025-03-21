@@ -1,0 +1,429 @@
+\documentclass{article}
+%\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{alltt}
+\usepackage{times}
+
+\makeatletter
+
+\newcommand{\file}[1]{{\tt #1}}
+\newcommand{\func}[1]{{\tt #1}}
+\newcommand{\type}[1]{{\tt #1}}
+\newcommand{\var}[1]{{\tt #1}}
+\newcommand{\scode}[1]{{\tt #1}}
+
+\newcommand{\tool}[1]{{\tt #1}}
+\newcommand{\comm}[1]{{\tt #1}}
+\newcommand{\filename}[1]{{\tt #1}}
+\newcommand{\feats}[1]{{\it #1}}
+
+\newcommand{\code}[1]{\vspace{0.4cm} \hspace{0.5cm}{\tt #1}}
+
+\begin{document}
+
+
+
+\title{NTM User's Guide}
+
+
+\author{Salah A\"{i}t-Mokhtar\\ ParSem Group, Xerox Research Centre Europe}
+\date{\today}
+
+\maketitle
+
+\section{What is NTM?}
+
+NTM (Normalisation, Tokenization and Morphological analysis) is a tool that tokenizes an input text and assigns lexical analyses to each token. Both tokenization and lexical analysis is performed according to finite-state transducers (FSTs) that contain token definitions. The FSTs must be in the Xerox FST format and, for the current version of NTM (1.1.2), should not make use of flag diacritics.
+
+
+One important feature of NTM that makes it different from standard tokenizers and morphological analyzers is that it uses the same source of information (a lexical FST, i.e. an FST that defines tokens) for doing both tokenization and morphological analysis in a single step. In fact, NTM does not rely on separators, spaces or specific characters to recognize tokens. Rather, a token can be any string of characters (i.e. it may contain spaces and other separators) as long as it is defined in the lexical FST.
+
+Therefore, a lexical FST may contain hundreds of thousands of simple words, compounds or complex terms. Forms as different as "goes", "C++", "Washington", "United Nations", "World Bank", ".NET", "TV screens", "Mr G. Washington", etc. can be handled in the same lexical FST, where they can be assigned differents tags ("+LOC", "+PERS", "+ORG", "+Sing", "+Noun", etc.) and NTM will tokenize and recognize their occurrences in texts in a single step.
+
+
+In order to tokenize/morphologically analyse texts, it is necessary to tell NTM what is the set of strings that are defined as lexical tokens, i.e. to give it one or more lexical FSTs that define forms and assign information tags to them.
+
+\section{Lexical FSTs for NTM}
+
+The lexical FSTs must be created and saved into files using a Xerox FST compiler tool, such as \tool{fst}. The lexical tokens are defined with regular expressions (REs) written in the language of the Xerox Finite-State calculus. Please read the Xerox FST compiler documentation to understand the syntax and semantics of the RE language and the \tool{fst} commands.
+
+A lexical FST may of course include a morphological dictionary, i.e. inflected wordforms of a given language associated with their lemmas (canonical forms) and morpho-syntactic features like \feats{+Noun, +Verb, +plural, +P1, +Ind, +past,} etc. XRCE has such dictionaries in the form of lexical FSTs for a wide range of languages.
+
+A lexical FST  may also contain lists of simple or complex proper names or entity names (e.g. "John Smith", "Paco de Lucia", ..) , technical terms, etc.
+
+
+\subsection{An example of lexical FSTs}
+\label{FSTexample}
+
+For instance, here is an example of a lexical FST definition for NTM, using \tool{fst}:
+
+\begin{verbatim}
+
+define Cities [
+[
+ {Aachen} |
+ {Andorra La Vella} |
+ {As Sulaymaniyah} |
+ {Antwerp} |
+ {Grenoble} |
+ {Los Angeles} |
+ {Sidi el Kebir} |
+ {Valencia}
+
+] %+Prop:0 %+Loc:0 %+City:0 %+NOUN:0 ] ;
+
+
+define Countries [
+[
+ {Argentina} |
+ {France} |
+ {Bosnia-Hercegovina} |
+ {San Andres y Providencia} |
+ {Spain} |
+ {United States of America}
+
+] %+Prop:0 %+Loc:0 %+Country:0 %+NOUN:0 ];
+
+
+
+define Persons [
+[
+ {Anne Frank} |
+ {Gunter Grass} |
+ {Jean-Marie Messier} |
+ {Jodie Foster}
+]  %+Proper:0 %+Celeb:0 %+Person:0  %+NOUN:0 ] ;
+
+
+
+regex 
+ Cities | Countries | Persons ;
+
+save lex1.fst
+
+
+
+\end{verbatim}
+
+In this example, 3 lists of entity names are defined (Cities, Countries and Persons) and assigned features (\feats{+NOUN, +Loc, +Prop,} etc.). They are merged into a single lexical FST in the \comm{regex} command, and then the resulting lexical FST is saved in a file named \filename{lex1.fst}. It can be used by NTM to tokenize texts and recognize the occurrences of the defined entity names.
+
+\subsection{Context constraints}
+\label{constraints}
+
+When we define a token in a lexical FST, it is possible to add to its definition constraints on the surrounding of its occurrences in a text. These constraints must be satisfied in order for an occurrence candidate to be recognized by NTM.
+
+The right constraints (RCs) applies on the character sequence that follows the token occurrence in the input text, and the left constraints (LCs) applies, in a reverse direction, on the sequence that precedes the token occurrence. The constraints are specified using regular expressions. The RCs specification must start with the special symbol \scode{RC}, and the LCs with the special symbol \scode{LC}. RCs and LCs specifacation must follow the token definition for which they apply.
+
+For instance, if we assume that \scode{UpperCase} and \scode{LowerCase} have been previously defined to refer to the set of upper-case letters and lower-case letters respectively, then in the following example:
+
+
+\begin{verbatim}
+
+define Companies [
+  UpperCase [ UpperCase | LowerCase ]+
+  %+Proper:0 %+Company:0  %+NOUN:0   RC (%,) { Inc.}
+] ;
+
+\end{verbatim}
+
+any string of letters starting with an upper-case letter is defined as a company name if it satisfies the right constraint \scode{RC (\%,) \{ Inc.\}}, which stipulates that the defined form must be followed by the substring `` Inc.'' or ``, Inc.''.
+
+The constraint regular expression may include the specific symbols \scode{BOT} and \scode{EOT}, which stand for ``beginning of text'' and ``end of text'' respectively.
+
+
+\section{Normalizing FSTs for NTM}
+\label{normalizingFSTs}
+
+Besides lexical FSTs, which are necessary for NTM to work, it is possible to define normalizing FSTs for NTM to handle, in an afficient way, typographical variations of forms in texts: upper-case/lower-case differences, diacritics, hyphenated forms, etc. Thus, instead of putting in the lexical FST all the possible typographical forms of a form, we can define an independent normalizing transducer that maps characters (or string of characters), from the input text, to normalized characters that NTM actually uses to lookup tokens in the lexical FST.
+
+If no normalizing transducer is specified, NTM uses an identity mapping by default.
+
+Like lexical FSTs, the normalizing FSTs are specified and compiled using a Xerox Finite-State compiler, such as \tool{fst}. The normalizing specifications are expressed iwith regular expressions so that the lower level is matched with the characters of the input text, and the upper level gives the resulting normalized characters.
+
+For example, the following :
+
+\begin{verbatim}
+define UpperToLow [
+ F:f | f:F | G:G | g:G | H:H | h:H
+];
+\end{verbatim}
+
+describes the mapping of any ``F'' of the input text to ``F'' and ``f'', etc. (actually, in practice this definition must be completed to handle all upper-case letters).
+
+
+It is possible to put left or right constraints on the normalizing mappings, as described in section \ref{constraints}. The following definition applies the preceding mapping only if the input character is not at the beginning of a wordform (i.e. if the input character is not preceded by a space character):
+
+\begin{verbatim}
+define CautiousUpperToLow [
+   UpperToLow  LC \[\  ]
+];
+\end{verbatim}
+
+
+Another example of typographical normalization is given by the following definitions. Assuming that \scode{Space} refers to any space character, \scode{NL} to a newline character, and \scode{Letter} to any alphabetic character, then in: 
+
+
+\begin{verbatim}
+
+define Hyphenation [%- Space* NL Space*] ;
+
+define HyphenAnalysis [
+        [
+         [ 0 .x. Hyphenation ] |
+         [ [%-] .x. Hyphenation ]
+        ]
+        LC Letter
+];
+
+\end{verbatim}
+
+
+\scode{HyphenAnalysis} will map any hyphenation string in the input text to the empty string (in case a normal wordform is hyphenated) and to the hyphen character (in case a compound wordform that naturally contains a hyphen, such as ``rendez-vous'', is split at its hyphen position). NTM checks both possibilities through the lexical FST.
+
+If at a given position in the input text, the normalizing mappings can potentially map input substrings of diffrent length, only the longest one (from left to right) is actually normalized. Also, if at a given position in the input text the normalizing mappings cannot apply (i.e. no match with the input, or the context constraints are not satisfied), an identity mapping is applied by default.
+
+\section{How does the NTM algorithm work?}
+\label{NTMalgo}
+
+Given a lexical FST $lex$, an optional normalizing FST $norm$ and a current position $pos$ in an input text (initially, the position is $0$, i.e. it points on the first character in the input text), the NTM algorithm gets {\bf the longest token} $t$ that starts at $pos$ in the input text and that satisfies the folowing conditions:
+
+\begin{enumerate}
+
+\item $t$ matches a defined token $t'$ in $lex$ after applying the normalizing mappings of $norm$ on $t$ (if no normalizing FST is specified, then the identity mapping is applied)
+\item if $t'$ has context constraints in $lex$, then $t$ must satisfy them in the input text, otherwise $t$ must end with a separator character or be immediately followed by a separator. 
+
+\end{enumerate}
+
+See section \ref{spaces&separators} for the definition of spaces and separators.
+
+
+If such token $t$ is found, then NTM outputs the token along with all its lexical analyses and the current position is incremented by the length of the recognized token. Otherwise, the recognition procedure fails with $lex$ and $norm$.
+
+
+\section{Spaces and separators}
+\label{spaces&separators}
+
+By default, NTM defines the sets of characters it considers as spaces and/or separators:\\
+
+
+SPACES: \\
+\begin{tt}
+$\backslash$09 $\backslash$10 $\backslash$13 $\backslash$32
+\end{tt} \\
+
+SEPARATORS: \\
+\begin{tt}
+, ; . : ! ? - \_ " ' ` ( ) [ ] \{ \} \^ \   = / $\backslash$ | * + \% \$ \pounds \  \# < > \~{} \&  <<  >> $^\circ$
+\end{tt}
+
+\vspace{0.7cm}
+
+A space character is automatically considered as a sperator character too. The numbers preceded by a backslash refers to decimal ASCII codes.
+
+The user can change the space and separator definitions in the NTM script file (see section \ref{ntmscript}).
+
+
+\section{The NTM script: defining strategies and space/separator classes}
+\label{ntmscript}
+
+An NTM script file is used to specify to NTM a sequence of strategies and/or to redefine the space/separator classes.
+
+\subsection{NTM strategies}
+
+It is possible to run NTM with one or several {\bf ordered} lexical FSTs (and optionnally normalizing FSTs) $(norm_1,lex_1),(norm_2,lex_2),...,(norm_n,lex_n)$, each FST level being a lookup strategy: NTM tries the $(norm,lex)$ levels, starting from the first strategy, and following the recognition procedure described in \ref{NTMalgo}. If the recognition procedure succeeds with some $(norm_i,lex_i)$, then NTM returns the recognized token. Otherwise, it returns an unknown token : the longest substring at the current input position that does not contain any separator, or the single separator if the current position contains a separator.
+
+In all cases, NTM increments the current position with the length of the returned token, and continues the analysis of the remaining text first trying again with  $(norm_1,lex_1)$, and so forth.
+
+The FSTs of the  must be declared in an NTM script file with the following syntax: \\
+
+
+\begin{tabular}{ll}
+
+$Alias_1$ &  $FstPathname_1$ \\
+$Alias_2$ &  $FstPathname_2$ \\
+... &  \\
+$Alias_k$ &  $FstPathname_k$ \\
+ &  \\
+$NormAlias_1$ & $LexicalAlias_1$ \\
+$NormAlias_2$ & $LexicalAlias_1$ \\
+... &  \\
+$NormAlias_n$ & $LexicalAlias_1$
+
+\end{tabular}
+
+\vspace{0.7cm}
+
+where $Alias_i$ is an alphanum-based alias name for a lexical or normalizing FST that is stored in  $FstPathname_i$, and  $NormAlias_j$ and $LexicalAlias_j$ are respectively the alias of the normalizing FST and the alias of the lexical FST to apply only when the FSTs of the preceding line fail. $NormAlias_j$ is optional: when omitted, NTM applies the identity mapping as said in sections \ref{normalizingFSTs} and \ref{NTMalgo}.
+
+{\bf It is necessary} to insert an empty line after the alias definitions and before the FST sequence definition. See the script file example below.
+
+
+\subsection{Redefining the space/separator classes}
+
+If not satisfied with the default definition of the space and separator classes given in section \ref{spaces&separators}, the user can redefine them in the NTM script file. The space re-definition must start with the ``SPACES:'' keyword, and the separator re-definition must start with the ``SEPARATORS:'' keyword, as showed in the following example.
+
+
+\subsection{A sample NTM script file}
+
+Here is an example of an NTM script file that contains a re-definition of space/separator classes, and the lookup strategies:
+
+\begin{verbatim}
+SPACES:
+        \09 \10 \13 \32
+
+SEPARATORS:
+         , ; . : ! ? - "
+
+
+lex2		../ntmscript/SpecialStrings.fst
+lex		../ntmscript/nvlex+context+add.fst
+guess		../ntmscript/alternative.fst
+open		../ntmscript/nv-open-1.fst
+norm		../ntmscript/norm.fst
+
+lex2 
+norm lex
+guess 
+open
+\end{verbatim}
+
+
+
+
+
+\section{Running the NTM command}
+
+In order to learn how to use the C API of NTM, please refer to the NTM API Guide. The following section stands for the runtime command \comm{ntm}.
+
+\subsection{NTM Options}
+
+\begin{verbatim}
+
+-t <name>
+       <name> is the filename of the normalizing transducer to use.
+       If this option is used, then do not use the -f option.
+
+-l <name>
+       <name> is the filename of the lexical transducer to use
+       If this option is used, then do not use the -f option.
+
+-f <name>
+       <name> is the filename of the ntm script (which defines the
+       space and separator classes, and the lookup strategy).
+       If this option is used, then do not use the -t and -l options.
+
+-i <name>
+       <name> is the filename of the input text to be processed
+       (if not specified, ntm reads from the standard input)
+
+-nsc
+       Do not apply the separator constraint by default (do not require
+       by default that any token must be delimited with separators)
+
+-unknownbychars
+       In case of unknown string, print only one char as an unknown
+       token and proceed ahead starting again from the next char.
+       When this option is not set (default), ntm returns a string
+       delimited with separators as an unknown token.
+
+-norm
+       Only output the result of the normalization (as defined by
+       the -t option, or by the first level of the strategy in the
+       script file of the -f option).
+
+-notok
+       ntm does not perform tokenization, but only normalization and
+       morphological analysis. It assumes the input file is already
+       tokenized, each line being a (single) token (without the
+       end-of-line char).
+
+-indices
+       Print out the offset indices of tokens (in the input text) in
+       terms of character symbols
+
+-bytes
+       Print out the offset indices of tokens (in the input text) in
+       terms of bytes
+
+-xml
+       Print out in xml format
+
+-utf8
+       Expect UTF-8 input data
+
+\end{verbatim}
+
+
+
+\subsection{Output format}
+
+First, the offset indices of each token are printed (thanks to the \comm{-indices} option), as shown in the example below. In the next line, the token reading is displayed: the token form, its lemma (canonical form) and its feature string (the three items are separated with tab characters). If a token has more than one reading in the lexical FST, each reading is displayed in a new line. If a token is unknown (no match found in any of the provided lexical FSTs) then it is displayed with a lemma of the same form, and with ``+?'' as the feature string. An empty line is printed after the set of readings of each token.
+
+
+
+\subsection{Example}
+
+
+Let's assume we want to use NTM with a given lexical FST description, such as the one given in \ref{FSTexample} and that such description has been saved in a file named \filename{lex.xfst}. 
+
+The first step is to compile \filename{lex.xfst} in order to get the FST we want to use for NTM. This can be done with the \tool{fst} tool:
+
+\begin{verbatim}
+fst -f lex.xfst
+\end{verbatim}
+
+
+
+This command will compile \filename{lex.xfst} and produce an FST in a file named \filename{lex1.fst}, as specified in the \comm{save} command in \filename{lex.xfst}. 
+
+In order to run NTM on an input text \filename{textfile.txt}, type the following:
+
+\begin{verbatim}
+ntm -l lex1.fst -indices -i textfile.txt
+\end{verbatim}
+
+If \filename{textfile.txt} contains the following text:
+
+\begin{verbatim}
+Jodie Foster is a celebrity and Los Angeles is a city.
+\end{verbatim}
+
+then the previous NTM command will yield the following result:
+
+\begin{verbatim}
+
+0-12
+Jodie Foster    Jodie Foster    +Proper+Celeb+Person+NOUN
+
+13-15
+is      is      +?
+
+16-17
+a       a       +?
+
+18-27
+celebrity       celebrity       +?
+
+28-31
+and     and     +?
+
+32-43
+Los Angeles     Los Angeles     +Prop+Loc+City+NOUN
+
+44-46
+is      is      +?
+
+47-48
+a       a       +?
+
+49-53
+city    city    +?
+
+53-54
+.       .       +?
+
+
+\end{verbatim}
+
+
+\end{document}

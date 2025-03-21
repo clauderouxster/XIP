@@ -2,7 +2,7 @@
 * Xerox Research Centre Europe - Grenoble Laboratory
 *
 * Copyright (C) 2003 - 2007 Xerox Corporation, XRCE-Grenoble, All Rights Reserved.
-* This file can only be used with the XIP library,
+* This file can only be used with the XIP library, 
 * it should not and cannot be used otherwise.
 */
 /* --- CONTENTS ---
@@ -12,7 +12,7 @@ filename   : mathemat.cxx
 Date       : 10/01/1999
 Purpose    : Implementation of the compiling and implementation of mathematic formulae.
 Programmer : Claude ROUX
-Reviewer   :
+Reviewer   : 
 */
 
 #ifdef XIPPYTHON
@@ -45,7 +45,7 @@ extern "C" {
 #include "lktypes.h"
 #include "ems.h"
 #include "lookup.h"
-
+    
 #include "networks.h"
 
 #include "tok-aux.h"
@@ -271,7 +271,7 @@ static const char* affichagemessageerreur[] ={
     "Instruction interrupted: The second parameter should be VECTOR in a RETRIEVELEMMAS instruction",//47
     "Instruction interrupted: The third parameter should be VINT in a RETRIEVELEMMAS instruction",//48
     "Instruction interrupted: Missing or wrong argument in a GETLEMMA instruction",//49
-    "Instruction interrupted: The first parameter should be lemma variable in a GETLEMMA instruction",//50
+    "Instruction interrupted: The first parameter should be lemma variable in a GETLEMMA instruction",//50    
     "Instruction interrupted: Wrong number of parameters in a FOPEN",//51
     "Instruction interrupted: This alias already exists",//52
     "Instruction interrupted: Error while opening a file",//53
@@ -654,8 +654,8 @@ void retourInitialParseur(int precedent) {
 	}
 }
 
-GlobalParseur* initNouveauParseur(int parsnum) {
-	if (parsnum!=index_parseur_courant) {
+GlobalParseur* initNouveauParseur(int parsnum) {	
+	if (parsnum!=index_parseur_courant) {		
 		GlobalParseur* parseur=gVecteurParseurs[parsnum];
 		if (parseur==NULL)
 			return NULL;
@@ -691,7 +691,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
 	 PyObject* pos=ConvertToPythonString(node->category.c_str());
 	 PyDict_SetItemString(noeud, "#pos", pos);
 	 Py_DECREF(pos);
-
+	 
 	 pos=ConvertToPythonLong(node->idnode);
 	 PyDict_SetItemString(noeud, "#id", pos);
 	 Py_DECREF(pos);
@@ -720,7 +720,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
 		 PyDict_SetItemString(noeud, "#rightchar", pos);
 		 Py_DECREF(pos);
 	 }
-
+	 
 	 if (node->Type()==XIPLEAF) {
 		 XipLeaf* feuille=(XipLeaf*)node;
 		 pos=ConvertToPythonString(feuille->lemma.c_str());
@@ -759,7 +759,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
 		 PyDict_SetItemString(dep, d->features[j]->attribute.c_str(), pos);
 		 Py_DECREF(pos);
 	 }
-
+	 
 	 if (stacks) {
 		 PyObject* thestack=PyList_New(0);
 		 for (j=0;j<d->features.size();j++) {
@@ -771,7 +771,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
 		 PyDict_SetItemString(dep,"$STACK",thestack);
 		 Py_DECREF(thestack);
 	 }
-
+	 
 	 PyObject* params=PyList_New(0);
 	 PyDict_SetItemString(dep, "#parameters", params);
 	 Py_DECREF(params);
@@ -783,7 +783,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
  }
 
  bool RajouteSurfaceLemme(XipNode* node, string& surface, string& lemme, bool& premier) {
-
+	 
 	 if (node->Type() == XIPLEAF) {
 		 XipLeaf* feuille = (XipLeaf*)node;
 		 if (!premier) {
@@ -817,7 +817,7 @@ GlobalParseur* initNouveauParseur(int parsnum) {
 	 pos = ConvertToPythonLong(node->idnode);
 	 PyDict_SetItemString(noeud, "#id", pos);
 	 Py_DECREF(pos);
-
+	 
 	 int j;
 	 for (j = 0; j<node->features.size(); j++) {
 		 pos = ConvertToPythonString(node->features[j]->value.c_str());
@@ -958,13 +958,13 @@ extern "C" {
 	static PyObject* xipsError;
 
     static PyObject* xips_loadgrm(PyObject* self, PyObject* args) {
-        char* grmfile;
+        char* grmfile;      
 
 #if PY_MAJOR_VERSION >= 3
 		if (initialization) {
 			string func = insere_xip_class();
 			PyRun_SimpleString(func.c_str());
-			initialization = false;
+			initialization = false;			
 		}
 #endif
 
@@ -990,8 +990,8 @@ extern "C" {
     }
 
     static PyObject* xips_freegrm(PyObject* self, PyObject* args) {
-        int parsnum=index_parseur_courant;
-
+        int parsnum=index_parseur_courant;      
+                
 		if (!PyArg_ParseTuple(args,"i",&parsnum)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
@@ -1001,7 +1001,7 @@ extern "C" {
 	}
 
 
-    static PyObject* xips_current_rule(PyObject* self, PyObject* args) {
+    static PyObject* xips_current_rule(PyObject* self, PyObject* args) {                        
 		int precedent=index_parseur_courant;
 
 		if (extraitParseurCourant(args)==NON) {
@@ -1013,7 +1013,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "No Current Rule");
 			return Py_BuildValue("[iiisssll]",-1,-1,-1,"","","",-1,-1);
 		}
-
+		
 		return Py_BuildValue("[iiisssll]",
 			parseur_courant->reglecourante->identificateur,
 			parseur_courant->reglecourante->numero,
@@ -1025,7 +1025,7 @@ extern "C" {
 			parseur_courant->reglecourante->label->dr->ligne);
     }
 
-    static PyObject* xips_current_rule_text(PyObject* self, PyObject* args) {
+    static PyObject* xips_current_rule_text(PyObject* self, PyObject* args) {                                
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int display;
@@ -1041,7 +1041,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "No Current Rule");
 			return ConvertToPythonString("");
 		}
-
+		
 		ostringstream os;
 		parseur_courant->FormatRuleText(os,parseur_courant->reglecourante->identificateur,display);
 		return ConvertToPythonString(os.str().c_str());
@@ -1049,7 +1049,7 @@ extern "C" {
 
 
     static PyObject* xips_setexechange(PyObject* self, PyObject* args) {
-
+        
         PyObject* objet;
         char* nomvariable;
 		if (!PyArg_ParseTuple(args,"sO",&nomvariable,&objet)) {
@@ -1062,13 +1062,13 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Unknown variable");
             return ConvertToPythonLong(-2);
 		}
-
+        
         Variable* v=(Variable*)e->valeur;
 		if (v->sorte!=VPYTHONOBJET) {
 			PyErr_SetString(PyExc_AttributeError, "This object is not a Python object");
             return ConvertToPythonLong(-3);
 		}
-
+        
         Py_INCREF(objet);
         VariablePython* vp=(VariablePython*)v;
         if (vp->echange!=NULL)
@@ -1090,7 +1090,7 @@ extern "C" {
 
 		if (nummodule==-1 && numligne==-1)
 			parseur->python_debug=NON;
-		else
+		else 
 			parseur->python_debug=OUI;
 
 		parseur->num_python_ligne=numligne;
@@ -1100,9 +1100,9 @@ extern "C" {
     }
 
     static PyObject* xips_reloadgrm(PyObject* self, PyObject* args) {
-        int parsnum=index_parseur_courant;
+        int parsnum=index_parseur_courant;      
 		int precedent=index_parseur_courant;
-
+                
 		if (!PyArg_ParseTuple(args,"i",&parsnum)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonString("Please provide a grammar handle");
@@ -1124,7 +1124,7 @@ extern "C" {
 			s=PyAsString(po);
 			return true;
 		}
-
+		
 #ifdef HAVE_WCHAR_H
 		if (PyUnicode_Check(po)) {
 			Py_ssize_t sz=PyUnicode_GetSize(po);
@@ -1139,7 +1139,7 @@ extern "C" {
 			const char* sbuff=PyUnicode_AS_DATA(po);
 			for (Py_ssize_t i=0;i<sz;i++) {
 				if (sbuff[i])
-					s+=sbuff[i];
+					s+=sbuff[i];				
 			}
 			return true;
 		}
@@ -1156,9 +1156,9 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong number of parameters");
 			return ConvertToPythonLong(-1);
 		}
-
+		
 		PyObject* pelement=PyTuple_GetItem(args, 0);
-		if (PyCheck_Number(pelement)!=1) {
+		if (PyCheck_Number(pelement)!=1) {		
 			PyErr_SetString(PyExc_AttributeError, "First element should be a integer");
 			return ConvertToPythonLong(-1);
 		}
@@ -1170,7 +1170,7 @@ extern "C" {
 
 
 		pelement=PyTuple_GetItem(args, 1);
-        string phrase;
+        string phrase;      
 		if (!PythonVersString(pelement,phrase)) {
 			PyErr_SetString(PyExc_AttributeError, "Second element should be a string");
 			return ConvertToPythonLong(-1);
@@ -1179,8 +1179,8 @@ extern "C" {
 
         PyObject* objet=NULL;
 		if (nbelement==3)
-			objet=PyTuple_GetItem(args, 2);
-
+			objet=PyTuple_GetItem(args, 2);		                
+		
 		XipResult* xip=new XipResult;
         parseur_courant->vpython_echange->echange=objet;
 		XipParseString(STR(phrase),parsnum, xip,1);
@@ -1202,7 +1202,7 @@ extern "C" {
 		}
 
 		PyObject* pelement=PyTuple_GetItem(args, 0);
-		if (PyCheck_Number(pelement)!=1) {
+		if (PyCheck_Number(pelement)!=1) {		
 			PyErr_SetString(PyExc_AttributeError, "First element should be a integer");
 			return ConvertToPythonLong(-1);
 		}
@@ -1214,7 +1214,7 @@ extern "C" {
 
 
 		pelement=PyTuple_GetItem(args, 1);
-		string phrase;
+		string phrase;      
 		if (!PythonVersString(pelement,phrase)) {
 			PyErr_SetString(PyExc_AttributeError, "Second element should be a string");
 			return ConvertToPythonLong(-1);
@@ -1233,7 +1233,7 @@ extern "C" {
 		parseur_courant->vpython_echange->echange=NULL;
 		XipParseString(STR(phrase),parsnum, xip, 0);
 		PyObject* resultat=PyList_New(0);
-
+		
 		delete xip;
 		retourInitialParseur(precedent);
 		parseur_courant->DESAMBIGUISATION = vtag;
@@ -1244,21 +1244,21 @@ extern "C" {
 	}
 
 	static PyObject* xips_parsedependencystring(PyObject* self, PyObject* args) {
-        char* phrase;
+        char* phrase;      
         int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+        
         PyObject* objet;
 		if (!PyArg_ParseTuple(args,"isO",&parsnum,&phrase,&objet)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
 		}
-
-
+		
+        
         GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
-
+        
         parseur_courant->vpython_echange->echange=objet;
 
 		ostringstream os;
@@ -1266,7 +1266,7 @@ extern "C" {
         retourInitialParseur(precedent);
 		if (res==0)
 			return ConvertToPythonString(os.str().c_str());
-		else {
+		else {			
 			PyErr_SetString(PyExc_AttributeError, affichagemessageerreur[res]);
 			return ConvertToPythonString(affichagemessageerreur[res]);
 		}
@@ -1280,30 +1280,30 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
 		}
-
+		
 		string buff;
 		parseur_courant->parcoursgeneration(buff);
 
         return ConvertToPythonString(buff.c_str());
     }
-
+   
 #ifdef XIPLIBXML
     static PyObject* xips_parsexmlstring(PyObject* self, PyObject* args) {
-        char* phrase;
+        char* phrase;      
         int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
         int depth;
-
+               
         PyObject* objet;
 		if (!PyArg_ParseTuple(args,"isiO",&parsnum,&phrase,&depth,&objet)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
 		}
-
+        
         GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
-
+        
 
         //Py_INCREF(objet);
         parseur_courant->vpython_echange->echange=objet;
@@ -1314,7 +1314,7 @@ extern "C" {
     }
 
 	static PyObject* xips_parsexmlfile(PyObject* self, PyObject* args) {
-		char* filename;
+		char* filename;      
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int depth=1;
@@ -1340,27 +1340,27 @@ extern "C" {
 #endif
 
     static PyObject* xips_version(PyObject* self, PyObject* args) {
-        char version[1000];
-
+        char version[1000];      
+        
          sprintf_s(version,1000,"XIP: Xerox Incremental Parser %s (2000-2007) ",VERSION_XIP_BUILD);
         return ConvertToPythonString(version);
     }
 
     static PyObject* xips_parsefile(PyObject* self, PyObject* args) {
-        char* filename;
+        char* filename;      
         int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+                
         PyObject* objet;
 		if (!PyArg_ParseTuple(args,"isO",&parsnum,&filename,&objet)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
 		}
-
+        
         GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
-
+        
 
         //Py_INCREF(objet);
         parseur_courant->vpython_echange->echange=objet;
@@ -1371,20 +1371,20 @@ extern "C" {
     }
 
 	static PyObject* xips_parsedependencyfile(PyObject* self, PyObject* args) {
-        char* filename;
+        char* filename;      
         int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+                
         PyObject* objet;
 		if (!PyArg_ParseTuple(args,"isO",&parsnum,&filename,&objet)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
 		}
-
+        
         GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
-
+        
 
 		parseur_courant->vpython_echange->echange=objet;
 
@@ -1399,35 +1399,35 @@ extern "C" {
     }
 
     static PyObject* xips_xipnode(PyObject* self, PyObject* args) {
-        int node;
+        int node;          
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+        
         if (!PyArg_ParseTuple(args,"i|i",&node,&parsnum))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return Py_BuildValue("[issssiiiiiiilllls]",0,
 				"NONE","NONE","NONE","[NONE:NONE]",-1,-1,-1,-1,-1,0,0,-1,-1,-1,-1,"");
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL) {
             return Py_BuildValue("[issssiiiiiiilllls]",0,
                 "NONE","NONE","NONE","[NONE:NONE]",-1,-1,-1,-1,-1,0,0,-1,-1,-1,-1,"");
         }
-
+        
         Noeud* n=NULL;
         //if ((*parseur->TasDeListes)[node]!=NULL)
         //    n=&parseur->TasDeListes->vecteur[node]->N;
-
+        
         if (parseur->NoeudsTemporaires[node]!=NULL)
             n=&parseur->NoeudsTemporaires[node]->N;
-
-
+        
+        
         if (n==NULL) {
 			PyErr_SetString(PyExc_IndexError, "This index does not match any syntactic node");
             return Py_BuildValue("[issssiiiiiiilllls]",0,
                 "NONE","NONE","NONE","[NONE:NONE]",-1,-1,-1,-1,-1,0,0,-1,-1,-1,-1,"");
-        }
+        }        
 
         string rpos;
         string rsurface;
@@ -1443,7 +1443,7 @@ extern "C" {
 		PyObject* laliste=NULL;
 		//dans le cas standard, il s'agit d'une simple concatenation dans les chaines pour les noeuds lexicaux
 		if (parseur->fullpythonlexical==NON || n->source->voc==NULL || n->source->voc->nbX==1) {
-			n->ConstruitUnNoeud(parseur,
+			n->ConstruitUnNoeud(parseur, 
 				rpos,
 				rsurface,
 				rlemme,
@@ -1488,7 +1488,7 @@ extern "C" {
 			laliste=PyList_New(0);
 			for (int i=0;i<n->source->voc->nbX;i++) {
 				n->source->choisie=i;
-				n->ConstruitUnNoeud(parseur,
+				n->ConstruitUnNoeud(parseur, 
 					rpos,
 					rsurface,
 					rlemme,
@@ -1528,10 +1528,10 @@ extern "C" {
 
 
     static PyObject* xips_xipnodes(PyObject* self, PyObject* args) {
-        char* node;
+        char* node;      
         int i,parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+        
         PyObject* liste=PyList_New(0);
 		if (!PyArg_ParseTuple(args,"s|i",&node,&parsnum)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
@@ -1541,11 +1541,11 @@ extern "C" {
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return liste;
-
+        
         Categorie* c=parseur->RetrouveCat(node);
 		if (c==NULL) {
 			PyErr_SetString(PyExc_IndexError, "Unknown POS");
-            return liste;
+            return liste;       
 		}
 
         for (i=0; i< parseur->IndexParCat[c->X.val].dernier;i++) {
@@ -1553,26 +1553,26 @@ extern "C" {
             PyList_Insert(liste,i,pcourant);
 			Py_DECREF(pcourant);
         }
-
+        
         return liste;
     }
-
+    
     static PyObject* xips_xiplexicalnodes(PyObject* self, PyObject* args) {
         int i;
 		int precedent=index_parseur_courant;
 
-        PyObject* liste=PyList_New(0);
+        PyObject* liste=PyList_New(0);        
 		if (extraitParseurCourant(args)==NON) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return liste;
 		}
-
+        
         for (i=0; i< parseur_courant->NoeudsLexicaux.dernier;i++) {
             PyObject* pcourant=ConvertToPythonLong(parseur_courant->NoeudsLexicaux[i]->num_noeud);
             PyList_Insert(liste,i,pcourant);
 			Py_DECREF(pcourant);
         }
-
+        
         return liste;
     }
 
@@ -1580,20 +1580,20 @@ extern "C" {
         int i;
         int precedent=index_parseur_courant;
 
-        PyObject* liste=PyList_New(0);
+        PyObject* liste=PyList_New(0);        
 		if (extraitParseurCourant(args)==NON) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return liste;
 		}
-
+        
         Noeud* n=NULL;
-
+        
         for (i=0; i< parseur_courant->NoeudsDependance.dernier;i++) {
             PyObject* pcourant=ConvertToPythonLong(parseur_courant->NoeudsDependance[i]->N.num_noeud);
             PyList_Insert(liste,i,pcourant);
 			Py_DECREF(pcourant);
         }
-
+        
         return liste;
     }
 
@@ -1608,19 +1608,19 @@ extern "C" {
 		if (parseur_courant->donneesATraiter==NULL) {
 			PyErr_SetString(PyExc_IndexError, "No string to process");
             return ConvertToPythonString("");
-		}
-
+		}        
+        
         return ConvertToPythonString((char*)parseur_courant->donneesATraiter);
     }
-
+    
     static PyObject* xips_dependency(PyObject* self, PyObject* args) {
-        int dep;
+        int dep;      
         int i,parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+        
 		if (!PyArg_ParseTuple(args,"i|i",&dep,&parsnum)) {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
-			return Py_BuildValue("[ssi]","NONE","[NONE:NONE]",-1);
+			return Py_BuildValue("[ssi]","NONE","[NONE:NONE]",-1);	
 		}
 
         GlobalParseur* parseur=initNouveauParseur(parsnum);
@@ -1642,7 +1642,7 @@ extern "C" {
                 "NONE","[NONE:NONE]",-1);
         }
 
-
+        
 		string traits;
 		if (rf->traits!=NULL)
 			rf->traits->TraitsEnChaineString(parseur,traits,parseur->FILTREFONCTION);
@@ -1693,7 +1693,7 @@ extern "C" {
             PyList_Insert(liste,params++,pcourant);
 			Py_DECREF(pcourant);
         }
-
+        
         return liste;
     }
 
@@ -1702,12 +1702,12 @@ extern "C" {
 		char* variable;
         int grm;
 
-
+		
 		if (!PyArg_ParseTuple(args,"isf",&grm,&variable,&valeur))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		string var=variable;
 		int r=XipSetVariable(grm,var,valeur);
         return ConvertToPythonLong(r);
@@ -1722,7 +1722,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		string var=variable;
 		int r=XipSetVariable(grm,var,(float)valeur);
         return ConvertToPythonLong(r);
@@ -1737,7 +1737,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		string var=variable;
 		string value=valeur;
 		int r=XipSetStringVariable(grm,var,value);
@@ -1753,7 +1753,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
         XipSetDisplayMode(grm,mode,80);
 
         return ConvertToPythonLong(0);
@@ -1767,7 +1767,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		XipAddFlagDisplayMode(grm,mode,80);
 
         return ConvertToPythonLong(0);
@@ -1781,13 +1781,13 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		if (XipTestFlagDisplayMode(grm,mode)==1)
 			return ConvertToPythonLong(1);
 
         return ConvertToPythonLong(0);
     }
-
+	
 	static PyObject* xips_currentgrammarindex(PyObject* self, PyObject* args) {
         if (parseur_courant==NULL)
             return ConvertToPythonLong(-1);
@@ -1804,7 +1804,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-
+        
 		XipRemoveFlagDisplayMode(grm,mode);
 
         return ConvertToPythonLong(0);
@@ -1812,7 +1812,7 @@ extern "C" {
 
 
     static PyObject* xips_dependencies(PyObject* self, PyObject* args) {
-        char* dep;
+        char* dep;      
         int i,parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
         PyObject* liste=PyList_New(0);
@@ -1821,7 +1821,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return liste;
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return liste;
@@ -1833,7 +1833,7 @@ extern "C" {
             return liste;
 
         PyObject* pcourant;
-
+        
 
         int idep=cdep->X.val;
 		ResultatFonction* rf;
@@ -1860,7 +1860,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return liste;
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return liste;
@@ -1869,7 +1869,7 @@ extern "C" {
             return liste;
 
         PyObject* pcourant;
-
+        
         if (parseur->PREMIERFONCTIONS[node]!=NULL) {
             for (int i=0;i<parseur->PREMIERFONCTIONS[node]->dernier;i++) {
                 if ((*parseur->PREMIERFONCTIONS[node])[i]!=NULL) {
@@ -1893,7 +1893,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return liste;
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
         if (parseur==NULL)
             return liste;
@@ -1902,7 +1902,7 @@ extern "C" {
             return liste;
 
         PyObject* pcourant;
-
+        
 		if (parseur->SECONDFONCTIONS[node]!=NULL) {
 			for (int i=0;i<parseur->SECONDFONCTIONS[node]->dernier;i++) {
 				if ((*parseur->SECONDFONCTIONS[node])[i]!=NULL) {
@@ -1923,7 +1923,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonString("");
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
 		if (parseur==NULL) {
 			PyErr_SetString(PyExc_AttributeError, "Unknown Grammar");
@@ -1943,7 +1943,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonString("");
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
 		if (parseur==NULL) {
 			PyErr_SetString(PyExc_AttributeError, "Unknown Grammar");
@@ -1963,7 +1963,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonString("");
 		}
-
+        
 		GlobalParseur* parseur=initNouveauParseur(parsnum);
 		if (parseur==NULL) {
 			PyErr_SetString(PyExc_AttributeError, "Unknown Grammar");
@@ -1979,13 +1979,13 @@ extern "C" {
 		int precedent=index_parseur_courant;
 		int id;
 		float value;
-
+        
         if (!PyArg_ParseTuple(args,"iif",&parsnum,&id,&value))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 		return ConvertToPythonLong(parseur->proba_metpoids(id,value));
@@ -1996,19 +1996,19 @@ extern "C" {
 		int precedent=index_parseur_courant;
 		int id;
 		float value;
-
+        
         if (!PyArg_ParseTuple(args,"iif",&parsnum,&id,&value))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 
-
-
-
+		
+		
+		
 
 		return ConvertToPythonLong(parseur->proba_metseuil(id,value));
 	}
@@ -2018,19 +2018,19 @@ extern "C" {
 		int precedent=index_parseur_courant;
 		int id;
 		float value;
-
+        
         if (!PyArg_ParseTuple(args,"iif",&parsnum,&id,&value))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 
-
-
-
+		
+		
+		
 
 		return ConvertToPythonLong(parseur->proba_metvaleur(id,value));
 	}
@@ -2039,19 +2039,19 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 
-
-
-
+		
+		
+		
 
 		double value=parseur->proba_poids(id);
 		return PyFloat_FromDouble(value);
@@ -2061,19 +2061,19 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 
-
-
-
+		
+		
+		
 
 		double value=parseur->proba_seuil(id);
 		return PyFloat_FromDouble(value);
@@ -2083,19 +2083,19 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(0);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(0);
 
-
-
-
+		
+		
+		
 
 		double value=parseur->proba_valeur(id);
 		return PyFloat_FromDouble(value);
@@ -2105,20 +2105,20 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
-
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
+                
         if (parseur==NULL || parseur->VBases[id]==NULL)
             return ConvertToPythonLong(-1);
 
-
-
-
+		
+		
+		
 
 		int ty=parseur->VBases[id]->label->type;
 		return ConvertToPythonLong(ty);
@@ -2128,19 +2128,19 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);                
         if (parseur==NULL || parseur->VBases[id]==NULL)
             return ConvertToPythonLong(-1);
 
-
-
-
+		
+		
+		
 
 		int ty=parseur->VBases[id]->couche;
 		return ConvertToPythonLong(ty);
@@ -2150,13 +2150,13 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);                
         if (parseur==NULL || parseur->VBases[id]==NULL)
             return ConvertToPythonLong(-1);
 
@@ -2235,7 +2235,7 @@ extern "C" {
 		return ConvertToPythonLong(kifhandler);
 	}
 
-	KifElement* pythonkifclone(KifCode* kifcode,PyObject* po) {
+	KifElement* pythonkifclone(KifCode* kifcode,PyObject* po) {		
 		if (PyBool_Check(po)==1) {
 			if (po==Py_True)
 				return new KifBoolean(kifcode,NULL,true);
@@ -2258,15 +2258,15 @@ extern "C" {
 		}
 
 		if (PyCheck_String(po)==1) {
-			string s=PyAsString(po);
+			char* s=PyAsString(po);
 			return kifcode->Providestringraw(s);
 		}
 
 		PyObject* pelement;
 		KifElement* e;
 		if (PyList_Check(po)==1) {
-			KifVector* kvect=new KifVector(kifcode,NULL);
-			int tail= PyList_GET_SIZE(po);
+			KifVector* kvect=new KifVector(kifcode,NULL);			
+			int tail= PyList_GET_SIZE(po);			
 			for (int i=0;i<tail;i++) {
 				//Puis chacun des objets, kj est l'index de l'element
 				pelement=PyList_GetItem(po,i);
@@ -2322,14 +2322,14 @@ extern "C" {
 			string s;
 			for (Py_ssize_t i=0;i<sz;i++) {
 				if (sbuff[i])
-					s+=sbuff[i];
+					s+=sbuff[i];				
 			}
 			return kifcode->Providestring(s);
 		}
 #endif
 		PyObject* perr=PyObject_Str(po);
 		if (perr!=NULL) {
-			string s=PyAsString(perr);
+			char* s=PyAsString(perr);
 			e=kifcode->Providestringraw(s);
 			Py_DECREF(perr);
 			return e;
@@ -2359,7 +2359,7 @@ extern "C" {
 
 		if (resultat->type==kifFloat || resultat->type==kifFraction) {
 			double d=resultat->Float();
-			if (relache)
+			if (relache) 
 				resultat->Release();
 			return PyFloat_FromDouble(d);
 		}
@@ -2376,7 +2376,7 @@ extern "C" {
 				PyList_Insert(liste,i,pcourant);
 				Py_DECREF(pcourant);
 				i++;
-			}
+			}				
 			itr->Release();
 			if (relache)
 				resultat->Release();
@@ -2385,14 +2385,14 @@ extern "C" {
 
 		agnostring value;
 		if (resultat->aMapContainer()) {
-			liste=PyDict_New();
+			liste=PyDict_New();			
 			KifIteration* itr=(KifIteration*)resultat->Newiterator(false);
 			for (itr->Begin();itr->End()==kifFALSE;itr->Next()) {
 				pcourant= kifclone(itr->IteratorValue(),false);
 				value=itr->IteratorKeyString();
 				PyDict_SetItemString(liste,STR(value),pcourant);
 				Py_DECREF(pcourant);
-			}
+			}				
 			itr->Release();
 			if (relache)
 				resultat->Release();
@@ -2440,8 +2440,8 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Expecting a string");
 			return ConvertToPythonLong(-4);
 		}
-
-		string functionname=PyAsString(pelement);
+		
+		char* functionname=PyAsString(pelement);
 
 		vector<KifElement*> params;
 		int i;
@@ -2451,7 +2451,7 @@ extern "C" {
 			pelement=PyTuple_GetItem(args, i);
 			ke=pythonkifclone(kifcode,pelement);
 			if (ke==kifRAISEERROR) {
-				for (i=0;i<params.size();i++)
+				for (i=0;i<params.size();i++) 
 					params[i]->Release();
 				PyErr_SetString(PyExc_AttributeError, "No mapping for this python element");
 				return ConvertToPythonLong(-5);
@@ -2474,19 +2474,19 @@ extern "C" {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
 		int id;
-
+        
         if (!PyArg_ParseTuple(args,"ii",&parsnum,&id))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL || parseur->VBases[id]==NULL)
             return ConvertToPythonLong(-1);
 
-
-
-
+		
+		
+		
 
 		int ty=parseur->VBases[id]->label->type;
 		char* tys=field_name[ty];
@@ -2496,19 +2496,19 @@ extern "C" {
 	static PyObject* xips_nbregles(PyObject* self, PyObject* args) {
 		int parsnum=index_parseur_courant;
 		int precedent=index_parseur_courant;
-
+        
         if (!PyArg_ParseTuple(args,"i",&parsnum))  {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 			return ConvertToPythonLong(-1);
         }
-
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
 
-
-
-
+		
+		
+		
 
 		return ConvertToPythonLong(parseur->VBases.dernier);
 	}
@@ -2522,7 +2522,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
 		int id=parseur->chargeprobabilites(fichier);
@@ -2538,7 +2538,7 @@ extern "C" {
 			PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
             return ConvertToPythonLong(-1);
 		}
-        GlobalParseur* parseur=initNouveauParseur(parsnum);
+        GlobalParseur* parseur=initNouveauParseur(parsnum);        
         if (parseur==NULL)
             return ConvertToPythonLong(-1);
 		parseur->sauvegardeprobabilites(fichier);
@@ -2546,7 +2546,7 @@ extern "C" {
     }
 
     static PyMethodDef NoeudMethode[] = {
-
+        
         {"node",xips_xipnode,METH_VARARGS,"Return a xip node."},
         {"nodeset",xips_xipnodes,METH_VARARGS,"Return a set of xip nodes."},
         {"dependency",xips_dependency,METH_VARARGS,"Return a dependency."},
@@ -2574,13 +2574,13 @@ extern "C" {
 		{"fictivenodes",xips_xipfictivenodes,METH_VARARGS,"return the list of fictive nodes that have been created so far:fictivenodes(g)."},
         {"setexchange",xips_setexechange,METH_VARARGS,"Set the exchange variable: xips.setexchange(v,o). v is a XIP python variable: return -1 if wrong parameters. -2 if unknown XIP variable. -3 if wrong XIP variable type. 0 if OK."},
         {"internalstring",xips_xipinternalstring,METH_VARARGS,"return the internal string buffer. Applies only when parsing with a string or from an XML file."},
-		{"lexicals",xips_xiplexicalnodes,METH_VARARGS,"return the list of the lexical node indexes:lexicals(g)."},
-        {"setfloat",xips_setfloatvariable,METH_VARARGS,"setfloat(par,v,f) Sets the variable v (a string) with the value f (a float) for the grammar grm."},
-        {"setint",xips_setintvariable,METH_VARARGS,"setint(par,v,i) Sets the variable v (a string) with the value i (an int) for the grammar grm."},
-        {"setstring",xips_setstringvariable,METH_VARARGS,"setstring(par,v,s) Sets the variable v (a string) with the value i (a string) for the grammar grm."},
-		{"setdebug",xips_setdebug,METH_VARARGS,"setdebug(module_number,module_line) Sets a break point in the module module_num at module_line."},
-		{"currentgrammarindex",xips_currentgrammarindex,METH_VARARGS,"grammarindex() return the current grammar index."},
-		{"currentrule",xips_current_rule,METH_VARARGS,"currentrule() return the current rule index."},
+		{"lexicals",xips_xiplexicalnodes,METH_VARARGS,"return the list of the lexical node indexes:lexicals(g)."},        
+        {"setfloat",xips_setfloatvariable,METH_VARARGS,"setfloat(par,v,f) Sets the variable v (a string) with the value f (a float) for the grammar grm."},        
+        {"setint",xips_setintvariable,METH_VARARGS,"setint(par,v,i) Sets the variable v (a string) with the value i (an int) for the grammar grm."},        
+        {"setstring",xips_setstringvariable,METH_VARARGS,"setstring(par,v,s) Sets the variable v (a string) with the value i (a string) for the grammar grm."},        
+		{"setdebug",xips_setdebug,METH_VARARGS,"setdebug(module_number,module_line) Sets a break point in the module module_num at module_line."},        
+		{"currentgrammarindex",xips_currentgrammarindex,METH_VARARGS,"grammarindex() return the current grammar index."},        
+		{"currentrule",xips_current_rule,METH_VARARGS,"currentrule() return the current rule index."},        
 		{"currentruletext",xips_current_rule_text,METH_VARARGS,"currentruletext(displayheader) return the current rule text, displayheader is 0,1 or 2."},
 		{"grammarcharset",xips_get_grammarcharset,METH_VARARGS,"grammarcharset(g) return the charset encoding of the grammar"},
 		{"sourcecharset",xips_get_sourcecharset,METH_VARARGS,"sourcecharset(g) return the charset encoding of the input"},
@@ -2602,7 +2602,7 @@ extern "C" {
 		{"kif",xips_kif,METH_VARARGS,"kif(khandler,function_name,arguments) Execute a KiF function, the argument should be a vector of strings"},
         {NULL,NULL,0,NULL}
     };
-
+    
 
 #if PY_MAJOR_VERSION >= 3
 	static struct PyModuleDef xipsmodule = {
@@ -2611,7 +2611,7 @@ extern "C" {
 		NULL, /* module documentation, may be NULL */
 		-1,       /* size of per-interpreter state of the module,
 				  or -1 if the module keeps state in global variables. */
-		NoeudMethode
+				  XipsMethode
 	};
 
 	Exportation PyMODINIT_FUNC PyInit_xips(void) {
@@ -2637,17 +2637,17 @@ extern "C" {
 		if (Py_IsInitialized())
 			return;
 		Py_Initialize();
-		PyInit_xips();
+		PyInit_xips();    
 	}
 
 #else
     Exportation void initxips() {
-        PyObject* module=Py_InitModule("xips",NoeudMethode);
-        PyObject* pDict = PyModule_GetDict(module);
+        PyObject* module=Py_InitModule("xips",NoeudMethode);        
+        PyObject* pDict = PyModule_GetDict(module);      
 		xipsError=PyErr_NewException("xips.error",NULL,NULL);
 		PyDict_SetItemString(pDict,"error",xipsError);
 
-		PyRun_String(insere_xip_objects(OUI).c_str(),Py_file_input,pDict,pDict);
+		PyRun_String(insere_xip_objects(OUI).c_str(),Py_file_input,pDict,pDict);                		
     }
 }
 
@@ -2656,13 +2656,14 @@ void GlobalParseur::initialisation_python() {
     if (Py_IsInitialized())
 		return;
     Py_Initialize();
-    initxips();
+    initxips();    
 }
 #endif
 #endif
 #else
 void initxips() {}
 #endif
+
 
 CREERAMASSE(TestFormuleElement);
 CREERAMASSE(Variable);
@@ -2674,8 +2675,8 @@ char minlettre(unsigned char c);
 static time_t  initialtime,finaltime;
 
 #ifdef WIN32
-#define _USE_MATH_DEFINES
-#include <math.h>
+const double M_PI=3.14159;
+const double M_E =  2.71828;
 #endif
 
 TVecteur TrouveValeur(Vecteur* v, Vecteur* vf,int& rang);
@@ -2687,7 +2688,7 @@ uchar* minuscule(unsigned char* c);
 
 static const char* TabOperateurs="+-*/^%";
 static const char* SoloOperateurs=TabOperateurs+2;
-static const char* TableOperations[] =
+static const char* TableOperations[] = 
 {"=",":","<",">","<=",">=","~:","+","*","-","/","%","^","log","ln","exp","sqrt",
  "tan","sin","cos","atan","@pi","@e","len","left","right","mid","regexp","trim","regexpsplit",
  "for","insertvalue","search","@lasterror","errormessage","insert","addstring",
@@ -2710,13 +2711,13 @@ static const char* TableOperations[] =
  "@generated","initlookdown","depth","rank", "nodedescendant","nodenext","nodeprevious",
  "nodemother","nodedaughter","lookup","lookdown","nodelast","nodenexttoken","nodeprevioustoken",
  "nodefirsttoken","nodelasttoken", "istoken","words","setword","getword","cleanword",
- "setruleweight","setrulethreshold","setrulevalue","getruleweight","getrulethreshold","getrulevalue",
+ "setruleweight","setrulethreshold","setrulevalue","getruleweight","getrulethreshold","getrulevalue", 
  "@nbrules","ruletype","ruletypestring","saveprobabilities","loadprobabilities",
  "rulecounter","rulelayer","xmlattributes","xmlget","eval","splitalong","keyonindex","@utf8","xmlstring",""}; //188
 
 
 
-static const char* TableOperationsParametres[] =
+static const char* TableOperationsParametres[] = 
 {
  "1. Operators",
  "x = y\t(assignation)",
@@ -2856,7 +2857,7 @@ static const char* TableOperationsParametres[] =
  "pause(x)\t(Pause for x seconds)",
  "read(str)\t(read a string on the console)",
  "print(str)\t(print a string on the console)",
- "printerr(str)\t(display the str string on error console)",
+ "printerr(str)\t(display the str string on error console)", 
  "14. File Functions",
  "fopen(alias,pathname)\t(open the file pathname and associates it to alias)",
  "fclose(alias)\t(close the file associated to alias)",
@@ -2874,29 +2875,29 @@ static const char* TableOperationsParametres[] =
  "@day;\t(return the day number in the month)",
  "@month;\t(return the month number)",
  "16. Field Names",
- "semantic,sï¿½mantique\tSemantics rules: lemme: Cat[features] = if ()... dep1(...),dep2(...)",
+ "semantic,sémantique\tSemantics rules: lemme: Cat[features] = if ()... dep1(...),dep2(...)",
  "terms,termes\tTerms rules	lemme: Cat[feature]= Cat1...Catn.",
  "reshuffling,reconstructeur\tReshuffling rules",
- "tagging,dï¿½sambiguï¿½sation\tDisambiguation rules",
- "idrules,dirï¿½gles\tId rules",
- "lprules,plrï¿½gles\t Linear Precedence Rules",
+ "tagging,désambiguïsation\tDisambiguation rules",
+ "idrules,dirègles\tId rules",
+ "lprules,plrègles\t Linear Precedence Rules",
  "marker,marqueur\tMarking rules",
- "dependencyrules,dï¿½duction\tDependency rules",
+ "dependencyrules,déduction\tDependency rules",
  "translation,traduction\ttranslation rules",
- "categorydefinition,dï¿½finitioncatï¿½gorie\tDefinition of a category for a reading, when none was provided in the translation file",
- "featuredefinition,dï¿½finitiontraits\tEnrichment a feature structure with new features within the translation file",
+ "categorydefinition,définitioncatégorie\tDefinition of a category for a reading, when none was provided in the translation file",
+ "featuredefinition,définitiontraits\tEnrichment a feature structure with new features within the translation file",
  "extraction\tSame as dependency rules, old format",
- "sequence,sï¿½quence\tsequence rules",
- "doublereduction,doublerï¿½duction\tDouble reduction rules",
+ "sequence,séquence\tsequence rules",
+ "doublereduction,doubleréduction\tDouble reduction rules",
  "fragment,fragmenter\tSplit a word into different categories",
  "script\tScription language",
  "final\tFinal section",
  "loading,enchargeant\tWhile loading a file of rules",
  "initial\tInitial section",
- "split,dï¿½coupesï¿½quence\tSplit rules",
+ "split,découpeséquence\tSplit rules",
  "multiwords,multimots\tRules based on a regular expression matching a sequence of words.",
  "multilemmas,multilemmes\tRules based on a regular expression matching a sequence of lemmas.",
- "generation,gï¿½nï¿½ration\tGeneration rules.",
+ "generation,génération\tGeneration rules.",
  "order,ordre\tGeneration ordering rules.",
  "zones,zones\tTo define zone within the grammar",
  "vocabulary,vocabulaires\tTo define a XIP lexicon",
@@ -2906,7 +2907,7 @@ static const char* TableOperationsParametres[] =
  "tag\tThe default part of speech when none is avalaible",
  "alluppercase,toutmajuscule\tTo define the feature in case of all uppercase in a word",
  "uppercase,majuscule\tTo define the name feature in case of a word starting with an uppercase",
- "pos,catï¿½gories\tTo define the Part of speech section",
+ "pos,catégories\tTo define the Part of speech section",
  "boundaries,finphrase\tTo define the substring that should be found in a lexical entry for the end of sentence",
  "regularboundaries,expressionfinphrase\tTo define a regular expression that should match the lexical entry for the end of sentence",
  "18. Dependency Definitions",
@@ -2921,8 +2922,8 @@ static const char* TableOperationsParametres[] =
  "20. Feature Rules",
  "postdfs,poststd\tDefault Feature Specification applied after the percolation of feature",
  "postfcr,postrct\tFeature Coocurrence Restriction applied after the percolation of feature",
- "predfs,prï¿½std\tDefault Feature Specification applied before the percolation of feature",
- "prefcr,prï¿½rct\tFeature Coocurrence Restriction applied before the percolation of feature",
+ "predfs,préstd\tDefault Feature Specification applied before the percolation of feature",
+ "prefcr,prérct\tFeature Coocurrence Restriction applied before the percolation of feature",
  "21. XIP Grammar File fields",
  "license\tlicense name",
  "modules\teffective modules",
@@ -2942,7 +2943,7 @@ static const char* TableOperationsParametres[] =
  "trace,trace\tPathname of the trace file",
  "features,traits\tFile Feature section ",
  "lexicons,lexique\tLexicon section",
- "rules,rï¿½gles\tRule section",
+ "rules,règles\tRule section",
  "22. XIP GRM File Fields",
  "path:\tDefines a pathname variable",
  "hmm:\tDefines the HMM pathname",
@@ -3116,7 +3117,7 @@ void AfficheAide(int h) {
         if (k==h) {
             c=0;
             cout<<TableOperationsParametres[i]<<Endl;
-            i++;
+            i++;            
 			while ((c<'0' || c>'9') && c!='#') {
                 cout<<TableOperationsParametres[i]<<Endl;
                 c=TableOperationsParametres[++i][0];
@@ -3129,11 +3130,11 @@ void AfficheAide(int h) {
 
 
 
-
+    
 fichiersscript::fichiersscript(char* a,char* nf) {
     alias=DupliqueChaine(a);
     nom_fichier=DupliqueChaine(nf);
-    fichier=NULL;
+    fichier=NULL;    
 }
 
 char fichiersscript::ouvrir() {
@@ -3158,7 +3159,7 @@ fichiersscript::~fichiersscript() {
 void GlobalParseur::affiche_derniere_erreur(int numero) {
     if (erreur_survenue!=-1) {
         ostream* os=&cout;
-
+        
         if (OS!=NULL)
             os=OS;
         if (numero!=-1 && VlabelVecteur[numero]!=NULL && VlabelVecteur[numero]->dr!=NULL) {
@@ -3169,16 +3170,12 @@ void GlobalParseur::affiche_derniere_erreur(int numero) {
         }
         *os<<affichagemessageerreur[erreur_survenue]
            <<ajoute_info_erreur<<Endl;
-
-		if (kifloader != NULL && erreur_survenue != 177) {
-			if (kifdebug) {
-				string mess = "XIP(001):";
-				mess += affichagemessageerreur[erreur_survenue];
-				mess += ajoute_info_erreur;
-				kifloader->Returnerror(mess);
-			}
-			else
-				initialise_erreur_instruction();
+		
+		   if (kifloader!=NULL && erreur_survenue!=177) {
+			   string mess="XIP(001):";
+			   mess+=affichagemessageerreur[erreur_survenue];
+			   mess+=ajoute_info_erreur;
+			   kifloader->Returnerror(mess);
 		}
     }
 }
@@ -3203,10 +3200,10 @@ char GlobalParseur::ajoutemot(string& nom,string& surface, string& lem, string& 
 
 int rechercheNomFonction(char* nom,const char* table[]) {
     int i=0;
-
+    
     if (nom[0]==0)
         return -1;
-
+    
     while (table[i][0]!=0) {
         if (!strcmp(table[i],nom))
             return i;
@@ -3237,19 +3234,19 @@ TestFonctionXML::~TestFonctionXML() {
 int TestFormuleElementNoeud ::arg() {
     if (tf->Type()!=TESTFONCTIONNOEUD)
         return -1;
-
+    
     return ((TestFonctionNoeud*)tf)->arggauche;
 }
 
 int TestFormuleElementNoeud ::argument(GlobalParseur* parseur,
-                                       VECTA<Noeud*>& argNoeuds) {
+                                       VECTA<Noeud*>& argNoeuds) {    
     if (tf->Type()!=TESTFONCTIONNOEUD)
         return -1;
-
+    
 
     TestFonctionNoeud* tfn=(TestFonctionNoeud*)tf;
     int argu=tfn->arggauche;
-    if (argNoeuds[argu]==NULL ||
+    if (argNoeuds[argu]==NULL || 
         tfn->traits[GAUCHE]==NULL ||
         tfn->TestNoeud(parseur,argNoeuds,NULL,NULL))
         return argu;
@@ -3319,13 +3316,13 @@ int VariableIntVector::recherchepremier(int val) {
     return -1;
 }
 
-int VariableIntVector::recherchetous(int val,VariableIntVector* vvect) {
+int VariableIntVector::recherchetous(int val,VariableIntVector* vvect) {    
     int j=0;
     vvect->raz();
     for (int i=0;i<valeurs.dernier;i++) {
         if (val==valeurs[i])
-            vvect->Affecte(j++,val);
-    }
+            vvect->Affecte(j++,val);        
+    } 
     return j;
 }
 
@@ -3338,7 +3335,7 @@ void recuperechainerulespace(rulespace* r,VariableVector* varvector,int& ind,cha
 		r->chaine(*s);
 		varvector->AffecteValeurStringIndex(s,ind++);
 	}
-	for (int i=0;i<r->fils.dernier;i++)
+	for (int i=0;i<r->fils.dernier;i++)		
 		recuperechainerulespace(r->fils[i],varvector,ind,type);
 }
 
@@ -3360,7 +3357,7 @@ int VariableVector::recherchetous(string& ch,VariableVector* vvect) {
             sprintf_s(chiff,100,"%d",i);
             vvect->AffecteValeurStringIndex(new string(ch),j++);
         }
-    }
+    } 
     return j;
 }
 
@@ -3368,8 +3365,8 @@ int VariableVectorIndex::recherchepremier(string& ch) {
     etat* e=index.recherche((uchar*)ch.c_str());
     if (e==NULL)
         return -1;
-
-    VECTA<int>* vic=(VECTA<int>*)e->valeur;
+    
+    VECTA<int>* vic=(VECTA<int>*)e->valeur;    
     return vic->cell(0);
 }
 
@@ -3379,13 +3376,13 @@ int VariableVectorIndex::recherchetous(string& ch,VariableVector* vvect) {
     if (e==NULL)
         return 0;
 
-    VECTA<int>* vic=(VECTA<int>*)e->valeur;
+    VECTA<int>* vic=(VECTA<int>*)e->valeur;    
     vvect->raz();
     for (int iv=0;iv<vic->dernier;iv++) {
         sprintf_s(chiff,100,"%d",vic->cell(iv));
         vvect->AffecteValeurStringIndex(new string(chiff),iv);
-    }
-
+    }        
+    
     return vic->dernier;
 }
 
@@ -3436,13 +3433,13 @@ VariableDictionnaire::~VariableDictionnaire() {
     raz();
 }
 
-int VariableIntVector::inserevaleur(double s,int i) {
+int VariableIntVector::inserevaleur(double s,int i) { 
     valeurs.insertion(i,s);
     return OUI;
 }
 
 
-int VariableVector::inserechaine(string& s,int i) {
+int VariableVector::inserechaine(string& s,int i) { 
     chaine.insere(i,new string(s));
     return OUI;
 }
@@ -3468,7 +3465,7 @@ int VariableVectorIndex::inserechaine(string& s,int ind) {
                 vic->affecte(k,vic->cell(k)+1);
         }
     }
-
+    
     chaine.insere(ind,new string(s));
     if (s.size()) {
         etat* e=index.recherche((uchar*)s.c_str());
@@ -3484,9 +3481,9 @@ int VariableVectorIndex::inserechaine(string& s,int ind) {
                 vic->ajoute(ind);
             return OUI;
         }
-
+        
         vic=new VECTA<int>;
-        vic->ajoute(ind);
+        vic->ajoute(ind);    
         index.parsebrute((uchar*)s.c_str(),(void*)vic);
     }
     return OUI;
@@ -3517,7 +3514,7 @@ string VariableDictionnaire::valeur(string& clef) {
 }
 
 //Nous inserons une chaine dont l'index est aussi une chaine (ind)
-void VariableDictionnaire::AffecteValeurStringIndexChaine(string* valeur,string cle) {
+void VariableDictionnaire::AffecteValeurStringIndexChaine(string* valeur,string cle) {    
 	dico[cle]=*valeur;
 }
 
@@ -3535,7 +3532,7 @@ char VariableDictionnaire::rechercheindex(int idi,string& res) {
 }
 
 int VariableDictionnaire::recherchechaineindex(string cle,string& res) {
-
+	
 	map<string, string>::iterator test=dico.find(cle);
 	if (test==dico.end())
 		return -1;
@@ -3593,7 +3590,7 @@ int VariableDictionnaire::lesvaleurs(VariableVector* vvect) {
 
 int VariableIntVector::retirevaleur(int i) {
     if (i<valeurs.dernier) {
-        valeurs.retireElement(i);
+        valeurs.retireElement(i);        
         return OUI;
     }
     return NON;
@@ -3615,7 +3612,7 @@ int VariableVectorIndex::retirechaine(int ind) {
     //s'ils sont superieurs a i
     if (ind>=chaine.dernier)
         return NON;
-
+    
     VECTA<int>* vic;
     int k;
 	for (int i = 0; i<index.lesetats.dernier; i++) {
@@ -3636,13 +3633,13 @@ int VariableVectorIndex::retirechaine(int ind) {
                 vic->affecte(k,vic->cell(k)-1);
         }
     }
-
+    
     if (chaine[ind]!=NULL && chaine[ind]->size()) {
         uchar* ch=(uchar*)chaine[ind]->c_str();
         etat* e=index.recherche(ch);
         vic=(VECTA<int>*)e->valeur;
         if (vic->dernier==1) {
-            index.retirebrute(ch);
+            index.retirebrute(ch);                    
             delete vic;
         }
         else {
@@ -3653,7 +3650,7 @@ int VariableVectorIndex::retirechaine(int ind) {
                 }
             }
         }
-
+        
         string* s=chaine.retireElement(ind);
         delete s;
     }
@@ -3686,8 +3683,8 @@ void VariableVectorIndex::AffecteValeurStringIndex(string* v,int i) {
         e=index.recherche(ch);
         vic=(VECTA<int>*)e->valeur;
         if (vic->dernier==1) {
-            index.retirebrute(ch);
-            delete vic;
+            index.retirebrute(ch);                    
+            delete vic;            
         }
         else {
             for (int j=0;j<vic->dernier;j++) {
@@ -3716,9 +3713,9 @@ void VariableVectorIndex::AffecteValeurStringIndex(string* v,int i) {
                 vic->ajoute(i);
             return;
         }
-
+        
         vic=new VECTA<int>;
-        vic->ajoute(i);
+        vic->ajoute(i);    
         index.parsebrute((uchar*)v->c_str(),(void*)vic);
     }
 }
@@ -3744,7 +3741,7 @@ double VariableIndexeeNoeud::Valeurs(Noeud* n) {
     for (int i=0;i<indexes.dernier;i++)
         if (n==indexes[i])
             return valeurs[i];
-        return -1;
+        return -1;            
 }
 
 string VariableIndexeeDependance::valdep(ResultatFonction* rf) {
@@ -3758,7 +3755,7 @@ string VariableIndexeeDependance::valdep(ResultatFonction* rf) {
 
 			return ch;
 		}
-		return "";
+		return "";     
 }
 
 string VariableIndexeeChaineDependance::valdep(ResultatFonction* rf) {
@@ -3768,7 +3765,7 @@ string VariableIndexeeChaineDependance::valdep(ResultatFonction* rf) {
 				return *valeurs[i];
 		}
 	}
-	return "";
+	return "";            
 }
 
 int VariableIndexeeNoeud::AjouteNoeud(Noeud* n,char ajout) {
@@ -3823,18 +3820,18 @@ void majvariablelemme(VariableLemmeIndex* vlemme,Noeud* n,uchar* chaine,int pos,
    string vs;
 
 	//On construit une expression reguliere
-    if (n!=NULL)
+    if (n!=NULL) 
         n->Lemme(vs);
     else {
         //Sinon on relit une partie de la chaine pour trouver le lemme
         char* pt=strstr((char*)chaine,"##");
-        int pos=0;
+        int pos=0;        
         //Une chaine est de la forme: var##POS#lemme
         if (pt!=NULL && pt[2]!=0) {
             char* pt2=strchr(pt+2,'#');
             if (pt2!=NULL) {
                 pt2++;
-                while (*pt2==' ') pt2++;
+                while (*pt2==' ') pt2++;                
 				//vs.push_back(pt2);
 				vs=pt2;
             }
@@ -3877,33 +3874,33 @@ VariableString* VariableLemmeChaineIndex::recherchechaine(unsigned char* mot,int
 
 VariableGlobale* VariableLemmeIndex::insere(string& expression,uchar* chaine,int ipos) {
     int index=listes.dernier;
-
+ 
     if (expression.size()==0)
         return NULL;
 
     //On ajoute cette expression a notre automate
     VariableGlobale* vg=recherche(USTR(expression),0);
 	if (vg==NULL) {
-        vg=new VariableGlobale((char*)chaine,type,VGLOBALE,NON);
+        vg=new VariableGlobale((char*)chaine,type,VGLOBALE,NON);    
         lemmes[expression]=vg;
         listes.ajoute(vg);
-    }
+    }    
     return vg;
 }
 
 VariableString* VariableLemmeChaineIndex::inserechaine(string& expression,uchar* chaine,int ipos) {
     int index=listes.dernier;
-
+ 
     if (expression.size()==0)
         return NULL;
 
     //On ajoute cette expression a notre automate
     VariableString* vg=recherchechaine(USTR(expression),0);
 	if (vg==NULL) {
-        vg=new VariableString((char*)chaine);
+        vg=new VariableString((char*)chaine);    
         lemmes[expression]=vg;
         listes.ajoute(vg);
-    }
+    }    
     return vg;
 }
 
@@ -3940,7 +3937,7 @@ void VariableIntVector::afficheXML(ostream& os) {
         os<<"<FEATURE attribute=\"#"<<nom<<"("<<i<<")\" value= "<<valeurs[i]<<";"<<Endl;
         os<<"\"/>"<<Endl;
     }
-
+    
 }
 
 void VariableIntVector::afficheNoeudXML(ostream& os,Noeud* n) {
@@ -3956,7 +3953,7 @@ void VariableVector::afficheXML(ostream& os) {
             os<<"\"/>"<<Endl;
         }
     }
-
+    
 }
 
 void VariableVector::afficheNoeudXML(ostream& os,Noeud* n) {
@@ -3979,20 +3976,20 @@ void VariableGlobale::afficheNoeudXML(ostream& os,Noeud* n) {
 
 void VariableIndexee::afficheXML(ostream& os) {}
 
-void VariableIndexeeDependance::affichageDependanceXML(ostream& os,ResultatFonction* rf) {
+void VariableIndexeeDependance::affichageDependanceXML(ostream& os,ResultatFonction* rf) { 
     for (int id=0;id<indexes.dernier;id++)
         if (rf==indexes[id]) {
             os<<"<FEATURE attribute=\"#"<<nom<<"\" value=\"";
             if (type==REEL)
                 os<<valeurs[id];
             else
-                os<<(int)valeurs[id];
+                os<<(int)valeurs[id];  
             os<<"\"/>"<<Endl;
             return;
         }
 }
 
-void VariableIndexeeChaineDependance::affichageDependanceXML(ostream& os,ResultatFonction* rf) {
+void VariableIndexeeChaineDependance::affichageDependanceXML(ostream& os,ResultatFonction* rf) { 
     for (int id=0;id<indexes.dernier;id++)
         if (rf==indexes[id]) {
             os<<"<FEATURE attribute=\"#"<<nom<<"\" value=\"";
@@ -4043,7 +4040,7 @@ void VariableString::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr parent,N
     CreationXML(parseur,parent);
 }
 
-void VariableString::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
+void VariableString::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {    
     char ch[500];
     if (chaine.size()>0) {
         xmlNodePtr feature=parseur->CreationNoeudXML(parent,"FEATURE",NULL);
@@ -4057,7 +4054,7 @@ void VariableIntVector::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr paren
     CreationXML(parseur,parent);
 }
 
-void VariableIntVector::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
+void VariableIntVector::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {    
     char ch[500];
     for (int i=0;i<valeurs.size();i++) {
         xmlNodePtr feature=parseur->CreationNoeudXML(parent,"FEATURE",NULL);
@@ -4073,7 +4070,7 @@ void VariableVector::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr parent,N
     CreationXML(parseur,parent);
 }
 
-void VariableVector::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
+void VariableVector::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {    
     char ch[500];
     for (int i=0;i<chaine.size();i++) {
         if (chaine[i]!=NULL) {
@@ -4103,7 +4100,7 @@ void VariableGlobale::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
 }
 
 
-void VariableLemmeIndex::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
+void VariableLemmeIndex::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) { 
     for (int i=0;i<listes.dernier;i++)
         listes[i]->CreationXML(parseur,parent);
 }
@@ -4113,7 +4110,7 @@ void VariableIndexee::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {}
 
 void VariableIndexeeDependance::CreationXMLDependance(GlobalParseur* parseur,
                                                       xmlNodePtr parent,
-                                                      ResultatFonction* rf) {
+                                                      ResultatFonction* rf) {   
     char ch[500];
     for (int id=0;id<indexes.dernier;id++)
         if (rf==indexes[id]) {
@@ -4126,12 +4123,12 @@ void VariableIndexeeDependance::CreationXMLDependance(GlobalParseur* parseur,
                 sprintf_s(ch,500,"%d",valeurs[id]);
             parseur->AjouteAttributValeur(feature,"value",ch);
             return;
-        }
+        }   
 }
 
 void VariableIndexeeChaineDependance::CreationXMLDependance(GlobalParseur* parseur,
                                                       xmlNodePtr parent,
-                                                      ResultatFonction* rf) {
+                                                      ResultatFonction* rf) {   
 	char ch[500];
     for (int id=0;id<indexes.dernier;id++)
         if (rf==indexes[id]) {
@@ -4143,7 +4140,7 @@ void VariableIndexeeChaineDependance::CreationXMLDependance(GlobalParseur* parse
 			else
 				parseur->AjouteAttributValeur(feature,"value",ch);
             return;
-        }
+        }   
 }
 
 void VariableIndexeeNoeud::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr parent,Noeud* n) {
@@ -4159,7 +4156,7 @@ void VariableIndexeeNoeud::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr pa
                 sprintf_s(ch,500,"%d",valeurs[i]);
             parseur->AjouteAttributValeur(feature,"value",ch);
             return;
-        }
+        }   
 }
 
 void VariableIndexeeChaine::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr parent,Noeud* n) {
@@ -4172,7 +4169,7 @@ void VariableIndexeeChaine::CreationXMLNoeud(GlobalParseur* parseur,xmlNodePtr p
 			sprintf_s(ch,500,(char*)valeurs[i]->c_str());
             parseur->AjouteAttributValeur(feature,"value",ch);
             return;
-        }
+        }   
 }
 
 #endif
@@ -4191,7 +4188,7 @@ TestFonctionKif::TestFonctionKif(Cat* X,KifElement* p) {
 TestFonctionKif::~TestFonctionKif() {}
 
 
-TestFonctionNoeud::TestFonctionNoeud() : arg(3,-2), traits(3) {
+TestFonctionNoeud::TestFonctionNoeud() : arg(3,-2), traits(3) {     
     arggauche=-1;
     argdroit=-1;
     comparateur=COMPATIBLES;
@@ -4200,15 +4197,15 @@ TestFonctionNoeud::TestFonctionNoeud() : arg(3,-2), traits(3) {
 	X=NULL;
 }
 
-TestFonctionDependance::TestFonctionDependance(Cat* X) : arg(3,-2), traits(3) {
+TestFonctionDependance::TestFonctionDependance(Cat* X) : arg(3,-2), traits(3) {     
     Fx=X;
-    changement=-1;
+    changement=-1;    
     traitsFonction=NULL;
     clearStack=NON;
 	final=NON;
     vardep=-1;
     leType=TESTFONCTIONDEPENDANCE;
-    pointeur=NON;
+    pointeur=NON;	
 	if (X->type==C_GENERATION)
 		typecat=C_GENERATION;
 	else
@@ -4231,7 +4228,7 @@ TestFonctionDependance::~TestFonctionDependance() {
 inline typeVariable RechercheType(char* tampon) {
     if (!strcmp(tampon,"float"))
         return REEL;
-
+    
     if (!strcmp(tampon,"int"))
         return ENTIER;
 
@@ -4244,7 +4241,7 @@ inline sorteVariable RechercheSorte(char* tampon,char& index,typeVariable& ty) {
         ty=REEL;
         return VGLOBALE;
     }
-
+    
     if (!strcmp(tampon,"int")) {
         ty=ENTIER;
         return VGLOBALE;
@@ -4254,12 +4251,12 @@ inline sorteVariable RechercheSorte(char* tampon,char& index,typeVariable& ty) {
         ty=CHAINE;
         return VCHAINE;
     }
-
+    
     if (!strcmp(tampon,"vector")) {
         ty=CHAINE;
         return VVECTEURCHAINE;
     }
-
+    
     if (!strcmp(tampon,"vint")) {
         ty=ENTIER;
         return VVECTEURINT;
@@ -4269,13 +4266,13 @@ inline sorteVariable RechercheSorte(char* tampon,char& index,typeVariable& ty) {
         ty=REEL;
         return VVECTEURINT;
     }
-
+    
     if (!strcmp(tampon,"vindex")) {
         index=OUI;
         ty=CHAINE;
         return VVECTEURCHAINE;
     }
-
+    
     if (!strcmp(tampon,"dictionary")) {
         ty=CHAINE;
         return VDICTIONNAIRE;
@@ -4301,13 +4298,13 @@ inline sorteVariable RechercheSorte(char* tampon,char& index,typeVariable& ty) {
 #endif
     ty=AUCUN;
     return VAUCUN;
-}
+}                                
 
 Variable* GlobalParseur::CreeVariable(char* tampon,typeVariable ty,sorteVariable sorte,char index,char ajout,char proc) {
     Variable* v=NULL;
     string err;
 
-    if (RetrouveFonc(tampon)!=NULL ||
+    if (RetrouveFonc(tampon)!=NULL || 
         RetrouveCat(tampon)!=NULL ||
         rechercheNomFonction(tampon,TableOperations)!=-1) {
 			err=CHAINES[324];
@@ -4317,11 +4314,11 @@ Variable* GlobalParseur::CreeVariable(char* tampon,typeVariable ty,sorteVariable
 
     char reinitialisation=OUI;
 
-
+    
     switch(sorte) {
-    case VVECTEURINT:
+    case VVECTEURINT:    
         reinitialisation=NON;
-        v=new VariableIntVector(tampon,ty);
+        v=new VariableIntVector(tampon,ty);        
         break;
 	case VGRAPHE:
 		reinitialisation=NON;
@@ -4397,7 +4394,7 @@ Variable* GlobalParseur::CreeVariable(char* tampon,typeVariable ty,sorteVariable
             else
                 v = new VariableIndexeeNoeud(tampon,ty,VNOEUD);
         }
-        else
+        else 
             if (strchr(tampon,'$'))
                 v = new VariableIndexeeDependance(tampon,ty,VDEPENDANCE);
             else
@@ -4429,23 +4426,23 @@ Variable* GlobalParseur::CreeVariable(char* tampon,typeVariable ty,sorteVariable
         }
         pt[2]=0;
     }
-
+    
     v->reinit=reinitialisation;
 
     //On ne l'ajoute pas forcement dans notre ensemble de variable (pour les structs)
     if (ajout==NON)
         return v;
 
-    etat* e=VariablesNoms.recherche(tampon);
+    etat* e=VariablesNoms.recherche(tampon);        
     //Relecture de variables
     if (e!=NULL && e->valeur!=NULL) {
 		err=CHAINES[309];
 		err+=tampon;
         erreur(STR(err));
     }
-
-
-
+    
+    
+    
     //s'il s'agit d'une nouvelle variable
     if (v!=NULL) {
         Variables.ajoute(v);
@@ -4461,16 +4458,16 @@ char GlobalParseur::LitVariables(istream& fichier,NomProcedure* nomproc) {
     char k=0,tampon[XIPBUFFERSIZE];
 	char lect[XIPBUFFERSIZE];
     string errmessage;
-    etat* e;
+    etat* e;    
     typeVariable ty=AUCUN;
     sorteVariable sorte=VAUCUN;
-    Variable* v;
+    Variable* v;    
     char index=NON;
 
 
     while (k!=':') {
         k=lit(fichier,tampon);
-
+        
         //c'est une variable de noeud de type #num
         if (nomproc!=NULL && k=='#') {
             k=lit(fichier,tampon);
@@ -4506,9 +4503,9 @@ char GlobalParseur::LitVariables(istream& fichier,NomProcedure* nomproc) {
                 erreur(lect);
             }
         }
-
+        
         RemetCaractere(k);
-
+        
         //------------------------------------------------------------------------------
 
         //Lecture d'une variable non structure
@@ -4532,7 +4529,7 @@ char GlobalParseur::LitVariables(istream& fichier,NomProcedure* nomproc) {
 					if (ty==GRAPHE)
 						sorte=VVECTEURGRAPHE;
             }
-
+            
             k=lit(fichier,lect);
             if (k!=']')
                 erreur(CHAINES[116]);
@@ -4543,7 +4540,7 @@ char GlobalParseur::LitVariables(istream& fichier,NomProcedure* nomproc) {
             if (k=='=')
                 val=LireUneFormule(fichier,k,variables_utilisees,OUI);
         }
-
+                
 
         if (nomproc!=NULL) {
             v=CreeVariable(tampon,ty,sorte,index,OUI,OUI);
@@ -4557,13 +4554,13 @@ char GlobalParseur::LitVariables(istream& fichier,NomProcedure* nomproc) {
             return k;
         }
 
-        v=CreeVariable(tampon,ty,sorte,index,OUI,NON);
+        v=CreeVariable(tampon,ty,sorte,index,OUI,NON);        
         v->defaut=val;
 
         if (k!=';')
             erreur(CHAINES[132]);
     }
-
+       
     return NON;
 }
 //---------------------------------------------------------------------------------------------------
@@ -4603,16 +4600,16 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 	char suite[XIPBUFFERSIZE];
 
     Categorie* c;
-
-
+    
+    
     char cgt=0;
     int varnum1=-1;
     int varnum2=-1;
-    int vardep=-1;
+    int vardep=-1;        
     suite[0]=0;
     uchar K;
 
-
+	
 	//Cas particulier, les variables $# dont le $ est dans tampon et le # dans k
 	if (k=='#' && tampon[0]=='$') {
 		//dans ce cas, on reconstruit, un tampon avec k
@@ -4623,7 +4620,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
     //if (vardep==1)
     //    erreur(CHAINES[219]);
     //Un '#' peut preceder une dependance et etre equivalent a #subj <=> ^subj
-
+	
     if (k=='#' || k=='^') {
         cgt=OUI; //cette variable indique que nous lisons une dependance qui doit etre modifiee
         //k=lit(fichier,tampon);
@@ -4634,7 +4631,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
         k=(char)K;
         if (tampon[0] >= '0' && tampon[0] <= '9') {
             //Une variable
-            varnum1=atoi(tampon);
+            varnum1=atoi(tampon);    	
 			variables_utilisees.affecte(varnum1,OUI);
             cgt=NON;
         }
@@ -4645,22 +4642,22 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
             neg=OUI;
         }
     }
-
-
+    
+    
     //Lecture d'une variable sur une dependance de type $x
     char* pt=strchr(tampon,'$');
     char pointeur=NON;
 	char NODE=NON;
-    if (pt!=NULL) {
+    if (pt!=NULL) {        
         //cas particulier d'une variable $$x qui pointe sur la dependance elle-meme
         if (pt[1]=='$') {
-            strcpy(pt,pt+1);
-            pointeur=OUI;
+            strcpy(pt,pt+1);            
+            pointeur=OUI;            
         }
 		//Autre cas particulier, une dependance de NODE
 		if (pt[1]=='#') {
-            strcpy(pt+1,pt+2);
-            NODE=OUI;
+            strcpy(pt+1,pt+2);            
+            NODE=OUI;            
         }
 
 		if (pt[1]>='0' && pt[1]<='9')
@@ -4682,19 +4679,19 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 		}
 		*pt=0;
     }
-
-
+    
+    
     Traits* trgauche=NULL;
     Traits* trdroit=NULL;
     Traits* trlexical=NULL;
     Traits* trlexicaltous=NULL;
 	Traits* modiftrait=NULL;
-    VECTA<char> affectations;
-
+    VECTA<char> affectations;	
+    
     //Nous avons deux cas possibles:
     //a) Nous lisons une fonction syntaxique
     //b) Nous lisons un test sur les traits d'une variable
-
+    
     //Lecture des traits associes a la fonction
     //ou a la premiere variable
     VECTA<char*> pile;
@@ -4711,7 +4708,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 
     if (k=='<') { //trait local a une lecture d'un mot donne
         char interk=litBis(fichier,suite);
-
+        
         if (interk=='*') {
             trlexicaltous=BatitTraits(fichier,'>',&pile,&clrStk);
 			//trgauche=trlexicaltous;
@@ -4725,16 +4722,16 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
         else {
             MetEnAttenteLecture(interk,suite);
             //sinon, il faut verifier la chose suivante
-            //a) s'il s'agit d'une comparaison '<', alors apres on doit avoir forcement
+            //a) s'il s'agit d'une comparaison '<', alors apres on doit avoir forcement 
             //les choses suivantes pour interk: &,|,),#
             //sinon, c'est une autre comparaison et interk ne peut valoir que > ou ":" ou "="
-            if (!strchr("&|)#",interk)) {
+            if (!strchr("&|)#",interk)) {            
                 trlexical=BatitTraits(fichier,'>',&pile,&clrStk);
 				//trgauche=trlexical;
                 k=lit(fichier,suite);
                 surlecture=OUI;
             }
-        }
+        }        
     }
 
     char etat=0;
@@ -4755,8 +4752,8 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
     c=CatVide;
     typeComparateur exacte=TEST;
     TestFonction* tf=NULL;
-
-
+    
+    
     int nv,i;
     char pair;
 	Traits* trvar;
@@ -4765,7 +4762,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
     //Traitement des comparaisons de traits
     /*
     Tous les cas sont les suivants:
-
+    
     EGAUX_ONTOLOGIE         #1[@ontologie] :: #2[@ontologie]
     COMPATIBLES_ONTOLOGIE   #1[@ontologie] : #2[@ontologie]
     AFFECTATION_ONTOLOGIE   #1[@ontologie] = {#2 | #3..}
@@ -4773,16 +4770,16 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 
     COMPATIBLES_LECTURE     #1<tr>:#2<tr>
     AFFECTATION_LECTURE     #1<tr>={...}
-    EGAUX_LECTURE
+    EGAUX_LECTURE           
 
     COMPATIBLES             #1[tr]:#2[tr]
 
     EGAUX                   #1[tr]::#2[tr]
     EGALITE                 #1:#2
-
+    
     INFERIEUR               #1<#2
     SUPERIEUR               #1>#2
-
+    
     INF_TRAITS              #1[tr]< ch | #2 | #2[tr]
     SUP_TRAITS              #1[tr]> ch | #2 | #2[tr]
     SUP_EGAL_TRAITS         #1[tr]<= ch | #2 | #2[tr]
@@ -4791,12 +4788,12 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
     AFFECTATION             #1[tr]={...}
     TEST                    #1[tr]
     */
-    if (varnum1!=-1) {
+    if (varnum1!=-1) {        
         TestFonctionNoeud* tfnoeud=NULL;
         char attr[100];
         trait* vattribut;
         trait* vvaleur;
-
+        
 
         //Il peut y avoir d'abord une negation
         if (k==NEGATION) {
@@ -4813,23 +4810,23 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 
             switch(etat) {//apres la lecture de la variable et de sa structure de traits (quand il y en a une)
             case 0: { //on peut avoir les cas suivants:
-                switch (k) {
-                case ':':
+                switch (k) {                    
+                case ':': 
                     exacte=COMPATIBLES;
                     etat=2;
                     break;
-                case '=':
+                case '=': 
                     exacte=AFFECTATION;
                     etat=3;
                     break;
-                case '<':
+                case '<': 
                     if (trgauche==NULL)
                         exacte=INFERIEUR;
                     else
                         exacte=INF_TRAITS;
                     etat=1;
                     break;
-                case '>':
+                case '>': 
                     if (trgauche==NULL)
                         exacte=SUPERIEUR;
                     else
@@ -4841,17 +4838,17 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                     etatsuivant=40;
                     continue;
                 }
-                k=lit(fichier,suite);
+                k=lit(fichier,suite);            
                 break;
                     }
-            case 1: //on vient de lire un '>' ou un '<'
-                //On relit une nouvelle fois, ce ne peut etre qu'un autre ':'
+            case 1: //on vient de lire un '>' ou un '<'    
+                //On relit une nouvelle fois, ce ne peut etre qu'un autre ':'            
                 if (k=='=') {
                     if (exacte==SUP_TRAITS)
-                        exacte=SUP_EGAL_TRAITS;
-                    if (exacte==INF_TRAITS)
+                        exacte=SUP_EGAL_TRAITS;                                                    
+                    if (exacte==INF_TRAITS) 
                         exacte=INF_EGAL_TRAITS;
-                    k=lit(fichier,suite);
+                    k=lit(fichier,suite);                                    
                     etat=4; //dans ce cas on ne peut avoir que #1[] <= #2[] ou #1[] <= ch
                 }
                 else {
@@ -4861,10 +4858,10 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                         etat=4; //dans ce cas c'est une comparaison #1[] < chaine ou #1[]<#2[]
                 }
                 break;
-            case 2:      //c'est une comparaison de type "::"
+            case 2:      //c'est une comparaison de type "::"      
                 if (trgauche!=NULL && trgauche->onto!=NULL)
                     exacte=COMPATIBLES_ONTOLOGIE;
-                if (k==':') {
+                if (k==':') {                    
                     exacte=EGAUX;
                     if (trgauche!=NULL && trgauche->onto!=NULL)
                         exacte=EGAUX_ONTOLOGIE;
@@ -4879,7 +4876,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                 //On vient de lire le signe d'affectation
                 if (trgauche!=NULL && trgauche->onto!=NULL)
                     exacte=AFFECTATION_ONTOLOGIE;
-
+				
                 if (k=='{') {
 					k=lit(fichier,suite);
 					etat=20;
@@ -4890,9 +4887,9 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
             case 4: //il s'agit de la lecture qui suit l'operateur <,>,<=,>=
                 //c'est une variable, on la traite
                 if (k=='#') {
-                    etat=6;
+                    etat=6;                        
                     break;
-                }
+                }                    
                 //On recupere le nom de l'attribut...
                 trgauche->present->ChaineAttributs(this,attr);
                 //Attention il ne peut y avoir qu'un seul trait
@@ -4902,25 +4899,25 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                 vvaleur=RetrouveValeurTrait(vattribut,suite,OUI);
 				trgauche->inittrait(vattribut,vvaleur);
                 //(trgauche->valeur)->ou(vvaleur->valeur);
-                //(trgauche->filtre)->ou(vattribut->valeur);
-                etat=25; //c'est la fin
+                //(trgauche->filtre)->ou(vattribut->valeur);                        
+                etat=25; //c'est la fin      
                 etatsuivant=40;
                 break;
-            case 6:
+            case 6:                
                 if (k!='#')
                     erreur(CHAINES[129]);
                 k=lit(fichier,suite);
                 etat=9;
-                break;
+                break;                
             case 7: //il ne peut y avoir de traits
                 if (k!='#')
                     erreur(CHAINES[129]);
                 k=lit(fichier,suite);
                 etat=10;
-                break;
-            case 9://on determine le numero de la variable
+                break;                
+            case 9://on determine le numero de la variable                
                 if (suite[0] >= '0' && suite[0] <= '9')
-                    varnum2=atoi(suite);
+                    varnum2=atoi(suite);               
                 else {
                     sprintf_s(suite,1000,"%s?",CHAINES[184]);
                     erreur(suite);
@@ -4942,13 +4939,13 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                 etatsuivant=50;
                 break;
             case 11://on doit lire une structure de traits
-                if (k=='[' || k=='<') {
+                if (k=='[' || k=='<') {                    
                     //On ne peut comparer que des structures semblables
                     if (k=='<' && surlecture!=NON)
                         trdroit=BatitTraits(fichier,'>');
                     else
-                        trdroit=BatitTraits(fichier);
-                    TestTraitVide(trdroit);
+                        trdroit=BatitTraits(fichier);                        
+                    TestTraitVide(trdroit);                
                     k=lit(fichier,suite);
                 }
                 etat=25;
@@ -4957,7 +4954,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
             case 20://on lit la variable
                 if (k!='#')
                     erreur(CHAINES[129]);
-
+                
                 k=lit(fichier,suite);
                 //on lit le numero de la variable
                 nv=atoi(suite);
@@ -4971,7 +4968,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 					traits_variables.affecte(affectations.dernier-1,FactoriseTraits(trvar));
 					k=lit(fichier,suite);
 					etat=21;
-					break;
+					break;					
                 case '&':
                 case '|':
                     affectations.ajoute(k);
@@ -4980,7 +4977,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                     break;
                 case '}': //fin de la lecture
                     etat=25;
-                    etatsuivant=30;
+                    etatsuivant=30;                    
                     k=lit(fichier,suite);
                     break;
                 default:
@@ -4991,7 +4988,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
             case 22://on lit la variable
                 if (k!='#')
                     erreur(CHAINES[129]);
-
+                
                 k=lit(fichier,suite);
                 //on lit le numero de la variable
                 nv=atoi(suite);
@@ -5022,7 +5019,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 				tfnoeud->selectiontous=FactoriseTraits(trlexicaltous);
 				tfnoeud->comparateur=exacte;
 				StockeTestFonction(tf);
-				etat=etatsuivant;
+				etat=etatsuivant;                        
 				break;
 			case 30: //creation de l'affectation
 				if (trgauche==NULL) {
@@ -5056,7 +5053,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 					}
 				}
 
-				pair=OUI;
+				pair=OUI;                        
 				for (i=0;i<affectations.dernier;i++) {
 					if (pair==NON) {
 						if (affectations[i]=='|')
@@ -5072,11 +5069,11 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 					}
 				}
 			case 40://c'est un simple test sur les traits
-				if (trgauche==NULL &&
-					trlexical==NULL &&
-					trlexicaltous==NULL &&
+				if (trgauche==NULL && 
+					trlexical==NULL && 
+					trlexicaltous==NULL && 
 					lectxml==NON)
-					erreur(CHAINES[126]);
+					erreur(CHAINES[126]);                    
 				if (trgauche!=NULL)
 					tfnoeud->traits.ajoute(FactoriseTraits(trgauche));
 				etat=100;
@@ -5104,7 +5101,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 
 	  return tf;
 	}
-
+    
     //--------------------------------------------------------------------------------------
     //Traitement des dependances
     //On regarde son type. "?" correspond a une dependance quelconque ce qui correspond a
@@ -5121,15 +5118,15 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 			erreur(CHAINES[397]);
 	}
 
-	TestFonctionKif* tfkif=NULL;
+	TestFonctionKif* tfkif=NULL;	
 	char kifmode=NON;
-
+    
     TestFonctionDependance* tfdep=NULL;
     TestFonctionAffichage* taff=NULL;
 
 #ifdef XIPPYTHON
     TestFonctionPython* tfpython=NULL;
-
+    
     if (c->X.type==C_PROCEDUREPYTHON) {
         for (int yp=0;yp<PythonScript.dernier;yp++) {
             if (PythonScript[yp]->depend->Fx==&c->X) {
@@ -5145,7 +5142,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 #else
         TestFonctionDependance* tfpython=NULL;
 #endif
-
+		
         if (c==Affichage) {
             taff=new TestFonctionAffichage;
             tf=taff;
@@ -5160,7 +5157,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 			else {
 				tfdep=new TestFonctionDependance(&c->X);
 				//Cas particulier, s'il s'agit d'un appel de procedure
-				if (c->X.type==C_PROCEDURE ||
+				if (c->X.type==C_PROCEDURE || 
 					c->X.type==C_PROCEDUREDECLAREE)
 					tfdep->leType=TESTFONCTIONPROCEDURE;
 
@@ -5171,18 +5168,18 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 				tfdep->pointeur=pointeur;
 			}
 	}
-
+    
     StockeTestFonction(tf);
-
+    
     if (tfdep!=NULL) {
-        tfdep->traitsFonction=FactoriseTraits(trgauche);
+        tfdep->traitsFonction=FactoriseTraits(trgauche);        
         tfdep->changement=cgt;
         tfdep->vardep=vardep;
     }
-
+    
     i=0;
     char boucle=OUI;
-
+    
     //si varnum1==-1, c'est la lecture d'une fonction syntaxique, mais si k!=')'
     //cela signifie qu'il s'agit d'une dependance sans arguments...
     if (taff!=NULL) {
@@ -5191,37 +5188,37 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
         k=lit(fichier,suite);
         while (boucle) {
             int mc=0;
-            while (affichagemotclef[mc][0]!='%' &&
+            while (affichagemotclef[mc][0]!='%' && 
                 compchmin((uchar*)affichagemotclef[mc],(uchar*)suite))
                 mc++;
             if (affichagemotclef[mc][0]=='%') {
                 sprintf(tampon,"%s: %s",CHAINES[270],suite);
-                erreur(tampon);
+                erreur(tampon);            
             }
             //sinon, mc pointe sur la bonne valeur
-            aff|=valeur_affichage[mc];
-
+            aff|=valeur_affichage[mc];            
+            
             if (k!= ',' && k!=carfin) {
                 delete tf;
                 erreur(CHAINES[133]);
             }
-
+            
             if (k==carfin)
-                boucle=NON;
+                boucle=NON;                    
             else
-                k=lit(fichier,suite);
-        }
-
+                k=lit(fichier,suite);                    
+        }        
+        
         k=lit(fichier,tampon);
         taff->affiche=aff;
     }
     else {
         if (varnum1==-1 && k=='(') {
-
+            
             //lecture des arguments de la fonction
             k=lit(fichier,suite);
             while (boucle) {
-                int typeVariable=-1;
+                int typeVariable=-1; 
                 char liretraits=NON;
                 //La lecture des arguments est de la forme: fonc(#1,?)
                 char typeargetat=0;
@@ -5261,7 +5258,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 								variables_utilisees.affecte(tfpython->arg[i],OUI);
 						}
 						else {
-							tfdep->arg.affecte(i,typeVariable);
+							tfdep->arg.affecte(i,typeVariable);                   
 							if (neg==NON)
 								variables_utilisees.affecte(tfdep->arg[i],OUI);
 						}
@@ -5278,14 +5275,14 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 					}
                     liretraits=OUI;
                     break;
-                case 3://lecture d'une formule mathematique
+                case 3://lecture d'une formule mathematique                    
                     if (k!=')' || suite[0]!=0) {
 						//cas particulier, il s'agit d'une chaine vide...
 						if (k==',' && LuEntreCotes==OUI) {
 							tformule=new TestFormuleString;
 							tformule->element=new TestFormuleElementValString((uchar*)suite);
 						}
-						else {
+						else {							
 							if (LuEntreCotes) {
 								//On reinjecte alors les doubles quotes, pour eviter que certains traitements
 								//ne modifie la chaine de caractere (en particulier sa mise en minuscule)
@@ -5294,7 +5291,7 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 								suite[nv + 1] = 0;
 								suite[0] = '"';
 							}
-							MetEnAttenteLecture(k,suite);
+							MetEnAttenteLecture(k,suite);                    
 							tformule=LireUneFormule(fichier,k,variables_utilisees,OUI,kifmode);
 						}
 						if (tfkif!=NULL)
@@ -5323,11 +5320,11 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
 								variables_utilisees.affecte(tfpython->arg[i],OUI);
 						}
 						else
-							tfdep->arg.affecte(i,typeVariable);
+							tfdep->arg.affecte(i,typeVariable);                   
 					}
                     break;
                 }
-
+                                
                 //Lecture des traits associes aux arguments...
                 if (liretraits && k=='[' && tfdep!=NULL) {
                     trgauche=BatitTraits(fichier);
@@ -5339,21 +5336,21 @@ TestFonction* GlobalParseur::LectureArgumentTest(istream& fichier,
                     delete tf;
                     erreur(CHAINES[133]);
                 }
-
+                
                 i++;
-
+                
                 if (k==carfin)
-                    boucle=NON;
+                    boucle=NON;                    
                 else
-                    k=lit(fichier,suite);
-            }
+                    k=lit(fichier,suite);                    
+            }        
 
 			//ICI, dans le cas d'un NODE, on remplace la categorie XCatVide par une autre
 			if (NODE==OUI && tfdep->Fx==XCatVide)
 				tfdep->typecat=C_GENERATION;
-
+            
             k=lit(fichier,tampon);
-        }
+        }       
     }
     return tf;
 }
@@ -5385,7 +5382,7 @@ void GlobalParseur::LectureTest(istream& fichier,
                                 TestArbre** tarbre,
                                 char carfin,
                                 char profondeur) {
-
+    
     TestFonction* tf=NULL;
     TestArbre* alocale=*tarbre;
     TestArbre* blocale;
@@ -5416,7 +5413,7 @@ void GlobalParseur::LectureTest(istream& fichier,
     clefXML* clexml;
     TestFonctionXML* tfxml;
 #endif
-#ifdef _DEBUG
+#ifdef _DEBUG	
 	VECTA<int> states;
 #endif
 
@@ -5442,7 +5439,7 @@ void GlobalParseur::LectureTest(istream& fichier,
 	//		tampon[20]=0;
 	//		cout<<"->"<<tampon<<endl;
 	//	}
-	//
+	//		
 	//	fichier.seekg(ps,ios::beg);
 	//}
 
@@ -5468,7 +5465,7 @@ void GlobalParseur::LectureTest(istream& fichier,
             case '$':
                 state=2;
                 break;
-            case '>':
+            case '>':                
                 state=14;
                 k=LectCrypte(fichier);
                 oper[0]='>';
@@ -5500,8 +5497,8 @@ void GlobalParseur::LectureTest(istream& fichier,
 				//dans ce cas, il nous faut lire la chaine entiere
 				xr=new x_lirechaine(ExtraireGroupe(this,fichier));
 				xr->loadtoken();
-				bnfarbre=new bnf_arbre;
-				x_mynode=bnfarbre->x_parsing(xr,PARTIAL);
+				bnfarbre=new bnf_arbre;				
+				x_mynode=bnfarbre->x_parsing(xr,PARTIAL);				
 				delete bnfarbre;
 				if (x_mynode==NULL || alocale->arbre.fin()==NULL) {
 					pourmessage="Wrong generation NODE structure: ";
@@ -5558,16 +5555,16 @@ void GlobalParseur::LectureTest(istream& fichier,
 				tfcreation=(TestFonctionNoeud*)tf;
 				tfcreation->comparateur=CREATION_NOEUD;
 				tfcreation->X=&tempcat->X;
-			}
+			}				
 			tempcat=NULL;
             tampon[0]=0;
             MetEnAttenteLecture(k,tampon);
             state=100; //ajout d'un argument
-            break;
+            break;        
         case 14: //Il faut que k=='=' (<=, >=)
             oper[1]=0;
             if (k=='=')
-                oper[1]='=';
+                oper[1]='=';            
             else {
                 tampon[0]=0;
                 MetEnAttenteLecture(k,tampon);
@@ -5588,11 +5585,11 @@ void GlobalParseur::LectureTest(istream& fichier,
                 erreur(CHAINES[325]);
 
             tfo=new TestFormule;
-            tfo->element=new TestFormuleElementOperation(operation);
+            tfo->element=new TestFormuleElementOperation(operation);            
             tfo->formules.ajoute(((TestFonctionMath*)tf)->formule);
             tfo->formules.ajoute(tform);
             tf->Formule(tfo);
-
+          
             tf->negation=neg;
             neg=negation;
             if (carfin==';')
@@ -5609,7 +5606,7 @@ void GlobalParseur::LectureTest(istream& fichier,
             while (Lettre(k)) {
                 tampon[u++]=k;
                 k=LectCrypte(fichier);
-            }
+            }            
             tampon[u]=0;
             minuscule((uchar*)tampon);
             //On verifie s'il s'agit d'une variable numerique
@@ -5628,7 +5625,7 @@ void GlobalParseur::LectureTest(istream& fichier,
             break;
 #ifdef XIPLIBXML
         case 27://Lecture d'une structure XML
-            clexml=ParseXPathExpression(fichier,k,tampon,neg,variables_utilisees);
+            clexml=ParseXPathExpression(fichier,k,tampon,neg,variables_utilisees);            
             tfxml=new TestFonctionXML;
             tfxml->negation=neg;
             tfxml->clefxml=clexml;
@@ -5645,7 +5642,7 @@ void GlobalParseur::LectureTest(istream& fichier,
 #endif
         case 30://Appel recursif
             //On cree la branche locale de cet appel recursif
-            blocale=new TestArbre;
+            blocale=new TestArbre;            
             deterministe=NON;
             //On l'appelle
             LectureTest(fichier,k,tampon,neg,variables_utilisees,&blocale,')',OUI);
@@ -5657,7 +5654,7 @@ void GlobalParseur::LectureTest(istream& fichier,
                 *tarbre=blocale;
             }
             else {//si nous avons recupere un gros paquet d'element, on l'insere d'un coup
-                if (blocale->arbre.dernier > 1)
+                if (blocale->arbre.dernier > 1) 
                     alocale->arbre.ajoute(blocale);
                 else {//dans le cas ou les parantheses ne contiennent qu'un seul element
                     alocale->arbre.ajoute(blocale->arbre.retire());
@@ -5708,7 +5705,7 @@ void GlobalParseur::LectureTest(istream& fichier,
                     state=70; //il s'agit d'une formule
 				}
 				k=LectCrypte(fichier);
-            }
+            }            
             tampon[u]=0;
 			minuscule((uchar*)tampon);
 			//Si on a trouve une categorie suivie d'un # et d'un chiffre
@@ -5723,20 +5720,20 @@ void GlobalParseur::LectureTest(istream& fichier,
 					tampon[0]=0;
 					break;
 				}
-			}
+			}            
             K=k;LectureBlancs(fichier,K,NON);k=K;
             break;
         case 50://test sur la negation de l'operateur
             if (negation==OUI) {
                 if (opcourrant=='&')
                     opcourrant='|';
-                else
+                else                    
                     opcourrant='&';
             }
             //On intrroduit alors un niveau supplementaire dans l'arbre, dans le cas d'un
             //changement d'operateur
             if (opcourrant!=alocale->operateur || deterministe!=alocale->deterministe) {
-                //on cree un nouveau sommet, qui devient un sommet avec le meme operateur
+                //on cree un nouveau sommet, qui devient un sommet avec le meme operateur 
                 TestArbre* narbre=new TestArbre;
                 //On lui donne cet operateur courrant
                 narbre->operateur=opcourrant;
@@ -5751,7 +5748,7 @@ void GlobalParseur::LectureTest(istream& fichier,
         case 55://Verification du type d'objet a lire
             state=70;
 			if (k=='[') {
-                e=VariablesNoms.recherche(tampon);
+                e=VariablesNoms.recherche(tampon);        
 				if (e==NULL || e->valeur==NULL) {
 					if (nom_procedure!=NULL) {
 						i=strlen(tampon);
@@ -5765,18 +5762,18 @@ void GlobalParseur::LectureTest(istream& fichier,
             //Il s'agit dans ce cas d'une affectation de traits a une dependance
 			if (k=='[' && (e==NULL || e->valeur==NULL))
                 state=60;
-            else {
+            else {            
                 ptdol=strchr(tampon,'$');
                 if (ptdol!=NULL)
                     *ptdol=0;
                 //C'est une dependance
                 if (k=='(' && rechercheNomFonction(tampon,TableOperations)==-1) {
                     //est-ce une procedure
-                    c=ChercheFonc(tampon);
+                    c=ChercheFonc(tampon);                
                     if (c->X.type!=C_PROCEDURE &&
 						c->X.type!=C_KIF &&
                         c->X.type!=C_PROCEDUREDECLAREE &&
-                        c->X.type!=C_PROCEDUREPYTHON)
+                        c->X.type!=C_PROCEDUREPYTHON)                    
                         state=60;
                 }
                 if (ptdol!=NULL)
@@ -5791,32 +5788,32 @@ void GlobalParseur::LectureTest(istream& fichier,
                 tf=LectureArgumentTest(fichier,variables_utilisees,carfin,tampon,k,neg);
             tf->negation=neg;
             if (carfin==';')
-                tf->negation=SAUTE;
+                tf->negation=SAUTE;       
             MetEnAttenteLecture(k,tampon);
             state=100;
             break;
         case 70://Lecture d'une formule mathematique
-            MetEnAttenteLecture(k,tampon);
+            MetEnAttenteLecture(k,tampon);            
             tampon[0]=0;
             tform=LireUneFormule(fichier,k,variables_utilisees,OUI);
-			if (tform->TypeGraphe())
+			if (tform->TypeGraphe()) 
 				tf=new TestFonctionGraphe;
 			else {
-				if (tform->TypeString())
+				if (tform->TypeString()) 
 					tf=new TestFonctionMathString;
-				else {
+				else { 
 					if (tform->TypeBoucle())
 						tf=new TestFonctionMathBoucle;
 					else
 						tf=new TestFonctionMath;
 				}
 			}
-
+            
             StockeTestFonction(tf);
             tf->Formule(tform);
-
+            
             tf->negation=neg;
-
+            
             if (carfin==';')
                 tf->negation=SAUTE;
             MetEnAttenteLecture(k,tampon);
@@ -5843,21 +5840,21 @@ static char estChiffre(unsigned char* forme) {
     int i=0;
     if (forme==NULL)
         return NON;
-
+    
     while (forme[i]) {
         if (forme[i]<'0' || forme[i]>'9')
             if (forme[i]!='.' && forme[i]!='-' && forme[i]!='+')
                 return NON;
             i++;
     }
-
+     
     //renvoie 2 s'il s'agit d'un nombre a virgule
     return OUI;
 }
 
 TestFormule::TestFormule() {
 	RAMASSE(TestFormule);
-    element=NULL;
+    element=NULL;    
 }
 
 TestFormule::~TestFormule() {
@@ -5930,7 +5927,7 @@ TestFormuleElementNoeud::~TestFormuleElementNoeud() {
 //-----------------------------------------------------------------------------------------------------
 int compteici=0;
 TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
-                                           char& k,
+                                           char& k,                                           
                                            VECTA<char>& variables_utilisees,
                                            char testerreur,
 										   char kifmode) {
@@ -5942,9 +5939,9 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
     etat* e;
     etat* varprocglob;
     Variable* variab;
-    char ajoutdansVPG;
+    char ajoutdansVPG;    
     graphe* ungraphe=NULL;
-    //Lecture particuliere ou le point decimal est recevable dans la lecture d'un element
+    //Lecture particuliere ou le point decimal est recevable dans la lecture d'un element    
     TestFormule* principal=NULL;
     TestFormule* soustf=NULL;
     TestFormule* racine=NULL;
@@ -5952,9 +5949,9 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
     TestFormule* nouveau;
     char etat=0;
     char etatsuivant=0;
-    int pos;
+    int pos;    
 	char tampon[XIPBUFFERSIZE];
-    TestFormuleString* sousstring;
+    TestFormuleString* sousstring;    
     TestFormule* indice_chaine=NULL;
     TestFormule* indice_vecteur=NULL;
     TestFormule* partiegauche;
@@ -5968,12 +5965,12 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
     char boucle=OUI;
     int nbdd=0;
     int nompos,id;
-    static char tabstopchar[] = ",()&|!;+-*/^%[]=<>:~";
-
+    static char tabstopchar[] = ",()&|!;+-*/^%[]=<>:~";        
+    
     char oper[2];
     oper[1]=0;
-    char dollar=NON;
-    TestFonction* tf;
+    char dollar=NON;    
+    TestFonction* tf;    
     VECTA<TestFormule*>* vtform;
     uchar K;
 
@@ -6007,11 +6004,11 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
             //lecture d'une variable
             case '$':
                 pos=0;
-                tampon[pos++]='$';
-                k=LectureMin(fichier);
+                tampon[pos++]='$';                
+                k=LectureMin(fichier);   
 				if (k=='#') {
 					tampon[pos++]='#';
-					k=LectureMin(fichier);
+					k=LectureMin(fichier);   
 				}
                 etat=19;
                 break;
@@ -6030,21 +6027,21 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                 pos=0;
                 tampon[pos++]=k;
                 k=LectureMin(fichier);
-                break;
+                break;            
             case '@':
                 //Lecture d'une valeur par defaut
-                etat=6;
+                etat=6;                
                 pos=0;
                 tampon[pos++]='@';
                 break;
             default:
                 pos=0;
-                if (k>='0' && k<='9') {
+                if (k>='0' && k<='9') {                    
                     etat=1;
                     break;
                 }
                 //c'est une chaine, peut etre une fonction
-                etat=2;
+                etat=2;                
                 tampon[pos++]=k;
             }
             break;
@@ -6128,29 +6125,29 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                 etat=5;
                 break;
             case 6:
-            case 2:
+            case 2:                
                 //On lit une chaine de caractere
                 //ce peut etre une variable (on doit compter le nombre de ##)
                 //Les caracteres d'arret sont dans stopchar
-                nbdd=0;
+                nbdd=0;                
                 nompos=-1;
                 K=LectureMin(fichier);
                 dollar=NON;
 				while (K>32 && !strchr(tabstopchar, K) && pos < XIPBUFFERMAX) {
-                    if (K=='#') {
+                    if (K=='#') {                        
                         nompos=pos;
                         nbdd++;
                     }
-
+                    
                     if (K=='$') {
                         dollar=OUI;
-                        nompos=pos;
+                        nompos=pos;                        
                         nbdd++;
                     }
-
+                    
 
                     tampon[pos++]=tolower(K);
-                    K=LectureMin(fichier);
+                    K=LectureMin(fichier);					
                 }
 
 				if (pos >= XIPBUFFERMAX) {
@@ -6163,7 +6160,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 
                 if (etat==6)
                     etat=8;
-                else
+                else 
                     if (k=='(')
                         etat=4;
                     else
@@ -6177,20 +6174,20 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 
                 //est-ce un operateur sans parametre)
                 if (rechercheNomFonction(tampon,TableSansParametre)!=-1 && k==';') {
-                    operation= rechercheNomFonction(tampon,TableOperations);
+                    operation= rechercheNomFonction(tampon,TableOperations);  
                     soustf=new TestFormule();
                     soustf->element=new TestFormuleElementOperation(operation);
                     etat=5;
                     break;
-                }
+                }               
 
-                //est-ce une variable?
+                //est-ce une variable?                
                 if (nompos!=-1) {
                     indice=atoi(tampon+nompos+1);
                     tampon[nompos+1]=0;
                 }
 
-                e=NULL;
+                e=NULL;                
                 varprocglob=NULL;
                 ajoutdansVPG=NON;
                 err[0]=0;
@@ -6215,7 +6212,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                 if (e==NULL)
                     e=VariablesNoms.recherche(tampon);
 
-                soustf=NULL;
+                soustf=NULL;                                
                 indice_chaine=NULL;
                 indice_vecteur=NULL;
                 liresuite=NON;
@@ -6258,29 +6255,29 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 
                 switch(lasorte) {
                 case VGLOBALEREINIT:
-                    soustf=new TestFormule;
+                    soustf=new TestFormule;                    
                     soustf->element = new TestFormuleElementGlobal((VariableGlobale*)variab);
                     break;
                 case VGRAPHE:
-                    soustf=new TestFormuleGraphe;
+                    soustf=new TestFormuleGraphe;                    
                     soustf->element = new TestFormuleElementGraphe((VariableGraphe*)variab,ungraphe);
                     break;
                 case VKIFOBJET:
                     soustf=new TestFormule;
                     soustf->element = new TestFormuleElementKif((VariableKif*)variab);
-                    break;
+                    break;  
 #ifdef XIPPYTHON
                 case VPYTHONOBJET:
                     soustf=new TestFormule;
                     soustf->element = new TestFormuleElementPython((VariablePython*)variab);
-                    break;
-#endif
+                    break;  
+#endif                    
 #ifdef XIPLIBXML
                 case VXMLOBJET:
                     soustf=new TestFormule;
                     soustf->element = new TestFormuleElementXML((VariableXML*)variab);
-                    break;
-#endif
+                    break;  
+#endif                    
                 case VNOEUD:
                     soustf=new TestFormule;
                     soustf->element = new TestFormuleElementVariable((VariableIndexeeNoeud*)variab,indice);
@@ -6311,8 +6308,8 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 					soustf->element->type = VLEMMECHAINEINDEX;
                     break;
 				case VVECTEURGRAPHE:
-                case VVECTEURINT:
-					if (k=='[') {
+                case VVECTEURINT:                    
+					if (k=='[') {                        
 						indice_vecteur=LireUneFormule(fichier,k,variables_utilisees,OUI);
 						if (k!=']')
 							erreur(CHAINES[298]);
@@ -6344,13 +6341,13 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 						soustf=new TestFormule;
 						soustf->element = new TestFormuleElementIntVector((VariableIntVector*)variab,indice_vecteur);
 					}
-					break;
+					break;            
                 case VCHAINE:
                 case VDICTIONNAIRE:
-                case VVECTEURCHAINE:
-                    sousstring=new TestFormuleString;
+                case VVECTEURCHAINE:                    
+                    sousstring=new TestFormuleString;                    
                     soustf=sousstring;
-                    if (k=='[') {
+                    if (k=='[') {                        
                         indice_chaine=LireUneFormule(fichier,k,variables_utilisees,OUI);
                         if (k!=']')
                             erreur(CHAINES[298]);
@@ -6362,7 +6359,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                     else {
                         indice_vecteur=indice_chaine;
                         indice_chaine=NULL;
-                        if (k=='[') {
+                        if (k=='[') {                        
                             indice_chaine=LireUneFormule(fichier,k,variables_utilisees,OUI);
                             if (k!=']')
                                 erreur(CHAINES[298]);
@@ -6383,7 +6380,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                         vtform=new VECTA<TestFormule*>;
                         VariablesProceduresGlobales.parsebrute((uchar*)err,(void*)vtform);
                     }
-                    vtform->ajoute(soustf);
+                    vtform->ajoute(soustf);                    
                 }
 
                 //Puis on lit la suite
@@ -6392,8 +6389,8 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
            case 8:
            case 4:
              //lecture d'une fonction
-               operation= rechercheNomFonction(tampon,TableOperations);
-               if (operation==-1 && tampon[0]) {
+               operation= rechercheNomFonction(tampon,TableOperations);  
+               if (operation==-1 && tampon[0]) {                   
                    etat=18;
                    continue;
                }
@@ -6403,7 +6400,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                     etat=14;
                     break;
                }
-
+               
                fonctionargument=rechercheNomFonction(tampon,TableOperationsNoeuds);
 
                //S'il s'agit d'une fonction de chaine
@@ -6422,13 +6419,13 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                //Cas particulier, s'il s'agit d'une regexp, le deuxieme parametre
                //est toujours une expression reguliere
                rxp=-1;
-               if (rechercheNomFonction(tampon,TableExpressionReguliere)!=-1)
+               if (rechercheNomFonction(tampon,TableExpressionReguliere)!=-1) 
                    rxp=1;
 
                //On lit alors les arguments de la fonction separee par une virgule
                while (etat==4) {
                    if (rxp==0)
-                       nouveau=LireUneFormule(fichier,k,variables_utilisees,2);
+                       nouveau=LireUneFormule(fichier,k,variables_utilisees,2);                       
                    else
                        nouveau=LireUneFormule(fichier,k,variables_utilisees,OUI);
                    //On rajoute ce nouvel element
@@ -6438,16 +6435,16 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                        if (id!=-1)
                            variables_utilisees.affecte(id,OUI);
                    }
-
+                       
                    //On compte les parametres
                    rxp--;
-                   if (k==')') {
+                   if (k==')') {                   
                        etat=5;
                        k=LectureMin(fichier);
                        break;
                    }
-                   if (k!=';' && k!=',')
-                       erreur(CHAINES[321]);
+                   if (k!=';' && k!=',') 
+                       erreur(CHAINES[321]);                   
                }
                break;
            case 14://lecture d'un for
@@ -6474,9 +6471,9 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                    k=';';
                    boucle=NON;
                }
-               else {
+               else {                   
                    if (k!=';')
-                       erreur(CHAINES[92]);
+                       erreur(CHAINES[92]);               
                    etat=17;
                }
                break;
@@ -6488,11 +6485,11 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                boucle=NON;
                break;
            case 17: //lecture du test du for
-               partiegauche=LireUneFormule(fichier,k,variables_utilisees,OUI);
+               partiegauche=LireUneFormule(fichier,k,variables_utilisees,OUI);               
                ope[0]=k;
-               k=LectureMin(fichier);
+               k=LectureMin(fichier);                    
                if (ope[0]==NEGATION || ( (ope[0]=='>' || ope[0]=='<') && k=='='))
-                   ope[1]=k;
+                   ope[1]=k;                
                else {//s'il s'agit d'un vector, il faut lire son indice
                    tampon[0]=0;
                    MetEnAttenteLecture(k,tampon);
@@ -6503,18 +6500,18 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                    sprintf_s(tampon,1000,"Unknown operator: %s",ope);
                    erreur(tampon);
                }
-               ope[1]=0;
+               ope[1]=0; 
                //On lit alors la partie droite
                partiedroite=LireUneFormule(fichier,k,variables_utilisees,OUI);
-
-			   if (partiegauche->TypeGraphe())
+               
+			   if (partiegauche->TypeGraphe()) 
 				   nouveau=new TestFormuleGraphe;
 			   else
-				   if (partiegauche->TypeString())
+				   if (partiegauche->TypeString()) 
 					   nouveau=new TestFormuleString;
 				   else
 					   nouveau=new TestFormule;
-
+               
                nouveau->element=new TestFormuleElementOperation(operation);
                nouveau->formules.ajoute(partiegauche);
                nouveau->formules.ajoute(partiedroite);
@@ -6545,11 +6542,11 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
            case 10:
                //Nous avons un nouvel operateur
                oper[0]=k;
-               operation= rechercheNomFonction(oper,TableOperations);
+               operation= rechercheNomFonction(oper,TableOperations);                              
                //si notre racine courante est deja du meme type, on ne cree rien de nouveau
                if (principal!=NULL) {
                    //a+b+
-                   if (operation == principal->element->valeur_operation()) {
+                   if (operation == principal->element->valeur_operation()) {                   
                        principal->formules.ajoute(soustf);
                        etat=0;
                        break;
@@ -6557,7 +6554,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 
                    //a+b-c+
                    if (racine!=principal && (k=='+' || k=='-')) {
-                       if (operation == racine->element->valeur_operation()) {
+                       if (operation == racine->element->valeur_operation()) {                   
                            principal->formules.ajoute(soustf);
                            principal=racine;
                            etat=0;
@@ -6577,16 +6574,16 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
 
                nouveau->element= new TestFormuleElementOperation(operation);
                if (racine==NULL) {
-                   racine=nouveau;
+                   racine=nouveau;                   
                    nouveau->formules.ajoute(soustf);
                }
-               else {//La plusieurs cas selon le type de l'operateur sur la racine
+               else {//La plusieurs cas selon le type de l'operateur sur la racine               
                //Si le nouvel operateur est + ou - il devient la nouvelle racine
                    if (k=='+' || k=='-') {
                        principal->formules.ajoute(soustf);
                        nouveau->formules.ajoute(racine);
-                       //On lui rajoute soustf
-                       racine=nouveau;
+                       //On lui rajoute soustf                       
+                       racine=nouveau;                       
                    }
                    else {//sinon, on le rajoute localement
                        principal->formules.ajoute(nouveau);
@@ -6595,13 +6592,13 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                }
                //Puis on rajoute soustf
                principal=nouveau;
-               //Ce nouvel element devient desormais la tete de notre nouveau sous-arbre
-               etat=0;
+               //Ce nouvel element devient desormais la tete de notre nouveau sous-arbre                              
+               etat=0;               
                break;
-           case 11:
+           case 11:           
                //appel d'une variable de noeuds
                if (testerreur==2)
-                   erreur(CHAINES[311]);
+                   erreur(CHAINES[311]);               
                tf=LectureArgumentTest(fichier,variables_utilisees,']',tampon,k,0,OUI);
                soustf=new TestFormuleString;
                soustf->element = new TestFormuleElementNoeud(tf);
@@ -6610,7 +6607,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
            case 18: //appel d'une procedure
                if (testerreur!=OUI && RetrouveFonc(tampon)==NULL)
                    return NULL;
-               strcpy_s(err,100,tampon);
+               strcpy_s(err,100,tampon);                              
                tf=LectureArgumentTest(fichier,variables_utilisees,')',tampon,k,0,OUI);
                if (tf!=NULL) {
                    if (tf->Type()!=TESTFONCTIONPROCEDURE &&
@@ -6624,7 +6621,7 @@ TestFormule* GlobalParseur::LireUneFormule(istream& fichier,
                soustf->element = new TestFormuleElementNoeud(tf);
                etat=5;
                break;
-            }
+            }            
         }
     return racine;
 }
@@ -6636,14 +6633,14 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
 											string& valeur,
                                             VECTA<Noeud*>& vectNoeuds,
                                             VECTA<ResultatFonction*>* vectFonc) {
-
+    
     Traits* tr=NULL;
     Noeud* n=NULL;
     TestFonctionNoeud* test;
     Traits* trbase=NULL;
     ResultatFonction* rf;
 
-
+    
     if (tf->Type()==TESTFONCTIONNOEUD) {
         test=(TestFonctionNoeud*)tf;
         tr=test->traits[0];
@@ -6663,8 +6660,8 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
         trbase=rf->traits;
     }
 
-
-
+    
+    
     if (tr!=NULL) {
         //Plusieurs cas, il peut s'agir du lemme
         if (tr->lemme!=NULL)
@@ -6672,8 +6669,8 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
         else {//ou bien de la forme de surface
             if (tr->surface!=NULL)
                 n->Surface(valeur);
-            else {
-				if (tr->onto!=NULL) {
+            else {            
+				if (tr->onto!=NULL) { 
 					if (ITR(this,tr,trbase,NON,NULL)) {
 						trbase->onto->cell(ONTOLOGIE_COMPARAISON)->ConcateneValeurs(this,hierarchies->lahierarchie,TraitsFiltreOntologie,valeur,",");
 						if (valeur[0]==',')
@@ -6703,7 +6700,7 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
 							if (val < 0) {
 								trouve=OUI;
 								//nous calculons sa position absolue
-								int pos= (igd*gBitVect + j)*2;
+								int pos= (igd*gBitVect + j)*2;       
 								if (tr->lpresent!=NULL) {
 									if (valeur.size()!=0)
 										valeur+=";";
@@ -6712,7 +6709,7 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
 									valeur+=TableDesTraits[pos+1];
 								}
 								else {
-									valeur=TableDesTraits[pos+1];
+									valeur=TableDesTraits[pos+1];                        
 									return OUI;
 								}
 							}
@@ -6722,7 +6719,7 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
                         }
                     }
                     return trouve;
-                }
+                }                
             }
         }
     }
@@ -6733,7 +6730,7 @@ char GlobalParseur::RecuperationTraitValeur(TestFonction* tf,
             if (rf!=NULL)
                 valeur+=rf->Fx->nom;
     }
-    return OUI;
+    return OUI;    
 }
 
 //------------------------------------------------------------------------
@@ -6797,7 +6794,7 @@ void AffecteNombre(GlobalParseur* parseur,
     TestFormule* tfmv=new TestFormule;
     TestFormuleElementReel* tfge=new TestFormuleElementReel(0);
     TestFormule* tfom=new TestFormule;
-
+    
     //Il s'agit d'une seule et unique initialisation.
 
 	tfom->element=new TestFormuleElementOperation(0);
@@ -6805,11 +6802,11 @@ void AffecteNombre(GlobalParseur* parseur,
 	tfmv->element=tfge;
 
     char err=NON;
-    tfom->formules.affecte(0,formule);
+    tfom->formules.affecte(0,formule);    
     tfge->var=val;
     tfom->formules.affecte(1,tfmv);
     tfm->TraitementFormule(parseur,noeuds,err,focus);
-    tfom->formules.raz();
+    tfom->formules.raz();    
 	delete tfm;
 	delete tfmv;
 }
@@ -6825,18 +6822,18 @@ void AffecteChaine(GlobalParseur* parseur,
     TestFormuleElementValString* tfse=new TestFormuleElementValString((uchar*)"");
     TestFormule* tfos=new TestFormule;
     char err=NON;
-
+    
     //Il s'agit d'une seule et unique initialisation.
 	tfos->element=new TestFormuleElementOperation(0);
 	tfs.formule=tfos;
 	tfsv.element=tfse;
 
-    tfos->formules.affecte(0,formule);
+    tfos->formules.affecte(0,formule);    
     libere(tfse->var);
     tfse->var=(uchar*)DupliqueChaine(val.c_str());
     tfos->formules.affecte(1,&tfsv);
     tfs.TraitementFormule(parseur,noeuds,err,focus);
-    tfos->formules.raz();
+    tfos->formules.raz();          
 }
 
 char TestFormule::AffecteVariable(GlobalParseur* parseur,
@@ -6855,11 +6852,11 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
     TestFormuleElementVariable* v;
 	TestFormuleElementChaineNoeud* vchn;
     TestFormuleElementLemme* vch;
-    TestFormuleElementDependance* dep;
-	TestFormuleElementChaineDependance* depch;
+    TestFormuleElementDependance* dep;    
+	TestFormuleElementChaineDependance* depch;    
     TestFormuleElementVectorString* vvect;
     TestFormuleElementIntVector* ivect;
-
+    
     ResultatFonction* rf=NULL;
     string lemme;
     string buff;
@@ -6870,7 +6867,7 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
     ind=-1;
     varglob=NULL;
     double res;
-
+    
     if (element->type !=VCHAINE) {
         if (val!=NULL)
             res=atof((char*)val);
@@ -6890,7 +6887,7 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
         v->var->valeurs.affecte(ind,res);
         v->var->utilisee=OUI;
         //Et nous enregistrons le fait que ce noeud est associe a cette variable
-        n->source->variables.affecte(v->var->position,v->var);
+        n->source->variables.affecte(v->var->position,v->var);        
         break;
     case VCHAINENOEUD:
         vchn=element->valeur_variable_chaine();
@@ -6903,13 +6900,13 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
         vchn->var->Affecte(ind,(char*)val);
         vchn->var->utilisee=OUI;
         //Et nous enregistrons le fait que ce noeud est associe a cette variable
-        n->source->variables.affecte(vchn->var->position,vchn->var);
+        n->source->variables.affecte(vchn->var->position,vchn->var);        
         break;
     case VDEPENDANCE:
         dep=element->valeur_dependance();
         rf=focus->cell(dep->indice);
-        if (rf==NULL)
-            return NON;
+        if (rf==NULL) 
+            return NON;        
         ind=dep->var->AjouteDependance(rf);
         dep->var->valeurs.affecte(ind,res);
         dep->var->utilisee=OUI;
@@ -6918,8 +6915,8 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
     case VCHAINEDEPENDANCE:
         depch=element->valeur_dependance_chaine();
         rf=focus->cell(depch->indice);
-        if (rf==NULL)
-            return NON;
+        if (rf==NULL) 
+            return NON;        
         ind=depch->var->AjouteDependance(rf);
         depch->var->Affecte(ind,(char*)val);
         rf->vardep.affecte(depch->var->position,depch->var);
@@ -6941,7 +6938,7 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
         n = noeuds[vch->indice];
         if (n==NULL)
             return NON;
-
+        
         //Il s'agit d'une concatenation du nom de la variable avec le lemme
         //sprintf((char*)lemme,"%s%s#",vlemme->nom,n->X->nom);
         lemme=vlemme->nom;
@@ -7003,15 +7000,15 @@ char TestFormule::AffecteVariable(GlobalParseur* parseur,
         vvect->var->AffecteValeurStringIndex(s,(int)res);
         break;
     }
-    return OUI;
+    return OUI;    
 }
 //------------------------------------------------------------------------------------
 char AffectationVariable(Variable* v,double res,string val) {
-
+    
     VariableGlobale* varglob;
     VariableString* vstr;
-    VariableVector* vvect;
-    VariableIntVector* ivect;
+    VariableVector* vvect;  
+    VariableIntVector* ivect;  
     string* s;
     int i;
 
@@ -7046,7 +7043,7 @@ char AffectationVariable(Variable* v,double res,string val) {
 		if (val=="a")
 			i=ivect->valeurs.dernier;
 		else {
-			ivect->raz();
+			ivect->raz();        
 			i=0;
 		}
 		ivect->Affecte(i,res);
@@ -7064,17 +7061,17 @@ char AffectationVariable(Variable* v,double res,string val) {
 		if (res==-10)
 			i=vvect->chaine.dernier;
 		else {
-			vvect->raz();
+			vvect->raz();        
 			i=0;
 		}
 		vvect->AffecteValeurStringIndex(s,i);
 		break;
 	}
-	return OUI;
+	return OUI;    
 }
 //------------------------------------------------------------------------------------
 char RenvoieValeurVariable(Variable* v,string& val) {
-
+    
     VariableGlobale* varglob;
     VariableString* vstr;
     char ch[100];
@@ -7088,7 +7085,7 @@ char RenvoieValeurVariable(Variable* v,string& val) {
 	case VCHAINEDEPENDANCE:
     case VVECTEURINT:
     case VVECTEURCHAINE:
-        return NON;
+        return NON;        
     case VGLOBALEREINIT:
     case VGLOBALE:
         //Il s'agit d'une variable globale
@@ -7102,26 +7099,26 @@ char RenvoieValeurVariable(Variable* v,string& val) {
         vstr=(VariableString*)v;
         vstr->utilisee=OUI;
         val=vstr->chaine;
-        break;
+        break;   
     }
-    return OUI;
+    return OUI;    
 }
-
+ 
 //Cette methode renvoie une variable de type vecteur
 Variable* TestFormule::RenvoieVariableVecteur(GlobalParseur* parseur,
                                               VECTA<Noeud*>& noeuds,
-                                              char& erreur,
+                                              char& erreur,                                              
                                               VECTA<ResultatFonction*>* focus,
                                               char renvoiebrute) {
 
-
+    
     Variable* variab;
     int id,ki;
     string lemme;
     TestFormuleElementLemme* vch;
     Noeud* n;
     VariableGlobale* varglob;
-    VariableLemmeIndex* vlemme;
+    VariableLemmeIndex* vlemme;    
 
     //Nous allons donc dans un premier tester les types de variable
     switch(element->type) {
@@ -7145,9 +7142,9 @@ Variable* TestFormule::RenvoieVariableVecteur(GlobalParseur* parseur,
         //Il s'agit d'une variable globale
         if (renvoiebrute==TESTERVECTEURVARIABLE)
             return NULL;
-        return element->valeur_global();
+        return element->valeur_global();        
 	case VGRAPHE:
-		return ((TestFormuleElementGraphe*)element)->vg;
+		return ((TestFormuleElementGraphe*)element)->vg; 
 	case VKIFOBJET:
 		return ((TestFormuleElementKif*)element)->vp;
 	case VVECTEURGRAPHE:
@@ -7162,7 +7159,7 @@ Variable* TestFormule::RenvoieVariableVecteur(GlobalParseur* parseur,
         n = noeuds[vch->indice];
         if (n==NULL)
             return NON;
-
+        
         //Il s'agit d'une concatenation du nom de la variable avec le lemme
         //sprintf((char*)lemme,"%s%s#",vlemme->nom,n->X->nom);
         lemme=vlemme->nom;
@@ -7180,7 +7177,7 @@ Variable* TestFormule::RenvoieVariableVecteur(GlobalParseur* parseur,
         //Il s'agit d'une variable globale
         if (renvoiebrute==TESTERVECTEURVARIABLE)
             return NULL;
-        return element->valeur_string();
+        return element->valeur_string();        
     case VVECTEURINT:
         return ((TestFormuleElementIntVector*)element)->var;
     case VDICTIONNAIRE:
@@ -7249,7 +7246,7 @@ void VariableVectorGraphe::raz() {
 
 #ifdef XIPLIBXML
 void VariableVectorGraphe::CreationXML(GlobalParseur* parseur,xmlNodePtr parent) {
-	for (int i=0;i<graphes.dernier;i++)
+	for (int i=0;i<graphes.dernier;i++) 
 		graphes[i]->sortieXml(parent);
 }
 
@@ -7293,7 +7290,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 											VECTA<ResultatFonction*>* focus,
 											sorteVariable surtype) {
 
-	TestFormuleElementGraphe* tfeg;
+	TestFormuleElementGraphe* tfeg;		
 	TestFormuleElementVectorGraphe* vtfeg;
 	TestFormuleElementVectorGraphe* rvtfeg;
 	VariableGraphe* vfeg;
@@ -7330,7 +7327,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
         id=(int)vtfeg->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
             return NON;
-		g=vtfeg->var->graphes[id];
+		g=vtfeg->var->graphes[id];		
 		if (g!=NULL) {
 			lesgraphes.ajoute(g);
 			return OUI;
@@ -7366,17 +7363,17 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
         id=(int)vtfeg->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
             return NON;
-
+		
 		parseur->retiregraphe(vtfeg->var->graphes[id]);
 		vtfeg->var->graphes.affecte(id,g);
 		lesgraphes.ajoute(g);
 		return OUI;
 	}
-
+	
 	if (element->type!=VOPERATEUR)
 		return NON;
 
-	int operateur=element->valeur_operation();
+	int operateur=element->valeur_operation();	
 	switch (operateur) {
 
 		case 0: //affectation
@@ -7398,7 +7395,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 							formules[1]->element->valeur_valstring()!="") {
 							erreur=OUI;
 							parseur->erreur_survenue=98;
-							return NON;
+							return NON;		
 						}
 						//On remet la structure a zero
 						vtfeg->var->raz();
@@ -7460,7 +7457,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 			}
 			if (formules[1]->TraitementFormuleGraphe(parseur,lesgraphes,noeuds,erreur,focus,ACTIONGRAPHEVIDE)==NON)
 				return NON;
-
+			
 			grapheXmlRacine=creeXMLGraphe();
 			//On recupere notre graphe a affecter
 			for (i=0;i<lesgraphes.dernier;i++)
@@ -7506,7 +7503,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 				rvtfeg->var->raz();
 			}
 			else {
-				if (formules.dernier==2)
+				if (formules.dernier==2) 
 					gardeprojection=NON;
 				else {
 					erreur=OUI;
@@ -7680,7 +7677,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 			//Deux parametres, un index
 			id=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
 			if (erreur==OUI)
-				return NON;
+				return NON;          
 			g=NULL;
 			if (id<vtfeg->var->graphes.dernier)
 				g=vtfeg->var->graphes.retireElement(id);
@@ -7708,7 +7705,7 @@ double TestFormule::TraitementFormuleGraphe(GlobalParseur* parseur,
 				else
 					testtype=VVECTEURGRAPHECREATION;
 			}
-
+			
 			//Deux parametres, un index
 			//Deuxieme parametre notre graphe patron, la aussi unique
 			if (formules[1]->TraitementFormuleGraphe(parseur,lesgraphes,noeuds,erreur,focus,ACTIONGRAPHEVIDE)==NON)
@@ -7737,13 +7734,13 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                                             char& erreur,
                                             string& buff,
                                             VECTA<ResultatFonction*>* focus) {
-
+    
     VariableString* vstr;
     TestFormuleElementString* vfs;
     TestFormuleElementNoeud* vnod;
     string* s;
     TestFormuleElementVectorString* vvect;
-    TestFormuleElementIntVector* ivect;
+    TestFormuleElementIntVector* ivect;    
     TestFormuleElementVectorString* vvectbis;
 	TestFormuleElementChaineDependance* depch;
 	TestFormuleElementChaineNoeud* vchn;
@@ -7778,7 +7775,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
     string reschaine="";
     automate* a;
     char construire=OUI;
-
+	
     etat* e;
     VECTA<string*> vectr;
     char egal;
@@ -7815,10 +7812,10 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             parseur->erreur_survenue=9;
             sprintf_s(parseur->ajoute_info_erreur,4096," dependency:%d",depch->indice-1);
             return NON;
-        }
+        }        
         id=depch->var->AjouteDependance(rf);
         i=depch->var->position;
-
+        
         if (rf->vardep[i]==NULL) {
             rf->vardep.affecte(i,depch->var);
             depch->var->Affecte(id,"");
@@ -7838,7 +7835,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             sprintf_s(parseur->ajoute_info_erreur,4096," node:%d",vch->indice);
             return NON;
         }
-
+        
         //Il s'agit d'une concatenation du nom de la variable avec le lemme
         //sprintf((char*)lemme,"%s%s#",vlemme->nom,n->X->nom);
         lemme=vlemme->nom;
@@ -7865,16 +7862,16 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             parseur->erreur_survenue=15;
             return NON;
         }
-
+        
         if (vstr->chaine.size()==0) {
             //valeur par defaut
             if (vstr->defaut!=NULL && vstr->utilisee==NON) {
                 vstr->defaut->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
-                vstr->AffecteValeurString((uchar*)buffbis.c_str());
+                vstr->AffecteValeurString((uchar*)buffbis.c_str());                
                 vstr->utilisee=OUI;
             }
         }
-
+        
         vfs=(TestFormuleElementString*)element;
         if (vfs->indice_chaine!=NULL) {
             id=(int)vfs->indice_chaine->TraitementFormule(parseur,noeuds,erreur,focus);
@@ -7905,10 +7902,10 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             sprintf_s(parseur->ajoute_info_erreur,4096," node:%d",vchn->indice);
             return OUI;
         }
-
+        
         id = vchn->var->AjouteNoeud(n);
         i=vchn->var->position;
-
+        
         //Dans le cas ou la variable n'a jamais ete encore utilisee
         //On lui met sa valeur par defaut
         if (n->source->variables[i]==NULL) {
@@ -7933,7 +7930,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             buff+=ch;
             return OUI;
         }
-
+        
         //On va chercher l'indice
         id=(int)ivect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
@@ -7947,11 +7944,11 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 sprintf_s(ch,256,"%g",res);
             else
                 sprintf_s(ch,256,"%d",(int)res);
-            buff+=ch;
+            buff+=ch;            
         }
         return OUI;
     case VDICTIONNAIRE:
-        vvect=(TestFormuleElementVectorString*)element;
+        vvect=(TestFormuleElementVectorString*)element;	
         //dans ce cas on recupere la taille de la chaine
         //On va chercher notre index
         vdict=(VariableDictionnaire*)vvect->var;
@@ -7961,7 +7958,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             buff+=ch;
             return OUI;
         }
-
+        
         //On va chercher l'indice dans le dictionnaire
         if (vvect->indice_vecteur->TypeString()) {
 			//On recupere la chaine correspondant au parametre
@@ -7980,7 +7977,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
 		//buffbis contient notre index (obtenu a partir d'une chaine ou d'un index)
 		//On recupere la valeur correspondant a cet index
-		buffbis=vdict->valeur(buffbis);
+		buffbis=vdict->valeur(buffbis); 
 		if (vvect->indice_chaine!=NULL) {
 			id=(int)vvect->indice_chaine->TraitementFormule(parseur,noeuds,erreur,focus);
 			if (erreur==OUI)
@@ -8007,7 +8004,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             buff+=ch;
             return OUI;
         }
-
+        
         //On va chercher l'indice
         res=vvect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
@@ -8031,9 +8028,9 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 buff+=*vvect->var->chaine[(int)res];
         }
         return OUI;
-    case VALNOEUD:
+    case VALNOEUD:    
         vnod=(TestFormuleElementNoeud*)element;
-
+        
         if (vnod->tf->Type()==TESTFONCTIONPROCEDURE ||
 			vnod->tf->Type()==TESTFONCTIONKIF ||
             vnod->tf->Type()==TESTFONCTIONPYTHON) {
@@ -8048,7 +8045,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             buff+=lemme;
         return OUI;
     }
-
+    
     if (element->type!=VOPERATEUR) {
         res=TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
@@ -8068,19 +8065,19 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
     switch (operateur) {
         //= (affectation)
     case 7: //+,*,- addition, multiplication, soustraction
-        for (i=0;i<formules.dernier;i++) {
+        for (i=0;i<formules.dernier;i++) {                
             formules[i]->TraitementFormuleString(parseur,noeuds,erreur,buff,focus);
             if (erreur==OUI)
-                return NON;
+                return NON;                
         }
-        return OUI;
+        return OUI;        
     case 24: //left of a string
     case 25: //right of a string
         //Parametre 0, c'est la chaine elle-meme
         if (formules.dernier!=2) {
             if (operateur==24) {
                 erreur=OUI;
-                parseur->erreur_survenue=0;
+                parseur->erreur_survenue=0;                
             }
             else {
                 erreur=OUI;
@@ -8091,20 +8088,20 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         //Parametre 1, c'est la longueur de la chaine
         iv=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         //buffbis contient la chaine
         if (operateur==24)//c'est la partie gauche
             buff+=s_left(buffbis,iv);
         else
             buff+=s_right(buffbis,iv);
-        break;
-    case 26: //mid of a string
+        break;            
+    case 26: //mid of a string   
         if (formules.dernier!=3) {
             erreur=OUI;
             parseur->erreur_survenue=1;
@@ -8112,16 +8109,16 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         }
         formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         //Parametre 1, c'est la longueur de la chaine
         id=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
-            return NON;
-
+            return NON;                
+        
         iv=(int)formules[2]->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         buff+=s_middle(buffbis,id,iv);
         break;
@@ -8137,14 +8134,14 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         //On va chercher notre chaine
         formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         //buffbis contient la chaine
         if (operateur==55)//c'est la partie gauche
 			buff+=EnMinuscule(buffbis);
         else
 			buff+=EnMajuscule(buffbis);
-        break;
+        break;            
     case 62://removefirst
     case 63://removelast
         if (formules.dernier!=2) {
@@ -8156,23 +8153,23 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         //On va chercher notre chaine
         formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
         //Le second argument, le nombre de caractere a retirer
         id=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
         //On retire en tete
         iv=buffbis.length();
         if (iv>0 && id<=iv) {
             if (operateur==62)
                 buff+=buffbis.c_str()+id;
-            else {
+            else {            
                 lemme=buffbis.substr(0,iv-id);
                 buff+=lemme;
             }
             return OUI;
         }
-        return NON;
+        return NON;    
     case 27: //regular expression regexp
     case 37: //regexpstart
     case 38: //regexpfull
@@ -8184,26 +8181,26 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             parseur->erreur_survenue=2;
             return -1;
         }
-
+            
         //On recupere notre chaine sur laquelle appliquer l'expression reguliere
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return -1;
+            return -1;                
 
-
+        
         if (formules[1]->element->type==VAUTOMATE)
             a=((TestFormuleElementAutomate*)formules[1]->element)->a;
         else {
             //Ou on construit l'automate a la volee
-            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);        
             if (bufftris.size()>0)
 				a=new automate((uchar*)bufftris.c_str(),(void*)1);
         }
 
         if (erreur==OUI)
-            return -1;
+            return -1;                
 
-        if (a!=NULL) {
+        if (a!=NULL) {                                    
             switch(operateur) {
             case 27:           //regexp
                 res=a->rechercheavecextraction((uchar*)buffbis.c_str(),reschaine);
@@ -8216,8 +8213,8 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 res=0;
                 break;
             case 89:
-                res=a->recherchejusqualafin((uchar*)buffbis.c_str(),reschaine); //regexpback
-                break;
+                res=a->recherchejusqualafin((uchar*)buffbis.c_str(),reschaine); //regexpback                
+                break;           
             case 38:
                 e=a->recherche((uchar*)buffbis.c_str()); //regexpfull
                 if (e==NULL) {
@@ -8230,7 +8227,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 if (construire==OUI)
                     buff+="1";
                 construire=NON;
-                break;
+                break;           
             case 79:
                 //we invert the input string
                 res=a->rechercheavecextractionparlafin((uchar*)buffbis.c_str(),reschaine);
@@ -8242,7 +8239,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             if (bufftris.size()>0)
                 delete a;
         }
-        return res;
+        return res;    
     case 28://Trimage de la chaine (on retire les caracteres blancs) trim
         if (formules.dernier!=1) {
             erreur=OUI;
@@ -8252,10 +8249,10 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         if (buffbis.size())
-            buff+=Trim(buffbis);
+            buff+=Trim(buffbis);                    
         return OUI;
     case 64://replace(x,"yy","zz"); each occurence of yy is replaced by zz in x
         res=0;
@@ -8266,21 +8263,21 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         }
 
         //Le premier parametre est notre chaine d'entree
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);                
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         //Le troisieme parametre est la chaine a remplacer
-        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,reschaine,focus);
+        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,reschaine,focus);    
         if (erreur==OUI)
-            return NON;
+            return NON;                
         res=1;
 		buff+=replacestringwithautomaton(buffbis,bufftris,reschaine);
-        return res;
+        return res;        
     case 29: //Construction avec un vecteur et une expression reguliere (3 parametres) regexpsplit
         res=-1;
         if (formules.dernier!=3) {
@@ -8299,25 +8296,25 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         varvector=(VariableVector*)variab;
 
         //Le premier parametre est notre chaine d'entree
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
         if (formules[1]->element->type==VAUTOMATE)
             a=((TestFormuleElementAutomate*)formules[1]->element)->a;
         else {
             //Ou on construit l'automate a la volee
-            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);        
             if (bufftris.size()>0)
                 a=new automate((uchar*)bufftris.c_str(),(void*)1);
         }
 
-
-
+        
+        
         if (erreur==OUI)
-            return NON;
-
-        if (a!=NULL) {
+            return NON;                
+        
+        if (a!=NULL) {           
             varvector->raz();
             vectr.raz();
             res=a->rechercheavecextractiondansvecteur((uchar*)buffbis.c_str(),vectr);
@@ -8327,7 +8324,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             if (bufftris.size()>0)
                 delete a;
         }
-        return res;
+        return res;        
     case 185: //Construction avec un vecteur autour d'un caractere (3 parametres) splitalong(chaine,caractere,vect)
         res=-1;
         if (formules.dernier!=3) {
@@ -8346,21 +8343,21 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         varvector=(VariableVector*)variab;
 
         //Le premier parametre est notre chaine d'entree
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;                
 
-		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);        
         if (erreur==OUI)
-            return NON;
-
+            return NON;                
+        
 		varvector->raz();
 		vectr.raz();
 		decoupechaine(buffbis,bufftris,vectr);
 		for (iv=0;iv<vectr.dernier;iv++)
 			varvector->AffecteValeurStringIndex(vectr[iv],iv);
 		res=vectr.dernier;
-		return res;
+		return res;        
 #ifdef XIPLIBXML
 	case 188: //xmlstring
 		if (formules.dernier!=2) {
@@ -8369,8 +8366,8 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 			return -1;
 		}
 		//premier parametre le nom de la balise
-		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
-		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
+		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);        
 		buff+=xmlEncoding(buffbis,bufftris);
 		return OUI;
 #endif
@@ -8452,7 +8449,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         vdict=(VariableDictionnaire*)variab;
 
-        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur
+        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur        
         varvectbis=NULL;
         if (formules[2]!=NULL) {
             variab=formules[2]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
@@ -8465,14 +8462,14 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         }
 
         //Le second parametre est notre chaine a rechercher
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);      
         if (erreur==OUI)
-            return NON;
-
+            return NON;         
+        
         res=-1;
         iv=-1;
         if (buffbis.size()>0) {
-
+                        
             //si l'on a un troisieme parametre, on y stocke toutes les valeurs
             if (varvectbis!=NULL)
                 iv=vdict->recherchetoutechaineindex(buffbis,varvectbis);
@@ -8482,7 +8479,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                     buff+=reschaine;
             }
         }
-        return iv;
+        return iv;    
     case 107://keys uniquement avec un dictionary
 		//recuperation de toutes les clefs d'un dictionaire
         if (formules.dernier!=2) {
@@ -8501,7 +8498,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         vdict=(VariableDictionnaire*)variab;
 
-        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur
+        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur        
         variab=formules[1]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
         if (variab==NULL || variab->sorte!=VVECTEURCHAINE)  {
             erreur=8;
@@ -8549,7 +8546,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         vdict=(VariableDictionnaire*)variab;
 
-        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur
+        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur        
         variab=formules[1]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
         if (variab==NULL || variab->sorte!=VVECTEURCHAINE)  {
             erreur=8;
@@ -8578,7 +8575,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 		//On recupere la chaine
 		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 		//le deuxieme parametre doit etre une variable vecteur
 		variab= formules[1]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
 		if (variab==NULL || variab->sorte!=VVECTEURCHAINE)  {
@@ -8589,9 +8586,9 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
 		varvector=(VariableVector*)variab;
 		varvector->raz();
-
+                
 		if (parseur->lecturemontante(buffbis,varvector->chaine)==NON)
-			return NON;
+			return NON;		
 		return varvector->chaine.dernier;
      case 158://lookdown
         if (formules.dernier!=2) {
@@ -8602,12 +8599,12 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 		//On recupere la chaine
 		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
         if (erreur==OUI)
-            return NON;
+            return NON;                
 		//On recupere les traits
 		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
         if (erreur==OUI)
-            return NON;
-
+            return NON;                
+                
 		if (parseur->lecturedescendante(buffbis,bufftris,reschaine)==NON)
 			return NON;
 		buff+=reschaine;
@@ -8692,9 +8689,9 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 		}
 
 		//On recupere ensuite la chaine a introduire dans la pile
-		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 		if (erreur==OUI)
-			return NON;
+			return NON; 
 		variab= formules[0]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,RENVOIEVARIABLE);
 		if (variab==NULL || variab->sorte!=VCHAINE)  {
 			erreur=OUI;
@@ -8715,12 +8712,12 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 		}
 
 		//On recupere ensuite la chaine a introduire dans la pile
-		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+		formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 		if (erreur==OUI)
-			return NON;
-		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);
+			return NON; 
+		formules[1]->TraitementFormuleString(parseur,noeuds,erreur,bufftris,focus);        
 		if (erreur==OUI)
-			return NON;
+			return NON; 
 		buffbis+="=";
 		buffbis+=bufftris;
 		buff+=bufftris;
@@ -8728,9 +8725,9 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 			_putenv((char*)buffbis.c_str());
 #else
 			putenv((char*)buffbis.c_str());
-#endif
+#endif 
 		break;
-    case 32: //search
+    case 32: //search 
         if (formules.dernier<2 || formules.dernier>3) {
             erreur=OUI;
             parseur->erreur_survenue=6;
@@ -8746,7 +8743,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 
         varvector=(VariableVector*)variab;
 
-        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur
+        //Si le troisieme parametre est fourni, on garde une trace dans un vecteur        
         varvectbis=NULL;
         if (formules[2]!=NULL) {
             variab=formules[2]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
@@ -8759,19 +8756,19 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         }
 
         //Le second parametre est notre chaine a rechercher
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);      
         if (erreur==OUI)
-            return NON;
-
+            return NON;                
+        
         res=-1;
         iv=-1;
         if (buffbis.size()>0) {
-
+                        
             //si l'on a un troisieme parametre, on y stocke toutes les valeurs
             if (varvectbis!=NULL) {
                 iv=varvector->recherchetous(buffbis,varvectbis);
                 if (iv==0)
-                    return -1;
+                    return -1;  
             }
             else
                 iv=varvector->recherchepremier(buffbis);
@@ -8779,7 +8776,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             if (construire==OUI)
                 buff+=buffbis;
         }
-        return iv;
+        return iv;    
     case 34://le message d'erreur
         if (formules.dernier!=1) {
             buff+="No Error message provided";
@@ -8789,7 +8786,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         if (iv==-1)
             buff+="No error detected so far";
         else
-            buff+=affichagemessageerreur[iv];
+            buff+=affichagemessageerreur[iv];        
         return iv;
     case 44://The pathname: @pathname
         if (parseur->fichier_en_cours!=NULL)
@@ -8817,11 +8814,11 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         else
 #endif
             *os<<buffbis;
-
+        
         break;
     case 84://printerr
         if (parseur->OS!=NULL)
-            os=parseur->OS;
+            os=parseur->OS;        
 		for (iv=0;iv<formules.dernier;iv++)
 			formules[iv]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
 #if defined(WIN32) && !defined(_WINDLL)
@@ -8829,7 +8826,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             *flot_erreur<<ConversionChaine(parseur,(char*)buffbis.c_str());
         else
 #endif
-            *flot_erreur<<buffbis;
+            *flot_erreur<<buffbis;        
         break;
     case 80://The grammar language @language
         if (parseur->langue_de_la_grammaire!=NULL) {
@@ -8855,24 +8852,24 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         break;
     case 92: //@date
         time(&date_et_heure);
-        temps = localtime(&date_et_heure);
+        temps = localtime(&date_et_heure); 
         buff+=asctime(temps);
         break;
     case 94: //@monthstring
         time(&date_et_heure);
-        temps = localtime(&date_et_heure);
+        temps = localtime(&date_et_heure); 
         strcpy_s(ch,256,parseur->CHAINES[338+temps->tm_mon]);
         buff+=ch;
         break;
     case 95://@daystring
         time(&date_et_heure);
-        temps = localtime(&date_et_heure);
+        temps = localtime(&date_et_heure); 
         strcpy_s(ch,256,parseur->CHAINES[350+temps->tm_wday]);
         buff+=ch;
         break;
     case 96://@hour
         time(&date_et_heure);
-        temps = localtime(&date_et_heure);
+        temps = localtime(&date_et_heure); 
         sprintf_s(ch,256,"%d:%d:%d",temps->tm_hour,temps->tm_min,temps->tm_sec);
         buff+=ch;
         break;
@@ -8883,7 +8880,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
 			parseur->erreur_survenue=106;
 			return 0;
 		}
-
+		
 		//premier parametre est une variable de chaine
 		variab= formules[0]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,RENVOIEVARIABLE);
 		if (variab==NULL || variab->sorte!=VCHAINE)  {
@@ -8966,7 +8963,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         //On recupere notre variable avec initialisation au besoin
         id=-1;
         n=NULL;
-		evalue=operateur;
+		evalue=operateur;		
         switch(formules[0]->element->type) {
         case VLEMMECHAINEINDEX:
             //c'est une variable de chaine
@@ -9006,18 +9003,18 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             break;
         case VDICTIONNAIRE:
         case VVECTEURCHAINE:
-            //On affecte notre valeur
+            //On affecte notre valeur            
             vvect=(TestFormuleElementVectorString*)formules[0]->element;
 
-
+            
             //remise-a-zero du tableau
-            if (vvect->indice_vecteur==NULL) {
+            if (vvect->indice_vecteur==NULL) {                                               
                 if (formules[1]!=NULL) {
                     vvectbis=NULL;
                     if (formules[1]->element->type==VVECTEURCHAINE)
                         vvectbis=(TestFormuleElementVectorString*)formules[1]->element;
                     if (vvectbis!=NULL) {
-                        vvect->var->raz();
+                        vvect->var->raz(); 
                         for (iv=0;iv<vvectbis->var->chaine.dernier;iv++)
                             vvect->var->AffecteValeurStringIndex(new string(*vvectbis->var->chaine[iv]),iv);
                         return OUI;
@@ -9027,22 +9024,22 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                     if (operateur==0) {
                         formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buff,focus);
                         if (buff.size()==0) {
-                            vvect->var->raz();
+                            vvect->var->raz(); 
                             return OUI;
-                        }
+                        }                    
                     }
                     else {//sinon c'est une comparaison mathematique avec la taille du vecteur
                         return TraitementFormule(parseur,noeuds,erreur,focus);
                     }
                 }
 
-                //dans ce cas, il s'agit soit
+                //dans ce cas, il s'agit soit 
                 sprintf_s(parseur->ajoute_info_erreur,4096," %s",vvect->var->nom);
                 parseur->erreur_survenue=29;
                 erreur=OUI;
                 return -1;
             }
-
+            
             //En cas d'affectation, il nous faut toutes les infos possibles
             if (operateur==0) {
                 //On va chercher l'indice
@@ -9050,7 +9047,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 if (vvect->var->sorte!=VDICTIONNAIRE) {
                     //dans le cas d'un dictionnaire nous trouvons notre indice
                     //differement. Car l'indice est une chaine
-                    res=vvect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
+                    res=vvect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);                
                     if (erreur==OUI)
                         return NON;
                     iv=(int)res;
@@ -9066,18 +9063,18 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                         operateur=21;
                     }
                     if (erreur==OUI)
-                        return NON;
+                        return NON;                    
                     vdict=(VariableDictionnaire*)vvect->var;
                 }
-
+                
                 if (vvect->indice_chaine!=NULL) {
                     id=(int)vvect->indice_chaine->TraitementFormule(parseur,noeuds,erreur,focus);
                     if (erreur==OUI)
                         return NON;
                 }
             }
-
-            //On affecte notre valeur
+            
+            //On affecte notre valeur            
             if (operateur==0)
                 operateur=10;
             break;
@@ -9098,7 +9095,7 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
         case VCHAINE:
             //En cas d'affectation, il nous faut tous les indexes
             if (operateur==0) {
-                vstr=formules[0]->element->valeur_string();
+                vstr=formules[0]->element->valeur_string();                                    
                 vfs=(TestFormuleElementString*)formules[0]->element;
                 if (vfs->indice_chaine!=NULL) {
                     id=(int)vfs->indice_chaine->TraitementFormule(parseur,noeuds,erreur,focus);
@@ -9107,34 +9104,34 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
                 }
             }
        }
-
-
+            
+            
 	   if (evalue!=NON) {
 		   formules[0]->TraitementFormuleString(parseur,noeuds,erreur,reschaine,focus);
 		   if (erreur==OUI)
 			   return NON;
 	   }
-
+        
         formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buff,focus);
         if (erreur==OUI)
             return NON;
 
-        egal=NON;
+        egal=NON;        
         switch (operateur) {
-        case 0:     //affectation
+        case 0:     //affectation   
 			if (id==-1)
 				vstr->chaine=buff;
-			else {
+			else {                
 				if (id>=vstr->chaine.size())
 					return NON;
 				else
-					c_char_index_assign(vstr->chaine, buff,id);
+					c_char_index_assign(vstr->chaine, buff,id);					
 			}
 			vstr->utilisee=OUI;
             return OUI;
         case 6: //difference
             egal=OUI;
-        case 1: //egalite
+        case 1: //egalite        
             if (buff==reschaine)
                 egal=1-egal;
             return egal;
@@ -9149,15 +9146,15 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
             }
             else {
                 if (vvect->var->chaine[(int)res]==NULL ||
-                    id>=vvect->var->chaine[(int)res]->size())
+                    id>=vvect->var->chaine[(int)res]->size())                    
                     return NON;
                 else
-                    (*vvect->var->chaine[(int)res])[id]=buff[0];
+                    (*vvect->var->chaine[(int)res])[id]=buff[0];          
             }
             return OUI;
 		case 17:
 			vlemme->utilisee=OUI;
-			majvariablelemme(vlemme,n,USTR(lemme),i,buff,0);
+			majvariablelemme(vlemme,n,USTR(lemme),i,buff,0);				
 			return OUI;
 		case 18://VCHAINEDEPENDANCE
 			depch->var->Affecte(id,buff);
@@ -9184,14 +9181,14 @@ double TestFormule::TraitementFormuleString(GlobalParseur* parseur,
        buff+=ch;
        return OUI;
     }
-
+    
     return OUI;
 }
 
 
 double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeuds,
                                       char& erreur,VECTA<ResultatFonction*>* focus) {
-
+    
     //"=",":","<",">","<=",">=","+","*","/","-","^","mod","log","ln","exp","sqrt";
     string lemme;
     double res=0,resinter=0;
@@ -9205,7 +9202,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
     Traits* trbase;
     Traits* copie=NULL;
     Vecteur* vecteur=NULL;
-    Traits* tr;
+    Traits* tr;    
 	ResultatFonction* rf1;
 	ResultatFonction* rf2;
 
@@ -9214,7 +9211,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
     VariableVector* varvector;
     VariableIntVector* varintvector;
     VariableIntVector* varintvectorbis;
-
+    
     Variable* variab;
 
 #ifdef XIPLIBXML
@@ -9222,14 +9219,14 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 	VariableXML* vxmlbis;
 #endif
 
-	TestFormuleElementChaineDependance* depch;
+	TestFormuleElementChaineDependance* depch;    
     TestFormuleElementVariable* v;
     TestFormuleElementLemme* vch;
     TestFormuleElementDependance* dep;
     TestFormuleElementNoeud* vnod;
     TestFormuleElementIntVector* ivect;
-    ResultatFonction* rf=NULL;
-    string buffbis="";
+    ResultatFonction* rf=NULL;    
+    string buffbis="";    
     static time_t tempsinitial,tempsfinal;
     fichiersscript* fscript;
     static time_t date_et_heure;
@@ -9249,7 +9246,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         //dans ce cas on recupere la taille de la chaine
         if (vtfeg->indice_vecteur==NULL)
 			return vtfeg->var->graphes.dernier;
-		return 0;
+		return 0;		
     case VALREEL:
         //on renvoie un nombre:
         return element->valeur_reel();
@@ -9257,9 +9254,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         vnod=(TestFormuleElementNoeud*)element;
         if (vnod->tf->Type()==TESTFONCTIONPROCEDURE ||
 			vnod->tf->Type()==TESTFONCTIONKIF ||
-            vnod->tf->Type()==TESTFONCTIONPYTHON)
+            vnod->tf->Type()==TESTFONCTIONPYTHON) 
             return vnod->tf->TraitementFormule(parseur,noeuds,erreur,focus);
-
+        
 
         lemme="";
         if (parseur->RecuperationTraitValeur(vnod->tf,lemme,noeuds,focus)==OUI)
@@ -9276,10 +9273,10 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             sprintf_s(parseur->ajoute_info_erreur,4096," node:%d",v->indice);
             return NON;
         }
-
+        
         ind = v->var->AjouteNoeud(n);
         i=v->var->position;
-
+        
         //Dans le cas ou la variable n'a jamais ete encore utilisee
         //On lui met sa valeur par defaut
         if (n->source->variables[i]==NULL) {
@@ -9303,7 +9300,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             sprintf_s(parseur->ajoute_info_erreur,4096," node:%d",vch->indice);
             return NON;
         }
-
+        
         //Il s'agit d'une concatenation du nom de la variable avec le lemme
         //sprintf((char*)lemme,"%s%s#",vlemme->nom,n->X->nom);
         lemme=vlemme->nom;
@@ -9324,7 +9321,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         return varglob->valeur;
-
+        
     case VDEPENDANCE:
         dep=element->valeur_dependance();
         rf=focus->cell(dep->indice);
@@ -9333,10 +9330,10 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=9;
             sprintf_s(parseur->ajoute_info_erreur,4096," dependency:%d",dep->indice-1);
             return NON;
-        }
+        }        
         ind=dep->var->AjouteDependance(rf);
         i=dep->var->position;
-
+        
         if (rf->vardep[i]==NULL) {
             if (dep->var->defaut!=NULL)
                 res=dep->var->defaut->TraitementFormule(parseur,noeuds,erreur,focus);
@@ -9344,7 +9341,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return NON;
             rf->vardep.affecte(i,dep->var);
             dep->var->valeurs.affecte(ind,res);
-        }
+        }        
         dep->var->utilisee=OUI;
         return dep->var->valeurs[ind];
     case VGLOBALEREINIT:
@@ -9352,7 +9349,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         varglob=element->valeur_global();
         //On instancie les variables...
         if (varglob->utilisee==NON) {
-            if (varglob->defaut!=NULL)
+            if (varglob->defaut!=NULL) 
                 res=varglob->defaut->TraitementFormule(parseur,noeuds,erreur,focus);
             if (erreur==OUI)
                 return NON;
@@ -9364,8 +9361,8 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         ivect=(TestFormuleElementIntVector*)element;
         //dans ce cas on recupere la taille de la chaine
         if (ivect->indice_vecteur==NULL)
-            return ivect->var->valeurs.dernier;
-
+            return ivect->var->valeurs.dernier;            
+        
         //On va chercher l'indice
         id=(int)ivect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
@@ -9382,17 +9379,17 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
     case VVECTEURCHAINE:
 		TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
 		res=atof(buffbis.c_str());
-        return res;
+        return res;       
 	case VPYTHONOBJET:
 		return 1;
     }
-
+    
     if (element->type!=VOPERATEUR) {
         erreur=OUI;
         parseur->erreur_survenue=10;
         return NON;
     }
-
+    
     //Sinon c'est un  operateur
     int operateur=element->valeur_operation();
     switch (operateur) {
@@ -9422,7 +9419,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return NON;
             }
             ind=v->var->AjouteNoeud(n);
-            //resinter=v->var->valeurs[ind];
+            //resinter=v->var->valeurs[ind];                   
             resinter=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
             break;
         case VDEPENDANCE:
@@ -9436,7 +9433,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             }
             ind=dep->var->AjouteDependance(rf);
             resinter=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
-            //resinter=dep->var->valeurs[ind];
+            //resinter=dep->var->valeurs[ind];       
             break;
         case VCHAINEDEPENDANCE:
             depch=formules[0]->element->valeur_dependance_chaine();
@@ -9449,7 +9446,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             }
             ind=depch->var->AjouteDependance(rf);
             resinter=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
-            //resinter=dep->var->valeurs[ind];
+            //resinter=dep->var->valeurs[ind];       
             break;
 #ifdef XIPLIBXML
 		case VXMLOBJET:
@@ -9519,8 +9516,8 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             id=-1;
             //dans ce cas on recupere la taille de la chaine
             if (ivect->indice_vecteur==NULL)
-                resinter=ivect->var->valeurs.dernier;
-            else {
+                resinter=ivect->var->valeurs.dernier;            
+            else {                
                 //On va chercher l'indice
                 id=(int)ivect->indice_vecteur->TraitementFormule(parseur,noeuds,erreur,focus);
                 if (erreur==OUI)
@@ -9545,14 +9542,14 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 
         if (erreur==OUI)
             return NON;
-
+        
         //on execute alors la formule associee
         //resinter contient la valeur initiale de notre variable
         res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
         if (erreur==OUI)
             return NON;
         switch(operateur) {
-        case 0: {// affectation
+        case 0: {// affectation 
             switch(formules[0]->element->type) {
             case VNOEUD:
                 //Nous rangeons la valeur au bon endroit, soit n->source->position
@@ -9570,7 +9567,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 //dans le cas de la creation d'une nouvelle variable, le
                 //lemme a deja ete identifiee
                 vlemme->utilisee=OUI;
-				majvariablelemme(vlemme,n,USTR(lemme),pos,"",res);
+				majvariablelemme(vlemme,n,USTR(lemme),pos,"",res);				
                 break;
             case VVECTEURINT:
                 if (id==-1)
@@ -9578,7 +9575,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                     ivect->var->raz();
                 else
                     ivect->var->Affecte(id,res);
-                break;
+                break;                
             default:
                 if (varglob!=NULL) {
                     varglob->utilisee=OUI;
@@ -9591,32 +9588,32 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             if (resinter == res)
                 return OUI;
             else
-                return NON;
+                return NON;        
         case 2: //< inferieur
             if (resinter < res)
                 return OUI;
             else
-                return NON;
+                return NON;        
         case 3: //> superieur
             if (resinter > res)
                 return OUI;
             else
-                return NON;
+                return NON;       
         case 4://<= inferieur ou egal
             if (resinter <= res)
                 return OUI;
             else
-                return NON;
+                return NON;                    
         case 5://>= superieur ou egal
             if (resinter >= res)
                 return OUI;
             else
-                return NON;
+                return NON;        
         case 6: // <> different
             if (resinter != res)
                 return OUI;
             else
-                return NON;
+                return NON;        
         }
         case 7: //+,*,- addition, multiplication, soustraction
         case 8:
@@ -9637,7 +9634,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                     break;
                 case 9: //-
                     res-=resinter;
-                }
+                }            
             }
             return res;
         case 10:
@@ -9646,17 +9643,17 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             res = formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
             if (erreur==OUI)
                 return NON;
-
+            
             if (formules[1]==NULL) {
                 erreur=OUI;
                 parseur->erreur_survenue=11;
                 return NON;
             }
-
+            
             resinter = formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
-            if (erreur==OUI)
-                return NON;
-
+            if (erreur==OUI)                
+                return NON;            
+            
             switch (operateur) {
             case 10: // / division
                 if (resinter==0) {
@@ -9675,8 +9672,8 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 res = (double)((int)res % (int)resinter);
                 break;
             case 12: // ^ puissance
-                res = pow(res,resinter);
-            }
+                res = pow(res,resinter);            
+            }            
             return res;
                  }
         case 13: //log
@@ -9724,13 +9721,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         case 22://@e
             return M_E;
         case 23: //length of a string
-            formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+            formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);            
             if (erreur==OUI)
                 return -1;
             return size_c(buffbis);
         case 24: //left of a string
         case 25: //right of a string
-        case 26: //mid of a string
+        case 26: //mid of a string        
         case 55: //lowercase
         case 56: //uppercase
         case 28: //trim
@@ -9742,7 +9739,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             if (erreur==OUI)
                 return NON;
             return atof(buffbis.c_str());
-        case 27: //regexp
+        case 27: //regexp        
         case 29: //regexpsplit
         case 32: //search
         case 37: //regexpstart
@@ -9750,7 +9747,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         case 79: //regexplast
         case 88: //backsearch
         case 89: //regexpback
-            erreur=2;
+            erreur=2;            
             res=TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
             if (erreur==OUI)
                 return -1;
@@ -9770,9 +9767,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		  }
 
 		  //Le parametre est notre label de saut
-		  formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+		  formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 		  if (erreur==OUI)
-			  return NON;
+			  return NON;                            
 		  if (operateur==124)
 			  return parseur->desactiveEspaceRegle(STR(buffbis));
 		  if (operateur==125)
@@ -9802,12 +9799,12 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 			if (operateur==126)
 				//On range alors tous les lemmes dans vvect
 				recuperechainerulespace(parseur->spacename,varvector,ind,NON);
-			else
+			else 
 				if (operateur==127)
 					recuperechainerulespace(parseur->spacename,varvector,ind,2);
 				else
 					recuperechainerulespace(parseur->spacename,varvector,ind,OUI);
-            return ind;
+            return ind;  
 		case 140://apply
 			//On desactive l'ensemble des regles, a partir de la racine
 			if (parseur->spacename==NULL)
@@ -9817,9 +9814,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 			//Puis on active pas a pas
 			for (ind=0;ind<formules.dernier;ind++) {
 				buffbis="";
-				formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+				formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 				if (erreur==OUI)
-					return NON;
+					return NON; 
 				parseur->reactiveEspaceRegle(STR(buffbis),NON);
 			}
 			return ind;
@@ -9827,7 +9824,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return parseur->derniere_erreur_survenue;
 		case 187://Retourne 1, si on est en utf8
 			return parseur->TestOptions(ENTREE_UTF8);
-        case 35://insert
+        case 35://insert        
             res=-1;
             if (formules.dernier!=3) {
                 erreur=OUI;
@@ -9842,18 +9839,18 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=17;
                 return -1;
             }
-
+            
             varvector=(VariableVector*)variab;
 
             //Le second parametre est notre chaine d'entree
-            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
             if (erreur==OUI)
-                return NON;
-
+                return NON;                
+            
             //Le troisieme parametre est l'index
-            ind=(int)formules[2]->TraitementFormule(parseur,noeuds,erreur,focus);
+            ind=(int)formules[2]->TraitementFormule(parseur,noeuds,erreur,focus);    
             if (erreur==OUI)
-                return NON;
+                return NON;                      
             varvector->inserechaine(buffbis,ind);
             return OUI;
         case 42: //addstringunique
@@ -9872,13 +9869,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=21;
                 return -1;
             }
-
+            
             varvector=(VariableVector*)variab;
             //Le second parametre est notre chaine d'entree
-            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+            formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
             if (erreur==OUI)
                 return NON;
-
+            
             if (operateur==42) {//addstringunique
                 //si la chaine existe deja, on renvoie sa position, mais on ne l'ajoute pas
                 ind=varvector->recherchepremier(buffbis);
@@ -9886,9 +9883,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                     return ind;
             }
 
-            ind=varvector->chaine.dernier;
+            ind=varvector->chaine.dernier;            
             varvector->AffecteValeurStringIndex(new string(buffbis),ind);
-            return ind;
+            return ind;  
         case 31://insertvalue
             res=-1;
             if (formules.dernier!=3) {
@@ -9904,21 +9901,21 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=21;
                 return -1;
             }
-
+            
             varintvector=(VariableIntVector*)variab;
 
-
+            
             //Le second parametre est notre valeur d'entree
-            res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+            res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);        
             if (erreur==OUI)
                 return NON;
-
+            
             //Le troisieme parametre est notre index
-            ind=formules[2]->TraitementFormule(parseur,noeuds,erreur,focus);
+            ind=formules[2]->TraitementFormule(parseur,noeuds,erreur,focus);        
             if (erreur==OUI)
                 return NON;
             varintvector->valeurs.insertion(ind,res);
-            return ind;
+            return ind;                  
         case 57://addvalue
         case 58://addvalueunique
             res=-1;
@@ -9935,15 +9932,15 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=21;
                 return -1;
             }
-
+            
             varintvector=(VariableIntVector*)variab;
 
-
+            
             //Le second parametre est notre valeur d'entree
-            res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+            res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);        
             if (erreur==OUI)
                 return NON;
-
+            
             if (operateur==58) {//addvalueunique
                 //si la valeur existe deja, on renvoie sa position, mais on ne l'ajoute pas
                 ind=varintvector->recherchepremier(res);
@@ -9951,9 +9948,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                     return ind;
             }
 
-            ind=varintvector->valeurs.dernier;
+            ind=varintvector->valeurs.dernier;                        
             varintvector->Affecte(ind,res);
-            return ind;
+            return ind;                  
         case 39://removestring
             if (formules.dernier!=2) {
                 erreur=OUI;
@@ -9968,13 +9965,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=20;
                 return -1;
             }
-
+            
             varvector=(VariableVector*)variab;
 
             //Le deuxieme parametre est l'index de l'element a retirer
-            ind=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+            ind=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);    
             if (erreur==OUI)
-                return NON;
+                return NON;                                  
             return varvector->retirechaine(ind);
         case 59://removevalue
             if (formules.dernier!=2) {
@@ -9990,13 +9987,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=20;
                 return -1;
             }
-
+            
             varintvector=(VariableIntVector*)variab;
 
             //Le deuxieme parametre est l'index de l'element a retirer
-            ind=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+            ind=(int)formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);    
             if (erreur==OUI)
-                return NON;
+                return NON;                                  
             return varintvector->retirevaleur(ind);
         case 40://goto
             if (formules.dernier!=1) {
@@ -10004,11 +10001,11 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=22;
                 return NON;
             }
-
+            
             //Le parametre est notre label de saut
-            formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+            formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
             if (erreur==OUI)
-                return NON;
+                return NON;                            
             //alors dans stack nous avons stocke le label vers lequel sauter
 			l = parseur->rechercheLabel((char*)buffbis.c_str());
             //ce label ne correspond a rien, on le saute
@@ -10022,10 +10019,10 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             //commencer a reappliquer nos regles
             parseur->demarre_regle=l->indexregle;
             parseur->demarre_couche=l->couche;
-            parseur->aller_label=l;
+            parseur->aller_label=l;            
             return OUI;
         case 41://exit
-            l=parseur->label_terminal;
+            l=parseur->label_terminal;    
             //Sinon, on remet a jour la couche et le numero de regle a partir de laquelle on peut
             //commencer a reappliquer nos regles
             parseur->demarre_regle=l->indexregle;
@@ -10033,7 +10030,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->aller_label=l;
             return OUI;
         case 70://stop
-            l=parseur->label_stop;
+            l=parseur->label_stop;    
             //Sinon, on remet a jour la couche et le numero de regle a partir de laquelle on peut
             //commencer a reappliquer nos regles
             parseur->demarre_regle=l->indexregle;
@@ -10046,20 +10043,20 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=22;
                 return NON;
             }
-
+            
             //Le parametre est notre label de saut
-            res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
+            res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);        
             if (erreur==OUI)
-                return NON;
-
+                return NON;                            
+            
             l=parseur->label_retour;
             //Sinon, on remet a jour la couche et le numero de regle a partir de laquelle on peut
             //commencer a reappliquer nos regles
             parseur->valeur_retour=res;
             parseur->aller_label=l;
             return res;
-        case 45://offset(noeud,gauche,droit)
-		case 122://tokennumber(noeud,gauche,droit)
+        case 45://offset(noeud,gauche,droit)            
+		case 122://tokennumber(noeud,gauche,droit)            
 		case 123://offsetchar(noeud,gauche,droit)
             if (formules.dernier!=3) {
                 erreur=OUI;
@@ -10098,10 +10095,10 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 erreur=OUI;
                 parseur->erreur_survenue=25;
                 return -1;
-            }
+            }                
             return n->num_noeud;
         case 47: //@sentencenumber
-            return parseur->num_phrase;
+            return parseur->num_phrase;           
         case 49: //node(#1,num)
             //this method assigns a node according to its number
             if (formules.dernier!=2) {
@@ -10124,7 +10121,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 erreur=OUI;
                 parseur->erreur_survenue=31;
                 return 0;
-            }
+            }            
             n=NULL;
             if (parseur->NoeudsTemporaires[ind]!=NULL)
                 n=&parseur->NoeudsTemporaires[ind]->N;
@@ -10141,7 +10138,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                     parseur->erreur_survenue=33;
                     return 0;
                 }
-
+                
             return 1;
     case 60: //searchvalue
         if (formules.dernier<2 || formules.dernier>3) {
@@ -10157,7 +10154,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=7;
             return -1;
         }
-
+        
         varintvector=(VariableIntVector*)variab;
 
         //Si le troisieme parametre est fourni, on garde une trace dans un vecteur
@@ -10169,24 +10166,24 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=23;
                 return -1;
             }
-
+            
             varintvectorbis=(VariableIntVector*)variab;
         }
 
         //Le second parametre est notre valeur a rechercher
-        res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+        res=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);      
         if (erreur==OUI)
-            return NON;
-
+            return NON;                
+        
         //si l'on a un troisieme parametre, on y stocke toutes les valeurs
         if (varintvectorbis!=NULL) {
             id=varintvector->recherchetous(res,varintvectorbis);
             if (id==0)
-                return -1;
+                return -1;  
         }
         else
             id=varintvector->recherchepremier(res);
-        return id;
+        return id;    
     case 50://next
     case 51://previous
     case 52://mother
@@ -10199,7 +10196,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         //On recupere notre argument
-        id=formules[0]->element->argument(parseur,noeuds);
+        id=formules[0]->element->argument(parseur,noeuds);            
         if (id==-1) {
             erreur=OUI;
             parseur->erreur_survenue=35;
@@ -10247,7 +10244,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         //echec dans la recherche du noeud
         if (n==NULL)
             return 0;
-
+		
         if (n2!=NULL) {
             if (n2==n) {
                 //On teste alors les traits
@@ -10265,7 +10262,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 			noeuds.affecte(ind,NULL);
 			return 0;
 		}
-        return 1;
+        return 1;                
     case 152://nodedescendant($#1,$#2)
     case 153://nodenext($#1,$#2)
     case 154://nodeprevious($#1,$#2)
@@ -10307,7 +10304,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		}
 		else
 			return 0;
-
+		
 		if (formules[1]->element->type!=VALNOEUD) {
 			erreur=OUI;
 			parseur->erreur_survenue=150;
@@ -10339,7 +10336,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		case 153://next
 			rf2=suivantde(rf1,rf2,1);
 			if (rf2==NULL)
-				return NON;
+				return NON;			
 			break;
 		case 154://previous
 			rf2=suivantde(rf1,rf2,-1);
@@ -10418,13 +10415,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		}
 
 		return 0;
-     case 61: //pause
+     case 61: //pause         
          time(&tempsinitial);
          res=10;
          if (formules.dernier==1)
              //Le second parametre est notre valeur a rechercher
-             res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
-         time(&tempsfinal);
+             res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);      
+         time(&tempsfinal);         
          car=8;
          while (difftime(tempsfinal,tempsinitial)<res) {
              cout<<"/"<<car<<"/"<<car<<"/"<<car;
@@ -10432,7 +10429,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
              cout<<"\\"<<car<<"\\"<<car<<"\\"<<car;
              time(&tempsfinal);
          }
-
+         
          return OUI;
      case 66: //cleanlemmas cette instruction detruit les lemmes associes a une variable
         if (formules.dernier!=1) {
@@ -10440,7 +10437,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=44;
             return 0;
         }
-
+        
         if (formules[0]->element->type!=VLEMMEINDEX) {
             erreur=OUI;
             parseur->erreur_survenue=44;
@@ -10481,7 +10478,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return -1;
         }
         varvector=(VariableVector*)variab;
-
+        
 
         //Le troisieme parametre doit etre une variable vecteur de int
         variab= formules[2]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
@@ -10489,9 +10486,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             erreur=OUI;
             parseur->erreur_survenue=48;
             return -1;
-        }
+        }        
         varintvector=(VariableIntVector*)variab;
-
+        
         varvector->raz();
         varintvector->raz();
         id=strlen(vch->var->nom);
@@ -10515,20 +10512,20 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         }
         vch = (TestFormuleElementLemme*)formules[0]->element;
         //On recupere le lemme
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         varglob =vch->var->recherche((uchar*)buffbis.c_str(),0);
         if (varglob==NULL)
             return 0;
-        return varglob->valeur;
+        return varglob->valeur;	 
      case 65://copyfeature, cette instruction permet d'ecrire des traits d'une structure sur une autre
         if (formules.dernier!=2) {
             erreur=OUI;
             parseur->erreur_survenue=41;
             return 0;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=42;
@@ -10568,7 +10565,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return NON;
             }
             //On recupere notre fonction
-            rf=(*focus)[ind];
+            rf=(*focus)[ind];            
             trbase=rf->traits;
         }
         vnod=(TestFormuleElementNoeud*)formules[1]->element;
@@ -10597,7 +10594,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 copie->libre->raz();
 
             tr=((TestFonctionNoeud*)tf)->traits[0];
-            if (tr->present!=NULL)
+            if (tr->present!=NULL)      
                 copie->libre->ou(tr->present);
             else
                 copie->libre->ou(tr->lpresent);
@@ -10611,7 +10608,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return NON;
             }
             //On recupere notre fonction
-            rf=(*focus)[ind];
+            rf=(*focus)[ind];      
             copie->valeur->ou(rf->traits->valeur);
             copie->filtre->ou(rf->traits->filtre);
             if (copie->libre==NULL)
@@ -10619,8 +10616,8 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             else
                 copie->libre->raz();
 
-            tr=tf->LesTraits();
-            if (tr->present!=NULL)
+            tr=tf->LesTraits();            
+            if (tr->present!=NULL)      
                 copie->libre->ou(tr->present);
             else
                 copie->libre->ou(tr->lpresent);
@@ -10628,7 +10625,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         //sinon, on recopie nos traits dans trbase
         if (trbase->libre!=NULL) {
 			vecteur=new Vecteur(trbase->libre);
-            car=parseur->PTT(*trbase,copie);
+            car=parseur->PTT(*trbase,copie);        
             trbase->libre->recopie(vecteur);
 			delete vecteur;
         }
@@ -10637,7 +10634,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             if (trbase->libre!=NULL) {
                 delete trbase->libre;
                 trbase->libre=NULL;
-            }
+            }            
         }
 		delete copie;
         return car;
@@ -10647,7 +10644,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=137;
             return 0;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=138;
@@ -10670,7 +10667,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 erreur=OUI;
                 parseur->erreur_survenue=138;
                 return 0;
-            }
+            }            
         }
         else {
 			erreur=OUI;
@@ -10681,9 +10678,9 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		if (formules.dernier==2) {
 			//On recupere la chaine des traits
 			//On recupere ensuite la chaine a introduire dans la pile
-			formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+			formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 			if (erreur==OUI)
-				return NON;
+				return NON; 
 		}
 		return parseur->initgenere(n->source,buffbis);
       case 71://fopen 2 parametre: 1) alias 2) nom de fichier
@@ -10693,19 +10690,19 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         //On recupere d'abord l'alias
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         lemme=buffbis;
         //Puis le nom du fichier
         buffbis="";
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         //On verifie s'il n'y pas cet alias deja en memoire
         for (i=0;i<parseur->lesfichiersscripts.dernier;i++) {
             if (lemme==parseur->lesfichiersscripts[i]->alias)
-                return OUI;
+                return OUI;            
         }
         fscript=new fichiersscript(STR(lemme),STR(buffbis));
         i=fscript->ouvrir();
@@ -10725,12 +10722,12 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         //On recupere d'abord l'alias
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON; 
         //On verifie s'il n'y pas cet alias deja en memoire
         for (i=0;i<parseur->lesfichiersscripts.dernier;i++) {
-            if (buffbis==parseur->lesfichiersscripts[i]->alias)
+            if (buffbis==parseur->lesfichiersscripts[i]->alias) 
                 break;
         }
         if (i==parseur->lesfichiersscripts.dernier) {
@@ -10739,7 +10736,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         delete parseur->lesfichiersscripts.retireElement(i);
-        return OUI;
+        return OUI;        
       case 73://fwrite 2 parametre: 1) alias 2) chaine a ecrire
         if (formules.dernier!=2) {
             erreur=OUI;
@@ -10748,13 +10745,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
         }
 
         //On recupere d'abord l'alias
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         lemme=buffbis;
         //Puis le nom du fichier
         buffbis="";
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
             return NON;
         //On verifie s'il n'y pas cet alias deja en memoire
@@ -10778,20 +10775,20 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
           return OUI;
       case 76://elapsedtime
           res = difftime( finaltime,initialtime);
-          return res;
+          return res;      
       case 110:
           time(&intermediate);
           res = difftime(intermediate,initialtime);
-          return res;
+          return res;      
     case 91://L'aide en ligne
         if (formules.dernier!=1) {
             erreur=OUI;
             parseur->erreur_survenue=63;
             return 0;
         }
-        res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);
+        res=formules[0]->TraitementFormule(parseur,noeuds,erreur,focus);      
         if (erreur==OUI)
-            return NON;
+            return NON;                
         AfficheAide((int)res);
         break;
       case 85://ascii
@@ -10801,23 +10798,23 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             return 0;
         }
         //On recupere d'abord l'alias
-        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON; 
         car=buffbis[0];
         res=(uchar)car;
         return res;
       case 93: //@year
         time(&date_et_heure);
-        temps = localtime(&date_et_heure);
+        temps = localtime(&date_et_heure); 
         return temps->tm_year+1900;
       case 97://@day
           time(&date_et_heure);
-          temps = localtime(&date_et_heure);
+          temps = localtime(&date_et_heure); 
           return temps->tm_mday;
       case 98://@month
           time(&date_et_heure);
-          temps = localtime(&date_et_heure);
+          temps = localtime(&date_et_heure); 
           return temps->tm_mon+1;
       case 99://dependencynumber
           if (formules.dernier!=1) {
@@ -10825,13 +10822,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
               parseur->erreur_survenue=66;
               return 0;
           }
-
+          
           if (formules[0]->element->type!=VALNOEUD) {
               erreur=OUI;
               parseur->erreur_survenue=65;
               return 0;
           }
-
+          
           tf=((TestFormuleElementNoeud*)formules[0]->element)->tf;
           if (tf->Type()!=TESTFONCTIONDEPENDANCE) {
               erreur=OUI;
@@ -10857,7 +10854,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
               parseur->erreur_survenue=67;
               return 0;
           }
-
+          
           tf=((TestFormuleElementNoeud*)formules[0]->element)->tf;
           if (tf->Type()!=TESTFONCTIONDEPENDANCE) {
               erreur=OUI;
@@ -10865,10 +10862,10 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
               return 0;
           }
           //Il nous faut ensuite recuperer l'index de la dependance
-          ind=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);
+          ind=formules[1]->TraitementFormule(parseur,noeuds,erreur,focus);      
           rf=(*parseur->INTERFONCTIONS[0])[ind];
           if (erreur==OUI)
-              return NON;
+              return NON;                
           if (rf!=NULL && focus!=NULL) {
               focus->affecte(tf->IndexDependance(),rf);
               return 1;
@@ -10882,22 +10879,22 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=71;
             return 0;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=72;
             return 0;
         }
         //On recupere d'abord l'alias
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         lemme=buffbis;
         //Puis le nom du fichier
         buffbis="";
-        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
 
         vnod=(TestFormuleElementNoeud*)formules[0]->element;
         tf=vnod->tf;
@@ -10931,7 +10928,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return NON;
             }
             //On recupere notre fonction
-            rf=(*focus)[ind];
+            rf=(*focus)[ind];            
             if (parseur->XipFeatureTraits(rf->traits,STR(lemme),STR(buffbis))==NON) {
               erreur=OUI;
               parseur->erreur_survenue=73;
@@ -10945,7 +10942,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=139;
             return -1;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=139;
@@ -10964,7 +10961,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return -1;
             }
             //On recupere notre fonction
-            rf=(*focus)[ind];
+            rf=(*focus)[ind];            
 			parseur->graphegeneration.profondeur(0,0);
 			return rf->profondeur;
         }
@@ -10972,14 +10969,14 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		parseur->erreur_survenue=139;
 		return -1;
 	 case 157://lookup pour renvoyer la taille du tableau
-		 return TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+		 return TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
      case 151://rank, cette instruction retourne le numero d'ordre d'un NODE
         if (formules.dernier!=1) {
             erreur=OUI;
             parseur->erreur_survenue=140;
             return -1;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=140;
@@ -10998,7 +10995,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 return -1;
             }
             //On recupere notre fonction
-            rf=(*focus)[ind];
+            rf=(*focus)[ind];      
 			parseur->graphegeneration.profondeur(0,0);
 			return rf->numero_ordre;
         }
@@ -11011,22 +11008,22 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
             parseur->erreur_survenue=131;
             return 0;
         }
-
+                
         if (formules[0]->element->type!=VALNOEUD) {
             erreur=OUI;
             parseur->erreur_survenue=132;
             return 0;
         }
         //On recupere d'abord l'alias
-        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
         lemme=buffbis;
         //Puis le nom du fichier
         buffbis="";
-        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+        formules[2]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
         if (erreur==OUI)
-            return NON;
+            return NON;       
 
         vnod=(TestFormuleElementNoeud*)formules[0]->element;
         tf=vnod->tf;
@@ -11044,7 +11041,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
                 parseur->erreur_survenue=134;
                 return 0;
             }
-
+			
             if (parseur->XipFeatureSubTraits(n,STR(lemme),STR(buffbis))==NON) {
               erreur=OUI;
               parseur->erreur_survenue=133;
@@ -11063,24 +11060,24 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
              parseur->erreur_survenue=74;
              return 0;
          }
-
+         
          if (formules[0]->element->type!=VALNOEUD) {
              erreur=OUI;
              parseur->erreur_survenue=65;
              return 0;
          }
-
+         
          tf=((TestFormuleElementNoeud*)formules[0]->element)->tf;
          if (tf->Type()!=TESTFONCTIONDEPENDANCE) {
              erreur=OUI;
              parseur->erreur_survenue=65;
              return 0;
          }
-
+         
          //On recupere ensuite la chaine a introduire dans la pile
-         formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+         formules[1]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
          if (erreur==OUI)
-             return NON;
+             return NON; 
          //Sinon, il s'agit d'une dependance
          res=0;
          ind=tf->IndexDependance();
@@ -11096,13 +11093,13 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
               parseur->erreur_survenue=76;
               return 0;
           }
-
+          
           if (formules[0]->element->type!=VALNOEUD) {
               erreur=OUI;
               parseur->erreur_survenue=65;
               return 0;
           }
-
+          
           tf=((TestFormuleElementNoeud*)formules[0]->element)->tf;
           if (tf->Type()!=TESTFONCTIONDEPENDANCE) {
               erreur=OUI;
@@ -11145,7 +11142,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		 }
 
 		  //Premier parametre, une chaine de caractere correspondant a la dependance.
-         formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+         formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 		 ind++;
          if (erreur==OUI)
              return NON;
@@ -11158,7 +11155,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		 trbase=NULL;
 		 if (formules[ind]->element->type!=VALNOEUD) {
 			 buffbis="";
-	         formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+	         formules[ind]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 			 ind++;
 			 trbase=parseur->TraduitChaineTraits(buffbis);
 			 if (trbase==NULL) {
@@ -11285,7 +11282,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 			  parseur->erreur_survenue=90;
 			  return 0;
 		  }
-		  formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+		  formules[0]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 		  variab= formules[1]->RenvoieVariableVecteur(parseur,noeuds,erreur,focus,TESTERVECTEURVARIABLE);
 		  if (variab==NULL || variab->sorte!=VXMLOBJET)  {
 			  erreur=OUI;
@@ -11350,7 +11347,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 		  //Nous enregistrons l'ensemble des ER que nous devrons evaluer
 		  for (id=0;id<formules.dernier;id++) {
 			  buffbis="";
-			  formules[id]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);
+			  formules[id]->TraitementFormuleString(parseur,noeuds,erreur,buffbis,focus);        
 			  expressions.ajoute(new automate((uchar*)buffbis.c_str(),(void*)1));
 		  }
 		  //Puis nous recherchons dans nos structures de graphe, celles qui correspondent
@@ -11398,7 +11395,7 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 			  if (pos>=parseur->listedetokens[id]->dernier)
 				  return 0;
 			  //Sinon, on met a jour la structure de mot dans notre element
-			  varvector->AffecteValeurStringIndex(new string(parseur->listedetokens[id]->vecteur[pos]->mot),id);
+			  varvector->AffecteValeurStringIndex(new string(parseur->listedetokens[id]->vecteur[pos]->mot),id);			  
 		  }
 
 		  return 1;
@@ -11544,22 +11541,22 @@ double TestFormule::TraitementFormule(GlobalParseur* parseur,VECTA<Noeud*>& noeu
 //Remise-a-zero des variables globales
 void TestFonctionDependance::raz(GlobalParseur* parseur) {
     VectTFInstruction* proced = parseur->ListeDesProcedures[parseur->IndexProcedures[Fx->index]];
-    if (proced==NULL)
+    if (proced==NULL)       
         return;
-
+    
     //Tout d'abord on verifie que la dependance comprend le meme nombre d'argument, sinon
     //c'est dans tous les cas une erreur
     Dependance* depproc=proced->dependances[0];
     NomProcedure* nomproc=NULL;
     if (depproc->Type()==NON)
         return;
-
+    
     nomproc=(NomProcedure*)depproc;
 
     //Tout d'abord on s'occupe des parametres mathematiques de la fonction
     for (int iar=0;nomproc!=NULL && iar<nomproc->parametres.dernier;iar++) {
         //Si c'est une variable globale
-        if (nomproc->parametres[iar]->reinit==NON &&
+        if (nomproc->parametres[iar]->reinit==NON && 
             formules[iar]==NULL) {
             //Alors on retrouve notre pointeur
             nomproc->parametres[iar]->raz();
@@ -11586,11 +11583,11 @@ inline void RemiseAJourVariable(GlobalParseur* parseur,
         if (nomproc->parametres[iar]->reinit==NON) {
             e=parseur->VariablesProceduresGlobales.recherche(nomproc->parametres[iar]->nom);
             if (e!=NULL) {
-                VECTA<TestFormule*>* vtform=(VECTA<TestFormule*>*)e->valeur;
+                VECTA<TestFormule*>* vtform=(VECTA<TestFormule*>*)e->valeur;                
                 for (int jar=0;jar<vtform->dernier;jar++)
                     (*vtform)[jar]->AffecteVariable(nomproc->parametres[iar]);
             }
-            continue;
+            continue;            
         }
 
         if (nomproc->parametres[iar]->sorte==VCHAINE)
@@ -11602,11 +11599,11 @@ inline void RemiseAJourVariable(GlobalParseur* parseur,
 				if (nomproc->parametres[iar]->sorte==VXMLOBJET)
 					vxml=(VariableXML*)nomproc->parametres[iar];
 
-            //si c'est une variable globale, il faut remettre a jour sa valeur
+            //si c'est une variable globale, il faut remettre a jour sa valeur        
             //si reinit vaut OUI, c'est une variable locale
             //En cas d'erreur, on redonne aussi leur valeurs aux variables globales
-            if (vs!=NULL)
-                vs->chaine=(*valeurschaines)[iar];
+            if (vs!=NULL)            
+                vs->chaine=(*valeurschaines)[iar];            
             else
                 if (vg!=NULL)
                     vg->valeur=(*valeursglobales)[iar];
@@ -11616,7 +11613,7 @@ inline void RemiseAJourVariable(GlobalParseur* parseur,
 						vxml->noeud=(*valeursxml)[iar];
 #endif
     }
-
+    
 	if (valeursglobales!=NULL)
         delete valeursglobales;
     if (valeursxml!=NULL)
@@ -11625,7 +11622,7 @@ inline void RemiseAJourVariable(GlobalParseur* parseur,
         valeurschaines->nettoie();
         delete valeurschaines;
     }
-
+    
 }
 
 
@@ -11634,21 +11631,21 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                                                  VECTA<Noeud*>& noeuds,
                                                  char& err,
                                                  VECTA<ResultatFonction*>* dep) {
-
+        
 
     VectTFInstruction* proced = parseur->ListeDesProcedures[parseur->IndexProcedures[Fx->index]];
-    if (proced==NULL)
+    if (proced==NULL)       
         return negation;
-
+ 
     VECTA<Noeud*> vectechangenoeuds(noeuds.dernier);
     VECTA<ResultatFonction*> vectechangedep;
-
-    VECTA<int>* retourvariables=NULL;
+    
+    VECTA<int>* retourvariables=NULL;    
     VECTA<float>* valeursglobales=NULL;
     VECTA<char*>* valeurschaines=NULL;
 	VECTA<xmlNodePtr>* valeursxml=NULL;
-
-
+    
+    
 
     int iar;
     int idep;
@@ -11657,7 +11654,7 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
     double res=OUI;
     char ch[100];
 
-
+    
     //Tout d'abord on verifie que la dependance comprend le meme nombre d'argument, sinon
     //c'est dans tous les cas une erreur
     Dependance* depproc=proced->dependances[0];
@@ -11683,14 +11680,14 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
         vs=NULL;
         vg=NULL;
 		vxml=NULL;
-
+        
         //Si c'est une variable globale
         if (nomproc->parametres[iar]->reinit==NON)
             continue;
 
         //L'origine des valeurs est double:
         //a) Ca peut etre une autre variable: proc(var1,var2)
-        //b) Ca peut etre une valeur donnee telle quelle: proc("ab",1)
+        //b) Ca peut etre une valeur donnee telle quelle: proc("ab",1) 
 
         //vs correspond a une variable de chaine qui est un parametre declaree dans notre
         //procedure.
@@ -11741,7 +11738,7 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                 //Il s'agit d'un mecanisme assez complexe de passage de parametre.
                 //Notre variable est une variable globale qui est initialisee avec une autre
                 //variable fourni en parametre
-                VECTA<TestFormule*>* vtform=(VECTA<TestFormule*>*)e->valeur;
+                VECTA<TestFormule*>* vtform=(VECTA<TestFormule*>*)e->valeur;                                
                 if (vtform==NULL || formules[iar]==NULL) {
                     err=OUI;
                     parseur->erreur_survenue=58;
@@ -11750,7 +11747,7 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                 else {
                     //variab est la variable fourni en appel dans la procedure
                     Variable* variab=formules[iar]->RenvoieVariableVecteur(parseur,noeuds,erreur,dep,RENVOIEVARIABLE);
-                    //si nous n'avons pas donne de parametre en entree pour cet appel,
+                    //si nous n'avons pas donne de parametre en entree pour cet appel, 
                     //on repart sans rien faire. Si de plus, le type de la variable est different de
                     //celui attendu, c'est aussi une erreur.
                     char typeerr=NON;
@@ -11774,9 +11771,9 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                                 typeerr=OUI;
                         }
                     }
-
+                    
                     if (typeerr==OUI){
-                        err=OUI;
+                        err=OUI;                
                         parseur->erreur_survenue=39;
                         sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
                     }
@@ -11800,12 +11797,12 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                 RemiseAJourVariable(parseur,nomproc,valeursglobales,valeurschaines,valeursxml);
                 sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
                 return NON;
-            }
+            }            
         }
-
+        
         if (nomproc->parametres[iar]->sorte==VCHAINE)
             vs=(VariableString*)nomproc->parametres[iar];
-        else
+        else            
             vg=(VariableGlobale*)nomproc->parametres[iar];
 
         //dans le cas d'un appel, il faut initialiser les variables avec les parametres
@@ -11818,7 +11815,7 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                     return NON;
                 if (vs!=NULL)
                     vs->chaine=buff;
-                else
+                else                
                     vg->valeur=atof((char*)buff.c_str());
             }
             else {
@@ -11863,7 +11860,7 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
                     retourvariables=new VECTA<int>;
                 retourvariables->ajoute(iar);
             }
-
+            
             vectechangenoeuds.affecte(depproc->arg[iar],n);
         }
         else {//c'est une dependance
@@ -11886,20 +11883,20 @@ double TestFonctionDependance::TraitementFormule(GlobalParseur* parseur,
     Label* retour_courant=parseur->aller_label;
     //Puis on teste
     res=parseur->DeduitFonction(0,DEDUCTIONPROCEDURE,OUI,parseur->IndexProcedures[Fx->index],&vectechangenoeuds,&vectechangedep);
-
+ 
     parseur->aller_label=retour_courant;
 
     if (retourvariables!=NULL) {
         for (iar=0;iar<retourvariables->dernier;iar++) {
             //on met a jour dans la table originale ci.noeuds (a partir de vectechangenoeuds)
             //C'est l'operation inverse de la precedente
-            //On recupere le noeud
-            int jar=depproc->arg[(*retourvariables)[iar]];
+            //On recupere le noeud                        
+            int jar=depproc->arg[(*retourvariables)[iar]];                        
             n=vectechangenoeuds[jar];
             if (n==NULL)
                 continue;
-
-            jar=arg[(*retourvariables)[iar]];
+            
+            jar=arg[(*retourvariables)[iar]];                        
             //Si cette variable a deja une valeur, on la compare
             if (noeuds[jar]!=NULL) {
                 if (noeuds[jar]!=n)
@@ -11921,9 +11918,9 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 										  VECTA<Noeud*>& noeuds,
 										  char& err,
 										  VECTA<ResultatFonction*>* dep) {
-
+   
     int iar;
-    char erreur=NON;
+    char erreur=NON;   
     double res=OUI;
     //VariableVector* vecteurchaine;
     //VariableIntVector* vecteurint;
@@ -11935,11 +11932,11 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
     if (parseur->OS!=NULL)
         os=parseur->OS;
 
-
+	
     //Tout d'abord on verifie que la dependance comprend le meme nombre d'argument, sinon
     //c'est dans tous les cas une erreur
 
-
+    
 	//dans le cas ou la fonction a ete declaree dans un programme KiF appelant,
 	//il nous faut recuperer ce kifcode...
 	KifCode* ancienkifcode=parseur->kifloader;
@@ -11952,7 +11949,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
             if (arg[iar]<0) {
                 err=OUI;
                 parseur->erreur_survenue=179;
-                sprintf_s(parseur->ajoute_info_erreur,4096," %s",Fx->nom);
+                sprintf_s(parseur->ajoute_info_erreur,4096," %s",Fx->nom);    
                 return -1;
             }
         }
@@ -11960,24 +11957,24 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
             if (arg[iar]>=0) {
                 err=OUI;
                 parseur->erreur_survenue=179;
-                sprintf_s(parseur->ajoute_info_erreur,4096," %s",Fx->nom);
+                sprintf_s(parseur->ajoute_info_erreur,4096," %s",Fx->nom);    
                 return -1;
             }
         }
     }
 
-    //on cree un tuple d'appel python dans lequel on va ranger nos objets
+    //on cree un tuple d'appel python dans lequel on va ranger nos objets    
 
 
 	//On conserve l'index du parseur courant sous la forme d'une variable dont le nom
 	//est: current_parseur et dont la valeur est l'index du parseur courant
-
+	
 
     double valeur;
 	params.clear();
 	nettoyage.clear();
 	KifElement* ke=NULL;
-
+	
     //On range les noeuds au bon endroit, les parametres noeuds sont les premiers appeles
     for (iar=0;iar<arg.dernier;iar++) {
 		ke=NULL;
@@ -12004,7 +12001,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 					ke=new KifXipDependency(parseur->kifloader,NULL,(*dep)[idep]);
 			}
         }
-
+		
 		if (ke!=NULL) {
 			ke->Setreference();
 			nettoyage.push_back(ke);
@@ -12023,7 +12020,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 			sprintf_s(parseur->ajoute_info_erreur,4096," %s",Fx->nom);
 			return -1;
 		}
-
+		
 		ke=NULL;
 		//Variable* variab=formules[iar]->RenvoieVariableVecteur(parseur,noeuds,erreur,dep,RENVOIEVARIABLE);
 		Variable* variab=formules[iar]->RenvoieVariable();
@@ -12056,7 +12053,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 				break;
 			case VKIFOBJET:
 				xiplocalvariable=true;
-				if (variab==parseur->vkif_echange)
+				if (variab==parseur->vkif_echange) 
 					ke=parseur->vkif_echange->kif;
 				else {
 					if (parseur->kifparametres==NULL || ikifobjet>=parseur->kifparametres->instructions.size()) {
@@ -12070,11 +12067,11 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 				break;
 			}
 		}
-
+		
 		if (ke==NULL) {
 			xiplocalvariable=false;
 			//sinon il nous faut tout calculer
-			if (formules[iar]->TypeString()) {
+			if (formules[iar]->TypeString()) {												
 				string buff;
 				formules[iar]->TraitementFormuleString(parseur,noeuds,err,buff,dep);
 				ke=parseur->kifloader->Providestring(buff);
@@ -12085,7 +12082,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 			}
 		}
 
-		if (ke!=NULL) {
+		if (ke!=NULL) {			
 			//dans le cas ou il ne s'agit pas d'une variable pre-declaree
 			params.push_back(ke);
 			//Dans le cas ou il s'agit d'une variable XIP, on evite de les nettoyer...
@@ -12125,7 +12122,7 @@ double TestFonctionKif::TraitementFormule(GlobalParseur* parseur,
 
 		//On arrete de debugger dans le code kif
 		kifGlobals->debuginfocurrent->kifdebugging=false;
-		Cleanerror();
+		Cleanerror();		
 		valeur=0;
 	}
 	else {
@@ -12150,7 +12147,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                                              VECTA<Noeud*>& noeuds,
                                              char& err,
                                              VECTA<ResultatFonction*>* dep) {
-
+   
     int iar;
     int i;
     char erreur=NON;
@@ -12162,7 +12159,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 	VariableGraphe* vgraph;
 	VariableVectorGraphe* vecteurgraph;
 
-
+	
     //Tout d'abord on verifie que la dependance comprend le meme nombre d'argument, sinon
     //c'est dans tous les cas une erreur
     Dependance* depproc=proc_python->depend;
@@ -12173,17 +12170,17 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
     if (depproc->arg.dernier!=arg.dernier) {
         err=OUI;
         parseur->erreur_survenue=79;
-        sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
+        sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);    
         return -1;
     }
-
+    
     for (iar=0;iar<arg.dernier;iar++) {
         int valarg=(int)depproc->arg[iar];
         if (valarg>=0) {
             if (arg[iar]<0) {
                 err=OUI;
                 parseur->erreur_survenue=80;
-                sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
+                sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);    
                 return -1;
             }
         }
@@ -12191,14 +12188,14 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
             if (arg[iar]>=0) {
                 err=OUI;
                 parseur->erreur_survenue=80;
-                sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
+                sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);    
                 return -1;
             }
         }
     }
 
     int dans_tuple=0;
-    //on cree un tuple d'appel python dans lequel on va ranger nos objets
+    //on cree un tuple d'appel python dans lequel on va ranger nos objets    
     PyObject* pcourant;
     PyObject* pelement;
     PyObject* liste;
@@ -12208,7 +12205,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 
 	//On conserve l'index du parseur courant sous la forme d'une variable dont le nom
 	//est: current_parseur et dont la valeur est l'index du parseur courant
-
+	
 	PyObject* pDict_principal = PyModule_GetDict(parseur->module_principal);
 	pcourant=ConvertToPythonLong(parseur->iParseurCourant);
 
@@ -12217,7 +12214,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 	PyRun_String(chrun,Py_file_input,pDict_principal,proc_python->pDico);
 	sprintf_s(chrun,100,"XipDependency.parseur=%d",parseur->iParseurCourant);
 	PyRun_String(chrun,Py_file_input,pDict_principal,proc_python->pDico);
-	PyDict_SetItemString(proc_python->pDico,"current_parseur",pcourant);
+	PyDict_SetItemString(proc_python->pDico,"current_parseur",pcourant);		
 
     double valeur;
     VECTA<PyObject*> py_listes;
@@ -12247,10 +12244,10 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                 pcourant=ConvertToPythonLong(-1);
         }
         //On le range alors dans le tuple des appels python
-        py_args.ajoute(pcourant);
+        py_args.ajoute(pcourant);        
     }
 
-
+    
     //On initialise les valeurs de nos variables python
     for (iar=0;nomproc!=NULL && iar<nomproc->parametres.dernier;iar++) {
 
@@ -12269,7 +12266,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
             //variab est la variable fourni en appel dans la procedure
             //Cas particulier du traitement des listes et dictionnaires
             char type_utilise=NON;
-
+            
             char typeerr=NON;
             //cas d'erreur
             if (variab->type==ENTIER) {
@@ -12289,17 +12286,17 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
             }
 
             if (typeerr==OUI){
-                err=OUI;
-                parseur->erreur_survenue=39;
+                err=OUI;                
+                parseur->erreur_survenue=39;                                
                 sprintf_s(parseur->ajoute_info_erreur,4096," %s",nomproc->Fx->nom);
                 return -1;
             }
-
+            
             switch(variab->sorte) {
 			case VGRAPHE:
 				vgraph=(VariableGraphe*)variab;
 				liste=pythonclone(vgraph->g);
-                py_args.ajoute(liste);
+                py_args.ajoute(liste);                
                 type_utilise=OUI;
 				break;
 			case VVECTEURGRAPHE:
@@ -12310,7 +12307,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 					PyList_Insert(liste,i,pcourant);
 					Py_DECREF(pcourant);
 				}
-                py_args.ajoute(liste);
+                py_args.ajoute(liste);                
                 type_utilise=OUI;
                 break;
             case VPYTHONOBJET:
@@ -12334,7 +12331,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                     PyList_Insert(liste,i,pcourant);
 					Py_DECREF(pcourant);
                 }
-                py_args.ajoute(liste);
+                py_args.ajoute(liste);                
                 type_utilise=OUI;
                 break;
             case VVECTEURINT:
@@ -12347,26 +12344,26 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                     PyList_Insert(liste,i,pcourant);
 					Py_DECREF(pcourant);
                 }
-                py_args.ajoute(liste);
+                py_args.ajoute(liste);                   
                 type_utilise=OUI;
                 break;
             case VDICTIONNAIRE:
                 vdict=(VariableDictionnaire*)variab;
                 liste=PyDict_New();
-                py_listes.affecte(iar,liste);
+                py_listes.affecte(iar,liste);				
                 for (iter=vdict->dico.begin();iter!=vdict->dico.end();iter++) {
 					pelement=ConvertToPythonString((*iter).second.c_str());
 					PyDict_SetItemString(liste, (*iter).first.c_str(), pelement);
                     Py_DECREF(pelement);
                 }
-                py_args.ajoute(liste);
+                py_args.ajoute(liste);                
                 type_utilise=OUI;
-                break;
+                break;                
             }
 
             if (type_utilise==OUI)
                 continue;
-
+            
         }
 
         if (formules[iar]!=NULL) {
@@ -12375,14 +12372,14 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                 formules[iar]->TraitementFormuleString(parseur,noeuds,err,buff,dep);
                 if (nomproc->parametres[iar]==NULL)
                     return NON;
-                pcourant=ConvertToPythonString((char*)buff.c_str());
+                pcourant=ConvertToPythonString((char*)buff.c_str());                
             }
             else {
                 res=formules[iar]->TraitementFormule(parseur,noeuds,err,dep);
                 if (nomproc->parametres[iar]->type==ENTIER)
                     pcourant=ConvertToPythonLong((long)res);
                 else
-                    pcourant=PyFloat_FromDouble(res);
+                    pcourant=PyFloat_FromDouble(res);                
             }
         }
         else {
@@ -12398,37 +12395,37 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 			if (idom!=string::npos)
 				dom=dom.substr(0,idom);
             pentree=ConvertToPythonString(STR(dom));
-            PyDict_SetItem(proc_python->pDico,pentree,pcourant);
-            py_listes.affecte(iar,pentree);
+            PyDict_SetItem(proc_python->pDico,pentree,pcourant);            
+            py_listes.affecte(iar,pentree);  
         }
         else
             py_args.ajoute(pcourant);
-
+            
     }
 
 	int tail;
     PyObject* procArgs = PyTuple_New(py_args.dernier);
 
     //On range les arguments dans un tuple
-    for (iar=0;iar<py_args.dernier;iar++)
-        PyTuple_SetItem(procArgs, iar, py_args[iar]);
-
+    for (iar=0;iar<py_args.dernier;iar++) 
+        PyTuple_SetItem(procArgs, iar, py_args[iar]);           
+    
     PyObject* presultat= PyObject_CallObject(proc_python->pFunction, procArgs);
     PyObject* perreur=PyErr_Occurred();
     if (perreur!=NULL) {
         err=OUI;
-        parseur->erreur_survenue=70;
+        parseur->erreur_survenue=70;        
         if (parseur->TestOptions(AFFICHAGE_ERREUR_EXECUTION)) {
-            ostream* os=&cout;
+            ostream* os=&cout;                
             if (parseur->OS==NULL) {
                 PyObject *ptype;
-                PyObject *pvalue;
+                PyObject *pvalue; 
                 PyObject *ptraceback;
-                PyErr_Fetch(&ptype,&pvalue,&ptraceback);
+                PyErr_Fetch(&ptype,&pvalue,&ptraceback);     
 				PyErr_Clear();
-                //os=parseur->OS;
+                //os=parseur->OS;      
                 *os<<"Error in file:"<<proc_python->nomfichier<<Endl;
-
+ 
                 if (pvalue!=NULL && PyCheck_String(pvalue)) {
 					PyObject* perr=PyObject_Str(pvalue);
                     *os<<Endl<<"In python procedure \""<<proc_python->nom<<"\": "<<PyAsString(perr)<<Endl;
@@ -12436,7 +12433,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 				}
 
 				if (ptraceback!=NULL) {
-					//On passe dans ce cas par le module traceback importe par XIP...
+					//On passe dans ce cas par le module traceback importe par XIP...					
 					PyObject* espace_trace=PyDict_GetItemString(pDict_principal, "traceback");
 					if (espace_trace!=NULL) {
 						PyObject* pDict_traceback = PyModule_GetDict(espace_trace);
@@ -12445,7 +12442,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 
 						PyObject* formatlistArgs = PyTuple_New(1);
 						//On y range notre objet
-						PyTuple_SetItem(formatlistArgs, 0, ptraceback);
+						PyTuple_SetItem(formatlistArgs, 0, ptraceback);     
 						//On appelle notre fonction
 						PyObject* plistetraceback= PyObject_CallObject(formatlist, formatlistArgs);
 						//Le resultat est dans plistetraceback, une liste de chaine
@@ -12466,7 +12463,7 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 						Py_DECREF(formatlistArgs);
 					}
 				}
-
+                
                 if (ptype!=NULL)
                     Py_DECREF(ptype);
                 if (pvalue!=NULL)
@@ -12481,15 +12478,15 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                 cout<<"In python procedure \""<<proc_python->nom<<Endl<<Endl;
 				PyErr_Clear();
             }
-        }
+        }		
         for (iar=0;nomproc!=NULL && iar<nomproc->parametres.dernier;iar++) {
             //Si c'est une variable globale
-            if (nomproc->parametres[iar]->reinit==NON) {
+            if (nomproc->parametres[iar]->reinit==NON) {               
                 pcourant=py_listes[iar];
                 if (pcourant!=NULL) {
                     //variab est la variable fourni en appel dans la procedure
                     Variable* variab=formules[iar]->RenvoieVariableVecteur(parseur,noeuds,erreur,dep,RENVOIEVARIABLE);
-                    //si nous n'avons pas donne de parametre en entree pour cet appel,
+                    //si nous n'avons pas donne de parametre en entree pour cet appel, 
                     //on repart sans rien faire. Si de plus, le type de la variable est different de
                     //celui attendu, c'est aussi une erreur.
                     switch(variab->sorte) {
@@ -12519,16 +12516,16 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
             string index;
             PyObject* key;
             PyObject* value;
-#if (defined(APPLE) | defined(ARCH64))
+#if (defined(APPLE) | defined(ARCH64)) 
 			Py_ssize_t pos;
 #else
             int pos;
-#endif
+#endif            
             pcourant=py_listes[iar];
             if (pcourant!=NULL) {
                 //variab est la variable fourni en appel dans la procedure
                 Variable* variab=formules[iar]->RenvoieVariableVecteur(parseur,noeuds,erreur,dep,RENVOIEVARIABLE);
-                //si nous n'avons pas donne de parametre en entree pour cet appel,
+                //si nous n'avons pas donne de parametre en entree pour cet appel, 
                 //on repart sans rien faire. Si de plus, le type de la variable est different de
                 //celui attendu, c'est aussi une erreur.
                 switch(variab->sorte) {
@@ -12563,10 +12560,10 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                                 reschaine=PyAsString(pelement);
                             else
                                 reschaine="";
-                            vecteurchaine->AffecteValeurStringIndex(new string(reschaine),i);
-                        }
+                            vecteurchaine->AffecteValeurStringIndex(new string(reschaine),i);                            
+                        }                            
                     }
-                    break;
+                    break;                        
                 case VVECTEURINT:
                     vecteurint=(VariableIntVector*)variab;
                     vecteurint->raz();
@@ -12587,9 +12584,9 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                                         valeur=PyAsNumber(pelement);
                             }
                             vecteurint->valeurs.affecte(i,valeur);
-                        }
+                        }                            
                     }
-                    break;
+                    break;                        
                 case VDICTIONNAIRE:
                     vdict=(VariableDictionnaire*)variab;
                     vdict->raz();
@@ -12603,17 +12600,17 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
                     }
                     break;
                 case VCHAINE:
-                    pelement=PyDict_GetItem(proc_python->pDico,pcourant);
+                    pelement=PyDict_GetItem(proc_python->pDico,pcourant);                   
                     if (PyCheck_String(pelement))
                         ((VariableString*)variab)->chaine=PyAsString(pelement);
                     Py_DECREF(pcourant);
                     PyDict_DelItem(proc_python->pDico, pcourant);
                     break;
-                }
+                }                 
             }
         }
     }
-
+   
     //On peut enfin liberer les arguments
     Py_DECREF(procArgs);
     res=0;
@@ -12636,10 +12633,11 @@ double TestFonctionPython::TraitementFormule(GlobalParseur* parseur,
 #endif
 
 ProcedurePython::~ProcedurePython() {
-    Py_DECREF(pDico);
+    Py_DECREF(pDico);    
 }
 
 
 
 #endif
+
 

@@ -90,6 +90,11 @@ public class TaskSync extends Task implements TaskContainer {
         }
         try {
             File fileLock = new File(lockFileName);
+            //create the fileLock dir if not exists
+            File fileLockDir = new File(fileLock.getParent());
+            if (!fileLockDir.exists()) {
+                fileLockDir.mkdir();
+            }
             waitNoFile(fileLock);
             fileLock.createNewFile();
             doTask();

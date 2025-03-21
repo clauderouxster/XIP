@@ -16,7 +16,7 @@ Reviewer   :
 */
 
 #include "kifversion.h"
-const char KIFVERSION[] = "1.94 build 18";
+const char KIFVERSION[] = "1.94 build 17";
 
 #ifdef KIFPYTHON
 #ifndef WIN32

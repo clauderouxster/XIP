@@ -1597,7 +1597,7 @@ int main(int argc, char *argv[])
 			ordreDependance, affichage_offset, laffichage, de_tree, fonction_synt);
 		BaseParseur->ChoixUTF8(conversionutf8);
 		if (debugkif==true) {
-			//KiFSetdebug(true);
+			KiFSetdebug(true);
 			BaseParseur->kifdebug = true;
 		}
 
