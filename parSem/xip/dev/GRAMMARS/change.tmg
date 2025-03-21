@@ -1,4 +1,4 @@
-
+int nb = 0;
 function find_grm(string path) {
     svector vs = < x | x <- _sys.ls(path), x[0] != ".">;
     string fichier;
@@ -14,9 +14,28 @@ function find_grm(string path) {
             if (nom != "") {
                 try {
                     texte.read(path+nom);
+                    string ligne;
                     if ("Expiration" in texte) {
-                        println("xipkey "+path+nom);
-                        _sys.command("xipkey "+path+nom);
+                        if ("Code:" in texte)
+                            ligne = texte["Code":"\n"];
+                        elif ("code:" in texte)
+                            ligne = texte["code":"\n"];
+                        if (ligne != "") {
+                            svector code = _sys.pipe("xipkey "+path+nom);
+                            if (code) {
+                                string c = code[0].trim()["=":][2:] + "\n";
+                                if (c not in ligne) {
+                                    c = "Code: " + c;
+                                    texte = texte.replace(ligne,c);
+                                    println("Texte:", texte["Code":"\n"], ligne, c);
+                                }
+                                else
+                                    println("Fait");
+                            }
+                            else
+                                println("*************************");
+                            println("---------------");
+                        }
                     }
                 }
                 catch;
