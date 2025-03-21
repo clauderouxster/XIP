@@ -18,11 +18,11 @@ export THEPYTHONVERSION=`python --version | gawk -F'[ .]' '/Python/ {print $2 ".
 
 ## XML
 
-XIP also needs to link with the `libxml2.so`. We provide the include in the [xml](https://github.com/clauderouxster/XIP/tree/main/parSem/xml/dev).
-By default, the system expect the library: `libxml2.so` to be in: https://github.com/clauderouxster/XIP/tree/main/parSem/xml/dev.
+XIP also needs to link with the `libxml2.so`. We provide the includes in the `parSem/xml/dev`.
+By default, the system expect the library: `libxml2.so` to be in: `parSem/xml/dev/libs`.
 
 Usually, you don't need to do anything since `libxml2.so` is available on all platforms. However, in some cases, it might be missing along the compiling paths. 
-The easiest to solve this issue is to create a _symbolic link_ in `https://github.com/clauderouxster/XIP/tree/main/parSem/xml/dev/libs`.
+The easiest to solve this issue is to create a _symbolic link_ in `parSem/xml/dev/libs`.
 
 ```sh
 cd parSem/xml/dev
