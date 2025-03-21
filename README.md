@@ -43,3 +43,13 @@ xip: the final parser
 ```
 
 The binaries will be produced in: `parSem/xip/dev/xipFst/bin`
+
+## Test a grammar
+Grammars are all stored in `parSem/xip/dev/GRAMMARS`.
+
+To test:
+
+`xip -grm parSem/xip/dev/GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm -f -tr "The lady drinks a glass of water"`
+
+
+
