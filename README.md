@@ -52,7 +52,7 @@ Grammars are all stored in `GRAMMARS`.
 
 To test:
 
-`echo "The lady drinks a glass of water" | xip -grm GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm -f -tr -t`
+`echo "The lady drinks a glass" | xip -grm GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm -f -tr -t`
 
 
 
