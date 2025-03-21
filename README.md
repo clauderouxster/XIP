@@ -44,12 +44,15 @@ xip: the final parser
 
 The binaries will be produced in: `parSem/xip/dev/xipFst/bin`
 
+The difference between `xip` and `xips` is the Python integration.
+Actually, the library: `xips.so` is also a Python library that can be used in a Python interpreter as: `import xips`.
+
 ## Test a grammar
-Grammars are all stored in `parSem/xip/dev/GRAMMARS`.
+Grammars are all stored in `GRAMMARS`.
 
 To test:
 
-`xip -grm parSem/xip/dev/GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm -f -tr "The lady drinks a glass of water"`
+`echo "The lady drinks a glass of water" | xip -grm GRAMMARS/ENGLISH/GRMFILES/GRAM_GEN/gram_gen.grm -f -tr -t`
 
 
 
