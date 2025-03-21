@@ -1,6 +1,6 @@
 # How to compile XIP
 
-First, if you want to compile the Windows, for which we already have (see [Binaries](https://github.com/clauderouxster/XIP/tree/main/Windows/Binaries)), you can use the Visual Studio [SLN project](https://github.com/clauderouxster/XIP/blob/main/Windows/XIP7/xipdll2.sln).
+First, if you want to compile the Windows version, for which we already have (see [Binaries](https://github.com/clauderouxster/XIP/tree/main/Windows/Binaries)), you can use the Visual Studio [SLN project](https://github.com/clauderouxster/XIP/blob/main/Windows/XIP7/xipdll2.sln).
 For other platforms, you need to install a JDK (1.8 for instance) and ANT.
 
 *Note that this version of build needs to be updated for later version of Mac OS.*
