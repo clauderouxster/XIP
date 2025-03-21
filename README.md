@@ -25,7 +25,7 @@ Usually, you don't need to do anything since `libxml2.so` is available on all pl
 The easiest to solve this issue is to create a _symbolic link_ in `parSem/xml/dev/libs`.
 
 ```sh
-cd parSem/xml/dev
+cd parSem/xml/dev/libs
 # create a symbolic link
 ln -s /usr/lib64/libxml2.so.2 libxml2.so
 ```
