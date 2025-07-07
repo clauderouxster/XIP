@@ -1,0 +1,170 @@
+
+<project>
+     <!--   -->
+    <target name="xipFst" depends="setMode" description="xip will be build with FST">
+        <if>
+            <not>
+                <istrue value="${linux}"/>
+            </not>
+            <then>
+                <fail message="+++++++++++++++++++ Run on linux only! ++++++++++++++++++++++" />
+            </then>
+        </if>
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+                <echo message="false" file="${transModeFile}" />
+                <antcall target="chgLink" >
+                    <param name="p1" value="xipFst" />
+                </antcall>
+                <echo message="~~~~~~~~  move to xipfst  ~~~~~~~~~~~" />
+            </then>
+            <else>
+                <echo message="fst mode already set => no change" />
+            </else>
+        </if>
+    </target>
+    
+    <!--   -->
+    <target name="xipTrans" depends="setMode" description="xip will be build without FST">
+        <if>
+            <not>
+                <istrue value="${linux}"/>
+            </not>
+            <then>
+                <fail message="+++++++++++++++++++ Run on linux only! ++++++++++++++++++++++" />
+            </then>
+        </if>
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+                <echo message="trans mode already set => no change" />
+            </then>
+            <else>
+                <echo message="true" file="${transModeFile}" />
+                <antcall target="chgLink" >
+                    <param name="p1" value="xipTrans" />
+                </antcall>
+                <echo message="~~~~~~~~  move to xiptrans  ~~~~~~~~~~~" />
+            </else>
+        </if>
+    </target> 
+    
+    <!--   -->
+    <target name="chgLink" >
+        <!-- use exec rm rather delete (otherwise all the dir and its subdirs are deleted) -->
+        <if>
+            <available file="${basedir}/bin" />
+            <then>
+                <exec executable="rm" failonerror="true" >
+                    <arg line="${basedir}/bin" />
+                </exec>
+            </then>
+        </if>
+        <if>
+            <available file="${basedir}/lib" />
+            <then>
+                <exec executable="rm" failonerror="true" >
+                    <arg line="${basedir}/lib" />
+                </exec>
+            </then>
+        </if>
+        <if>
+            <available file="${basedir}/obj" />
+            <then>
+                <exec executable="rm" failonerror="true" >
+                    <arg line="${basedir}/obj" />
+                </exec>
+            </then>
+        </if>
+        <if>
+            <available file="${basedir}/log" />
+            <then>
+                <exec executable="rm" failonerror="true" >
+                    <arg line="${basedir}/log" />
+                </exec>
+            </then>
+        </if>
+        <exec executable="ln" failonerror="true" >
+            <arg line="-s ${p1}/bin bin" />
+        </exec>
+        <exec executable="ln" failonerror="true" >
+            <arg line="-s ${p1}/lib lib" />
+        </exec>
+        <exec executable="ln" failonerror="true" >
+            <arg line="-s ${p1}/obj obj" />
+        </exec>
+        <exec executable="ln" failonerror="true" >
+            <arg line="-s ${p1}/log log" />
+        </exec>
+    </target> 
+    
+    <!--   -->
+    <target name="setMode" depends="platformSetting" >
+        <!-- transMode and fstMode properties must NEVER been set to false (only to true when necessary) -->
+        <property name="transModeFile" location="${basedir}/.transMode" />
+        <if>
+            <available file="${transModeFile}" />
+            <then>
+                <loadfile property="transModeF" srcFile="${transModeFile}"/>
+                <if>
+                    <istrue value="${transModeF}"/>
+                    <then>
+                            <!-- transMode is only set to true, or undefined (and never set to false) -->
+                        <property name="transMode" value="true" />
+                    </then>
+                    <else>
+                        <property name="fstMode" value="true" />
+                    </else>
+                </if>
+                <if>
+                    <available file="${basedir}/lib" />
+                    <then>
+                    </then>
+                    <else>
+                        <fail message="You have to run ant on unix platform to create the symbolic link for bin, log,obj, dir directories"/>
+                    </else>
+                </if>
+            </then>
+            <else>
+                <!-- the first time -->
+                <property name="fstMode" value="true" />
+                <echo message="false" file="${transModeFile}" />
+                <mkdir dir="xipFst" />
+                <if>
+                    <available file="${basedir}/bin" />
+                    <then>
+                        <move file="${basedir}/bin" todir="${basedir}/xipFst" preservelastmodified="true" />
+                        <move file="${basedir}/obj" todir="${basedir}/xipFst" preservelastmodified="true" />
+                        <move file="${basedir}/lib" todir="${basedir}/xipFst" preservelastmodified="true" />
+                        <move file="${basedir}/log" todir="${basedir}/xipFst" preservelastmodified="true" />
+                        <echo message="fst mode set + bin,obj,lib,log dirs are moved in xipFst dir" />
+                    </then>
+                    <else>
+                        <mkdir dir="xipFst/bin" />
+                        <mkdir dir="xipFst/obj" />
+                        <mkdir dir="xipFst/lib" />
+                        <mkdir dir="xipFst/log" />
+                    </else>
+                </if>
+                <antcall target="chgLink" >
+                    <param name="p1" value="xipFst" />
+                </antcall>
+                <mkdir dir="xipTrans" />
+                <mkdir dir="xipTrans/bin" />
+                <mkdir dir="xipTrans/obj" />
+                <mkdir dir="xipTrans/lib" />
+                <mkdir dir="xipTrans/log" />
+            </else>
+        </if>
+        <if>
+            <istrue value="${transMode}"/>
+            <then>
+                <echo message="................................ xiptrans ........." />
+            </then>
+            <else>
+                <echo message="................................ xipfst ........." />
+            </else>
+        </if>
+    </target>
+</project>

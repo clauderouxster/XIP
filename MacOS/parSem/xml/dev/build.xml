@@ -1,0 +1,193 @@
+
+<project name="xml" default="compile" basedir=".">
+    <property name="name" value="xml" />
+    <property name="env" environment="env" value="env"/>
+    <property name="ps"	value="${path.separator}" />
+    <property name="common.dir" location="${basedir}/../../common" />
+    <import file="${common.dir}/buildInclude.xml" />
+    <property name="archive.name"	value="archive-${xml.version}-${curDate.now}" />
+    <property name="archive.zip.file"	location="${archive.root}/${archive.name}.zip" />
+    <property name="delivery.name"	value="${name}-${xml.version}" />
+    <property name="delivery.dir"	location="${delivery.root}/${delivery.name}" />
+    <property name="delivery.zip.file"	location="${delivery.root}/${delivery.name}.zip" />
+    <property name="ftp.login" 		value="" />
+    <property name="ftp.password" 	value="" />
+    <property name="ftp.login.client"       value="" />
+    <property name="ftp.password.client"    value="" />
+    <property name="ftp.remote.dir"         value="" />
+    <property name="log.level"		value="verbose" />
+    <property name="xml.dir"	  	location="${basedir}/libxml2-${xml.version}" />
+    <property name="xml.src.dir"        location="${xml.dir}" />
+    <property name="srcModified.dir"	location="${basedir}/srcModified/${xml.version}" />
+    <property name="xml.inc1.dir" location="${xml.dir}" />
+    <property name="xml.inc2.dir" location="${xml.dir}/include" />
+    <property name="xml.src.files" value="
+              c14n.c, catalog.c, chvalid.c, debugXML.c, dict.c, DOCBparser.c, encoding.c, entities.c,
+              error.c, globals.c, hash.c, HTMLparser.c, HTMLtree.c, legacy.c, list.c, nanoftp.c,
+              nanohttp.c, parser.c, parserInternals.c, pattern.c, relaxng.c, SAX.c, SAX2.c, threads.c,
+              tree.c, uri.c, valid.c, xinclude.c, xlink.c, xmlIO.c, xmlmemory.c, xmlreader.c, xmlregexp.c,
+              xmlsave.c, xmlschemas.c, xmlschemastypes.c, xmlstring.c, xmlunicode.c, xpointer.c, xpath.c
+    "/>
+    <target name="all" depends="clean, compile" description=" clean + compile And Link (static)">
+    </target>
+    
+    <!-- ********************************* update new version ************************************* -->
+    <target name="update"  description="update with a new version">
+        <delete dir="${xml.dir}" />
+        <property name="comp.file"	value="libxml2-${xml.version}" />
+        <gunzip src="${comp.file}.tar.gz"/>
+        <!-- do not use untar because it does not keep file permissions -->
+        <exec executable="tar" dir="${basedir}">
+            <arg line="xvf ${comp.file}.tar" />
+        </exec>
+        <delete file="${comp.file}.tar" />
+        <exec executable="sh" dir="${xml.dir}">
+            <arg line="${xml.dir}/configure" />
+        </exec>
+        <!-- save files -->
+        <move file="${xml.src.dir}/xpath.c" tofile="${xml.src.dir}/xpath.c.bak" />
+        <move file="${xml.inc2.dir}/libxml/xpath.h" tofile="${xml.inc2.dir}/libxml/xpath.h.bak" />
+        <move file="${xml.inc2.dir}/libxml/xmlversion.h" tofile="${xml.inc2.dir}/libxml/xmlversion.h.bak" />
+        <move file="${xml.src.dir}/config.h" tofile="${xml.src.dir}/config.h.bak" />
+        <!-- update files -->
+        <copy  todir="${xml.inc2.dir}/libxml" >
+            <fileset dir="${srcModified.dir}" includes="xpath.h,xmlversion.h" />
+        </copy>
+        <copy  todir="${xml.src.dir}" >
+            <!-- this new config.h will include config.h.unix or include/win32config.h or 
+            include/win64config.h depending of the WIN32 define -->
+            <fileset dir="${srcModified.dir}" includes="xpath.c, config.h, config.h.unix" />
+        </copy>
+        <copy  todir="${xml.src.dir}/include" >
+		<!-- this file is added for windows 64 -->
+            <fileset dir="${srcModified.dir}" includes="win64config.h" />
+        </copy>
+    </target>
+    
+    <target name="compile" depends="staticLib,sharedLib" description="compile And Link all " />
+    <target name="compile.debug" depends="staticLib.debug, sharedLib.debug" 
+        description="compile And Link all " />
+    
+    <target name="staticLib" depends="staticLibCom" description="compile and link (static lib) "/>
+    <target name="staticLib.debug" depends="setDebugMode, staticLibCom" 
+        description="compile and link (static lib) "/>
+    <target name="staticLibCom" depends="setCommonProperties" 
+        description="compile and link (static lib) ">
+        <property name="static.lib.obj.dir.name" value="staticLib" />
+        <property name="staticLib.record.file" value="${log.dir}/${static.lib.obj.dir.name}" />
+        <record name="${staticLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="static.lib.obj.dir" location="${obj.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.obj.dir}" />
+        <property name="static.lib.dir" location="${lib.dir}/${static.lib.obj.dir.name}" />
+        <mkdir dir="${static.lib.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optimize}" objdir="${static.lib.obj.dir}" 
+            subsystem="console" exceptions="true" multithreaded="true" outtype="static" runtime="dynamic" 
+            outfile="${static.lib.dir}/${name}" warnings="${cc.warnings}" debug="${cc.debug}">
+            <compiler extends="xmlCompilerCommon" name="${compilerC.name}" >
+                <fileset dir="${xml.src.dir}" includes="${xml.src.files}"  />
+            </compiler>
+            <linker name="${compilerC.name}" />
+        </cc>
+        <record name="${staticLib.record.file}" action="stop"/>
+    </target>
+    
+    <target name="sharedLib" depends="sharedLibCom" description="compile and link (shared lib) "/>
+    <target name="sharedLib.debug" depends="setDebugMode, sharedLibCom" description="compile and link (shared lib) "/>
+    <target name="sharedLibCom" depends="setCommonProperties" description="compile and link (shared lib) ">
+        <property name="shared.lib.obj.dir.name" value="sharedLib" />
+        <property name="sharedLib.record.file" value="${log.dir}/${shared.lib.obj.dir.name}" />
+        <record name="${sharedLib.record.file}" loglevel="${log.level}" action="start"/>
+        <property name="shared.lib.obj.dir" location="${obj.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.obj.dir}" />
+        <property name="shared.lib.dir" location="${lib.dir}/${shared.lib.obj.dir.name}" />
+        <mkdir dir="${shared.lib.dir}" />
+        <cc name="${compilerC.name}" optimize="${cc.optimize}" objdir="${shared.lib.obj.dir}" 
+            subsystem="console" exceptions="true" multithreaded="true" outtype="shared" 
+            runtime="dynamic" outfile="${shared.lib.dir}/${name}" warnings="${cc.warnings}" debug="${cc.debug}">
+            <compiler extends="xmlCompilerCommon" name="${compilerC.name}" >
+                <fileset dir="${xml.src.dir}" includes="${xml.src.files}"  />
+            </compiler>
+            <!--linker extends="linkerCommon" name="${compilerC.name}"  >
+                <linkerarg value="${linker.shared.arg}" location="start" unless="nomt"/>
+                <linkerarg value="-liconv" location="end" if="mac"/>
+                <syslibset libs="${system.libC.names}"/>
+            </linker-->
+        </cc>
+        <record name="${sharedLib.record.file}" action="stop"/>
+    </target>
+    
+    <target name="setCommonProperties" depends="platformSetting, compilerLinkerCommonSetting " 
+        description="action before compiling" unless="commonPropertiesSet">
+        <property name="commonPropertiesSet" value="true" />
+        <if>
+            <istrue value="${debugMode}"/>
+            <then>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}.debug" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}.debug" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}.debug" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}.debug" />
+                <property name="cc.debug"       value="true" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optimize"     value="none" />
+            </then>
+            <else>
+                <property name="lib.dir" location="${lib.dirs}/${platform-arch}" />
+                <property name="obj.dir" location="${obj.dirs}/${platform-arch}" />
+                <property name="bin.dir" location="${bin.dirs}/${platform-arch}" />
+                <property name="log.dir" location="${log.dirs}/${platform-arch}" />
+                <property name="cc.debug"       value="false" />
+                <property name="cc.warnings"    value="none" />
+                <property name="cc.optimize"     value="extreme" />
+            </else>
+        </if>
+        <mkdir dir="${lib.dir}" />
+        <mkdir dir="${obj.dir}" />
+        <mkdir dir="${bin.dir}" />
+        <mkdir dir="${log.dir}" />
+        <!-- define setting -->
+        <if>
+            <or>
+                <equals arg1="${platform}" arg2="solaris" />
+                <equals arg1="${platform-arch}" arg2="linux64" />
+            </or>
+            <then>
+                <property name="ansiDecl" value="true"  />
+            </then>
+        </if>
+        <defineset id="define.basic" >
+            <define name="HAVE_CONFIG_H"/>
+            <!-- <define name="HaveAnsiDecl" if="ansiDecl"/ -->
+            <define name="_REENTRANT"/>
+            <define name="WIN32"        if="windows"/>
+            <define name="_WIN32"       if="windows"/>
+            <define name="_MBCS"        if="windows"/>
+            <define name="MAC_OS"       if="mac"/>
+            <define name="ARCH64BITS"   if="arch64bits"/>
+        </defineset>
+        <!-- compiler setting -->
+        <compiler id="xmlCompilerCommon" extends="compilerCommon" >
+            <defineset refid="define.basic" />
+            <includepath> 
+                <!-- take care about the order: srcModified.dir must be the first path -->
+                <pathelement location="${xml.inc1.dir}"/>
+                <pathelement location="${xml.inc2.dir}"/>
+            </includepath>
+        </compiler>
+    </target>
+    
+    <target name="srcMin"  description="">
+    </target>
+    
+    <target name="localCleanAll"  >
+    </target>
+    
+    <target name="localClean"  >
+    </target>
+</project>
+
+
+
+
+
+
+

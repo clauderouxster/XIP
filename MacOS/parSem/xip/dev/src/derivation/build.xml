@@ -1,0 +1,180 @@
+
+<project name="" default="test" basedir=".">
+    
+    <property name="env" environment="env" value="env"/>
+    <property name="cc.debug"		value="false" />
+
+    <!--
+    There are two main targets:
+        - the target "test" allows to compile the file "derivation.cxx" and "main.cxx"
+            to generate and run this small c++ sample
+        - the target "testJar" rebuild the jxip.jar with a new jXipLib.so or jXipLib.dll. These libraries are
+        built using  the binary of "derivation.cxx" and the library static provided in the java directory. This static lib
+        contains the xip library and the jni code.
+    -->
+     
+    <target name="test" depends="compile" description=" ">
+        <exec executable="${build.dir}/derivation" failonerror="true" >
+        </exec>
+    </target>
+    
+    <target name="compile" depends="setCommonProperties" >
+        <delete file="build/derivation.o"/>
+        <delete file="build/derivation"/>
+        <delete file="build/derivation.exe"/>
+        <delete file="build/derivation.obj"/>
+        <cc name="${compilerCplus.name}" optimize = "extreme" objdir="${build.dir}" subsystem="console" exceptions="true"
+             multithreaded="true" outtype="executable" runtime="dynamic" outfile="${build.dir}/derivation" >
+            <compiler name="${compilerCplus.name}" debug="false">
+                <fileset dir="." includes="derivation.cxx, main.cxx" />
+                <includepath>
+                    <pathelement location="${include.dir}"/>
+                </includepath>
+                <defineset define="${define.common}"/>
+            </compiler>
+            <linker name="${compilerCplus.name}" debug="${cc.debug}">
+                <syslibset libs="${system.libCplus.names}" if="linux" />
+                <syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+                <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+                <!--
+                <libset dir="${lib.xip.dir}/staticLib" libs="xip" type="static"/>
+                -->
+                <libset dir="../../java/dist/staticLib/${platform}" libs="jXip" type="static"/>
+            </linker>
+        </cc>
+    </target>
+
+    <target name="jxip" depends="setCommonProperties" >
+        <property name="libName" value="jXip" />
+        <property name="libDir" location="${build.dir}/jxip/${platform}/sharedLib" />
+        <delete dir="${libDir}" />
+        <mkdir dir="${libDir}" />
+        <property name="outFileName" location="${libDir}/${libName}" />
+        <cc name="${compilerCplus.name}" optimize = "extreme" objdir="${build.dir}" subsystem="console" exceptions="true"
+            multithreaded="true" outtype="shared" runtime="dynamic" outfile="${outFileName}" >
+            <compiler name="${compilerCplus.name}" debug="false">
+                <fileset dir="." includes="derivation.cxx" />
+                <includepath>
+                    <pathelement location="${include.dir}"/>
+                </includepath>
+                <defineset define="${define.common}"/>
+            </compiler>
+            <linker name="${compilerCplus.name}" debug="false">
+                <syslibset libs="${system.libCplus.names}" if="linux" />
+                <syslibset libs="${system.libCplus.names},ws2_32,user32" if="windows" />
+                <syslibset libs="${system.libCplus.names},w,socket,nsl" if="solaris"/>
+                <libset dir="../../java/dist/staticLib/${platform}" libs="jXip" type="static"/>
+            </linker>
+        </cc>
+    </target>
+
+    <target name="jar" depends="jxip" description="rebuild jxip.jar with the derivation code " >
+        <copy file="${oldJar}" toFile="${newJar}" />
+        <jar jarfile="${newJar}" update="yes" >
+            <fileset dir="build/jxip"/>
+        </jar>
+    </target>
+
+    <target name="testJar" depends="jar" description="check the new jar with derivation" >
+        <javac destdir="build" classpath="${newJar}" srcdir="${basedir}" includes="Test.java" />
+        <java  classname="Test" fork="true" failonerror="true" >
+            <classpath>
+                <pathelement location="${newJar}"/>
+                <pathelement path="build" />
+            </classpath>
+            <arg value="toyGram/english.grm"/>
+        </java>
+    </target>
+    
+    <target name="setCommonProperties" depends="platformSetting" >
+        <property name="include.dir"	location="../../include" />
+        <property name="build.dir"		location="${basedir}/build" />
+        <mkdir dir="${build.dir}" />
+        <property name="lib.xip.dir" location="${basedir}/../../lib/${platform}" />
+        <property name="newJar" location="build/jxip.jar" />
+        <property name="oldJar" location="../../java/dist/jxip.jar" />
+    </target>
+    
+    <target name="platformSetting" depends="setWin32Properties, setSolarisProperties,
+            setLinuxProperties, setMacProperties"  description="platform setting" />
+    
+    <target name="setWin32Properties" depends="platformIdentification" if="windows"
+            description="define properties for the platform : win32" >
+        <property name="platform" value="windows" />
+        <property name="obj.suffixe" value="obj" />
+        <property name="compilerCplus.name" value="msvc" />
+        <property name="system.libCplus.names" value="c" />
+        <property name="define.common" value="XIPDLL_EXPORT, XIPSTLAPI, XIPSTLUSE, WIN32" />
+    </target>
+    
+    <target name="setSolarisProperties" depends="platformIdentification" if="solaris"
+            description="define properties for the platform : solaris" >
+        <property name="platform" value="solaris" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names" value="m,pthread,z"/>
+        <property name="define.common" value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="setLinuxProperties" depends="platformIdentification" if="linux"
+            description="define properties for the platform : linux" >
+        <property name="platform" value="linux" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names" value="m,pthread,z" />
+        <property name="define.common" value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="setMacProperties" depends="platformIdentification" if="mac"
+            description="define properties for the platform : mac" >
+        <echo message="set mac properties" />
+        <property name="platform" value="mac" />
+        <property name="obj.suffixe" value="o" />
+        <property name="compilerCplus.name" value="g++" />
+        <property name="system.libCplus.names" value="m,pthread,z"/>
+        <property name="define.common" value="XIPSTLAPI, XIPSTLUSE" />
+    </target>
+    
+    <target name="platformIdentification" depends="taskExt"
+            description="platform identification: set the property solaris,
+            windows or linux to true when one of this platform has been identified">
+        <condition property="solaris">
+            <os name="SunOS" arch="sparc"/>
+        </condition>
+        <condition property="windows">
+	    <or>
+                <os name="Windows 2000" arch="x86"/>
+                <os name="Windows XP" arch="x86"/>
+                <os name="Windows Server 2008 R2" arch="amd64"/>  <!-- used by chamonix: windows 64 bits -->
+                <os name="Windows 7" arch="x86"/>
+            </or>
+        </condition>
+        <condition property="linux">
+            <os name="Linux" arch="i386"/>
+        </condition>
+        <condition property="mac">
+            <os name="Mac OS X" />
+        </condition>
+    </target>
+    
+    <target name="taskExt" depends="" description="add jar for specific ant task" >
+        <!-- download cpptasks.jar from http://ant-contrib.sourceforge.net/ -->
+        <property name="common.dir"		location="${basedir}/../../../../common" />
+        <taskdef resource="cpptasks.tasks">
+            <classpath>
+                <pathelement location="${common.dir}/cpptasks.jar"/>
+            </classpath>
+        </taskdef>
+        <typedef resource="cpptasks.types">
+            <classpath>
+                <pathelement location="${common.dir}/cpptasks.jar"/>
+            </classpath>
+        </typedef>
+    </target>
+    
+    <target name="clean"  >
+        <delete dir="build"/>
+    </target>
+    
+</project>
+
